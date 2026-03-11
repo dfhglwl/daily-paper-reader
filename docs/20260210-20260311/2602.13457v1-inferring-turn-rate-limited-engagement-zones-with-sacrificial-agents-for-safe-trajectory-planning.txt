@@ -1,0 +1,1779 @@
+Title: Inferring Turn-Rate-Limited Engagement Zones with Sacrificial Agents for Safe Trajectory Planning
+
+URL Source: https://arxiv.org/pdf/2602.13457v1
+
+Published Time: Tue, 17 Feb 2026 01:13:11 GMT
+
+Number of Pages: 36
+
+Markdown Content:
+# Inferring Turn-Rate-Limited Engagement Zones with Sacrificial Agents for Safe Trajectory Planning 
+
+Grant Stagg ∗ and Cameron K. Peterson †
+
+Brigham Young University, Provo, Utah, 84602, USA 
+
+This paper presents a learning-based framework for estimating pursuer parameters in turn-rate-limited pursuit–evasion scenarios using sacrificial agents. Each sacrificial agent follows a straight-line trajectory toward an adversary and reports whether it was intercepted or survived. These binary outcomes are related to the pursuer’s parameters through a geometric reachable-region (RR) model. Two formulations are introduced: a boundary-interception case, where capture occurs at the RR boundary, and an interior-interception case, which allows capture anywhere within it. The pursuer’s parameters are inferred using a gradient-based multi-start optimization with custom loss functions tailored to each case. Two trajectory-selection strategies are proposed for the sacrificial agents: a geometric heuristic that maximizes the spread of expected interception points, and a Bayesian experimental-design method that maximizes the 𝐷 -score of the expected Gauss–Newton information matrix, thereby selecting trajectories that yield maximal information gain. Monte Carlo experiments demonstrate accurate parameter recovery with five to twelve sacrificial agents. The learned engagement models are then used to generate safe, time-optimal paths for high-value agents that avoid all feasible pursuer engagement regions. 
+
+## I. Introduction 
+
+# In modern warfare environments, autonomous agents are tasked with safely navigating airspace while avoiding adversarial threats that actively seek to neutralize them. These environments are often characterized by partial or incomplete information about threat locations and capabilities, including speed, turn rate, and engagement range. Effective operation therefore requires methods that can infer adversary parameters from limited observations while explicitly accounting for uncertainty. Crucially, this inferred information must be incorporated immediately into decision-making. Autonomous agents must plan trajectories that avoid regions where interception is likely, even as uncertainty in adversary capabilities persists. A natural framework for reasoning about such interactions is the concept of an engagement zone (EZ): the set of 
+
+> ∗PhD Candidate, Electrical and Computer Engineering, Brigham Young University.
+> †Associate Professor, Electrical and Computer Engineering, Brigham Young University, and AIAA Senior Member.
+> arXiv:2602.13457v1 [cs.RO] 13 Feb 2026
+
+states or spatial regions in which an adversary can successfully intercept a target, given its kinematic and operational constraints. EZs provide a principled representation of threat capabilities and enable quantitative assessment of the risk associated with different portions of the environment. However, the parameters defining these EZs (pursuer position, heading, turn-rate, range, and speed) are often unknown. To address this, we consider the use of sacrificial agents, which deliberately expose themselves to potential engagement. By observing the outcomes of these interactions, whether the agent is intercepted or survives, we can infer the underlying pursuer parameters and, in turn, construct a probabilistic model of the EZ. In this paper, we present a framework for inferring pursuer parameters from the outcomes of sacrificial agent interactions. The approach defines loss functions that map interception and survival outcomes to a likelihood over pursuer parameters, and employs gradient-based optimization to recover candidate estimates of the pursuer’s position, heading, turn radius, range, and speed. To mitigate sensitivity to local minima, a multi-start optimization procedure is used, yielding a set of feasible pursuer parameter vectors consistent with the observed outcomes. Building on this inference framework, we design a sacrificial agent path planner that deliberately selects informative, high-risk trajectories to maximize information gain about the adversary. Finally, we demonstrate how this learned set of potential pursuer parameter vectors can be directly incorporated into motion planning, enabling autonomous agents to generate trajectories that avoid all engagement zones induced by the inferred uncertainty. The contributions of this work are as follows: 1) An optimization-based, multi-start inference framework for estimating pursuer parameter vectors from sacrificial-agent trajectories and binary interception outcomes, producing a set of pursuer parameter vectors consistent with observed data. 2) Two interception models and corresponding differentiable loss functions that enable gradient-based estimation of pursuer parameters under different assumptions about when interception occurs. 3) Two sacrificial-trajectory selection strategies, one based on geometric exploration and one based on information-driven design, that improve the efficiency of estimating the set of pursuer parameter vectors. 4) A trajectory-planning formulation that uses the inferred set of pursuer parameter vectors to generate safe, time-optimal paths that avoid all engagement zones consistent with the inferred parameters. More broadly, this work studies how autonomous agents can acquire information about adversarial capabilities through interaction when observations are limited to binary outcomes. Rather than relying on continuous sensing or direct measurement, only whether an agent is intercepted or survives is measured. We show that these sparse observations are sufficient to constrain adversary parameters and that sacrificial agent paths can be planned to efficiently reduce uncertainty and support subsequent safe trajectory planning. The remainder of this paper is organized as follows. Section I.A reviews related work, and Section I.B provides background on EZs. Section II formulates the problem, while Section III presents the pursuer-parameter learning 2algorithm. The sacrificial-trajectory planning approach is described in Section IV. Once the feasible pursuer parameters are learned, Section V demonstrates how to incorporate them into a safe trajectory planner. Section VI presents simulation results, and conclusions are given in Section VII. 
+
+A. Related Work 
+
+Engagement zones (EZs) provide a principled framework for representing the set of states from which an adversary can intercept a target. Early work modeled EZs using simplified cardioid geometries [ 1 –3], which capture interception risk but are not directly derived from the pursuer’s physical parameters. More recent work introduced basic engagement zones (BEZs) derived from the geometric structure of differential games [ 4, 5], yielding engagement regions that explicitly encode pursuer–evader dynamics and agent capabilities. The BEZ formulation assumes the pursuer can instantaneously reorient to an optimal collision course. This assumption was relaxed by introducing a turn-rate-limited engagement zone, the curve–straight basic engagement zone (CSBEZ), which models pursuer motion using Dubins kinematics [ 6, 7 ]. While BEZ and CSBEZ models provide a stronger geometric and theoretical foundation than cardioid approximations, they generally assume perfect knowledge of the pursuer’s parameters, including position, heading, speed, turn radius, and range. In realistic adversarial settings, such information is rarely known with certainty. This limitation was partially addressed in [ 8 ], where varying levels of knowledge were assumed to plan safe paths. In our prior work, we extended BEZs to probabilistic settings [ 9] and later to turn-rate-limited pursuers [ 10 ], producing uncertainty-aware EZ boundaries. These methods, however, still required an initial probability distribution over the pursuer’s parameters. The work presented here removes that dependency by using sacrificial (decoy) agents deployed to infer the pursuer’s parameters directly. Prior work has explored the use of sacrificial agents—low-cost platforms that deliberately undertake risky actions to acquire valuable information. In our prior work, this paradigm was applied to radar mapping, where expendable agents intentionally exposed themselves to detection in order to localize and characterize enemy radar systems, trading survival for improved situational awareness [ 11 ]. Related ideas appear in the path-clearance problem [ 12 , 13 ], where scouting agents are deployed ahead of high-value assets to identify hidden threats. In [ 14 ], agents nearing battery depletion are repurposed as sacrificial scouts, while Duggan et al. [ 15 ] employ fast, low-cost agents to probe uncertain terrain and secure safe routes for more valuable teammates. In contrast to prior work, we use sacrificial agents that are expected to be intercepted in order to infer adversary capabilities. While sacrificial agents provide a mechanism for collecting informative interaction data, learning the underlying engagement geometry from such data requires new approaches for constructing reachable regions (RRs) and engagement zones (EZs) directly from observations. Prior work on learning reachable regions (RRs) and engagement zones (EZs) has primarily relied on simulation-based 3approaches, where interception probabilities are estimated through repeated Monte Carlo simulations of pursuer–evader interactions [ 16 , 17 ]. Candidate evader states or trajectories are evaluated under assumed pursuer models, and empirical interception probabilities are computed as the fraction of simulations resulting in capture. EZs are then defined implicitly as level sets of the resulting probability field. While these methods are data-driven, the engagement geometry itself is not inferred directly from observed interactions. Instead, it is approximated via forward simulation of hypothesized pursuer models. In contrast, our approach leverages real sacrificial agent trajectories as direct evidence of the underlying engagement structure, enabling EZs to be inferred from observed interception and survival outcomes rather than simulated engagements. Our sacrificial trajectory selection is closely related to Bayesian experimental design (BED), in which actions are chosen to maximize expected information about uncertain model parameters. Many BED approaches use the Fisher Information Matrix (FIM) as a design criterion, commonly maximizing D-optimality (log-determinant of the FIM) or E-optimality (minimum eigenvalue). Trajectory optimization methods have explicitly maximized Fisher information [ 18 ], and observer path planning problems have used D-optimality to guide trajectory selection [ 19 ]. In Bayesian settings, maximizing the expected trace or determinant of the FIM provides tractable surrogates for information gain [ 20 , 21 ], closely related to Gauss–Newton information approximations used in nonlinear regression. Related work has also employed mutual information and Bayesian optimization for informative path planning [22–24]. While BED has been widely applied to active sensing and experimental design, it has not previously been integrated into engagement-zone learning for adversarial interactions. In contrast, the framework proposed here couples pursuer-parameter inference with BED-based sacrificial trajectory selection, enabling agents to actively probe and learn adversary capabilities. The resulting set of pursuer parameter vectors captures model uncertainty and directly supports downstream planning, as demonstrated in Section V, where it is used to generate safe, time-optimal trajectories that avoid all learned engagement zones. 
+
+B. Background: Weapon Engagement Zones 
+
+The curve–straight basic engagement zone (CSBEZ) characterizes the set of evader configurations—positions and headings—from which interception is possible by a pursuer with bounded turn rate (minimum turn radius 𝑎 ). The model assumes the evader maintains its initial heading at constant speed (see the green region in Fig. 1), while the pursuer follows an optimal turn–straight collision course. This region depends on the pursuer’s initial state and parameters, collected into the pursuer parameter vector 
+
+𝜽 𝑃 = (𝒙 𝑃 , 𝜓 𝑃 , 𝑣 𝑃 , 𝑎, 𝑅 ), (1) where 𝒙 𝑃 ∈ R2 is the pursuer’s initial position, 𝜓 𝑃 its heading, 𝑣 𝑃 its speed, 𝑎 its minimum turn radius, and 𝑅 its 4−2 0 2
+
+## X
+
+−3 
+
+−2 
+
+−1 
+
+0
+
+1
+
+2
+
+3
+
+> Y
+
+RR 
+
+CSBEZ Fig. 1 Reachable region (RR) of the pursuer (magenta) and the corresponding CSBEZ (green) for an evader heading along the 𝑥 -axis. Sample evader (blue) and pursuer (red) trajectories are also shown. 
+
+engagement range. The CSBEZ also depends on the evader’s initial position 𝒙 𝐸 , heading 𝜓 𝐸 , and speed 𝑣 𝐸 .To evaluate whether a given evader configuration lies inside the CSBEZ, we project the evader’s future position assuming it travels in a straight line for the time it takes the pursuer to traverse its maximum range 𝑅 at constant speed 
+
+𝑣 𝑃 . This projected point is defined as 
+
+𝒙 𝐹 = 𝒙 𝐸 + 𝜈𝑅 𝒗 𝐸 , (2) where 𝜈 = 𝑣 𝐸 /𝑣 𝑃 is the speed ratio and 𝒗 𝐸 = [cos 𝜓 𝐸 , sin 𝜓 𝐸 ]⊤ is the unit vector in the direction of the evader’s heading. The pursuer attempts to reach this point via the shortest feasible curve-straight path, which consists of a circular arc of radius 𝑎 , either a left or right turn, followed by a straight-line segment. The engagement zone function computes the length of this path and subtracts the pursuer’s range: 
+
+𝜑 EZ (𝒙 𝐸 , 𝜓 𝐸 , 𝜽 𝑃 ) = 𝐿 (𝒙 𝐹 , 𝒙 𝑃 , 𝜓 𝑃 , 𝑎 ) − 𝑅. (3) A point lies inside the CSBEZ if 𝜑 EZ (𝒙 𝐸 , 𝜓 𝐸 , 𝜽 𝑃 ) ≤ 0, where negative values indicate that the evader lies within the interceptable region. The function 𝐿 (𝒙 𝐹 , 𝒙 𝑃 , 𝜓 𝑃 , 𝑎 ) returns the shortest total length of either a left-turn–straight or right-turn–straight 5path from 𝒙 𝑃 to 𝒙 𝐹 , assuming an initial heading of 𝜓 𝑃 and a minimum turn radius 𝑎 . That is, 
+
+𝐿 (𝒙 𝐹 , 𝒙 𝑃 , 𝜓 𝑃 , 𝑎 ) = min  𝐿 ℓ (𝒙 𝐹 , 𝒙 𝑃 , 𝜓 𝑃 , 𝑎 ), 𝐿 𝑟 (𝒙 𝐹 , 𝒙 𝑃 , 𝜓 𝑃 , 𝑎 ), (4) where 𝐿 ℓ and 𝐿 𝑟 are the lengths of the left- and right-turn paths, respectively. These constructions follow from the geometric derivation presented in [10]. We define the reachable region (RR) function similarly, but without reference to any evader state. It evaluates the distance required for the pursuer to reach a fixed point 𝒙 ∈ R2 using a curve-straight path from its initial state. This function is independent of the evader’s position, heading, or speed, and is given by 
+
+𝜑 𝑅𝑅 (𝒙 , 𝜽 𝑃 ) = 𝐿 (𝒙 , 𝒙 𝑃 , 𝜓 𝑃 , 𝑎 ) − 𝑅. (5) Thus, 𝜑 𝑅𝑅 (𝒙 , 𝜽 𝑃 ) computes the curve-straight path length from 𝒙 𝑃 to 𝒙 and subtracts the pursuer’s available range 𝑅 .The boundary of the reachable region corresponds to the zero contour of 𝜑 𝑅𝑅 (𝒙 , 𝜽 𝑃 ) = 0.The EZ function can be viewed as a shifted version of the RR function, where the target point 𝒙 is displaced along the evader’s heading to account for its future position at time 𝑅 /𝑣 𝑃 . This shift introduces a dependence on the evader’s state, distinguishing the EZ from the purely kinematic RR. Figure 1 shows an example of an RR (magenta) and EZ (green) for a set of pursuer and evader parameters. 
+
+## II. Problem Statement 
+
+To better understand what can be learned about unknown adversaries using sacrificial vehicles, we examine the inference problem under a range of assumptions and parameters. We present a hierarchy of learning cases with increasing levels of complexity to illustrate what can be inferred about the pursuer. Case 1 considers the setting in which the engagement zone shape is known and the goal is to estimate only the pursuer’s position and heading. Case 2 increases the difficulty by also treating the shape (defined from the turn radius and range) as unknown. Case 3 is the most general setting, in which pursuer speed is also unknown, and an additional timing measurement is introduced to make speed observable. For each of these three case families, we consider both a noise-free variant (A) and a noisy variant (B), where trajectory measurements are corrupted by additive noise. Given a collection of 𝑁 𝑠 sacrificial agent trajectories X = { 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ) } 𝑁 𝑠  
+
+> 𝑖 =1
+
+and corresponding binary outcomes 
+
+Z = { 𝑧 (𝑖 ) }𝑁 𝑠 
+
+> 𝑖 =1
+
+, where 𝑧 (𝑖 ) ∈ { 0, 1} indicates whether the 𝑖 th agent was intercepted ( 𝑧 (𝑖 ) = 1) or survived ( 𝑧 (𝑖 ) = 0), we aim to infer the parameters of an unknown pursuer. Each trajectory 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), defined for 𝑡 ∈ [ 𝑡 (𝑖 ) 
+
+> 0
+
+, 𝑡 (𝑖 ) 
+
+> 𝑓
+
+], terminates at time 
+
+𝑡 (𝑖 ) 
+
+> 𝑓
+
+and position 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 (𝑖 ) 
+
+> 𝑓
+
+). This final position is either where the agent was intercepted or when it exits the region of interest D ⊂ R2.6Each trajectory corresponds to a straight inbound path toward the pursuer, parameterized by its starting location 
+
+𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 (𝑖 ) 
+
+> 0
+
+) and heading 𝜓 (𝑖 ) 
+
+> 𝑠
+
+. For clarity, we treat each agent as beginning directly from 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 (𝑖 ) 
+
+> 0
+
+); in practice, an agent would depart from a common origin, travel to this start point, and then execute the inbound segment. We discard the transit leg because it remains outside the pursuer’s reachable region and therefore carries no information about capture feasibility. The resulting collection (X , Z) constitutes the dataset used to infer the pursuer’s parameter vector 𝜽 𝑃 .The unknown pursuer parameters are denoted: 
+
+𝜽 𝑃 = [ 𝑥 𝑃 , 𝑦 𝑃 , 𝜓 𝑃 , 𝑎, 𝑅, 𝑣 𝑃 ]⊤ ∈ R6, (6) where (𝑥 𝑃 , 𝑦 𝑃 ) is the initial (launch) position of the pursuer, 𝜓 𝑃 is its heading, 𝑎 is its minimum turn radius, 𝑅 is its maximum range, and 𝑣 𝑃 is its constant speed. 
+
+A. Assumptions 
+
+The operational assumptions used in our analysis are listed below. They form the modeling framework for inferring engagement zones. 
+
+• [A1-strict] Boundary interception: Interception occurs exactly on the boundary of the pursuer’s reachable region. 
+
+• [A1-relaxed] Interior interception: Interception may occur anywhere within the pursuer’s reachable region. 
+
+• [A2] Guaranteed interception: If the pursuer is able to intercept the evader, it does so. 
+
+• [A3] Stationary launch point: The pursuer’s launch position (𝑥 𝑃 , 𝑦 𝑃 ), and heading ( 𝜓 𝑃 ) are fixed. 
+
+• [A4] Known evader behavior: Each sacrificial agent follows a known, constant-velocity trajectory 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ).
+
+• [A5] Kinematic-only model: Engagement zones are defined purely by kinematic constraints; effects such as terrain, occlusion, or probabilistic detection are ignored. 
+
+• [A6] Multi-target capability: The pursuer is capable of engaging multiple evaders; for example, it may represent a missile launch system with multiple interceptors. These assumptions define the analytical regime under which inference is performed. Assumptions [A1-strict] and [A1-relaxed] specify alternative interception models, enabling evaluation under both boundary-based and interior-inclusive interpretations of engagement. Assumptions [A3] and [A4] fix the pursuer configuration and prescribe sacrificial agent trajectories, which is consistent with experimental settings where agent paths are controlled or planned. Assumption 
+
+[A5] restricts attention to kinematic effects, allowing the inferred engagement zones to reflect pursuer capability rather than environmental or sensing artifacts. Finally, assumption [A6] permits multiple sacrificial trials to be interpreted as independent observations of a single pursuer configuration, rather than requiring reinitialization of the system after each engagement; a similar assumption is adopted in [8]. Several of these assumptions also identify natural extensions of the framework. For example, [A3] is appropriate 7for fixed-site systems but does not capture mobile pursuers, which represents a clear direction for future work. More broadly, the focus of this paper is to establish a principled framework for engagement zone inference under well-defined conditions; extensions that relax these assumptions can be incorporated within the same structure in subsequent works. 
+
+B. Measurements 
+
+The inference algorithm relies on a small number of measurable quantities collected from each sacrificial trajectory: position history, interception outcome, and, in some cases, pursuer launch timing. For each sacrificial agent, the following data are available: 
+
+• Trajectory: The full trajectory 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ) for 𝑡 ∈ [ 𝑡 (𝑖 ) 
+
+> 0
+
+, 𝑡 (𝑖 ) 
+
+> 𝑓
+
+]. In uncertainty cases, the observed trajectory is modeled as the true path corrupted by additive Gaussian noise with zero mean and covariance Σ𝒙 .
+
+• Interception outcome: A binary indicator 𝑧 (𝑖 ) ∈ { 0, 1} specifying whether the agent was intercepted (1) or survived (0). 
+
+• Time of launch (speed-unknown setting only): The pursuer’s launch time 𝑡 (𝑖 ) 
+
+> ℓ
+
+, which is used when pursuer speed 𝑣 𝑃 is treated as unknown. This measurement is also corrupted by additive Gaussian noise with zero mean and variance 𝜎 2 
+
+> 𝑡
+
+.The agent’s trajectory 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ) is assumed to be measured using onboard sensors such as inertial measurement units and, when available, GPS or other localization systems. The details of the navigation system are outside the scope of this work; instead, navigation uncertainty is explicitly modeled in the noisy variants (the B use cases) by introducing additive noise. In the speed-unknown setting, the launch time 𝑡 (𝑖 ) 
+
+> ℓ
+
+of the pursuer is assumed to be known. In practice, this value could be estimated using external sensing modalities such as acoustic or visual sensors. For example, an acoustic sensor might detect the sudden sound of a missile launch, while a visual system (e.g., high-speed camera or infrared sensor) could identify the moment of ignition or departure. In many settings, only trajectories and binary outcomes are available; in this measurement regime, the pursuer speed is not identifiable from capture feasibility alone because timing can be rescaled without changing interception outcomes. Accordingly, learning 𝑣 𝑃 requires an additional timing cue (e.g., launch time), which is only assumed available in the speed-unknown setting. 
+
+C. Learning Cases 
+
+We consider a hierarchy of learning cases with increasing complexity. Each case specifies (i) which elements of 𝜽 𝑃 
+
+are unknown, (ii) whether sacrificial agent trajectory measurements are corrupted by noise, and (iii) what measurements are available. All cases are evaluated under both the boundary-only interception assumption ( [A1-strict] ) and the interior-inclusive interception assumption ( [A1-relaxed] ). Cases 1 and 2 assume that the pursuer’s speed is known. Case 1 further assumes that the pursuer’s kinematic 8parameters are known, and isolates the localization problem by estimating only the pursuer’s position and heading. Case 2 relaxes this assumption by treating the kinematic limits (e.g., turn radius and range) as unknown while still assuming known speed. Together, these cases function as an ablation across sensing regimes: Cases 1–2 examine what can be inferred from interception outcomes and trajectory information alone, without access to timing measurements, whereas Case 3 augments the measurement set with launch-time information, rendering the pursuer speed observable. Table 1 summarizes the learning cases considered in this work. 
+
+Table 1 Learning cases for pursuer parameter estimation. Each case is evaluated under both the boundary-only interception assumption ([A1-strict]) and the interior-inclusive interception assumption ([A1-relaxed]). Case Unknown Parameters Uncertainty Measured Data Description 
+
+1A Position (𝑥 𝑃 , 𝑦 𝑃 ), heading 
+
+𝜓 𝑃 
+
+No Agent trajectory, interception outcome Known engagement zone shape; esti-mate pursuer position and heading. 1B Position (𝑥 𝑃 , 𝑦 𝑃 ), heading 
+
+𝜓 𝑃 
+
+Yes Noisy agent trajectory, intercep-tion outcome Same as 1A, but with Gaussian noise corrupting trajectory measurements. 2A (𝑥 𝑃 , 𝑦 𝑃 ), 𝜓 𝑃 , turn radius 
+
+𝑎 , range 𝑅 
+
+No Agent trajectory, interception outcome Engagement zone shape unknown; esti-mate position, heading, turn radius, and range. 2B (𝑥 𝑃 , 𝑦 𝑃 ), 𝜓 𝑃 , 𝑎 , 𝑅 Yes Noisy agent trajectory, intercep-tion outcome Same as 2A, but with trajectory cor-rupted by noise. 3A Full 𝜽 𝑃 :
+
+(𝑥 𝑃 , 𝑦 𝑃 , 𝜓 𝑃 , 𝑣 𝑃 , 𝑎, 𝑅 )
+
+No Agent trajectory, interception outcome, time of launch General case; estimate all pursuer pa-rameters including speed. 3B Full 𝜽 𝑃 Yes Noisy agent trajectory, intercep-tion outcome, time of launch Most general case; full parameter in-ference with measurement uncertainty, including unknown pursuer speed. To formalize which parameters are inferred in each case, we decompose the pursuer parameter vector as 
+
+𝜽 𝑃 =
+
+
+
+𝜽 𝑆 𝑃 
+
+𝜽 ∗\ 𝑆 𝑃 
+
+
+
+, (7) where 𝜽 𝑆 𝑃 denotes the subset of parameters being learned and 𝜽 ∗\ 𝑆 𝑃 denotes parameters assumed known. In Case 1, only the pursuer’s position and heading are unknown, 
+
+𝜽 𝑆 𝑃 = [𝑥 𝑃 , 𝑦 𝑃 , 𝜓 𝑃 ]⊤, (8) while the turn radius 𝑎 , range 𝑅 , and speed 𝑣 𝑃 are assumed known. This case isolates the geometric localization problem under a known engagement zone shape. 9In Case 2, the engagement zone shape itself is unknown. The learned parameter set expands to 
+
+𝜽 𝑆 𝑃 = [𝑥 𝑃 , 𝑦 𝑃 , 𝜓 𝑃 , 𝑎, 𝑅 ]⊤, (9) while the pursuer speed 𝑣 𝑃 remains known. This case captures the setting where both the pursuer state and kinematic limits must be inferred. In Case 3, the full pursuer parameter vector is estimated: 
+
+𝜽 𝑆 𝑃 = [𝑥 𝑃 , 𝑦 𝑃 , 𝜓 𝑃 , 𝑎, 𝑅, 𝑣 𝑃 ]⊤. (10) This represents the most general setting considered, in which all pursuer parameters are unknown and must be inferred jointly from interception outcomes and trajectory observations. For each of the above parameter configurations, we additionally consider both noise-free (A) and noisy (B) measurement variants, where the latter assumes additive Gaussian noise corrupting the observed sacrificial agent trajectories. This structure enables a systematic evaluation of inference performance as uncertainty and problem complexity increase. 
+
+## III. Learning CSBEZ Parameters 
+
+The goal of the learning algorithm is to identify the pursuer parameter vector that best explain the sacrificial agent trajectories 𝒙 (𝑖 ) (𝑡 ), the binary outcomes 𝑧 (𝑖 ) , and, for cases 3A and 3B, the launch times 𝑡 (𝑖 ) 
+
+> ℓ
+
+. We use a gradient-based optimization algorithm with a loss function designed to penalize infeasible pursuer parameter vectors. When the number of sacrificial trajectories is limited, multiple feasible parameter vectors may explain the data. To address this ambiguity, we employ a multi-start approach, running the optimization from many different initial guesses. This produces a set of candidate pursuer parameter vectors that all satisfy the observed outcomes. To evaluate convergence, we estimate the variability of the resulting set of parameter vectors by computing the standard deviation across the optimized solutions. The loss functions are designed to satisfy the following properties: 1) they are zero when evaluated at the true pursuer parameter vector, 2) they are strictly positive for infeasible pursuer parameter vectors. This section proceeds as follows: the loss function for the boundary interception [A1-strict] is described in Section III.A, the loss function for the interior interception [A1-relaxed] is shown in Section III.B, the optimization algorithm is detailed in Section III.C, and the multi-start scheme is presented in Section III.D. 
+
+A. Loss Function: Boundary Interception 
+
+We use the same loss function for cases 1A and 2A, with slight modifications in cases 1B and 2B to account for noise in the observations. In Cases 3A and 3B, estimating pursuer speed requires adding a term that incorporates the 10 measured launch time. Without timing information, pursuer speed is not identifiable because speed changes can be offset by corresponding changes in time without altering interception feasibility. Therefore, in Case 3 we introduce an additional loss term to account for this timing measurement and to enable joint estimation of speed alongside the remaining pursuer parameters. In Cases 1 and 2, the pursuer’s speed is assumed to be known. In practice, this assumption is often reasonable: speed may be available from prior intelligence regarding the adversary system, or estimated through a brief tracking phase before sacrificial trajectories are deployed. 
+
+1. Known Pursuer Speed (Cases 1 and 2) 
+
+In this subsection, we describe the loss function for cases when the pursuer’s speed is known. We use a squared hinge loss defined as 
+
+ReSq (𝑥 ) = 12 max (0, 𝑥 )2, (11) which provides a differentiable objective that penalizes parameter values inconsistent with the observed interception events. The loss terms are defined as functions of the sacrificial trajectory 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), the interception point 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 𝑓 ), the observed outcome 𝑧 (𝑖 ) , and the pursuer parameter vector 𝜽 𝑃 . The objective function is designed to enforce three conditions derived from the problem assumptions: 1) The interception point lies on the boundary of the RR. 2) Prior to interception, the trajectory remains outside the RR. 3) A trajectory corresponding to a non-intercepted agent remains outside the RR at all times. Together, these conditions encourage consistency between the predicted RR and the observed interception outcomes across all sacrificial trajectories. The first condition is enforced through a boundary-consistency loss, 
+
+L (𝑖 ) 
+
+> bound,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ) =
+
+
+
+0, 𝑧 (𝑖 ) = 0,
+
+ReSq  𝜑 𝑅𝑅 (𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 𝑓 ), 𝜽 𝑃 ) − 𝜀  + ReSq   − 𝜑 𝑅𝑅 (𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 𝑓 ), 𝜽 𝑃 ) − 𝜀 , 𝑧 (𝑖 ) = 1,
+
+(12) where 𝜀 is a soft-margin factor that accounts for measurement noise. We define 
+
+𝜀 = 𝛽 √︁ 𝜆 max (Σ𝒙 ),
+
+where 𝜆 max (Σ𝒙 ) is the largest eigenvalue of the position covariance Σ𝒙 , and 𝛽 ≥ 0 controls the margin size. With this definition, any model whose predicted interception point lies within a distance 𝜀 of the RR boundary incurs zero loss; the 11 loss becomes positive only when the point lies more than 𝜀 from the boundary. The function 𝜑 𝑅𝑅 (𝒙 , 𝜽 𝑃 ) acts as a signed distance to the predicted RR boundary (positive outside, negative inside), so the two ReSq (·) terms penalize deviations on either side of the boundary beyond the 𝜀 -margin. This loss is applied only when 𝑧 (𝑖 ) = 1 (intercepted agents); for non-intercepted trajectories, boundary consistency is not enforced since no terminal contact point is observed. The second and third conditions are enforced through a trajectory-level loss that penalizes any portion of a sacrificial trajectory that lies within the predicted RR: 
+
+L (𝑖 ) 
+
+> traj,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 )) = max  
+
+> 𝑡 ∈𝒕
+
+h
+
+ReSq   − 𝜑 𝑅𝑅 (𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝜽 𝑃 ) − 𝜀 i
+
+, (13) where 𝒕 = {𝑡 0, 𝑡 0 + Δ, . . . , 𝑡 𝑓 − 𝛼 } denotes the set of sampled time points along the trajectory, Δ = (𝑡 𝑓 − 𝛼 − 𝑡 0)/ 𝑁 𝑡 ,
+
+𝑁 𝑡 is the number of samples, and 𝛼 > 0 offsets the final time to exclude points immediately preceding interception. The argument of the ReSq (·) becomes positive when a trajectory point lies more than 𝜀 inside the predicted RR, indicating a violation of consistency between the parameter vector and the observed trajectory. When all trajectory points remain outside the RR by at least 𝜀 , this term evaluates to zero. The outer max (·) selects the largest such violation along the trajectory, ensuring that even a single incursion into the RR produces a nonzero penalty. Operationally, this loss discourages candidate parameter vectors 𝜽 𝑃 that produce an RR overlapping observed sacrificial trajectories, for both intercepted and non-intercepted agents. This prevents solutions in which the RR expands to explain interceptions at the expense of incorrectly overlapping with trajectories that were observed to survive. The total loss for a single sacrificial agent is the sum of the boundary and trajectory components, 
+
+L (𝑖 ) 
+
+> comb,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ) = L (𝑖 ) 
+
+> bound,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ) + L (𝑖 ) 
+
+> traj,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 )) . (14) Finally, the losses from all sacrificial agents are summed to form the overall objective, 
+
+Ltot,RR (𝜽 𝑃 , X, Z) =∑︁    
+
+> 𝒙 (𝑖 )
+> 𝑠 ∈ X , 𝑧 (𝑖 )∈ Z
+
+L (𝑖 ) 
+
+> comb,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ), (15) where X = {𝒙 1 
+
+> 𝑠
+
+(𝑡 ), . . . , 𝒙 𝑁 𝑠  
+
+> 𝑠
+
+(𝑡 )} is the set of all trajectories and Z = {𝑧 1, . . . , 𝑧 𝑁 𝑠 } the corresponding outcomes. This formulation jointly enforces geometric consistency between predicted RR boundaries and observed interception outcomes, while penalizing trajectories that violate the spatial constraints implied by the RR model. The result is a differentiable loss that aligns learned pursuer parameters with physically consistent engagement behavior. 12 2. Unknown Pursuer Speed (Case 3) 
+
+Using only trajectory and outcome measurements, the pursuer’s speed is unobservable. Inferring speed requires at least one additional measurement. In particular, incorporating launch-time information (e.g., from acoustic or visual sensors) provides the temporal reference needed for the algorithm to learn the speed. However, the loss function in Equation (15) does not enable speed to be learned. Consequently, an alternative loss function must be introduced that explicitly allows for speed inference. Using this measurement, we incorporate an additional term in the loss function to ensure that speed is observable. We define the pursuer’s path length to a single interception location as 
+
+𝐿 (𝑖 ) (𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+) = 𝜑 𝑅𝑅 
+
+
+
+𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 (𝑖 ) 
+
+> 𝑓
+
+), 𝜽 𝑃 
+
+
+
++ 𝑅. (16) The predicted launch time of the pursuer for the 𝑖 th sacrificial trajectory is 
+
+ˆ𝑡 (𝑖 ) 
+
+> ℓ
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+) = 𝑡 (𝑖 ) 
+
+> 𝑓
+
+− 𝐿 (𝑖 ) (𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+)
+
+𝑣 𝑃 
+
+. (17) The time loss for a single sacrificial trajectory is defined ae 
+
+L (𝑖 ) 
+
+> time
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝑡 (𝑖 ) 
+
+> ℓ
+
+) = ReSq  |ˆ𝑡 (𝑖 ) 
+
+> ℓ
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+) − 𝑡 (𝑖 ) 
+
+> ℓ
+
+| − 𝛿 . (18) where 𝛿 = 𝛽𝜎 𝑡 is a flattening parameter that accounts for uncertainty in the launch-time measurement. This loss function measures the difference between the measured launch time and the estimated launch time (derived from the inferred speed), giving higher values when the difference exceeds the threshold 𝛿 .Finally, for all trajectories, the total time loss is 
+
+Ltot ,time (𝜽 𝑃 , X, Tℓ ) =∑︁    
+
+> 𝒙 (𝑖 )
+> 𝑠 ∈ X , 𝑡 (𝑖 )
+> ℓ∈ T ℓ
+
+L (𝑖 ) 
+
+> time
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝑡 (𝑖 ) 
+
+> ℓ
+
+), (19) where Tℓ = {𝑡 (1) 
+
+> ℓ
+
+, . . . , 𝑡 ( 𝑁 𝑠 ) 
+
+> ℓ
+
+} denotes the set of launch-time measurements. To learn all the pursuer parameters, we combine the time loss with the previous loss from Equation (15): 
+
+Ltot ,EZ (𝜽 𝑃 , X, Z, Tℓ ) = Ltot,RR (𝜽 𝑃 , X, Z) + L tot ,time (𝜽 𝑃 , X, Tℓ ). (20) 
+
+B. Loss Function: Interior Interception 
+
+This section presents the loss function under the interior-interception assumption ( [A1-relaxed] ), in which interception is not restricted to the RR boundary but may occur anywhere within the RR. 13 1. Known Pursuer Speed (Cases 1 and 2) 
+
+Under the interior-interception assumption ( [A1-relaxed] ), the loss function is designed to satisfy the following properties: 1) The interception point lies strictly inside the RR. 2) A trajectory corresponding to a non-intercepted agent remains outside the RR at all times. In this case, there is no trajectory loss for intercepted outcomes, since the exact point at which the sacrificial agent entered the RR is unknown. The only available information is that, if the sacrificial agent survived, its trajectory never entered the RR. This leads to the trajectory loss function 
+
+L (𝑖 )
+
+> traj,RR
+
+
+
+𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 )
+
+
+
+=
+
+
+
+max  
+
+> 𝑡 ∈𝒕
+
+h
+
+ReSq   − 𝜑 𝑅𝑅 (𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝜽 𝑃 ) − 𝜀 i
+
+, 𝑧 (𝑖 ) = 0,
+
+0, 𝑧 (𝑖 ) = 1,
+
+(21) which penalizes only surviving trajectories ( 𝑧 (𝑖 ) = 0). Since 𝜑 𝑅𝑅 (𝒙 , 𝜽 𝑃 ) is positive outside the RR and negative inside, the quantity 
+
+
+
+−𝜑 𝑅𝑅 (𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝜽 𝑃 ) − 𝜀 
+
+
+
+becomes positive precisely when the trajectory enters the RR by more than the 
+
+𝜀 margin. In this case, the loss becomes nonzero, indicating an inconsistency between the model prediction and the observed survival. If the trajectory remains outside the RR for all 𝑡 , the argument of the ReSq (·) is non-positive everywhere and the loss evaluates to zero. No trajectory penalty is applied for intercepted agents ( 𝑧 (𝑖 ) = 1), since the entry point into the RR is unobserved. Unlike the boundary condition in the [A1-strict] case, where the interception point is required to lie exactly on the RR boundary, here we only require that it lie within the RR. This results in the boundary loss 
+
+L (𝑖 ) 
+
+> bound,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ) =
+
+
+
+0, 𝑧 (𝑖 ) = 0,
+
+ReSq  𝜑 𝑅𝑅 (𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 𝑓 ), 𝜽 𝑃 ) − 𝜀 , 𝑧 (𝑖 ) = 1,
+
+(22) which penalizes positive RR values, ensuring that the predicted interception point for an intercepted trajectory lies strictly within the RR of the candidate model. As before, the boundary and trajectory losses are combined to form the total loss for each sacrificial agent, 
+
+L (𝑖 ) 
+
+> comb,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ) = L (𝑖 ) 
+
+> bound,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ) + L (𝑖 ) 
+
+> traj,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ). (23) For multiple trajectories (sacrificial agents), the total loss is obtained by summing across all agents: 
+
+Ltot,RR (𝜽 𝑃 , X, Z) =∑︁    
+
+> 𝒙 (𝑖 )
+> 𝑠 ∈ X , 𝑧 (𝑖 )∈ Z
+
+L (𝑖 ) 
+
+> comb,RR
+
+(𝜽 𝑃 , 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 ), 𝑧 (𝑖 ) ), (24) 14 where X and Z denote the sets of all sacrificial trajectories and corresponding outcomes, respectively. This relaxed-loss formulation ensures that intercepted trajectories are modeled as interior points of the RR while preserving the non-intercepted constraints, enabling parameter learning under partial or ambiguous interception information. 
+
+2. Unknown Pursuer Speed (Cases 3) 
+
+To learn the speed with the interior interception assumption, we use the same time loss term (Equation (19) . We add this term to the total learning loss for Cases 1 and 2 (Equation (24); 
+
+Ltot ,EZ (𝜽 𝑃 , X, Z, Tℓ ) = Ltot,RR (𝜽 𝑃 , X, Z) + L tot ,time (𝜽 𝑃 , X, Tℓ ). (25) 
+
+C. Parameter Estimation Via Nonlinear Optimization 
+
+To estimate the pursuer parameter vector 𝜽 𝑃 , we minimize the total loss defined in Equation (15) for Cases 1 and 2, and Equation (20) for Case 3 under the boundary interception assumption. When using the interior interception assumption, we instead minimize Equation (24) for Cases 1 and 2, and Equation (25) for Case 3. This optimization problem is solved using IPOPT, a gradient-based interior-point optimizer [ 25 ]. Lower and upper bounds are defined for each parameter in 𝜽 𝑃 to restrict the solution to physically plausible values. Let 𝜽 min  
+
+> 𝑃
+
+and 𝜽 max  
+
+> 𝑃
+
+denote the lower and upper bounds, respectively. The resulting optimization problem is 
+
+𝜽 ★𝑃 = argmin     
+
+> 𝜽 𝑃 ∈ [ 𝜽 min
+> 𝑃 ,𝜽 max
+> 𝑃 ]
+
+Ltot (𝜽 𝑃 , X, Z) , (26) where Ltot (𝜽 𝑃 , X, Z) denotes the total loss function for the corresponding case and interception assumption. We compute the gradient of Ltot with respect to 𝜽 𝑃 using JAX’s automatic differentiation framework [ 26 ], which enables efficient and scalable gradient evaluation within the IPOPT solver. 
+
+D. Multi-start Estimation Strategy 
+
+To mitigate the nonconvexity of the estimation problem and the resulting ambiguity in the inferred parameters, we employ a multi-start inference scheme rather than relying on a single optimizer initialization. In practice, the loss landscape induced by the hinged-based constraints contains large flat regions of zero loss: many distinct parameter vectors produce RR geometries that are fully consistent with the observed data and therefore achieve identical loss values of zero. As a result, different optimizer initializations often converge to different parameter estimates, all of which satisfy the imposed consistency conditions but may correspond to substantially different RR geometries and yield different predictions for new sacrificial trajectories. Single-start optimization is therefore insufficient, as it returns only one such 15 solution without representing the inherent ambiguity supported by the available data. The proposed approach maintains a population of candidate parameter estimates that are refined as new data become available. By preserving multiple hypotheses in parallel, the method captures this ambiguity and enables solutions to be progressively refined as additional measurements are incorporated. Formally, let 𝑁 𝑝 denote the number of optimizer initializations. We find the 𝑁 𝑝 starting values using Latin Hypercube Sampling (LHS) to uniformly cover the prior domain [𝜽 min  
+
+> 𝑃
+
+, 𝜽 max  
+
+> 𝑃
+
+]. Each sampled initialization 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+for 
+
+𝑗 = 1, . . . , 𝑁 𝑝 is used as the starting point for a separate IPOPT optimization, producing a set of locally optimized solutions: 
+
+T =
+
+n
+
+𝜽 ( 𝑗 )∗ 
+
+> 𝑃
+
+o𝑁 𝑝  
+
+> 𝑗 =1
+
+, 𝜽 ( 𝑗 )∗  
+
+> 𝑃
+
+= arg min 
+
+> 𝜽 𝑃
+
+Ltot (𝜽 𝑃 , X, Z) . (27) After this batch of optimizations, we select a new sacrificial agent path (described in Section IV) and observe the result of its trajectory. The resulting trajectory and interception outcome are added to the dataset. The full process—optimization, agent deployment, and data update—is then repeated with the previously optimized pursuer parameter value serving as the starting points for the next round. This iterative scheme allows the model to progressively refine the estimate of 𝜽 𝑃 as more information becomes available. Sacrificial agents are dispatched until the standard deviation of the estimates is below a threshold. Our full estimation algorithm proceeds as follows: 1) Initialize. Draw 𝑁 𝑝 initializations {𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+}𝑁 𝑝  
+
+> 𝑗 =1
+
+via Latin Hypercube Sampling within the prior bounds, and set 
+
+X ← ∅ and Z ← ∅ . Initialize 𝜎 𝜽 𝑃 ← ∞ .2) Repeat until converged (elementwise). While any  𝜎 𝜽 𝑃 > 𝜎 thresh 
+
+, i.e., while any component of the estimated standard deviation vector exceeds its corresponding threshold: a) Plan & deploy a sacrificial agent. Select the next trajectory (Section IV), execute it, and collect the observed path 𝒙 (𝑘 ) 
+
+> 𝑠
+
+(𝑡 ) and outcome 𝑧 (𝑘 ) .b) Update the dataset. Append 𝒙 (𝑘 ) 
+
+> 𝑠
+
+(𝑡 ) to X and 𝑧 (𝑘 ) to Z.c) Optimize and filter. For 𝑗 = 1, . . . , 𝑁 𝑝 , solve 
+
+𝜽 ( 𝑗 )∗  
+
+> 𝑃
+
+← arg min  
+
+> 𝜽
+
+L( 𝜽 ; X, Z) 
+
+(Eq. (26)), and discard any candidate with L( 𝜽 ( 𝑗 )∗  
+
+> 𝑃
+
+; X, Z) > 𝜖 L .d) Compute summary statistics. Compute 𝜇 𝜽 𝑃 and 𝜎 𝜽 𝑃 from the retained (feasible) candidates. e) Resample starting points. Form the next set of 𝑁 𝑝 initializations by keeping all retained candidates and randomly resampling (with replacement) and jittering them until 𝑁 𝑝 starting points are obtained. 3) Terminate. When all components satisfy their thresholds, return the final retained candidates as the estimate of 16 T = {𝜽 ( 𝑗 )∗  
+
+> 𝑃
+
+}.
+
+Algorithm 1 Multi-start Inference of Pursuer Parameters 
+
+Require: Number of initializations 𝑁 𝑝 , prior bounds on 𝜽 𝑃 , tolerances 𝜎 thresh and loss threshold 𝜖 L 
+
+> 1:
+
+Initialize candidate set {𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+}𝑁 𝑝  
+
+> 𝑗 =1
+
+via Latin Hypercube Sampling over prior bounds  
+
+> 2:
+
+Initialize measurement collections X ← ∅ , Z ← ∅  
+
+> 3:
+
+Initialize 𝜎 𝜽 𝑃 ← ∞ ; trial index 𝑘 ← 0 
+
+> 4:
+
+while any (𝜎 𝜽 𝑃 > 𝜎 thresh ) do  
+
+> 5:
+
+𝑘 ← 𝑘 + 1 
+
+> 6:
+
+Dispatch 𝑘 th sacrificial agent; observe 𝒙 (𝑘 ) 
+
+> 𝑠
+
+(𝑡 ) and 𝑧 (𝑘 ) 
+
+> 7:
+
+X ← X ∪ { 𝒙 (𝑘 ) 
+
+> 𝑠
+
+(𝑡 )} , Z ← Z ∪ { 𝑧 (𝑘 ) } 
+
+> 8:
+
+for 𝑗 = 1 to 𝑁 𝑝 do  
+
+> 9:
+
+𝜽 ( 𝑗 )∗  
+
+> 𝑃
+
+← arg min 𝜽 L( 𝜽 ; X, Z) ⊲ Eq. (26)  
+
+> 10:
+
+end for  
+
+> 11:
+
+Retain candidates with L( 𝜽 ( 𝑗 )∗  
+
+> 𝑃
+
+; X, Z) ≤ 𝜖 L 
+
+> 12:
+
+Compute 𝜇 𝜽 𝑃 and 𝜎 𝜽 𝑃 from the retained candidates  
+
+> 13:
+
+Resample (with replacement) from retained candidates and apply small random perturbations (jitter) until 𝑁 𝑝 
+
+candidates are obtained  
+
+> 14:
+
+end while  
+
+> 15:
+
+return Retained candidate set T = {𝜽 ( 𝑗 )∗  
+
+> 𝑃
+
+}
+
+To illustrate the mechanics of the learning procedure (rather than to evaluate performance), we include a qualitative example trial from Case 2B (unknown 𝑥 𝑃 , 𝑦 𝑃 , 𝜓 𝑃 , 𝑎, 𝑅 with noisy trajectory measurements). Figures 2 and 3 visualize how the feasible RR family contracts as additional sacrificial trials are incorporated. 17 −4 
+
+> −2
+> 0
+> 2
+> 4
+> Y
+
+1 Agent 2 Agents     
+
+> −4 −2 024
+> X
+> −4
+> −2
+> 0
+> 2
+> 4
+> Y
+
+3 Agents     
+
+> −4 −2 024
+> X
+
+4 Agents    
+
+> Sacrificial True RR Potential RR Mean RR
+
+Fig. 2 Sacrificial trajectories (blue), along with the true (red), potential (magenta), and learned mean (orange) pursuer reachable regions. 
+
+Figure 2 illustrates representative sacrificial-agent trials for increasing numbers of agents (one through four, left-to-right and top-to-bottom). The executed sacrificial trajectories are shown in blue. Also shown are the true RR (red), the family of RRs induced by the feasible parameter set T (magenta), and the RR generated by the mean estimate 
+
+𝜇 𝜽 𝑃 (orange). The envelope of feasible RRs contains the true RR, and as additional sacrificial trials are incorporated this envelope contracts toward the true RR. With a single agent, many distinct pursuer parameter vectors remain feasible and produce a wide range of admissible RRs; as the number of agents increases, inconsistent parameter hypotheses are eliminated and the feasible RR family collapses around the true RR. Similarly, Figure 3 shows the true (red) and mean (blue) of the set of estimated pursuer parameter vectors. Each optimized parameter vector is also plotted (black points), showing how the set of potential pursuer parameter vectors collapses to a single value. The resulting set of feasible pursuer parameter vectors not only supports parameter inference but also forms the basis for downstream planning; in Section V we show how these learned engagement regions can be incorporated into real-time trajectory optimization. 18 −2    
+
+> −1
+> 0
+> Pursuer X Position
+> True Value
+> Mean
+> −2
+> 0
+> 2
+> Pursuer Y Position
+> 1234
+> Num Sacrificial Agents
+> −2
+> 0
+> 2
+> Pursuer Heading
+
+Fig. 3 Learned parameter values (points) and the mean learned parameter value (blue), along with the true parameter value (red). 
+
+## IV. Sacrificial Agent Trajectory Selection 
+
+To maximize the efficiency of sacrificial agents, trajectories should be selected that will yield the greatest information learned about the pursuer’s RR (or EZ). We consider two complementary strategies: (i) a geometry-based approach that plans trajectories to maximize the dispersion of possible intercept locations around the RR shown in Section IV.A, and (ii) an information-based approach that uses the curvature of the Gauss–Newton information matrix of the loss shown in Section IV.B. 
+
+A. Boundary Interception Trajectory Selection 
+
+For the boundary assumption ( [A1-strict] ), the most informative trajectories are those that result in interceptions maximally spread around the boundary of the pursuer’s reachable region (RR). However, the true boundary is unknown to the sacrificial agents. The only available information is the current set of pursuer parameters that satisfy the loss function, denoted by T . The goal is therefore to identify sacrificial trajectories whose interception locations are distributed as widely as possible along this inferred boundary. To achieve this, we maximize the expected distance between the predicted future interception location and all previously observed interception locations. For a candidate sacrificial trajectory 𝒙 𝑠 , each potential parameter vector 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+∈ T that predicts an interception induces a predicted interception location, obtained by evaluating the RR function along 𝒙 𝑠 and identifying the first point 19 at which 𝜑 𝑅𝑅 changes sign from positive to negative. Collecting these points yields 
+
+{𝒙 ( 𝑗 ) 
+
+> hit
+
+(𝒙 𝑠 )} 𝑁 𝑝, hit ( 𝒙 𝑠 ) 
+
+> 𝑗 =1
+
+, (28) where 𝑁 𝑝, hit (𝒙 𝑠 ) is the number of parameter vectors in T that predict an interception for 𝒙 𝑠 .We summarize the predicted interception distribution for 𝒙 𝑠 by its centroid, 
+
+𝒙 hit (T , 𝒙 𝑠 ) = 1
+
+𝑁 𝑝, hit (𝒙 𝑠 )   
+
+> 𝑁 𝑝, hit (𝒙 𝑠 )
+
+∑︁ 
+
+> 𝑗 =1
+
+𝒙 ( 𝑗 ) 
+
+> hit
+
+(𝒙 𝑠 ). (29) The next sacrificial trajectory is then selected by optimizing an exploration objective over candidate trajectories; specifically, we choose 𝒙 (𝑖 +1) 
+
+> 𝑠
+
+to maximize the minimum distance between 𝒙 hit (T , 𝒙 𝑠 ) and the set of previously observed interception locations: 
+
+argmax 
+
+> 𝒙 (𝑖 +1)
+> 𝑠
+
+min  
+
+> 𝑖
+
+𝒙 hit − 𝒙 (𝑖 ) 
+
+> 𝑠
+
+(𝑡 (𝑖 ) 
+
+> 𝑓
+
+) , (30) for all trajectories 𝒙 (𝑖 ) 
+
+> 𝑠
+
+that resulted in an interception. Rather than optimizing over the entire trajectory space, we parameterize the sacrificial path with a constrained starting point and heading. Specifically, the starting point is restricted to lie on a circle of radius 𝑟 𝑠 centered at the current estimated pursuer position 𝜇 𝜽 𝑃 . A candidate trajectory is therefore completely defined by two parameters: the angle 𝛼 (𝑖 +1) specifying the starting point on the circle, and the heading 𝜓 (𝑖 +1) 
+
+> 𝑠
+
+. In practice, sacrificial agents would first travel to this starting point and then execute the prescribed straight-line trajectory; however, in this work, we assume that the agent begins directly at the trajectory’s starting position. The objective function defined above is both non-differentiable and non-convex. Consequently, we employ an exhaustive grid-based search over the two parameters that define each sacrificial trajectory. Leveraging GPU-based parallelization, this search can be executed efficiently and has produced empirically near-global solutions in all tested cases. For comparison, we also applied gradient-based optimization to the utility function. Using standard single-start initializations, the optimizer consistently converged to lower-utility solutions. We additionally initialized the gradient-based optimizer at the best grid-search point and reran the optimization; this yielded only marginal improvement, which further motivated the direct grid-based approach used here. 
+
+B. Interior Interception Trajectory Selection 
+
+Under the interior-interception assumption [A1-relaxed] , the most informative sacrificial trajectories are those that skim just outside the RR. Each sacrificial trajectory can be interpreted as an experiment probing the unknown pursuer parameters. Trajectories that remain far outside the RR are unlikely to be intercepted and thus provide little 20 discriminatory information, while trajectories that penetrate deeply into the RR are almost certainly intercepted and therefore also offer limited information for distinguishing between parameter vectors. The most informative trajectories lie near the RR boundary, where small variations in the pursuer parameters strongly influence the interception outcome. The proposed BED formulation formalizes this intuition by selecting trajectories that maximize the expected information gain about the pursuer parameters, accounting for both possible outcomes (interception and survival) and their predicted likelihoods. Because the learning loss is based on squared hinge penalties, it exhibits locally quadratic structure near active constraints. This motivates the use of a Gauss–Newton-style approximation to the loss curvature with respect to the pursuer parameters. We adopt this curvature as an information surrogate and apply a D-optimality criterion to select sacrificial trajectories that are maximally informative for parameter estimation. Given a candidate trajectory 𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, we seek to evaluate its expected information gain. For each potential pursuer vector 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+∈ T , we evaluate the RR along the trajectory 𝒙 (𝑖 +1) 
+
+> 𝑠
+
+. If any point along the trajectory lies inside the RR of the parameter vector, we declare that trajectory intercepted under that potential pursuer. This produces a binary outcome 
+
+𝑧 ( 𝑗 ) ∈ { 0, 1}, (31) indicating whether interception occurs. We also approximate the expected interception location under each potential parameter vector. Unlike the boundary-interception case, here interception is assumed to occur in the interior of the RR. We assume that the sacrificial agent is equally likely to be intercepted at any point along the portion of its trajectory lying inside the RR. The predicted interception location for parameter vector 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+is then defined as the average of the trajectory points with negative RR values, yielding 
+
+{𝒙 ( 𝑗 ) 
+
+> hit
+
+}𝑁 𝑃 
+
+> 𝑗 =1
+
+. (32) We compute the empirical interception probability across the set of all inferred parameter vectors as 
+
+ˆ𝑝 = 1
+
+𝑁 𝑝 𝑁 𝑝 ∑︁ 
+
+> 𝑗 =1
+
+𝑧 ( 𝑗 ) , (33) and the average predicted interception location as 
+
+𝒙 hit (T , 𝒙 (𝑖 +1) 
+
+> 𝑠
+
+) =
+
+Í𝑁 𝑝  
+
+> 𝑗 =1
+
+𝑧 ( 𝑗 ) 𝒙 ( 𝑗 )
+
+> hit
+
+Í𝑁 𝑝  
+
+> 𝑗 =1
+
+𝑧 ( 𝑗 ) . (34) To compute the expected information gain we construct two hypothetical trajectories: an intercepted trajectory 21 𝒙 (𝑖 +1) 
+
+> 𝑠, hit
+
+(𝑡 ) that terminates at the average interception location 𝒙 hit (T , 𝒙 (𝑖 +1) 
+
+> 𝑠
+
+), and a non-intercepted trajectory 𝒙 (𝑖 +1) 
+
+> 𝑠, miss
+
+(𝑡 )
+
+that continues unimpeded. The information contribution for the intercepted case corresponds to the interception-consistency loss in (22) . For the intercepted trajectory, we evaluate the RR at the average hit location and define the informativeness weight 
+
+𝜔 hit = ReLU  𝜑 𝑅𝑅 (𝒙 hit ; 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) − 𝜀 , (35) which quantifies the degree of inconsistency between the parameter vector prediction and the observed interception outcome. When the predicted hit location lies strictly within the RR, 𝜔 hit = 0 and the observation is consistent with the parameters, contributing no information under the adopted loss. When the predicted hit lies outside the RR, 𝜔 hit 
+
+becomes positive and increases with the degree of violation. The gradient of the RR with respect to the pursuer parameters at the hit location is 
+
+𝑔 hit = ∇𝜽 𝑃 𝜑 𝑅𝑅 (𝒙 hit ; 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+). (36) Under the squared-hinge loss, the gradient of the corresponding loss term is proportional to 𝜔 hit 𝑔 hit . We therefore define a loss-induced information surrogate via the outer product of this gradient, yielding a weighted Gauss–Newton approximation to the curvature: 
+
+𝐼 hit (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) = 𝜔 2 
+
+> hit
+
+𝑔 hit 𝑔 ⊤
+
+> hit
+
+. (37) For the missed trajectory 𝒙 (𝑖 +1) 
+
+> 𝑠, miss
+
+(𝑡 ), we compute the information contribution corresponding to the trajectory loss in (21). We discretize the trajectory at time points 𝑡 𝑖 ∈ 𝒕 = {𝑡 1, . . . , 𝑡 𝑁 𝑡 } and evaluate the hinge violation along the path: 
+
+𝜔 𝑖 = ReLU  − 𝜑 𝑅𝑅 (𝒙 (𝑖 +1) 
+
+> 𝑠, miss
+
+(𝑡 𝑖 ), 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) − 𝜀 . (38) The scalar weight 𝜔 𝑖 quantifies the degree of parameter–data inconsistency for the survival outcome, with larger values indicating stronger violation of the requirement that a surviving trajectory remain outside the RR. We then select the maximally violating point along the trajectory, 
+
+𝑖 ★ = arg max  
+
+> 𝑖
+
+𝜔 𝑖 , (39) and the corresponding gradient 
+
+𝑔 miss = ∇𝜽 𝑃 𝜑 𝑅𝑅 (𝒙 (𝑖 +1) 
+
+> 𝑠, miss
+
+(𝑡 𝑖 ★ ), 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+). (40) 22 The corresponding Gauss–Newton curvature surrogate is 
+
+𝐼 miss (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) = 𝜔 2 
+
+> 𝑖 ★
+
+𝑔 miss 𝑔 ⊤
+
+> miss
+
+. (41) The expected information increment for trajectory 𝒙 (𝑖 +1) 
+
+> 𝑠
+
+under parameters 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+is 
+
+Δ𝐼 (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) = ˆ𝑝 𝐼 hit (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) + ( 1 − ˆ𝑝 ) 𝐼 miss (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+). (42) Averaging across the ensemble yields the expected information increment used for trajectory selection: 
+
+Δ𝐼 avg (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, T ) = 1
+
+𝑁 𝑝 𝑁 𝑝 ∑︁ 
+
+> 𝑗 =1
+
+Δ𝐼 (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+). (43) For past (realized) trajectories, the outcome is known. The information increment for a single trajectory 𝒙 (𝑖 ) 
+
+> 𝑠
+
+and parameter vector 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+is therefore 
+
+Δ𝐼 past (𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝑧 (𝑖 ) , 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) = 𝑧 (𝑖 ) 𝐼 hit (𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) + ( 1 − 𝑧 (𝑖 ) ) 𝐼 miss (𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+). (44) Here, the true interception location is used rather than the predicted location. Averaging over the set of all parameter vectors yields 
+
+Δ𝐼 avg,past (𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝑧 (𝑖 ) , T ) = 1
+
+𝑁 𝑝 𝑁 𝑝 ∑︁ 
+
+> 𝑗 =1
+
+Δ𝐼 past (𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝑧 (𝑖 ) , 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+), (45) and accumulating over all past trajectories gives 
+
+𝐼 past (X , Z, T ) =
+
+> 𝑁 𝑠
+
+∑︁ 
+
+> 𝑖 =1
+
+Δ𝐼 avg,past (𝒙 (𝑖 ) 
+
+> 𝑠
+
+, 𝑧 (𝑖 ) , T ) . (46) We now have both the accumulated curvature surrogate from past trajectories and the expected change induced by executing the candidate trajectory 𝒙 (𝑖 +1) 
+
+> 𝑠
+
+. We compute the D-optimality score 
+
+𝐷 gain = log det 
+
+
+
+𝐼 past + Δ𝐼 avg (𝒙 (𝑖 +1) 
+
+> 𝑠
+
+)
+
+
+
+− log det  𝐼 past 
+
+ . (47) The next sacrificial trajectory is selected by maximizing this D-optimality score, yielding the trajectory that maximally increases the curvature surrogate and thus steepens the loss landscape under the hinge-based learning objective. As in the boundary-interception planner, we restrict the search space by constraining the trajectory start location to lie on a circle. Each candidate trajectory is parameterized by two variables: the angular start position 𝛼 (𝑖 +1) and the 23 initial heading 𝜓 (𝑖 +1) 
+
+> 𝑠
+
+. The trajectory defined by these parameters that maximizes the D-score is selected for execution. While this section focused on selecting sacrificial trajectories to refine pursuer estimates, the resulting learned feasible-parameter set can also be used for motion planning of high-priority agents requiring safe paths. The following section demonstrates how the learned engagement zones are used to compute safe, time-optimal trajectories. 
+
+## V. Path Planning with Learned Feasible Engagement Zones 
+
+In this section, we demonstrate how the learned set of feasible pursuer parameter vectors T , can be directly leveraged for real-time path planning. By constructing EZs for each parameter vector in T , we form a threat map that captures all pursuer parameters consistent with the observations. The proposed planning algorithm then computes a trajectory that safely navigates around these EZs, ensuring that the evader remains outside every learned, feasible interception region. This integration connects parameter learning with trajectory planning and enables the generation of shorter paths that satisfy safety constraints. ‘ We parameterize the evader’s trajectory using a B-spline representation and employ a nonlinear optimizer to minimize the total path time, which is equivalent to the path length, since the evader travels at constant velocity. Kinematic feasibility is enforced through constraints on maximum turn rate and curvature to ensure the resulting trajectory is flyable. Additionally, the path is constrained to remain outside all EZs generated from the all pursuer parameter vectors in T , guaranteeing safety against every learned pursuer configuration. We represent the evader trajectory with a B-spline curve due to its smoothness, differentiability, and local support, which together yield sparse Jacobians well-suited to gradient-based optimization. Let the control points be 
+
+C = (𝒄 1, 𝒄 2, . . . , 𝒄 𝑁 𝑐 ), and define the knot vector 𝒕 𝑘 =  𝑡 0 − 𝑘 Δ𝑡 , . . . , 𝑡 0 − Δ𝑡 , 𝑡 0, 𝑡 0 + Δ𝑡 , . . . , 𝑡 𝑓 , 𝑡 𝑓 + Δ𝑡 , . . . , 𝑡 𝑓 + 𝑘 Δ𝑡 
+
+,where 𝑡 0 and 𝑡 𝑓 are the start and end times, 𝑘 is the spline order, 𝑁 𝑘 is the number of internal knots, and Δ𝑡 = (𝑡 𝑓 −𝑡 0)/ 𝑁 𝑘 
+
+is the uniform knot spacing. The position at time 𝑡 is a weighted sum of basis functions: 
+
+𝒑 (𝑡 ) =
+
+> 𝑁 𝑐
+
+∑︁ 
+
+> 𝑖 =1
+
+𝐵 𝑖,𝑘 (𝑡 ) 𝒄 𝑖 , (48) with {𝐵 𝑖,𝑘 } defined recursively via the Cox–de Boor construction [27]. We seek a time-optimal (equivalently, length-optimal under constant speed) trajectory from an initial location 𝒙 0 to a goal location 𝒙 𝑓 . The set of potential pursuer parameter vectors T induces EZ constraints that require the trajectory to avoid capture. Trajectory feasibility is enforced using a unicycle kinematic model with bounded turn rate and curvature. 24 The resulting nonlinear optimization is 
+
+(C opt , 𝑡 𝑓 opt ) = arg min  
+
+> C, 𝑡 𝑓
+
+𝑡 𝑓 , (49a) s.t. 𝒑 (0) = 𝒙 0, (49b) 
+
+𝒑 (𝑡 𝑓 ) = 𝒙 𝑓 , (49c) 
+
+𝜑 EZ ( 𝒑 (𝒕 𝑠 ), 𝜓 ( 𝒑 (𝒕 𝑠 )) , 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+) ≥ 0; 𝜽 ( 𝑗 ) 
+
+> 𝑃
+
+∈ T , (49d) 
+
+𝑣 (𝒕 𝑠 ) = 𝑣 𝐸 , (49e) 
+
+𝑢 lb ≤ 𝑢 𝐸 (𝒕 𝑠 ) ≤ 𝑢 ub , (49f) 
+
+|𝜅 𝐸 (𝒕 𝑠 )| ≤ 𝜅 ub , (49g) where 𝜓 ( 𝒑 (𝑡 )) = atan2 ( ¤ 𝑝 𝑦 (𝑡 ), ¤𝑝 𝑥 (𝑡 )) is the heading of the trajectory, 𝒕 𝑠 = {0, Δ𝑡 , 2Δ𝑡 , . . . , 𝑡 𝑓 } are the discrete times to enforce the constraints at with Δ𝑡 = 𝑡 𝑓 /𝑁 𝑡 . Constraints (49b) – (49c) set the boundary conditions; (49d) encodes avoidance of all EZs generated by T (recall 𝜑 EZ (𝒙 𝐸 , 𝜓 𝐸 , 𝜽 𝑃 ) ≤ 0 means the evader is capturable); and (49e) – (49g) ensure kinematic feasibility. Under the unicycle model, 
+
+𝑣 (𝑡 ) = ∥ ¤ 𝒑 (𝑡 )∥ 2, 𝑢 (𝑡 ) = ¤𝒑 (𝑡 ) × ¥ 𝒑 (𝑡 )∥ ¤ 𝒑 (𝑡 )∥ 22
+
+, 𝜅 (𝑡 ) = 𝑢 (𝑡 )
+
+𝑣 (𝑡 ) . (50) We solve (49) using the interior-point solver IPOPT [ 25 ]. All required derivatives (objective and constraints) are obtained via automatic differentiation in JAX [ 26 ], enabling efficient assembly of sparse Jacobians and Hessian approximations. 
+
+## VI. Results 
+
+In this section, we present the results of the pursuer-parameter learning algorithm. We conduct 500 Monte Carlo (MC) simulations using 500 distinct pursuer parameter vectors, each sampled uniformly from the range [𝜽 min  
+
+> 𝑃
+
+, 𝜽 max  
+
+> 𝑃
+
+].The same parameter vectors are used across all evaluated cases to ensure consistent comparison. For each run, we compute the absolute error between the true and estimated pursuer parameter values. In addition, we evaluate two geometric consistency metrics based on the resulting RRs. First, we report the ratio between the area of the true RR and the area of the union of all RRs generated from the feasible set of learned parameter vectors. Second, we compute the percentage of the true RR that is covered by this union. Both metrics are obtained by numerically integrating over the RR areas. 25 A. Boundary Interception 
+
+We report the absolute error from the estimated mean value of the pursuer’s parameters and the true value. For Case 1, only the location and orientation of the pursuer are learned. Figure 4 shows the median error for each learned parameter for both the noise free (1A, blue) and noisy (1B, orange) cases. In this and in subsequent plots, the gray and orange shaded regions represent the interquartile range (IQR) for the noise free and noisy cases, respectively. As can be seen, it typically takes four sacrificial agents to learn the position and orientation of the pursuer in the noise free case, and five agents in the noisy case. 1 3 5 7 9 11 13 15 
+
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+X Position Error         
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Y Position Error         
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Heading Error 
+
+> No Noise
+> Noise
+
+Fig. 4 Median absolute error (solid) and IQR (shaded) across 500 MC runs for Cases 1A and 1B under the boundary-interception assumption. Blue indicates no measurement noise, and orange indicates noisy measurements. 
+
+Figure 5 shows results for Cases 2A (blue) and 2B (orange) under the boundary interception assumption. The plots report the median absolute error between the true and estimated pursuer parameters. In the noise-free case, roughly five sacrificial agents are sufficient to recover accurate parameter estimates. With noisy measurements, the error decreases after about seven agents, with reliable convergence achieved after approximately nine agents. Figure 6 shows Cases 3A (blue) and 3B (orange) under the boundary interception assumption. Plotted is the median absolute error between the true and estimated values of each pursuer parameter, with shaded regions indicating the interquartile range across 500 Monte Carlo trials. In the noise-free case, parameter errors converge after about five sacrificial agents. With noisy trajectories, the errors decrease more gradually, requiring approximately seven agents for reliable convergence across all parameters. Even though there is an extra unknown variable compared to Case 2, it takes around the same number of agents to converge because there is an extra measurement (launch time) in this case. Figure 7 shows the size of the outer union of the pursuer’s RR across all feasible parameter vectors T , normalized by the size of the true RR. The true RR area is computed by numerically integrating the RR generated from the true pursuer parameters. For each iteration, the outer union of RRs from all currently feasible parameter vectors is also numerically integrated, and the ratio of the two areas is reported. A value of one indicates perfect agreement between the union and the true RR. Blue corresponds to the noise-free case and orange to the noisy case, with shaded regions 26 1 3 5 7 9 11 13 15 
+
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+X Position Error         
+
+> 1357911 13 15
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Y Position Error         
+
+> 1357911 13 15
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Heading Error        
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+Turn Radius Error         
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Range Error 
+
+> No Noise
+> Noise
+
+Fig. 5 Median absolute error (solid) and IQR (shaded) across 500 runs for Cases 2A and 2B under the boundary-interception assumption. Blue indicates no measurement noise, and orange indicates noisy measurements. Coverage Threshold Case 1A Case 1B Case 2A Case 2B Case 3A Case 3B 
+
+95% 99.71% 98.62% 97.26% 98.71% 90.74% 92.60% 90% 99.80% 99.32% 98.45% 99.44% 94.20% 96.79% 85% 100.00% 99.61% 99.10% 99.65% 95.71% 97.97% 
+
+Table 2 Percentage of deployment steps for which the outer union of feasible RRs contained at least the indicated fraction of the true RR area. 
+
+denoting the interquartile range across 500 Monte Carlo runs. The red dashed line marks the true RR size. In all cases, the union ratio decreases rapidly with the number of sacrificial agents, converging to a single consistent set after roughly four to five agents in Case 1, and five to six in Cases 2 and 3. Notably, while noisy settings reduce parameter accuracy more gradually, the overall union size still shrinks quickly, demonstrating robustness of the approach. Table 2 summarizes how consistently the outer union of all feasible RRs contained the true RR during learning. At each deployment step in every MC run, the ratio between the area of the true RR and the portion of that area enclosed by the current outer union was computed by numerically integrating the intersection of the true RR and outer union. A step was counted as satisfying a given coverage threshold (e.g., 95%) if at least that fraction of the true RR area was contained within the union. The table entries show the percentage of all deployment steps across all runs for which the coverage exceeded each threshold. The results demonstrate that in Cases 1A–2B, the learned outer union contained at least 95% of the true RR area in more than 98% of all evaluated steps, confirming that the set of inferred parameter vectors nearly always 27 1 3 5 7 9 11 13 15 
+
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+X Position Error         
+
+> 1357911 13 15
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Y Position Error         
+
+> 1357911 13 15
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Heading Error        
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+Speed Error         
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Turn Radius Error         
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Range Error 
+
+> No Noise
+> Noise
+
+Fig. 6 Median absolute error (solid) and IQR (shaded) across 500 runs for Cases 3A and 3B under the boundary-interception assumption. Blue indicates no measurement noise, and orange indicates noisy measurements. 
+
+produced complete geometric containment of the true RR. Coverage decreases modestly in Cases 3A and 3B due to the higher-dimensional parameter inference and measurement noise, yet the union still covered at least 95% of the true RR in roughly 91% of all steps, showing that the algorithm maintains high geometric fidelity throughout learning. 
+
+B. Interior Interception 
+
+In this section we report results using the [A1-relaxed] interior assumption. We use the same 500 MC runs to validate the learning algorithms. In general, the boundary assumptions allows the pursuer parameters to be learned faster than the interior interception assumption. This can be seen for Cases 1A and 1B with the [A1-relaxed] interior assumption error plots shown in Figure 8. Under these assumptions it takes around nine sacrificial agents to learn the pursuer’s parameters in the noise free case (blue) and 11-12 in the noisey case (orange). It is important to note that the chart shows total number of agents deployed, not intercepted. Under the interior-interception case, the trajectory-selection objective intentionally favors trajectories that skim just outside the RR boundary, as these produce the strongest sensitivity of the loss to the pursuer parameters. Consequently, many sacrificial agents are not intercepted. If surviving agents can be reused, the total number of agents required can be substantially reduced. Figure 9 shows the estimation error for Cases 2A (blue) and 2B (orange) under the interior interception assumption. As shown, approximately 16–17 sacrificial agents are required for convergence in the noise-free case (blue) and 19–20 agents in the noisy case (orange). Note that the X-axis indicates the number of deployed agents, not the number intercepted. If agents can be reused after surviving an engagement, the required number of deployments 28 1 3 5 7 9 11 13 15 
+
+> Number of Sacrificial Agents
+> 1
+> 3
+> 5
+> 7
+> 9
+> 11
+> 13
+> 15
+> Size of Union
+
+Case 1        
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 1
+> 3
+> 5
+> 7
+> 9
+> 11
+> 13
+> 15
+
+Case 2        
+
+> 1357911 13 15
+> Number of Sacrificial Agents
+> 1
+> 3
+> 5
+> 7
+> 9
+> 11
+> 13
+> 15
+
+Case 3 
+
+> No Noise
+> Noise
+
+Fig. 7 Size of the outer union of the RRs for all feasible sets of pursuer parameters under the boundary-interception assumption. 1 3 5 7 9 11 13 15 17 19 21 23 25 
+
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+X Position Error       
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Y Position Error       
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Heading Error 
+
+> No Noise
+> Noise
+
+Fig. 8 Median absolute error (solid) and IQR (shaded) across 500 runs for Cases 1A and 1B under the interior-interception assumption. Blue indicates no measurement noise, and orange indicates noisy measurements. 
+
+would decrease accordingly. The interior-interception assumption makes each trajectory less informative than in the boundary-interception case, which is reflected in the larger number of sacrificial agents needed for convergence. Figure 10 shows the absolute error for Cases 3A (blue) and 3B (orange) under the interior-interception assumption. Interestingly, in the noise-free case (blue) the error decreases faster than in the noise-free Case 2A (Figure 9), even though more parameters are being estimated. This occurs because, under the interior-interception assumption, the binary interception outcome provides less information than observing the pursuer’s launch time. In Case 3, the launch time is assumed to be measured, and this additional information significantly accelerates error reduction. In contrast, the noisy case (orange) shows that measurement noise limits the ability to reduce uncertainty in the estimated turn radius and range. Overall, convergence occurs after approximately 7–8 sacrificial agents in the noise-free case and 10–11 agents in the noisy case. Figure 11 compares the area of the outer union of all feasible learned RRs to the area of the true RR, both computed via numerical integration. The results show that even though the estimation error in the noisy cases (orange) does not converge exactly to zero, the area of the outer union nevertheless approaches that of the true RR. This indicates that the 29 1 3 5 7 9 11 13 15 17 19 21 23 25 
+
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+X Position Error       
+
+> 1357911 13 15 17 19 21 23 25
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Y Position Error       
+
+> 1357911 13 15 17 19 21 23 25
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Heading Error      
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+Turn Radius Error       
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Range Error 
+
+> No Noise
+> Noise
+
+Fig. 9 Median absolute error (solid) and IQR (shaded) across 500 runs for Cases 2A and 2B under the interior-interception assumption. Blue indicates no measurement noise, and orange indicates noisy measurements. Coverage Threshold Case 1A Case 1B Case 2A Case 2B Case 3A Case 3B 
+
+95% 98.72% 99.05% 99.42% 99.09% 96.66% 93.07% 90% 99.67% 99.70% 99.76% 99.71% 98.24% 96.11% 85% 99.85% 99.91% 99.89% 99.82% 98.98% 97.98% 
+
+Table 3 Percentage of deployment steps for which the outer union of feasible RRs contained at least the indicated fraction of the true RR area. 
+
+learned feasible sets continue to contract toward the true reachable region, maintaining conservative geometric coverage even when the underlying parameter estimates remain imperfect. This behavior is further quantified in Table 3, which reports the percentage of deployment steps across all MC runs for which the outer union of feasible RRs contained at least 95%, 90%, or 85% of the true RR area. The consistently high values across all cases confirm that the learned feasible sets almost always fully covered the true reachable region throughout learning, even under noisy conditions. 
+
+C. Path Planner 
+
+In this section, we present results for the safe path-planning algorithm described in Section V. We performed 50 MC runs for all twelve test cases—six under the boundary-interception assumption and six under the interior-interception assumption. For each case, we report the normalized path time , defined as the ratio between the time of a learned safe trajectory and the time of the optimal trajectory computed with perfect knowledge of the pursuer. A value of one 30 1 3 5 7 9 11 13 15 17 19 21 23 25 
+
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+X Position Error       
+
+> 1357911 13 15 17 19 21 23 25
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Y Position Error       
+
+> 1357911 13 15 17 19 21 23 25
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Heading Error      
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Absolute Error
+
+Speed Error       
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Turn Radius Error       
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+
+Range Error 
+
+> No Noise
+> Noise
+
+Fig. 10 Median absolute error (solid) and IQR (shaded) across 500 runs for Cases 3A and 3B under the interior-interception assumption. Blue indicates no measurement noise, and orange indicates noisy measurements. 
+
+indicates that the learning and planning algorithms together produced a trajectory as efficient as the one achievable with perfect information. For comparison, we also include the path time obtained when no sacrificial agents are deployed. In this case, because no pursuer parameters have been learned, the only way to guarantee safety is to plan a trajectory that remains entirely outside any location that the pursuer could possibly reach. This region corresponds to the box representing all possible initial positions of the pursuer, defined by the parameter bounds 𝜽 min  
+
+> 𝑃
+
+and 𝜽 max  
+
+> 𝑃
+
+. It is then extended by the pursuer’s range (known in Case 1) and by the maximum possible range (from 𝜽 max  
+
+> 𝑃
+
+) for Cases 2 and 3, to encompass any location that the pursuer could potentially reach. Figure 12 shows the ratio between the path length of the optimal trajectory (planned with perfect knowledge) and the safe trajectory planned around all EZs generated from the current learned set of pursuer parameter vectors. The plots show the median and IQR values across 50 MC runs with varying pursuer parameters. Each boundary-interception case is shown, with the noise-free (blue) and noisy (orange) results indicated. The largest decrease in path time across all cases occurs after the first sacrificial agent, as the pursuer’s location becomes constrained to be near the observed interception point. In Case 1, the path length decreases more sharply after the first agent because the pursuer’s range is known, producing a circular region of radius 𝑅 representing all possible pursuer locations. In Cases 2 and 3, where the range must be learned, the first sacrificial agent still yields a significant reduction in path length. As shown, the optimal path is typically 31 1 3 5 7 9 11 13 15 17 19 21 23 25 
+
+> Number of Sacrificial Agents
+> 1
+> 3
+> 5
+> 7
+> 9
+> 11
+> 13
+> 15
+> Size of Union
+
+Case 1      
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 1
+> 3
+> 5
+> 7
+> 9
+> 11
+> 13
+> 15
+
+Case 2      
+
+> 1357911 13 15 17 19 21 23 25
+> Number of Sacrificial Agents
+> 1
+> 3
+> 5
+> 7
+> 9
+> 11
+> 13
+> 15
+
+Case 3 
+
+> No Noise
+> Noise
+
+Fig. 11 Size of the outer union of the RR for all feasible sets of pursuer parameters under the interior-interception assumption. 0 2 4 6 8
+
+> Number of Sacrificial Agents
+> 1.0
+> 1.1
+> 1.2
+> 1.3
+> 1.4
+> 1.5
+> Normalized Path Time
+
+Case 1      
+
+> 02468
+> Number of Sacrificial Agents
+> 1.0
+> 1.1
+> 1.2
+> 1.3
+> 1.4
+> 1.5
+
+Case 2      
+
+> 02468
+> Number of Sacrificial Agents
+> 1.0
+> 1.1
+> 1.2
+> 1.3
+> 1.4
+> 1.5
+
+Case 3 
+
+> No Noise
+> Noise
+
+Fig. 12 Median ratio between the optimal path length and the path length of the safe path planned around all feasible EZs for the boundary-interception assumption. 
+
+achieved within three to four agents in Case 1, four to five agents in Case 2, and three to four agents in Case 3. These results demonstrate that even before the pursuer parameters are precisely learned, the safe path-planning algorithm substantially reduces path time while maintaining safety. Figure 13 shows the ratio between the optimal path time—computed using the true pursuer parameters—and the path time of trajectories planned using the current set of learned pursuer parameter vectors under the interior-interception assumption. Although more sacrificial agents are typically required in the interior-interception case to fully learn the pursuer parameters, the path times of the planned trajectories decrease substantially even with only a few agents. In Case 1, the path time drops sharply with a single agent, and with two or three agents it approaches the optimal value achievable with perfect information. In Case 2, more agents are needed to achieve comparable performance, with around five or six agents required to reduce the path time to within approximately 5% of optimal. In Case 3, where additional parameters are unknown but an extra measurement is available, similar improvements are seen with about four or five agents. Overall, these results indicate that while many sacrificial agents may be required to fully collapse the the set of 32 0 2 4 6 8
+
+> Number of Sacrificial Agents
+> 1.0
+> 1.1
+> 1.2
+> 1.3
+> 1.4
+> 1.5
+> Normalized Path Time
+
+Case 1      
+
+> 02468
+> Number of Sacrificial Agents
+> 1.0
+> 1.1
+> 1.2
+> 1.3
+> 1.4
+> 1.5
+
+Case 2      
+
+> 02468
+> Number of Sacrificial Agents
+> 1.0
+> 1.1
+> 1.2
+> 1.3
+> 1.4
+> 1.5
+
+Case 3 
+
+> No Noise
+> Noise
+
+Fig. 13 Median ratio between the optimal path length and the path length of the safe path planned around all feasible EZs for the interior-interception assumption. 
+
+learned parameter vectors, significant performance gains can be achieved much earlier. Even a single agent can markedly reduce the safe path time, demonstrating the practical benefit of limited early learning. 
+
+## VII. Conclusion 
+
+This paper presented a unified learning framework for pursuit–evasion scenarios in which autonomous agents must infer adversary capabilities from sparse interaction outcomes in order to plan safe trajectories. The method establishes a consistent geometric foundation for interpreting sacrificial-agent outcomes by enforcing that survived trajectories remain outside the RR and intercepted ones terminate on or within it. Two formulations were developed: a boundary-interception case that assumes interception at the RR boundary and an interior-interception case that relaxes this constraint. For each, tailored loss functions were derived and optimized with gradient-based methods using automatic differentiation through the RR model. A multi-start inference strategy was implemented using IPOPT to address the nonconvexity of the learning problem and prevent convergence to local minima. The ensemble of feasible, learned RRs progressively contracts as more sacrificial trajectories are observed. Two complementary methods for selecting sacrificial trajectories were presented. The first is a heuristic approach that maximizes the expected spread of interception locations along the RR boundary, promoting uniform exploration of the feasible set. The second is an information-theoretic method based on Bayesian experimental design that selects the next trajectory by maximizing the 𝐷 -score (log-determinant) of the expected Gauss–Newton information surrogate, choosing paths that most increase the curvature of the loss landscape. The heuristic method is used in the boundary-interception case, where interception locations are assumed to lie on the RR boundary and uniform boundary coverage is desirable, whereas the BED method is used in the interior-interception case, where trajectories must be selected to maximize sensitivity of the loss to model parameters. 33 Monte Carlo simulations over hundreds of randomized pursuer parameter vectors demonstrated that the method rapidly converges to accurate estimates even under measurement noise. In boundary-interception cases, roughly five to seven sacrificial agents were sufficient for full parameter convergence, while the interior-interception cases required slightly more trajectories but provided robustness when fewer intercepts occurred. Across all cases, the learned feasible RRs maintained over 95% geometric coverage of the true RR in more than 94% of all deployment steps, confirming both convergence and physical consistency of the learned models. We also demonstrate that safe paths can be effectively planned using the learned set of pursuer parameter vectors, even before the parameter set collapses to full agreement. As shown, the use of even a single sacrificial agent can substantially reduce the safe planned path length. With additional agents, the planned paths become progressively shorter, approaching the optimal path length achievable with perfect knowledge of the pursuer parameters. This reveals a tradeoff between the number of sacrificial agents deployed the planned path length. The proposed framework unifies geometric reachability modeling with data-driven inference, enabling pursuer characteristics to be learned directly from binary engagement outcomes. By coupling physically grounded RR models with actively selected sacrificial trajectories, the method transforms sparse interception data into actionable information about adversary capability. Several limitations of the present framework should be acknowledged. We assume a stationary pursuer launch point, deterministic kinematic models, and known evader behavior. The interior-interception model further assumes a simplified capture distribution along the interior of the reachable region. In addition, sensing effects such as detection uncertainty, occlusion, and adversarial adaptation are not modeled. These assumptions are intentional in order to establish a clear geometric and algorithmic foundation; relaxing them to incorporate mobility, probabilistic interception, and richer sensing models represents an important direction for future work. Future work will extend this framework along several dimensions. First, more realistic interaction models can be incorporated by replacing the deterministic interception assumptions with probabilistic capture models that account for sensing uncertainty, seeker dynamics, and engagement stochasticity. Second, the current assumption of a stationary pursuer can be relaxed to allow mobile or adaptive adversaries, enabling learning and planning in dynamic environments. Finally, richer sacrificial-agent behaviors—such as curved trajectories, coordinated multi-agent probing, and closed-loop adaptive exploration—may substantially improve information efficiency relative to the straight-line probes considered here. 
+
+## Acknowledgments 
+
+This work was supported by the NSF IUCRC Phase I: Center for Autonomous Air Mobility and Sensing (CAAMS) under Award No. 2139551. Portions of this manuscript were refined and edited using OpenAI’s ChatGPT model (GPT-5). The tool was 34 employed for language polishing, LaTeX and Python code assistance, and to help organize and clarify research ideas. All technical content, algorithms, and conclusions were developed, verified, and approved by the authors. 
+
+## References 
+
+[1] Weintraub, I. E., Von Moll, A., Carrizales, C. A., Hanlon, N., and Fuchs, Z. E., “An Optimal Engagement Zone Avoidance Scenario in 2-D,” AIAA SCITECH 2022 Forum , 2022, p. 1587. [2] Dillon, P. M., Zollars, M. D., Weintraub, I. E., and Von Moll, A., “Optimal Trajectories for Aircraft Avoidance of Multiple Weapon Engagement Zones,” Journal of Aerospace Information Systems , Vol. 20, No. 8, 2023, pp. 520–525. [3] Wolek, A., Weintraub, I. E., Von Moll, A., Casbeer, D., and Manyam, S. G., “Sampling-Based Risk-Aware Path Planning Around Dynamic Engagement Zones,” arXiv preprint arXiv:2403.05480 , 2024. [4] Von Moll, A., and Weintraub, I., “Basic engagement zones,” Journal of Aerospace Information Systems , 2024, pp. 1–7. [5] Isaacs, R., “Differential Games, a Mathematical Theory with Applications to Optimization,” , 1965. [6] Dubins, L. E., “On curves of minimal length with a constraint on average curvature, and with prescribed initial and terminal positions and tangents,” American Journal of mathematics , Vol. 79, No. 3, 1957, pp. 497–516. [7] Chapman, T., Weintraub, I. E., Von Moll, A., and Garcia, E., “Engagement Zones for a Turn Constrained Pursuer,” 2025 International Conference on Unmanned Aircraft Systems (ICUAS) , IEEE, 2025, pp. 763–768. [8] Chapman, T., Von Moll, A., and Weintraub, I. E., “Safe Navigation in the Presence of Range-Limited Pursuers,” arXiv preprint arXiv:2509.04258 , 2025. [9] Stagg, G., and Peterson, C. K., “Probabilistic Weapon Engagement Zones,” 2025 American Control Conference (ACC) , IEEE, 2025, pp. 2888–2894. [10] Stagg, G., and Coauthors, “Probabilistic Weapon Engagement Zones for a Turn Constrained Pursuer (PLACEHOLDER),” arXiv preprint , Vol. arXiv:2501.12345, 2025. Under review. [11] Stagg, G., and Peterson, C. K., “Cooperative Multi-Agent Path Planning for Heterogeneous UAVs in Contested Environments,” 
+
+arXiv preprint arXiv:2509.02483 , 2025. [12] Likhachev, M., and Stentz, A., “Path Clearance,” IEEE Robotics & Automation Magazine , Vol. 16, No. 2, 2009, pp. 62–72. https://doi.org/10.1109/MRA.2009.932525. [13] Likhachev, M., and Stentz, A., “Information value-driven approach to path clearance with multiple scout robots,” 2008 IEEE International Conference on Robotics and Automation , 2008, pp. 2651–2656. https://doi.org/10.1109/ROBOT.2008.4543612. [14] Cesare, K., Skeele, R., Yoo, S.-H., Zhang, Y., and Hollinger, G., “Multi-UAV exploration with limited communication and battery,” 2015 IEEE international conference on robotics and automation (ICRA) , IEEE, 2015, pp. 2230–2235. 
+
+35 [15] Duggan, C. A., Wolfe, K. C., Woosley, B., Kobilarov, M., and Moore, J., “Uncertainty-Aware Planning for Heterogeneous Robot Teams using Dynamic Topological Graphs and Mixed-Integer Programming,” , 2025. URL https://arxiv.org/abs/2310.08396. [16] Dantas, J. P., Costa, A. N., Geraldo, D., Maximo, M. R., and Yoneyama, T., “Weapon engagement zone maximum launch range estimation using a deep neural network,” Brazilian Conference on Intelligent Systems , Springer, 2021, pp. 193–207. [17] Dantas, J. P. A., Geraldo, D., Medeiros, F. L. L., Maximo, M. R. O. A., and Yoneyama, T., “Real-Time Surface-to-Air Missile Engagement Zone Prediction Using Simulation and Machine Learning,” , 2023. URL https://arxiv.org/abs/2311.11905. [18] Wilson, A. D., and Murphey, T. D., “Maximizing Fisher information using discrete mechanics and projection-based trajectory optimization,” 2015 IEEE International Conference on Robotics and Automation (ICRA) , IEEE, 2015, pp. 2403–2409. [19] Kaya, C. Y., “Observer path planning for maximum information,” Optimization , Vol. 71, No. 4, 2022, pp. 1097–1116. [20] Overstall, A. M., “Properties of Fisher information gain for Bayesian design of experiments,” Journal of Statistical Planning and Inference , Vol. 218, 2022, pp. 138–146. [21] Prangle, D., Harbisher, S., and Gillespie, C. S., “Bayesian experimental design without posterior calculations: An adversarial approach,” Bayesian Analysis , Vol. 18, No. 1, 2023, pp. 133–163. [22] Marchant, R., and Ramos, F., “Bayesian optimisation for informative continuous path planning,” 2014 IEEE International Conference on Robotics and Automation (ICRA) , IEEE, 2014, pp. 6136–6143. [23] Francis, G., Ott, L., Marchant, R., and Ramos, F., “Occupancy map building through bayesian exploration,” The International Journal of Robotics Research , Vol. 38, No. 7, 2019, pp. 769–792. [24] Morere, P., Marchant, R., and Ramos, F., “Sequential Bayesian optimization as a POMDP for environment monitoring with UAVs,” 2017 IEEE International Conference on Robotics and Automation (ICRA) , IEEE, 2017, pp. 6381–6388. [25] Wächter, A., and Biegler, L. T., “On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear programming,” Mathematical programming , Vol. 106, No. 1, 2006, pp. 25–57. [26] Bradbury, J., Frostig, R., Hawkins, P., Johnson, M. J., Leary, C., Maclaurin, D., Necula, G., Paszke, A., VanderPlas, J., Wanderman-Milne, S., and Zhang, Q., “JAX: composable transformations of Python+NumPy programs,” , 2018. URL http://github.com/google/jax. [27] Cox, M. G., “The numerical evaluation of B-splines,” IMA Journal of Applied mathematics , Vol. 10, No. 2, 1972, pp. 134–149. 
+
+36

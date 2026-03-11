@@ -1,0 +1,814 @@
+Title: Modeling Large-Scale Adversarial Swarm Engagements using Optimal Control
+
+URL Source: https://arxiv.org/pdf/2602.23323v1
+
+Published Time: Fri, 27 Feb 2026 02:23:32 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+> 1
+
+# Modeling Large-Scale Adversarial Swarm Engagements using Optimal Control 
+
+Claire Walton, Isaac Kaminer, Qi Gong, Abram H. Clark, and Theodoros Tsatsanifos 
+
+Abstract —We investigate the optimal control of large-scale au-tonomous systems under explicitly adversarial conditions, incorporating the probabilistic destruction of agents over time. In many such systems, adversarial interactions arise as different agents or groups compete against one another. A crucial yet often overlooked factor in existing theoretical and modeling frameworks is the random attrition of agents during operation. Effective modeling and control strategies must therefore account for both agent attrition and spatial dynamics. Given the inherently random nature of agent survival, directly solving this problem is challenging. To address this, we propose and evaluate three approximate numerical modeling approaches in which agent survival probabilities decrease deterministically over time based on their relative positions. We apply these schemes to a scenario where agents defend a high-value unit against an attacking swarm. Our results demonstrate that these models can effectively capture the dynamics of such interactions, provided that attrition and spatial positioning are tightly integrated. These findings are relevant to a broad range of adversarial autonomy scenarios where both agent positioning and survival probabilities play a critical role. 
+
+Index Terms —optimal control, nonlinear control, numer-ical methods, large-scale networked systems, swarming. 
+
+NOTE TO PRACTITIONERS 
+
+This paper addresses a pressing challenge in au-tonomous multi-agent systems operating in adversarial environments: how to maintain effective collective be-havior while accounting for the random loss (attrition) of agents. Many real-world applications, such as defending assets with drone swarms or managing airspace with hos-tile interference, require resilience not only to external threats but also to internal degradation due to agent loss. The proposed modeling and control framework en-ables practitioners to simulate and optimize swarm be-havior in these high-risk settings, where agents may                                   
+
+> Claire Walton is with the Departments of Electrical Engineer-ing and Mathematics, University of Texas at San Antonio (e-mail: claire.walton@utsa.edu). Isaac Kaminer and Theodoros Tsatsanifos are with the Depart-ment of Mechanical and Aerospace Engineering, Naval Postgradu-ate School, Monterey, CA, 93943 USA (e-mail: kaminer@nps.edu; theodoros.tsatsanifos.gr@nps.edu). Qi Gong is with the Department of of Applied Mathe-matics and Statistics, University of California, Santa Cruz (e-mail: qgong@ucsc.edu). Abe Clark is with the Department of Physics, Naval Postgraduate School (e-mail: abe.clark@nps.edu).
+
+be randomly destroyed due to combat, collisions, or failures. The work introduces three computationally ef-ficient approximations to a difficult stochastic control problem, allowing engineers to model swarm dynamics that evolve under uncertainty while maintaining control performance. Practitioners can use the results to better plan and coordinate swarming UAVs or other autonomous plat-forms in defense, surveillance, or disaster response mis-sions. Importantly, the paper demonstrates that coupling between spatial dynamics and survival probability is essential to achieving realistic and robust swarm behaviors, a principle that should inform real-world deployment and autonomy software design. I. I NTRODUCTION 
+
+Advancements in autonomous systems have enabled the development of large-scale networked swarms of agents. Ensuring robustness and resilience is critical, whether in designing control algorithms for individual agents [1] or for collective swarm behavior [2], [3], [4], [5]. Beyond these internal challenges, it is equally im-portant to consider the resilience of autonomous agents or swarms under external, potentially adversarial, condi-tions. Many multi-agent systems naturally operate in ad-versarial environments, where agents must both (1) ac-complish a given task and (2) minimize their risk of neutralization. For instance, Unmanned Aerial Vehicles (UAVs) delivering packages in congested airspace must optimize delivery efficiency while mitigating the risk of collisions. These interactions can be indirectly adver-sarial—where one swarm’s optimal performance leads to another’s inefficiency—or directly adversarial, as in competitive or adversarial engagements. A recent re-view [6] highlights adversarial control strategies inspired by biological systems, such as birds of prey herding bird flocks [7], dolphins hunting [8], and sheepdogs managing livestock [9], [10]. These herding strategies exploit a swarm’s response mechanisms to achieve objectives like containment. However, existing studies largely overlook agent at-trition—whether due to collisions or active neutraliza-tion by adversaries [11]. Adversarial scenarios involving agent removal introduce complexities in network topol-ogy, swarm size, and intra-swarm dynamics. Agent at-
+
+> arXiv:2602.23323v1 [math.OC] 26 Feb 2026 2
+
+trition not only affects individual survival but also alters swarm-wide interactions, further complicating mission success. UAVs operating in such hostile environments must employ control algorithms that balance task com-pletion with survival probabilities while accounting for dynamically shifting swarm interactions—an aspect not yet addressed in existing theoretical frameworks. In this paper, we develop a new theoretical frame-work for modeling and controlling large-scale adversarial autonomy, explicitly incorporating both agent dynamics and attrition. We consider a scenario where a group of 
+
+N agents seeks to complete a task while experiencing stochastic attrition based on their positions. We formu-late a novel optimal control problem to maximize the probability of task completion under these conditions and validate our framework using agent-based numer-ical simulations in a swarm-versus-swarm adversarial engagement. Our results demonstrate the effectiveness of direct optimal control methods in addressing adver-sarial autonomy challenges where agent attrition plays a critical role. This work builds upon our prior conference pa-per [12], presented at the 2021 IEEE Conference on Decision and Control. In this extended version, we introduce new results in Section V, providing a trade-off analysis on the number of defenders required to protect a High-Value Unit against a swarm attack. Additionally, Section IV has been significantly expanded to include a detailed formulation of the optimal control problem for swarm defense and an in-depth discussion of the numerical methods used to solve it. II. M ODELING AND OPTIMIZATION FRAMEWORK FOR ADVERSARIAL SWARMING 
+
+We assume that the dynamics of agents are locally deteministic, meaning each agent operates in a determin-istic fashion (no randomness). However, the process of agent attrition is better modeled as pseudo-random based on random failure of the drones themselves, crashes that may or may not disable a drone with some probability, or on-board weapons that drones can use against each other. Thus, an agent may be killed randomly, and its survival probability is (in general) time-varying depending on its relative position to hazards or adversaries. The loss of an agent will change the dynamical coupling among neighboring agents and cause a ripple effect on the entire swarm. For example, in engagements between two swarms, with N attacking and M defending agents, the agent dynamics depend on the location of the neighbor-ing agents within a certain distance. As time advances, some agents in the neighborhood may be destroyed, resulting in a change of the dynamics. Thus the global behavior of the swarm presents some random features. To capture the varying numbers of agents in attacking and defending swarms throughout the swarm engage-ment, we introduced an index set Iptkq that labels agents survived at time instance tk. At the initial time t0 for the swarm-on-swarm example, Ipt0q “ t 1, 2, . . . , N, N `
+
+1, . . . , N `M u includes all attackers and defenders at the start of the engagement. For all tk ą t0, Iptkq Ď Ipt0q
+
+due to the attrition. The discrete dynamics of all the agents can be summarized by 
+
+zptk`1q “ ϕkpzptkq, u ptkq, I ptkqq , (1) where z are the states and u are the controls. Moreover, 
+
+zptkq and the corresponding controls are aggregated states and controls for agents in the index set at time tk:
+
+zptkq “ Ť  
+
+> iPIptkq
+
+ziptkq, where zi is the state of agent 
+
+i and ϕk are the collective dynamics only for agents in the indicator set Iptkq.The superscript k in ϕk emphasizes the time depen-dence of the dynamics function, which changes with each change in Iptkq. More than just time dependency, it emphasizes the changing dimension of the state vector and its dynamics function as the index set changes. Swarm dynamics (1) appear to be deterministic. How-ever, over the entire swarm engagement, the dynamics ϕk
+
+can change in a random fashion depending, for example, on the probability of survival of each agent. To capture such stochastic behavior, we introduce the following dynamical update of the index set. 
+
+Iptk`1q “ ψpIptkq, z ptkq, ω ptkqq , (2) where ωptkq is a random variable. Both ωptkq and zptkq,especially the probability of survival of each agent at tk,define how the current index set Iptkq should be updated. As an example, let ωptkq be uniformly distributed on 
+
+r0, 1s and Jptkq Ď Iptkq be the attrition set defined as 
+
+Jptkq fi 
+
+tj P Iptkq| ωptkq ě prob. of survival of agent j u
+
+(3) Then the update ψ, can be defined as 
+
+Iptk`1q “ ψpIptkq, z ptkq, ω ptkqq fi Iptkqz Jptkq.
+
+(4) Any changes on the index set Iptkq will affect the entire swarm dynamics at the next time instance. Such coupling between locally deterministic dynamics (for each agent i) and globally stochastic dynamics (for the index set I and time span rt0, t f s) is not well captured in standard deterministic or stochastic control. Further-more, the performance metrics in adversarial swarms can typically be expressed as a function of all agents at the final time tf , i.e., F pzptf qq , which is also stochastic as zptf q depends on the entire sequence of random variables tωpt0q, ω pt1q, ¨ ¨ ¨ ωptf qu . This cost must thus 3
+
+be transformed to an expectation additionally dependent on the indicator set, E rF pzptf q, I ptf qqs . We arrive at the following discrete stochastic optimal control problem 
+
+P0 fi 
+
+$’’’’&’’’’%
+
+min J :“ E rF pzptf q, I ptf qqs 
+
+subject to 
+
+zptk`1q “ ϕkpzptkq, u ptkq, I ptkqq ,Iptk`1q “ ψpIptkq, z ptkq, ω ptkqq ,
+
+Hpzptkq, u ptkqq ď 0,
+
+where F pzptf q, Q ptf qq represents the terminal cost, 
+
+ϕpzptkq, u ptkq represents the deterministic swarm dy-namics, and Hpzptkq, u ptkqq are the constraints on the states and control inputs. This problem has not been well-addressed by the existing deterministic or stochas-tic optimal control frameworks. This optimal control problem has several distinctive features that make it challenging to solve: (1) the random time-varying di-mension of the dynamics and the state trajectory due to loss of agents in an adversarial environment; (2) probability dependent performance metrics intertwining with locally deterministic agent dynamics (for each agent and at each local time instance), yet globally stochastic dynamical behavior (with respect to a time horizon and entire swarm); and (3) high dimension in both decision variables (e.g., trajectories of defending agents) and dynamical constraints (overall swarm dynamics that may include thousands of agents). As an attempt to address these challenges, in the next section we propose some simplified models to approximate such optimal control problems. III. P ROPOSED SOLUTION METHODS 
+
+In this section, we consider three alternative numerical schemes for solving the Problem P 0.
+
+A. P1: Deterministic and Decoupled Optimal Control Problem Formulation 
+
+We first consider the option of not modifying the swarm dynamics by the indicator set. This is the ap-proach originally taken in [11]. This results in continuous dynamics over time. Rather than an indicator set, agent survival can also be modeled as continuous probabilities over time. We will consider a specific example of a high-value unit (HVU) defense, which we fully describe in the next section. In that example, we define QAj ptq as the probability of the j-th attacker surviving at time t, QDk ptq
+
+as the probability of the k-th defender surviving at time 
+
+t, and Q0ptq as the probability of the HVU surviving. In this case, 
+
+Q “ r Q0, Q A 
+
+> 1
+
+, . . . Q AN , Q D 
+
+> 1
+
+, . . . Q DM s
+
+can be modeled with the dynamics 
+
+Qptk`1q “ ΨpQptkq, z ptkqq .
+
+Thus instead of a stochastic variable in the form of the indicator set, this model tracks a deterministic quantity 
+
+Q to estimate survival probabilities. We emphasize that the framework we introduce is applicable to any situation involving autonomy with attrition of agents. The discrete-time standard optimal control problem P
+
+can be expressed in the following form 
+
+P 1 fi 
+
+$’’’’&’’’’%
+
+min J :“ F pzptf q, Q ptf qq 
+
+subject to 
+
+zptk`1q “ ϕpzptkq, u ptkqq 
+
+Qptk`1q “ ΨpQptkq, z ptkqq 
+
+Hpzptkq, u ptkqq ď 0,
+
+(5) Problem P 1 approximates P 0 using the standard optimal control framework. It has no dependence on the index set Iptkq. As we show below, this can lead to highly unphysical results. In our case, the optimization engine finds “ghost-herding” solutions, where the defending agents have an extremely low survival probability but utilize the fact that the attackers want to avoid them to herd them away from the HVU. This highlights a central point of our work, which is that spatial dynamics and attrition must be coupled to correctly model adversarial autonomy situations in general. 
+
+B. P2: Weighted Forces Model 
+
+The weighted force model considers re-coupling the swarm dynamics with agent survival, but through the continuous time survival probabilities, Qptq instead of the indicator set. This is done by weighting the con-tribution of each agent to the collective dynamics by its probability of survival. An example is provided in the simulation model description in equation 13. Note that if survival probabilities were all equal to 1, this would return the dynamics of problem P 1. If they were binary indicators of survival, this would return the dynamics of the indicator set coupled dynamics of P 0.As weights using the continuous probability dynamics, this approach maintains the smoothness properties of 
+
+P 1 while potentially better approximating P 0. This model includes some unphysical characteristics (e.g., the attraction between two attackers is weakened as their survival probabilities decrease), but it has the essential characteristic that dead defenders are no longer able to repel attackers. We summarize this as 
+
+P 2 fi 
+
+$’’’’&’’’’%
+
+min J :“ F pzptf q, Q ptf qq 
+
+subject to 
+
+zptk`1q “ ϕpzptkq, u ptkq, Q ptkqq 
+
+Qptk`1q “ ΨpQptkq, z ptkqq 
+
+Hpzptkq, u ptkqq ď 0,
+
+(6) 
+
+C. P3: Threshold model 
+
+The threshold model treats all agents as fully alive until their survival probability drops below some thresh-4
+
+old, which we choose as 50%, after which they do not interact with other agents (in dynamics or attrition). This provides an update rule for equation (2), updating the indicator set Iptkq. This update rule, however, uses the continuous probability dynamics. This provides a smooth problem in between changes to Iptk`1q. Furthermore, the index set is dependent on Q rather than the random variable ω, keeping the expectation out of the cost function J.
+
+P 3 fi 
+
+$’’’’’’&’’’’’’%
+
+min J :“ F pzptf q, I ptf qq 
+
+subject to 
+
+zptk`1q “ ϕkpzptkq, u ptkq, I ptkqq 
+
+Qptk`1q “ ΨpQptkq, z ptkqq 
+
+Iptk`1q “ ψpIptkq, z ptkq, Q ptkqq 
+
+Hpzptkq, u ptkqq ď 0,
+
+(7) 
+
+D. Validation: Monte Carlo 
+
+To examine the accuracy of the three models, we test the final results of the optimization against averages over an ensemble of Monte Carlo simulations. The Monte Carlo simulations use the defender trajectories generated by the optimization processes; we then run an engagement using those trajectories where attackers and defenders are killed randomly. These Monte Carlo simu-lations enact the agent and index set dynamics of P 0 for the calculated defender controls. For the index set update of equation (2), we model the random variable ωptkq as a vector with an independent component for each agent including the HVU, ω “ r ω0, ω A 
+
+> 1
+
+, . . . ω AN , ω D 
+
+> 1
+
+, . . . ω DM s.This random variable is sampled at each tk. Each agent component of the random variable is sampled uniformly. The index set is updated by removing a set in the form of equation (8) with the definition 
+
+Jptkq fi 
+
+!
+
+j P Iptkq
+
+ˇˇˇ ωj ptkq ą Qj ptk`1q  
+
+> Qjptkq
+
+)
+
+(8) where, Qj represents probability of survival of the j-th agent in the set Q, whether attacker or defender. Moreover, the ratio Qj ptk`1q   
+
+> Qjptkq
+
+models the probability that the j-th agent has survived on the time interval 
+
+rtk, t k`1s.IV. C ASE STUDY : D EFENSE AGAINST A SWARM 
+
+ATTACK 
+
+To test the numerical schemes presented in the previ-ous section, we consider a scenario where a swarm is at-tacking a high-value unit (HVU). The HVU is defended by a number of defending agents whose trajectories are described by a finite sum of Bernstein polynomials and are optimized to maximize the probability of the HVU survival, i.e., F pzptf q, Q ptf qq “ 1 ´ Q0ptf q, where 
+
+Q0ptf q is the survival probability of the HVU at time 
+
+tf . All agents are equipped with model weapons, such that all agents and the HVU have an attrition rate at each time step in the simulation that is determined by its relative position to all enemy agents. 
+
+A. Attacker Equations of Motion 
+
+We consider N attacking agents and M defending agents, where attacking agent i has position xiptq P R3
+
+and and velocity viptq P R3, defending agent k has position skptq P R3 and velocity vD k ptq P R3. The equation of motion for attacker i, where the acceleration 
+
+:xi at each time step is the sum of four forces, is 
+
+9xi “vi
+
+9vi “
+
+> N
+
+ÿ
+
+> j‰i
+
+fI pxij q}xij } xij `
+
+> M
+
+ÿ
+
+> k“1
+
+fdpsik q}sik } sik 
+
+` K hi
+
+}hi} ´ bv i “: fipp tkqq , i “ 1 . . . N (9) There are four terms in this equation, representing: (1) attractive and repulsive forces fI pxij q from other attacking agents j, where xij “ xi ´ xj is the distance between attackers i and j; (2) a constant “virtual leader” force with magnitude K pulling them toward the HVU’s position, where hi “ h ´ xi and h is the position of the HVU; (3) purely repulsive forces fdpsik q due to defending agents, where sik “ xi ´ sk is the distance between attacker i and defender k; and (4) a damping force proportional to the 9xi.For the mathematical forms of fI and fd, we use a common model proposed by Leonard and Fiorelli [4], where fI and fd can be written as gradients of scalar potential functions that depend only on xij and sik , re-spectively. Both terms include repulsive collision avoid-ance at short ranges, and fI includes attractive forces at intermediate ranges for swarm cohesion. Specifically, 
+
+fI is repulsive when }xij } ď d0, attractive when d0 ă}xij } ď d1, and zero when }xij } ą d1. Similarly, fd is repulsive when }sik } ď s0 and zero when }sik } ą s0. To test robustness, we also performed simulations using the Reynolds dynamics model [2] instead of the first term in Eq. (9) with qualitatively similar results to those we show here. 
+
+B. Defender Equations of Motion 
+
+In this paper we have used a 3D double integrator model to represent defender dynamics: 
+
+9sk “ vD k 
+
+9vDk “ uk, (10) where ukptq P R3 and absolute value of each element of 
+
+uk, p| ukj |, j “ 1, 2, 3q is bounded by umax . The discrete dynamics of defenders and attackers results from explicit discretization of these continuous dynamics. 5
+
+(a) 
+
+Fig. 1: Normal Distribution Function Φ used to define the attrition rate functions datt  
+
+> ik
+
+and ddef  
+
+> ki
+
+.
+
+C. Mutual Attrition model 
+
+To model mutual attrition between enemy agents, we choose a pairwise damage function that takes as an argument the relative position between the two agents. This function has a value of 1 when its argument is 0 (i.e., when the agents are at the same position), and the function smoothly and continuously decreases as the argument increases. We use a cumulative normal distribution, which we denote Φ, see Figure 1, to accom-plish this, but our results are highly insensitive to this choice. Thus, the rate at which attacker i is destroyed due to defender k is datt  
+
+> ik
+
+“ λdΦp} sik }2{σdq, where σd
+
+is a range parameter and λd is a rate-of-fire parameter. Similarly, the attrition rate of defender k due to attacker 
+
+i is ddef  
+
+> ki
+
+“ λaΦ `}sik }2{σa
+
+˘, and the attrition rate of the HVU is dhvu  
+
+> i
+
+“ λaΦ `}hi}2{σa
+
+˘, where σa and λa
+
+correspond to the range and rate of fire of the attackers’ weapons. At each time step, all attackers are firing at all defend-ers, and vice versa. Thus, for example, the probability that attacker j would survive during time interval ∆t
+
+can be written as Mś
+
+> i
+
+p1 ´ “datt  
+
+> ji
+
+QDi ptq‰∆tq. The survival probabilities QAj pt ` ∆tq for attacker j, QDi ptq for defender i, and Q0ptq for the HVU are governed by 
+
+QAj pt ` ∆tq “ QAj ptq
+
+> M
+
+ź
+
+> i
+
+p1 ´ datt  
+
+> ji
+
+QDi ptkq∆tq, (11) 
+
+QDi pt ` ∆tq “ QDi ptq
+
+> N
+
+ź
+
+> j
+
+p1 ´ “ddef  
+
+> ij
+
+QAj ptkq‰∆tq,Q0pt ` ∆tq “ Q0ptq
+
+> N
+
+ź
+
+> j
+
+p1 ´ “ddef  
+
+> ij
+
+QIj ptkq‰∆tq, (12) Initial conditions are set to Qip0q “ 1 for all agents and the HVU. 
+
+D. Problem Formulation 
+
+In this section we introduce the optimal control prob-lems P 0, P 1, P 2, P 3 for the HVU defense scenario. Define a sequence of time instances tk`1 “ tk ` ∆t
+
+where k “ 0, . . . K , t0 “ 0 and tK “ tf for some positive integer K. Then using the notation introduced in the previous section the stochastic optimal control problem P 0 has the following form: 
+
+P0 fi $’’’’’’’’’’’’’’’’’’’’’’’&’’’’’’’’’’’’’’’’’’’’’’’%
+
+min uj ptq, j PIptk q,t Pr 0; tf s J :“ 1 ´ E rQ0ptf qs 
+
+subject to 
+
+xiptk`1q “ xiptkq ` viptkq∆t ` fiptkq∆t2{2
+
+vipp tk`1q “ vipp tkq ` p fiptkq ` fiptk´1qq ∆t{2
+
+QAi ptk`1q “ QAi ptkqMś
+
+> j
+
+p1 ´ datt  
+
+> ji
+
+QDj ptkq∆tq
+
+QDj ptk`1q “ QDj ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq
+
+Q0ptk`1q “ Q0ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq
+
+9sj ptq “ vDj ptq
+
+9vDj ptq “ uj ptq|| uj ptq|| 8 ď umax , @t P r 0; tf s, @j P Iptkq
+
+Iptk`1q “ Iptkqz Jptkq.
+
+where fiptkq is defined in (9) and we used velocity-Verlet integration scheme [13] to discretize attacker and defender dynamics. The motivation for this choice is discussed in the next section. Note that the dimension of the state vector in P0 is itself a random variable. This fact makes this problem impossible to solve explicitly. In fact, to the best of our knowledge it has not been addressed in the literature. Therefore, as proposed in Section III we have tried three approximations of P 0. The first candidate is a classic optimal control problem P 1 (the ghost herding model) that does not have any dependence on the index set I:
+
+P1 fi $’’’’’’’’’’’’’’’’’’’’’’’&’’’’’’’’’’’’’’’’’’’’’’’%
+
+min uj ptq, j “1,...M,t Pr 0; tf s J :“ 1 ´ Q0ptf q
+
+subject to 
+
+xiptk`1q “ xiptkq ` viptkq∆t ` fiptkq∆t2{2
+
+vipp tk`1q “ vipp tkq ` p fiptkq ` fiptk´1qq ∆t{2
+
+QAi ptk`1q “ QAi ptkqMś
+
+> j
+
+p1 ´ datt  
+
+> ji
+
+QDj ptkq∆tq
+
+QDj ptk`1q “ QDj ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq
+
+Q0ptk`1q “ Q0ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq
+
+9sj ptq “ vDj ptq
+
+9vDj ptq “ uj ptq|| uj ptq|| 8 ď umax , @t P r 0; tf s@i “ 1 . . . N, @j “ 1 . . . M 
+
+The next approximation candidate is the optimal control Problem P 2 (the weighted model) that has an implicit dependence on the index set I:6
+
+P2 fi $’’’’’’’’’’’’’’’’’’’’’’’&’’’’’’’’’’’’’’’’’’’’’’’%
+
+min uj ptq, j “1,...M,t Pr 0; tf s J :“ 1 ´ Q0ptf q
+
+subject to 
+
+xiptk`1q “ xiptkq ` viptkq∆t ` f Wi ptkq∆t2{2
+
+vipp tk`1q “ vipp tkq ` p f Wi ptkq ` f Wi ptk´1qq ∆t{2
+
+QAi ptk`1q “ QAi ptkqMś
+
+> j
+
+p1 ´ datt  
+
+> ji
+
+QDj ptkq∆tq
+
+QDj ptk`1q “ QDj ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq
+
+Q0ptk`1q “ Q0ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq
+
+9sj ptq “ vDj ptq
+
+9vDj ptq “ uj ptq|| uj ptq|| 8 ď umax , @t P r 0; tf s
+
+i “ 1 . . . N, j “ 1 . . . M 
+
+where 
+
+f Wi ptkq “ 
+
+> N
+
+ÿ
+
+> j‰i
+
+QAj ptkq fI pxij q}xij } xij `
+
+> M
+
+ÿ
+
+> l“1
+
+QDk ptkq fdpsil q}sil } sil 
+
+` K hi
+
+}hi} ´ bv i, i “ 1 . . . N (13) Note, in (13) we multiply the contribution of each attacker and defender to f W by its corresponding prob-ability of survival, thus introducing implicit dependence on the index set I into formulation of P 2.Finally, the optimal control Problem P 3 (the threshold model) is explicitly dependent on the index set Im, a modified version of the index set I:
+
+P3 fi $’’’’’’’’’’’’’’’’’’’’’’’’’&’’’’’’’’’’’’’’’’’’’’’’’’’%
+
+min uj ptq, pj,t qPr 1,M s,ˆr 0; tf s J :“ 1 ´ Q0ptf q
+
+subject to 
+
+xiptk`1q “ xiptkq ` viptkq∆t ` f mi ptkq∆t2{2
+
+vipp tk`1q “ vipp tkq ` p f mi ptkq ` f mi ptk´1qq ∆t{2
+
+QAi ptk`1q “ QAi ptkqMś
+
+> j
+
+p1 ´ datt  
+
+> ji
+
+W Dj ptkq∆tq
+
+QDj ptk`1q “ QDj ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+W Ai ptkq‰∆tq
+
+Q0ptk`1q “ Q0ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+W Ai ptkq‰∆tq
+
+9sj ptq “ vDj ptq
+
+9vDj ptq “ uj ptq|| uj ptq|| 8 ď umax , @t P r 0; tf s
+
+Imptk`1q “ Imptkqz Jmptkq
+
+i “ 1 . . . N, j “ 1 . . . M 
+
+where 
+
+f mi ptkq “ 
+
+> N
+
+ÿ
+
+> j‰i
+
+W Aj ptkq fI pxij q}xij } xij `
+
+> M
+
+ÿ
+
+> l“1
+
+W Dl ptkq fdpsil q}sil } sil 
+
+` K hi
+
+}hi} ´ bv i, i “ 1 . . . N, (14) 
+
+Jmptkq fi tj P Imptkq | 0.5 ě the probability of survival of agent ju , (15) 
+
+W Aj ptkq “ 
+
+" 1, j P Imptkq
+
+0, o.w. ,W Dl ptkq “ 
+
+" 1, l P Imptkq
+
+0, o.w. . (16) Note, in the definition of the set Jm we used a fixed value of 0.5 to define the survival threshold. This is in contrast to the definition of the set J where the value of the threshold is a random variable. We use the new set 
+
+Jm to define an index set Im. The set Im in turn is used to define the weights W Aj and W Dl . This simplification makes P 3 a standard optimal control problem that is explicitly dependent on the modified attrition set Im.
+
+E. Numerical Methods 
+
+We have used direct methods of optimal control [14], [15] to obtain numerical solutions to the optimal control problems P 1, P 2, P 3, (5). The outcome of the numerical optimization problem included optimal defender trajecto-ries si, i “ 1, M that maximize probability of the HVU survival. In addition, we borrowed standard numerical methods of molecular dynamics (MD), a branch of computational physics that simulates materials on the level of individual atoms [16], in order to be able to scale the optimization problem to include very large numbers of attackers and defenders. In particular, we numeri-cally integrate the equation of motion for each attacker, Eq. (9), using a velocity-Verlet integration scheme [13] that is standardly used in large MD simulations [17]. The velocity-Verlet scheme is advantageous since it is highly stable but only requires calculating the forces on each attacker (the computational time for which scales as N 2) once per time step, whereas, e.g., fourth-order Runge-Kutta integration requires calculating the forces four times per time step. Next, we outline the numerical approach used in this paper to solve problems P 1 - P 3. For more details the reader is referred to [14], [15]. Let smL denote an 7
+
+Lth order Bernstein polynomial approximation of the position sm of the mth defender defined as 
+
+smL ptq “ 
+
+> L
+
+ÿ
+
+> j“0
+
+¯cmj bj,L ptq , (17) where ¯cmj , j “ 0, . . . , L , are control points , and 
+
+bj,L ptq “ 
+
+ˆ Lj
+
+˙ tj ptf ´ tqL´j
+
+tLf
+
+is the generalized Bernstein polynomial basis of degree 
+
+L, with 
+
+ˆ Lj
+
+˙
+
+“ L! 
+
+> j!pL´jq!
+
+. The rth derivative of 
+
+smL ptq can be easily computed as follows 
+
+sprq 
+
+> mL
+
+ptq “ 
+
+> L
+
+ÿ
+
+> j“0
+
+˜ Lÿ
+
+> i“0
+
+¯cmi Drij 
+
+¸
+
+bj,L ptq , (18) where Drij denotes the ij element of the matrix D P
+
+RpL`1qˆp L`1q elevated to the rth power, and D is a con-stant square differentiation matrix (which can be quickly computed using the degree elevation and derivative of B´ ezier curve properties [18, Chapter 5]). Note, from (18) it follows that the Lth order approximation of the control input umL of the mth agent is 
+
+umL ptq fi : smL ptq “ 
+
+> L
+
+ÿ
+
+> j“0
+
+˜ Lÿ
+
+> i“0
+
+¯cmi D2
+
+> ij
+
+¸
+
+bj,L ptq. (19) Using equations (17, 19) we can formulate a Nonlinear Programming Problem (NLP) to obtain a numerical solution to the problem P 1:
+
+P L 
+
+> 1
+
+“
+
+$’’’’’’’’’’’’’’’’’’’’&’’’’’’’’’’’’’’’’’’’’%
+
+min ¯cml , pm,l qPr 1,M sˆr 0,L s JL :“ 1 ´ Q0ptf q
+
+subject to 
+
+xiptk`1q “ xiptkq ` viptkq∆t ` fiptkq∆t2{2
+
+vipp tk`1q “ vipp tkq ` p fiptkq ` fiptk´1qq ∆t{2
+
+QAi ptk`1q “ QAi ptkqMś
+
+> j
+
+p1 ´ “datt  
+
+> ji
+
+QDj ptkq‰∆tq
+
+QDj ptk`1q “ QDj ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq
+
+Q0ptk`1q “ Q0ptkq Nś
+
+> i
+
+p1 ´ “ddef  
+
+> ij
+
+QAi ptkq‰∆tq|| umL ptkq|| 8 ď umax ,
+
+|| sjL ptkq ´ slL ptkq|| ě dmin , j ‰ l
+
+@p i, j, l, t kq P r 1, N s ˆ r 1, M s ˆ r 1, M s ˆ r 0; tf s.
+
+Remark 1: To solve the NLP problem P L 
+
+> 1
+
+we com-puted the cost JL by propagating forward all the discrete-time equations for the states xi, v i, Q Ai , Q Dj , Q 0.This was done given the defender trajectories smL ptkq “ řLl“0 ¯cml bl,L ptkq obtained using the current values of the control points ¯cml .
+
+Remark 2: The problem P 2 can be solved in a similar way by replacing fi with f Wi . Solution of the problem 
+
+P 3 requires inclusion of the modified index set IV as well as replacing fi with f Vi .
+
+Remark 3: We have exploited differential flatness of the defender dynamics, namely umptq “ :smptq,to significantly reduce the number of the discrete-time equations that must be propagated forward to solve P L
+
+> 1
+
+- P L 
+
+> 3
+
+.Figure 2 shows an optimization of P 1, where survival probability is not coupled to the equations of motion of the attackers, for 25 defenders protecting an HVU against a swarm of 100 attackers. The defenders have a 50% larger weapons range ( σd{σa “ 1.5) as well as dou-ble the fire rate with respect to the attackers ( λd{λa “ 2). Figure 2(a) shows the results of a simulation where the defenders remain in place, and Figure 2(b) shows results of a simulation after optimizing the trajectories of the defenders. The attackers are red and the defenders are cyan, but turn to black as their survival probability decreases to zero. In both scenarios the defenders are stronger and suffer fewer losses; however, in the unop-timized scenario, some of the attacking agents manage to penetrate the defenders’ zone and destroy the HVU. Figure 2(c) shows that the optimized trajectories lead to better results for the survival of the HVU, the survival of defenders, and the defeat of the attackers (although the survival of the HVU is the only metric used in the optimization). We also note that the defending agents utilize both herding and weapons, as seen in Fig. 2. Similar results to those shown in Fig. 2 are found when considering problems P 2 (where spatial interac-tions are multiplied by the survival probabilities) and 
+
+P 3 (where spatial interactions and damage functions are turned off below a 50% survival probability threshold). These results are qualitatively indistinguishable from the results we show for P 1, so we do not show them here. However, a key question remains: how well do the modeling frameworks used in problems P 1 (uncoupled dynamics), P 2, and P 3 compare with the stochastic problem P 0? Problems P 1, P 2, and P 3 are approxi-mations to P 0.
+
+F. Comparing Performance of the Proposed Models 
+
+To answer the question posed in the previous section, we compare numerical solutions of problems P 1 ´ P 3
+
+with the outcome of a Monte Carlo simulation with fixed defender trajectories We consider a case with M “ 200 
+
+defenders and N “ 2066 attackers with identical rates and ranges of fire ( λa “ λd, σa “ σd). The defender trajectories are obtained by solving problems P 1, P 2, P 3
+
+and these trajectories are then tested using Monte Carlo simulation. Results for Monte Carlo simulation. are 8
+
+(a) 
+
+(b) 
+
+(c) 
+
+Fig. 2: Unoptimized (a) and optimized (b) defender trajectories are shown for a confrontation of 100 at-tacking swarm agents with a HVU protection force of 25 defenders with superior weapons. The optimized trajectories defend the HVU more effectively, as shown in (c). averaged over 200 runs; all other results use a single simulation, since there is no randomness. Figure 3 shows results from each type of simulation, specifically the mean survival probabilities of attackers, defenders, and the HVU. This figure shows that P 2 and 
+
+P 3 have similar results to Monte Carlo, which is typical of all simulations. However, P 1 does not agree with Monte Carlo, P 2, or P 3. Instead, P 1 greatly overes-timates the probability of HVU survival, which is also typical of all simulations. Physically, this has an obvious explanation: P 1 had no coupling between attrition and spatial dynamics, so attackers would still try to avoid defenders who were in their path, even if these defenders had a very low probability of survival (ghost herding). In contrast, the modeling frameworks corresponding to 
+
+P 2 and P 3 reduced the spatial interactions as survival probability decreased. So, even with the simple coupling between agent dynamics and agent attrition used in 
+
+P 2 and P 3 these approximations agreed relatively well with the stochastic results produced by Monte Carlo simulation. This result highlights our main point in this paper, which is that modeling and control frameworks for adversarial autonomy must include attrition, and the attrition modeling should be coupled to the spatial dynamics of the agents. V. TRADE-OFF ANALYSIS In the previous section, we compared the results of all four types of simulations (three deterministic models plus Monte Carlo) for the case of a very large attacking swarm of 2066 agents against only 200 defenders. We found that the two models P 2 and P 3 (weighted and threshold) that included coupling between dynamics and attrition agreed well with the Monte Carlo simulation, while the uncoupled model P 1 exhibited the unphysical “ghost-herding” effect. However, this was for a case where the attacking swarm was vastly superior and certain to win. Thus, it is useful to study a broad range of scenarios to better understand how the proposed models perform and compare to the Monte Carlo simulations. To do this, we consider a swarm of 50 agents attacking an HVU. The number of defenders M is varied between 1 and 70. We also set a larger weapons range for either attackers (A-type simulations) or defenders (B-type sim-ulations) to test the sensitivity of weapon strength in each model. We optimize the dynamics for all three models (uncoupled, weighted, and threshold) for each number of defenders with both A-type and B-type simulations. The final probability of HVU destruction is plotted in Fig. 4 for both cases. For the A-type simulations, shown in Fig. 4(a), the 50 agents of the attacking swarm have a 10% bigger weapons range than the defenders. The optimization results of this problem again demonstrate the “ghost-herding” problem in the uncoupled simulations P 1, since only 21 defenders are sufficient - an unrealistically low number. The weighted and threshold models P 2, P 3
+
+are similar, estimating that 52 and 65 defenders are sufficient, respectively. Figure 4(b) shows optimized results from B-type sim-ulations, where defenders have a 10% larger weapons range than attackers. The uncoupled model P 1 predicts the exact same number (21) of defenders as in the A-type simulations. This is due to the fact that the uncoupled simulations protect the HVU via “ghost-herding,” so the minimum number of defenders required is insensitive to 9
+
+Fig. 3: Comparison of the performance of the 3 proposed models for optimization with the Monte Carlo simulation model in a scenario of 2066 attackers and 200 defenders the strength of the weapons. The weighted and threshold models P 2 and P 3 predict that fewer defenders (37 and 30, respectively) are required to successfully protect the HVU, as expected. In Figs. 5 through 8, we compare the time dynamics for all four types of simulations at the four “checkpoints” shown in Fig. 4. The simulation results shown in these figures obtained by first optimizing with the weighted model to get defender trajectories. These defender trajec-tories are then used as inputs for a single simulation for each of the four simulation methods with identical initial conditions. Thus, these figures represent a comparison of how individual simulations play out for a given set of defender trajectories. We emphasize that the results below are insensitive to how we obtained the defender trajectories. The first two checkpoints, A1 and B1, represent cases where the weighted and the threshold models P 2 and 
+
+P 3 both predict that the HVU will be destroyed. The checkpoints A2 and B2 represent cases where weighted and threshold models both predict that the number of defenders is sufficient to protect the HVU. We also compare with the ensemble average of 200 Monte Carlo simulations. We note two important features of the data shown in Figs. 5 through 8. First, the HVU survival probability versus time shows good agreement between the two coupled models (weighted and threshold, P 2
+
+and P 3) and the Monte Carlo simulations. In the two cases (A1 and B1) where the HVU is destroyed, it happens at roughly the same time for all three cases. The uncoupled model P 1 always predicts HVU survival, due to the “ghost-herding” problem. Second, for the survival probability of the attackers and defenders versus time, the weighted model shows the closest agreement with the threshold model. This agreement is particularly striking for checkpoint B2, shown in Fig. 8, but it is a generic feature to all four checkpoints shown. VI. C ONCLUSIONS 
+
+In this paper we have addressed the question of optimal motion planning for large-scale, coordinated autonomous systems in adversarial conditions, by which we mean that it is likely that some agents will be lost while trying to accomplish the task. We studied this scenario using the framework of optimal control. We specifically studied the scenario of a multi-agent team defending a high-value unit against a swarm attack. We observed several key challenges associated with using optimal control to study such a large-scale motion planning problem in adversarial conditions. The first challenge revolves around a modeling framework to study the scenario. We demonstrate a coupled frame-work between dynamics, Eqs. (9) and (10), and attrition modeling, Eqs. (12), is an appropriate and highly flexible way to model such engagements. The second challenge involves formulation on an op-timal control problem, which in principle could be used 10 
+
+Fig. 4: Optimized cost versus number of defenders for all three proposed models for optimization against a swarm of 50 assets 
+
+Fig. 5: Analysis of optimization results at Data Points A1. Insufficient number of defenders for HVU protection to find the best set of trajectories to accomplish a given task. We proposed a novel optimal control problem, P 0,that explicitly includes random reduction of an index set of surviving agents in time. However, since there is no known solution to such a problem, the third challenge involved asking whether there are approximate problems that could be proposed and solved that would faithfully mimic the stochastic optimal control problem. To this end, we proposed three non-random approximations that can be solved using direct methods of optimal control. By considering a case study of defending agents protecting an HVU from an attacking swarm, we showed that these approximations can be solved and that they give results that are consis-tent with the stochastic problem, especially if the attrition and spatial dynamics are coupled. We note that our results assume that the cooperat-ing strategies and weapons capabilities of the attacking swarm are known or can be estimated. Estimation can be considered seperately, using an approach such as in [19]. Parameter uncertainty can also be added into this framework, using methods such as in [20]. The frame-work we describe here can be applied to an entire class of adversarial autonomy problems. For example, attrition 11 
+
+Fig. 6: Analysis of optimization results at Data Point B1. Insufficient number of defenders for HVU protection 
+
+Fig. 7: Analysis of optimization results at Checkpoint A2. Sufficient number of defenders for HVU protection could result from many factors, including environmental or terrain-related causes. Future work might focus on improving the approximation methods ( P 1, P 2, and P 3)as well as improving stochastic optimization techniques such that P 0 could be treated directly. ACKNOWLEDGMENT 
+
+This work was supported in part by the ONR Science of Autonomy program under the grant N0001425GI01578 and by NPS CRUSER program. REFERENCES [1] L. Evers, T. Dollevoet, A. I. Barros, and H. Monsuur, “Robust uav mission planning,” Annals of Operations Research , vol. 222, no. 1, pp. 293–315, 2014. [2] C. W. Reynolds, Flocks, herds and schools: A distributed behav-ioral model . ACM, 1987, vol. 21. [3] T. Vicsek, A. Czir´ ok, E. Ben-Jacob, I. Cohen, and O. Shochet, “Novel type of phase transition in a system of self-driven particles,” Phys. Rev. Lett. ,vol. 75, pp. 1226–1229, Aug 1995. [Online]. Available: https://link.aps.org/doi/10.1103/PhysRevLett.75.1226 [4] N. E. Leonard and E. Fiorelli, “Virtual leaders, artificial po-tentials and coordinated control of groups,” in Proceedings of 12 
+
+Fig. 8: Analysis of optimization results at Checkpoint B2. Sufficient number of defenders for HVU protection 
+
+the 40th IEEE Conference on Decision and Control (Cat. No. 01CH37228) , vol. 3. IEEE, 2001, pp. 2968–2973. [5] M. Brambilla, E. Ferrante, M. Birattari, and M. Dorigo, “Swarm robotics: a review from the swarm engineering perspective,” 
+
+Swarm Intelligence , vol. 7, no. 1, pp. 1–41, 2013. [6] S.-J. Chung, A. A. Paranjape, P. Dames, S. Shen, and V. Kumar, “A survey on aerial swarm robotics,” IEEE Transactions on Robotics , vol. 34, no. 4, pp. 837–855, August 2018. [7] A. A. Paranjape, S.-J. Chung, K. Kim, and D. H. Shim, “Robotic herding of a flock of birds using an unmanned aerial vehicle,” 
+
+IEEE Transactions on Robotics , vol. 34, no. 4, pp. 901–915, 2018. [8] M. A. Haque, A. R. Rahmani, and M. B. Egerstedt, “A hybrid, multi-agent model of foraging bottlenose dolphins,” in IFAC Proceedings Volumes , vol. 42, 2009, pp. 262–267. [9] D. Str¨ ombom, R. P. Mann, A. M. Wilson, S. Hailes, A. J. Morton, D. J. Sumpter, and A. J. King, “Solving the shepherding problem: heuristics for herding autonomous, interacting agents,” Journal of the royal society interface , vol. 11, no. 100, p. 20140719, 2014. [10] A. Pierson and M. Schwager, “Bio-inspired non-cooperative multi-robot herding,” in 2015 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2015, pp. 1843–1849. [11] C. Walton, P. Lambrianides, I. Kaminer, J. Royset, and Q. Gong, “Optimal motion planning in rapid-fire combat situations with attacker uncertainty,” Naval Research Logistics (NRL) , vol. 65, no. 2, pp. 101–119, 2018. [12] T. Tsatsanifos, A. H. Clark, C. Walton, I. Kaminer, and Q. Gong, “Modeling large-scale adversarial swarm engagements using op-timal control,” 60th IEEE Conference on Decision and Control ,pp. 1244–1249, 2021. [13] L. Verlet, “Computer ”experiments” on classical fluids. i. thermodynamical properties of lennard-jones molecules,” Phys. Rev. , vol. 159, pp. 98–103, Jul 1967. [Online]. Available: https://link.aps.org/doi/10.1103/PhysRev.159.98 [14] V. Cichella, I. Kaminer, C. Walton, N. Hovakimyan, and A. M. Pascoal, “Consistent approximation of optimal control problems using bernstein polynomials,” in 2019 IEEE 58th Conference on Decision and Control (CDC) , 2019, pp. 4292–4297. [15] V. Cichella, I. Kaminer, C. Walton, N. Hovakimyan, and A. M. Pascoal, “Optimal multi-vehicle motion planning using bernstein approximants,” IEEE Transactions on Automatic Control , 2020. [16] M. P. Allen and D. J. Tildesley, Computer simulation of liquids (2nd Ed.) . Oxford university press, 2017. [17] S. Plimpton, “Fast parallel algorithms for short-range molecular dynamics,” J. Comput. Phys. , vol. 117, no. 1, pp. 1–19, 1995. [18] R. T. Farouki, “The bernstein polynomial basis: a centennial retrospective,” Computer Aided Geometric Design , 2012. [19] Q. Gong, W. Kang, C. Walton, I. Kaminer, and H. Park, “Partial observability analysis of an adversarial swarm model,” Journal of Guidance, Control, and Dynamics , pp. 1–12, 2019. [20] C. Walton, I. Kaminer, and Q. Gong, “Consistent numerical methods for state and control constrained trajectory optimisation with parameter dependency,” International Journal of Control ,vol. 94, no. 9, pp. 2564–2574, 2021.

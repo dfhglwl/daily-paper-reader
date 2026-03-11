@@ -1,0 +1,11144 @@
+Title: Provably Convergent Actor-Critic in Risk-averse MARL
+
+URL Source: https://arxiv.org/pdf/2602.12386v1
+
+Published Time: Mon, 16 Feb 2026 01:09:19 GMT
+
+Number of Pages: 62
+
+Markdown Content:
+# Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Yizhou Zhang 1 Eric Mazumdar 1
+
+Abstract 
+
+Learning stationary policies in infinite-horizon general-sum Markov games (MGs) remains a fun-damental open problem in Multi-Agent Reinforce-ment Learning (MARL). While stationary strate-gies are preferred for their practicality, computing stationary forms of classic game-theoretic equi-libria is computationally intractable—a stark con-trast to the comparative ease of solving single-agent RL or zero-sum games. To bridge this gap, we study Risk-averse Quantal response Equilibria (RQE), a solution concept rooted in behavioral game theory that incorporates risk aversion and bounded rationality. We demonstrate that RQE possesses strong regularity conditions that make it uniquely amenable to learning in MGs. We propose a novel two-timescale Actor-Critic algo-rithm characterized by a fast-timescale actor and a slow-timescale critic. Leveraging the regularity of RQE, we prove that this approach achieves global convergence with finite-sample guarantees. We empirically validate our algorithm in several en-vironments to demonstrate superior convergence properties compared to risk-neutral baselines. 
+
+1. Introduction 
+
+Emerging paradigms in AI are fundamentally multi-agent in nature, requiring agents to interact strategically to achieve their goals. From autonomous driving and robotics to agen-tic markets, these interactions are often driven by misalign-ment between agent objectives. While Reinforcement Learn-ing (RL) has become the dominant paradigm for isolated decision-making (Sutton & Barto, 1998), training agents to navigate strategic interactions requires drawing on ideas from Multi-Agent Reinforcement Learning (MARL) and game theory more broadly (Littman, 1994; Silver et al., 2016; Vinyals et al., 2019). This stems from the fact that—unlike single-agent RL, which solves an optimization  
+
+> 1Department of Computing and Mathematical Sciences, Califor-nia Institute of Technology, Pasadena, CA, USA. Correspondence to: Yizhou Zhang <yzhang8@caltech.edu >.
+> Preprint. February 16, 2026.
+
+problem— MARL and game theory seek to solve problems of equilibrium computation (Lanctot et al., 2017). The canonical framework for studying dynamic strategic interactions is the discounted general-sum Markov Game (MG) which dates back to seminal work by Shapley (Shap-ley, 1953). Despite the longevity of this framework, de-signing algorithms with provable guarantees of convergence to a meaningful equilibrium remains a largely open prob-lem. Existing guarantees are generally limited to highly structured settings, like two-player zero-sum (Daskalakis et al., 2022) or cooperative games (Monderer & Shapley, 1996). This can be attributed to the fact that Nash equi-libria are intractable (PPAD-complete) to compute even in general-sum normal-form games (Daskalakis et al., 2009; Chen et al., 2009). Furthermore, computing even stationary generalizations of weaker forms of equilibria like correlated and coarse correlated equilibria (which can be computed in normal-form games) has been shown to be intractable (Jin et al., 2022; Daskalakis et al., 2022). This in turn precludes the possibility that one could design algorithms to learn these strategies efficiently. Consequently, recent work in MARL has pivoted toward finding non-stationary equilibria (Jin et al., 2021). While computationally tractable, these approaches suffer from cru-cial drawbacks: they require agents to maintain history-dependent policies whose complexity scales with the time horizon, and they fail to reflect the stationary policies typi-cally employed in practice (Lowe et al., 2017; Samvelyan et al., 2019). In this paper, we tackle the problem of learning stationary equilibria by adopting a different perspective. We build upon a line of work originating in behavioral game the-ory that models human decision-making via strategic risk aversion and bounded rationality. The resulting solution concept—Risk-Averse Quantal-Response Equilibria (RQE) (Mazumdar et al., 2024)—has recently been shown to be computationally tractable in MGs (Zhang & Mazumdar, 2025). The key insight of these works is that computational tractability can be achieved by making assumptions on agent behavior rather than game structure. In effect the behav-ioral features regularize the underlying game, rendering it monotone (Rockafellar & Wets, 2009) (a game-theoretic analogue to convexity (Cai & Zheng, 2023)) and allowing 1
+
+> arXiv:2602.12386v1 [cs.MA] 12 Feb 2026 Provably Convergent Actor-Critic in Risk-averse MARL
+
+for the definition of a contractive risk-adjusted Bellman operator. We extend this line of work to derive a practical MARL algorithm that provably converges to RQE in general-sum MGs. Concretely, our contributions are: • Generalized Conditions for RQE Tractability: We weaken the requirements on players’ risk aversion and bounded rationality necessary for the game to possess a unique, computationally tractable RQE. We prove that a broader class of games than those considered in prior work (Mazumdar et al., 2024; Zhang & Mazum-dar, 2025) admits an RQE that is unique and varies smoothly with respect to payoff matrices. We use these results to establish that the risk-adjusted Bellman oper-ator is a contraction, which in turn allows us to derive convergent value-based learning methods. Critically, the assumptions under which our theory hold are on the agents’ properties (e.g., degrees of risk-aversion and bounded rationality) and not on the underlying game. This makes our approach applicable to arbi-trary general-sum games, provided we design agents appropriately—a key advantage in practical applica-tions where game structure is fixed but the agent design is under our control. • A Provably Convergent Actor-Critic Algorithm: We design a two-timescale iteration rule that approximates the contraction mapping. In contrast to standard Actor-Critic methods (where critics often update faster than actors), our approach updates the policy (actor) on a fast timescale and the Q-function (critic) on a slow timescale. We provide a novel contraction-based anal-ysis of coupled Lyapunov drift inequalities to prove that this algorithm enjoys finite-sample convergence guarantees. To the best of our knowledge, this is the first MARL algorithm with global guarantees of con-vergence to stationary equilibria in general-sum dis-counted MGs that does not assume additional structure on the game. • Scalable Implementation and Evaluation: We fur-ther adapt our algorithm to fit modern deep RL infras-tructure by employing policy- and Q-networks and a replay buffer. We conduct experiments on three differ-ent MARL environments: A normal-form inspection game, a (Markov) gridworld cooperation game and an MPE Simple Tag experiment with fixed good agents. Our results confirm that RQE leads to more stable con-vergence patterns in the learning process and inherently risk-averse agent behaviors. 
+
+2. Preliminaries 
+
+In this section we present our problem setup. We first define RQE and the notion of monotone games in normal-form games, and then introduce infinite-horizon general-sum Markov game, a setting that extends normal-form games to MARL. Due to space limit, we defer our notations and basic definitions to Appendix A. For our theoretical results, we focus on the two-player case for simplicity, although our results can be easily extended to the n-player case. 
+
+2.1. RQE and Generalized Monotonicity in Normal-form Games 
+
+The first and simpler setting we consider in this work is a two-player general-sum bimatrix game where player (agent) 
+
+i ∈ { 1, 2} has payoff matrix Ri and pure strategy set (action set) Ai. When players are risk-neutral, their objective is to maximize the expected utility, expressed as: 
+
+Ui(πi, π −i) = E(a1,a 2)∼(π1,π 2)[Ri(a1, a 2)] = πTi Riπ−i;
+
+(1) for i ∈ { 1, 2} where πi ∈ ∆|A i| denotes the mixed strategy (policy) of agent i. However, since π−i is a mixed strategy, if player i wants to be risk-averse against different possi-ble realizations of the pure strategy a−i selected by π−i,maximizing the expected utility may not be its desirable objective. Using the framework of convex risk measures (F ¨ollmer & Schied, 2002), player i minimizes a risk measure 
+
+ρi,π −i (Eπi [Ri(ai, a −i)]) associated with π−i. Leveraging the dual representation theorem for convex risk measures proposed in F ¨ollmer & Schied (2002), prior work (Mazum-dar et al., 2024) showed that the objective of player i under risk aversion can be expressed as: minimize 
+
+> πi
+
+sup 
+
+> pi∈∆|A −i|
+
+−πTi Ripi − Di(pi, π −i)/τ i (2) here Di is a penalty function as a regularization term in addition to the reward term induced by Ri. We can alter-natively interpret (2) as follows: Instead of optimizing to play against player −i, player i imagines an adversary (we call it adversary i), who decides pi that tries to minimize its expected payoff, while constrained by a term Di(pi, π −i)
+
+not to be too far away from the true policy π−i of player −i.The parameter τi characterizes the degree of risk-aversion of player i, where larger τi indicates player i to be more risk-averse by making the adversary less constrained. To incorporate the bounded rationality behavior in agents’ strategies, we restrict their strategies to quantal responses, which can be realized by adding a proper convex regularizer 
+
+νi to their objective function (Sokota et al., 2023; Mer-tikopoulos & Sandholm, 2016). Now the objective function 2Provably Convergent Actor-Critic in Risk-averse MARL 
+
+for player i becomes (to minimize): 
+
+fi(πi, π −i; Ri)= sup 
+
+> pi∈∆|A −i|
+
+−πTi Ripi − Di(pi, π −i)/τ i + ϵiνi(πi). (3) where ϵi is the temperature that captures the regularization strength of player i. Notice that in reinforcement learning, the regularization term νi (often set to be entropy) is al-ready widely used to encourage the policy to be randomized for better exploration. When context is clear, we drop the dependence of fi on Ri and simply write fi(πi, π −i).Given each player’s objective function as in (3) , we define the risk-averse quantal response equilibrium (RQE) as the equilibrium point at which each player attains optimality: 
+
+Definition 2.1 (Mazumdar et al., 2024, Definition 5) . Arisk-averse quantal response equilibrium (RQE) of a two-player general-sum bimatrix game whose payoff matrix is given by R = ( R1, R 2) is a pair of mixed strategies 
+
+π∗ = ( π∗ 
+
+> 1
+
+, π ∗ 
+
+> 2
+
+) ∈ ∆|A 1| × ∆|A 2| such that 
+
+fi(π∗ 
+
+> i
+
+, π ∗−i; R) ≤ fi(πi, π ∗−i; R), ∀πi ∈ ∆|A i| (4) for both i ∈ { 1, 2}. When the RQE is unique, we use RQE i
+
+to denote the value of player i at this equilibrium: 
+
+RQE i(R) := fi(π∗ 
+
+> i
+
+, π ∗−i; R), i ∈ { 1, 2}. (5) Since the objective function (3) is in the form of a minimax optimization problem, we can treat this objective function from the view of a 4-player game, with 2 original players 
+
+i ∈ { 1, 2} deciding πi ∈ ∆|A i| minimizing: 
+
+Ji(πi, π −i, p i; Ri) = −πTi Ripi−Di(pi, π −i)/τ i+ϵiνi(πi); 
+
+(6a) and two adversaries deciding pi ∈ ∆|A −i| and minimizing: 
+
+¯Ji(πi, π −i, p i; Ri) = πTi Ripi + Di(pi, π −i)/τ i − ϵiνi(πi).
+
+(6b) It is proven that the Nash equilibria of the 4-player game can be connected to the RQE in the original 2-player game in the following way: 
+
+Proposition 2.2 (Mazumdar et al., 2024, Proposition 1) .
+
+Let z∗ = ( π∗, p ∗) be a Nash equilibrium of the 4-player game characterized by (6a) and (6b) . We have that π∗ is an RQE of the original two-player game characterized by (3) .Furthermore, if π∗ is an RQE of the two-player game, then 
+
+(π∗, p ∗) is a Nash equilibrium of the 4-player game where 
+
+p∗ 
+
+> i
+
+= arg max pi∈∆|A −i| −π∗ 
+
+> i
+
+Ripi − Di(pi, π ∗−i)/τ i.
+
+Proposition 2.2 implies that, as long as we can find a Nash equilibrium for the 4-player game, we also obtain an RQE of the original two-player game through taking its π com-ponent. Indeed, the introduction of adversaries creates a partial zero-sum structure in each player-adversary pair, and relaxes the exact dependency of player i’s utility on π−i in (1), which greatly simplifies equilibrium computation. Based on the intuition above, Zhang & Mazumdar (2025) studied the properties of Nash equilibria for the 4-player game through its monotonicity . In this work, we consider a generalized monotonicity notion originally referred to as 
+
+diagonally (strictly) concave in Rosen (1965) as follows: 
+
+Definition 2.3. Let Z be a subset of Rn and λ ∈ Rn sat-isfying λ > 0. An operator F : Z → Rn is λ-monotone if: 
+
+⟨z − z′, F (z) − F (z′)⟩λ ≥ 0, ∀z, z ′ ∈ Z ,
+
+it is λ-strictly monotone when the inequality is strict when 
+
+z̸ = z′, and is (μ, λ )-strongly monotone if: 
+
+⟨z − z′, F (z) − F (z′)⟩λ ≥ μ∥z − z′∥22, ∀z, z ′ ∈ Z .
+
+An N -player game where player i chooses action zi from a compact and convex action space Zi ⊆ ∆|A i| with cost function Ji(zi, z −i) is a λ-monotone (resp. λ-strictly mono-tone, (μ, λ )-strongly monotone) game if its gradient oper-ator F : Z → RP   
+
+> i∈[N]|A i|
+
+where Z = QNi=1 Zi defined by Fi(z) = ∇zi Ji(zi, z −i) ∈ R|A i| is a λ-monotone (resp. 
+
+λ-strictly monotone, (μ, λ )-strongly monotone) operator. Definition 2.3 generalizes the monotonicity definition in Zhang & Mazumdar (2025) through introducing a weight vector λ that controls the weight of each direction in the decision space Z. The class of monotone games are known to satisfy many desirable properties. For example, for a 
+
+λ-strictly monotone game, there exists a unique Nash equi-librium. If the game is further (μ, λ )-strongly monotone for some λ > 0, projected preconditioned gradient descent 
+
+zt+1 = Proj Z (zt − ηΛF (zt)) where Λ = Diag (λ) is a diagonal matrix with diagonal entries equal λ converges linearly to the Nash equilibrium. 
+
+2.2. RQE in Discounted Infinite-horizon Markov Games 
+
+In this section we generalize the RQE notion from normal form games to Markov games. A discounted two-player infinite-horizon general-sum Markov game is specified by a tuple MG = {S , {A i}i=1 ,2, {ri}i=1 ,2, γ, P, ρ 0} where S
+
+is the state space of the underlying MDP, Ai is the action space of player i ∈ { 1, 2}, and we use the notation A =
+
+A1 × A 2 to denote the product action space of both players. We assume both |S| and |A 1|, |A 2| to be finite. ri : S×A → 
+
+[0 , 1] is the reward function of player i, which we assume to be deterministic. We use r to denote the paired reward function r := ( r1, r 2). γ ∈ [0 , 1) is the discount factor and 
+
+P : S × A → ∆S is the transition kernel, where P (s′|s, a)
+
+is the probability of the next state being s′ given the current state s and the current actions a = ( a1, a 2) of the players. We use ρ0 ∈ ∆S to denote the initial state distribution. 3Provably Convergent Actor-Critic in Risk-averse MARL 
+
+We focus on Markov policies , the class of policies where the action selection probability only depends on the current state instead of the entire gameplay trajectory, i.e. π = ( π1, π 2)
+
+where πi : S → ∆|A i|, i ∈ { 1, 2}. Given a product Markov policy π, without considering risk-aversion and bounded rationality, player i has an expected discounted cumulative reward given by Eπ [P∞ 
+
+> t=0
+
+γtri(st, a t)] .To incorporate risk-aversion in discounted infinite-horizon Markov games, we slightly overload the notations in normal-form games and consider the following risk-adjusted objective of player i that minimizes fi(πi, π −i) = max pi:S→ ∆|A −i| Ji(πi, π −i, p i) where Ji is defined as: 
+
+Ji(πi, π −i, p i) = Eπ,p,s 0∼ρ0
+
+ P ∞ 
+
+> t=0
+
+γt  − ri(st, at)
+
+− Di (pi, π −i; st) /τ i + ϵiνi(πi; st) (7) where the joint actions at are sampled through ai,t ∼
+
+πi(·| st), a−i,t ∼ pi(·| st) and the next state st+1 is sampled from st+1 ∼ P (·| st, at). The notations of Di(pi, π −i; s)
+
+and νi(πi; s) are abbreviations of Di(pi(·| s), π −i(·| s)) and 
+
+νi(πi(·| s)) respectively. Starting from now, we refer to the Markov game objective above when we don’t include payoff matrices R in the argument of Ji and refer to the normal form game objective (6a) when R are included. This ad-justed objective can be viewed as each player is playing against its imaginary adversary who controls pi that tries to minimize its discounted cumulative reward but constrained by a penalty term Di(·, ·; s) at each possible state s ∈ S 
+
+from π−i for all subsequent time steps. Given a set of origi-nal player policies πi and adversarial policies pi, we define the value function for each state s ∈ S as: 
+
+V π,p i (s) = Eπ,p,s 0=s
+
+ P ∞ 
+
+> t=0
+
+γt  − ri(st, at)
+
+− Di (pi, π −i; st) /τ i + ϵiνi(πi; st) (8) so that Ji(π, p ) = Es∼ρ0 [V π,p i (s)] , and the Q function as: 
+
+Qπ,p i (s, a) = −ri(s, a) + γEs′∼P (·| s, a)V π,p i (s′). (9) Additionally, we use fi(πi, π −i; s) to denote 
+
+max pi:S→ ∆|A −i| V π,p i (s), so that Es∼ρ[fi(πi, π −i; s)] = 
+
+fi(πi, π −i). Notice that given the state s, we can view 
+
+Qπ,p i (s, ·) as a payoff matrix of a normal form game, with associated strategies πi and pi, it is easy to verify that: 
+
+V π,p i (s) = πi(·| s)T Qπ,p i (s, ·)pi(·| s)
+
+− Di(pi, π −i; s)/τ i + ϵiνi(πi; s). (10) which provides the connection between value function and the objective for the 4-player stage-game: 
+
+V π,p i (s) = Ji (πi(·| s), π −i(·| s), p i(·| s); −Qπ,p (s, ·)) 
+
+(11) We extend the notion of RQE to Markov games as follows: 
+
+Definition 2.4 (Stationary Markov RQE) . A pair of Markov policies π∗ = ( π∗ 
+
+> 1
+
+, π ∗ 
+
+> 2
+
+) where π∗ 
+
+> i
+
+: S → ∆|A i| is said to be an RQE of a two-player Markov game MG if for both 
+
+i ∈ { 1, 2}:
+
+fi(π∗ 
+
+> i
+
+, π ∗−i; s) ≤ fi(πi, π ∗−i; s), ∀s ∈ S , π i : S → ∆|A i|.
+
+(12) Definition 2.4 is a simpler version of RQE than that in Zhang & Mazumdar (2025) which additionally considered risk-aversion against the potential stochasticity of the en-vironment. Despite this simplification, we expect most of our results could be easily translated to their notion. We also note that unlike the widely studied CE or CCE, RQE policies are Markovian and can be executed independently. To characterize the computation of RQE in discounted Markov games, assume that the stage game given a Q func-tion pair Q has a unique RQE, we define the risk-averse quantal-response Bellman operators as follows: 
+
+Definition 2.5. Given a two-player discounted Markov game MG , risk-aversion penalty functions Di(·, ·) and reg-ularizers νi(·) where i ∈ { 1, 2}, the risk-averse quantal-response Bellman optimality operator T maps a Q function pair Q = ( Q1, Q 2) where Qi : S × A → R to another 
+
+Q function pair T Q in the same function space, defined elementwise as: 
+
+(T Q)i(s, a) = −ri(s, a)+ γEs′∼P (·| s, a)[RQE i(−Q(s′, ·))] 
+
+(13) here we view Q(s′, ·) as a pair of payoff matrices in some normal form game with action space A = A1 × A 2. Sim-ilarly, for a joint policy profile z = ( π, p ), we define the risk-averse quantal-response Bellman evaluation operator with respect to z as: 
+
+(Tz Q)i(s, a) = −ri(s, a) + γEs′∼P (·| s, a)[ϵiνi(πi; s′)+ 
+
+πTi (·| s′)Qi(s′, ·)pi(·| s′) − Di(pi, π −i; s′)/τ i]
+
+(14) also elementwise for i ∈ { 1, 2}.When context is clear, we will simply use “Bellman optimal-ity operator” (or simply “Bellman operator”) and “Bellman evaluation operator” to refer to the operators defined in (13) and (14) respectively. Notice that the Bellman optimality op-erator is adapted from Definition 4.1 in Zhang & Mazumdar (2025) through removing the risk-aversion to the environ-ment, and the Bellman evaluation operator can be viewed as evaluating the Q function (9) corresponding to z.The intuition behind the definition of Bellman operators is that at state s, when deciding the first action, each agent is faced with a “stage game” as a normal form game with payoff matrices −Q(s, ·), computed by adding up the imme-diate reward plus a discounted RQE value it can get, as the regularized risk-averse version of that originally proposed 4Provably Convergent Actor-Critic in Risk-averse MARL 
+
+in the Nash Q-learning algorithm by Hu & Wellman (2003). It can be shown (details in Appendix E) that the following property holds for the Bellman operator: 
+
+Proposition 2.6. Let Q∗ be a fixed point of the Bellman optimality operator T , the policy profile π∗ = ( π∗ 
+
+> 1
+
+, π ∗ 
+
+> 2
+
+)
+
+where π∗ 
+
+> i
+
+: S → ∆|A i| given by: 
+
+π∗ 
+
+> i
+
+(·| s) = arg min 
+
+> πi∈∆|A i|
+
+max 
+
+> pi∈∆|A −i|
+
+πTi Q∗ 
+
+> i
+
+(s, ·)pi
+
+− Di(pi, π −i(·| s)) /τ i + ϵiνi(πi)
+
+(15) 
+
+is an RQE of the Markov game. Additionally, let π∗ =(π∗ 
+
+> 1
+
+, π ∗ 
+
+> 2
+
+) be an RQE of the Markov game, then for p∗ =(p∗
+
+> 1
+
+, p ∗
+
+> 2
+
+) where p∗ 
+
+> i
+
+= arg max pi:S→ ∆|A −i| V π∗,p i (s), ∀s ∈S, the associated Q function Qπ∗,p ∗
+
+is a fixed point of the Bellman optimality operator T .
+
+The first statement in Proposition 2.6 is stated in Proposition 4.3 (under stronger assumptions) of Zhang & Mazumdar (2025) but not formally proved. Proposition 2.6 generalizes that result by stating that the policy π∗ is an RQE if and only if its associated Q function is a fixed point of the Bellman optimality operator T .
+
+3. Results for Normal-form Games 
+
+In this section, we provide our results for normal-form games. We first provide a result suggesting uniqueness and Lipschitz continuity (with respect of payoff matrices) of RQE under λ-monotonicity (Definition 2.3) of the 4-player game, and then provide conditions for the game to be λ-monotone for some λ. The results presented in this section generalize those in Zhang & Mazumdar (2025). Recall the 4-player game view and the objective functions (6) , let z = ( π, p ) = ( π1, π 2, p 1, p 2) denote the joint strat-egy of all players (2 original players and 2 adversaries), the gradient operator of the 4-player game is: 
+
+F (z) = 
+
+
+
+∇π1 J1
+
+∇π2 J2
+
+∇p1
+
+¯J1
+
+∇p2
+
+¯J2
+
+ =
+
+
+
+−R1p1 + ϵ1∇ν1(π1)
+
+−R2p2 + ϵ2∇ν2(π2)
+
+RT 
+
+> 1
+
+π1 + 1 
+
+> τ1
+
+∇pD1(p1, π 2)
+
+RT 
+
+> 2
+
+π2 + 1 
+
+> τ2
+
+∇pD2(p2, π 1)
+
+ (16) Our first result, stated in Theorem 3.1, captures uniqueness and Lipschitz continuity of RQE with respect to the payoff matrices, whose proof can be found in Appendix F.1. 
+
+Theorem 3.1. Suppose λ > 0 can be written as λ =(λ11|A 1|, λ 21|A 2|, λ 11|A 2|, λ 21|A 1|)T , we have: 1. If the 4-player game (6) is λ-strictly monotone, the RQE of the original two-player game is unique. 2. If the 4-player game is (μ, λ )-strongly monotone, for two different pairs of payoff matrices R and R′, their corresponding Nash equilibria z∗ = ( π∗ 
+
+> 1
+
+, π ∗ 
+
+> 2
+
+, p ∗
+
+> 1
+
+, p ∗
+
+> 2
+
+)
+
+and z† = ( π†
+
+> 1
+
+, π †
+
+> 2
+
+, p †
+
+> 1
+
+, p †
+
+> 2
+
+) satisfy: 
+
+∥z∗−z†∥2 ≤
+
+2∥λ∥∞
+
+p|A 1| + p|A 2|
+
+
+
+μ ∥R−R′∥max .
+
+As a result, the corresponding RQEs of the original 2-player game satisfy: 
+
+∥π∗−π†∥2 ≤
+
+2∥λ∥∞
+
+p|A 1| + p|A 2|
+
+
+
+μ ∥R−R′∥max .
+
+Theorem 3.1 generalizes Proposition 3.2 and Theorem 3.3 in Zhang & Mazumdar (2025) through introducing a weight vector λ that weighs the components of gradient operator 
+
+F for player i by λi. When taking λ1 = λ2 = 1 , we recover the strong monotonicity condition used by Zhang & Mazumdar (2025) that captures the z∗ − z† in L2 norm. Now we give the conditions for the game to be λ-strictly / 
+
+(μ, λ )-strongly monotone: 
+
+Theorem 3.2. We have the following regarding the mono-tonicity conditions for the 4-player game: 1. Let Mi(λ, z ) denote the following matrix: 
+
+" 2λiϵi∇2νi(z) λ−i 
+
+> τ−i
+
+∇2 
+
+> pπ
+
+D−i(z) 
+
+> λ−i
+> τ−i
+
+∇2 
+
+> pπ
+
+D−i(z) 2 λ−i 
+
+> τ−i
+
+∇2
+
+> p
+
+D−i(z)
+
+#
+
+,
+
+then the game (6) is λ-strictly monotone if for all z,
+
+Mi(λ, z ) ⪰ 0, i ∈ { 1, 2}, and is (μ, λ )-strongly mono-tone if and only if ∀z, Mi(λ, z ) ⪰ 2μI, i ∈ { 1, 2}.2. If νi(·) are log-barrier function and Di(·, ·) are KL-divergence, then the game is (μ, λ )-strongly monotone for some μ, λ > 0 as long as 16 ϵ1ϵ2τ1τ2 > 1.3. If νi(·) are negative entropy and Di(·, ·) are reverse KL-divergence, then the game is λ-strictly monotone as long as 16 ϵ1ϵ2τ1τ2 > 1.
+
+The proof is deferred to Appendix F.2. As stated in The-orem 3.2, whether the 4-player game is monotone or not does not depend on the payoff matrices of the game, but only depends on the Hessians of the regularizers νi, D i.More specifically, if the regularizers are taken to be KL/log-barrier or reverse KL/negative entropy, the condition for monotonicity simplifies to 16 ϵ1ϵ2τ1τ2 > 1. Notice that when the regularizers are reverse KL/negative entropy, the game can only be strictly monotone (but not strongly mono-tone) because the Hessian of reverse KL may not be strongly convex even in the interior of the simplex. When the regular-izer pairs are either KL/log-barrier or reverse KL/negative entropy, we compare the regions where the uniqueness of 5Provably Convergent Actor-Critic in Risk-averse MARL 0 1 2 3 4 5 6               
+
+> 12
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 2 1
+> RQE Uniqueness Region Comparison
+> 1212> 1/16 (this work)
+> 12> 1/4, 21> 1/4
+> 1212> 1
+> Figure 1. RQE uniqueness region for KL/log-barrier or reverse KL/negative entropy. Green captures the region indicated by The-orems 3.1 and 3.2. Orange captures that in Zhang & Mazumdar (2025) and blue captures that in Mazumdar et al. (2024).
+
+RQE is guaranteed given by Theorem 3.2 to that in Mazum-dar et al. (2024) and Zhang & Mazumdar (2025) in Figure 1: Theorems 3.1 and 3.2 require strictly weaker conditions on the levels of risk-aversion and bounded rationality, as Mazumdar et al. (2024) essentially takes a social convexity 
+
+(Even-dar et al., 2009) approach, which is stronger than the 
+
+λ-monotonicity that we use in Definition 2.3. The condi-tions provided in Zhang & Mazumdar (2025) did’t introduce 
+
+λ and is equivalent to setting λ = 1 in our setting. 
+
+4. Results for Markov Games and MARL 
+
+In this section we shift our focus to the harder problem of discounted general-sum Markov games. We first prove the contraction property of the Bellman operator, and then use it to design a provably convergent two-timescale iteration rule. Finally, we propose an actor-critic algorithm that provably learns the RQE in finite sample through interaction with the environment. Throughout this section, we assume: 
+
+Assumption 4.1. Regarding the 4-player stage game (11) ,there exists λ = ( λ11|A 1|, λ 21|A 2|, λ 11|A 2|, λ 21|A 1|)T >
+
+0 for it to be (μ, λ )-strongly monotone for every s ∈ S .Notice that the monotonicity of a stage game depends only on the level of risk-aversion and bounded rationality of the players, not on the property of the original MG. Additionally, since the condition in Mazumdar et al. (2024) is stronger than ours, Assumption 4.1 is realistic, and it captures real-world human behaviors as shown in Mazumdar et al. (2024). 
+
+4.1. Contraction of Bellman Operator 
+
+In this section we adapt and generalize Theorem 4.2 in Zhang & Mazumdar (2025) to our setting as follows, whose detailed version and proof can be found in Appendix G.1: 
+
+Proposition 4.2. Under Assumption 4.1, when either of the following cases hold: (i) The regularizers Di(·, ·) are 
+
+LD -Lipschitz metrics that satisfy triangle inequality; (ii) If 
+
+Di(·, ·) are KL-divergence and νi(·) are log-barrier func-tions, and the Q functions are bounded, if γ is smaller than some threshold, there exists γ0 < 1 such that the Bellman optimality operator T is a γ0-contraction mapping. 
+
+Proposition 4.2 generalizes Theorem 4.2 in Zhang & Mazumdar (2025) in two ways: First, it assumes (μ, λ )-strong monotonicity, while the assumption is stronger in Zhang & Mazumdar (2025), requiring λ = 1 . Second, it covers the case for KL/log-barrier regularizer pair, while Theorem 4.2 in Zhang & Mazumdar (2025) only works when the regularizer Di(·, ·) are Lipschitz metrics. 
+
+4.2. Two-timescale Iteration for Markov Games 
+
+In principle, given the contraction property of the Bellman operator T , if we start from some bounded Q function Q0
+
+and iteratively apply T to it, or more generally conduct the value iteration rule Qt+1 = (1 − αt)Qt + αtT Qt as stated in Corollary 4.4 in Zhang & Mazumdar (2025) for some step size sequence {αt}Tt=0 > 0, we know that Qt converges to the unique fixed point Q∗ of T and as suggested by Proposition 2.6, the corresponding policies π∗ obtained by (15) is an RQE of the Markov game. However, applying T
+
+requires an oracle of RQE i(·) that computes the RQE value of agent i given some Q function Q. This prevents us from directly conducting value iteration, and we have to design another practical algorithm that converges to RQE without directly computing RQE i(·). To design that algorithm, we make a smoothness assumption on the regularizers: 
+
+Assumption 4.3. The regularizers Di(·, ·) and νi(·) are both S-smooth functions for some S > 0.Assumption 4.3 is a standard assumption in optimization theory and RL. When the regularizers are KL/log-barrier, although they are not smooth on the entire simplex, we can modify the projection step in the z update in (17) to project onto a subset of Z where policies are uniformly lower-bounded, on which both KL and log-barrier are smooth. Under Assumptions 4.1 and 4.3, if we have a fixed Q
+
+function, iteratively applying preconditioned GD zt+1 =
+
+Proj Z (zt − ηΛF (zt)) on the joint policy z of all players, it holds that z converges to the unique Nash equilibrium of the 4-player game, which by Proposition 2.2 has its π
+
+component converges to the RQE of the two-player game, corresponding to the stage game given Q. This can be seen as an approximation of RQE i(·) with some error. In light of this rationale, we propose a two-timescale itera-tion process regarding the 4-player game with two original agents and two adversaries, that provably converges to the 6Provably Convergent Actor-Critic in Risk-averse MARL 
+
+RQE of the Markov game as follows: 
+
+zt+1 (·| s) ←Proj Z (zt(·| s) − βtΛF (zt; −Qt)( s)) , ∀s;
+
+Qt+1 ←(1 − αt)Qt + αtTzt+1 Qt.
+
+(17) where we initialize Q0 = 0 and z0 to be uniform policies. Here αt, β t are step sizes and Proj Z is the projection opera-tor that projects each component (π1,t , π 2,t , p 1,t , p 2,t ) onto their respective simplexes. In each iterate, we first conduct a projected preconditioned GD step to obtain zt+1 using the current gradient operator F (zt; −Qt), followed by a soft 
+
+Q-update to drive Qt+1 closer to the true Q function of 
+
+zt+1 . The convergence guarantee for the iteration rule (17) is stated in Theorem 4.4, whose detailed version and proof can be found in Appendix G.2. 
+
+Theorem 4.4. Under Assumptions 4.1 and 4.3 and as-sume T is a γ0-contraction mapping, let z∗ be the Nash equilibrium of the 4-player game, if the step sizes satisfy 
+
+αt ≪ βt ≪ 1, the iteration rule (17) satisfies: 1. For constant step size αt = α, β t = β, there ex-ists a constant D1 such that ∥zt(·| s) − z∗(·| s)∥2 ≤
+
+D1
+
+ 1 − 1−γ0 
+
+> 2
+
+αt , ∀s ∈ S .2. For diminishing step size αt = αt+h , β t = βt+h , there exists a constant D2 such that ∥zt(·| s) − z∗(·| s)∥2 ≤
+
+D2
+
+ hh+t+1 
+
+ 1−γ02 α
+
+, ∀s ∈ S .As a result, the π component of z converges to the RQE of the original 2-player game at the same rate. 
+
+Theorem 4.4 suggests that when we use constant step sizes, the iterates of (17) converges to the RQE at a linear rate, and if we use diminishing step sizes O(1 /t ), the convergence rate becomes sublinear. Crucially, in contrast to standard policy gradient methods, Theorem 4.4 requires the policy step size βt be much larger than the Q function step size αt
+
+in order to use the property that T is a contraction mapping, which is satisfied under either case in Proposition 4.2. 
+
+4.3. Convergent Actor-Critic through Risk-aversion 
+
+In the previous part we proved that under (μ, λ )-strong monotonicity assumption of the 4-player game, the iteration rule (17) provably converges to the RQE of the Markov game. Following this, we design an actor-critic style MARL algorithm (Algorithm 1 in Appendix C) that learns the Q
+
+function through interacting with the environment and prov-ably converge to the RQE of the game. The main difference between Algorithm 1 and (17) is that it conducts Q iteration with stochastic approximation through samples instead of directly applying Tzt+1 which requires knowing the transi-tion matrix. Thanks to its actor-critic nature, Algorithm 1 supports both on-policy and off-policy training, where the only difference is that for on-policy, we use current policies 
+
+π to sample transition data, while for off-policy, transitions are sampled using a fixed reference policy πr . To guarantee the Markov game can be sufficiently explored, we make Assumptions 4.5 and 4.6, both being common assumptions in modern stochastic approximation and RL literature: 
+
+Assumption 4.5. For all joint policy π, the underlying Markov chain induced by transition kernel Pπ is irreducible and uniformly geometrically ergodic. That is, let P tπ (s, ·) de-note the state distribution at time step t with initial state be-ing s, there exists a unique state distribution μπ (·) uniformly lower-bounded by μ, such that ∥P tπ (s, ·) − μπ (·)∥TV ≤
+
+Cρ t, ∀s ∈ S for some constants C < ∞ and ρ ∈ (0 , 1) .
+
+Assumption 4.6. For all t, s ∈ S and a ∈ A , the policies used for sampling are uniformly lower bounded by π.We now present Theorem 4.7, a finite-sample convergence result for Algorithm 1 as follows: 
+
+Theorem 4.7. Under Assumptions 4.1, 4.3, 4.5 and 4.6, assume T is a γ0-contraction mapping, let z∗ be the Nash equilibrium of the risk-adjusted 4-player game (and corre-spondingly π∗ the RQE of the original game), if the step sizes satisfy αt ≪ βt ≪ 1, then for both on- and off-policy variants, let d = μπ , the iterates of Algorithm 1 satisfies: 1. For constant step size αt = α, β t = β, there exists constants D3, D 4 such that for all s ∈ S :
+
+E[∥zt(·| s)−z∗(·| s)∥22] ≤ (1 − (1 − γ0)2 dα )tD3+αD 4.
+
+2. For diminishing step size αt = αt+h , β t = βt+h , there exists constant D5 such that for all s ∈ S :
+
+E[∥zt(·| s) − z∗(·| s)∥22] ≤ D5
+
+ h + 1 
+
+h + t
+
+ (1 −γ0)2 dα 
+
+.
+
+A detailed version of Theorem 4.7 and its proof can be found in Appendix H. The proof involves constructing and solv-ing a novel coupled Lyapunov drift inequality for both the policies zt and the Q functions Qt. The main technical chal-lenge, is that instead of relying on the policy gradient step to provide a negative drift (which no longer holds in game-theoretic setting), we rely on the contraction of Bellman operator T to yield a negative drift, which is only possible with faster actor and slower critic, compared to slower actor and faster critic used in normal actor-critic algorithms. 
+
+5. Experiments 
+
+In this section we conduct numerical experiments to show-case the effectiveness of risk-aversion in normal-form games 7Provably Convergent Actor-Critic in Risk-averse MARL 
+
+and MARL. We first provide Algorithm 2, a scalable imple-mentation of Algorithm 1 that employs policy/Q networks and a replay buffer in Appendix C.1. To emphasize how risk-aversion helps training compared to risk-neutral, we compare the risk-averse version of Algorithm 2 against its risk-neutral version in our MARL experiments. 
+
+5.1. Inspection Game Experiment 
+
+Our first experiment is a simple normal-form Inspection Game , whose payoff matrices are specified by R1 =0 53 3
+
+
+
+; R2 =
+
+−3 −50 3
+
+
+
+. Here player 1 is the Inspec-tor , and player 2 is the Inspectee . The inspector decides whether to audit (top row) or not (bottom row), and the inspectee chooses whether to comply (left column) or to defect (right column). When the inspector inspects, it will enjoy a high utility if the inspectee defects, but will have low utility if the inspectee complies. For the inspectee, when choosing to defect, getting inspected will incur a penalty of 
+
+−5, but if not inspected it will get a high utility of 3. We plot the learning dynamics for gradient descent when applying 
+
+zt+1 = Proj Z (zt − ηF (zt; R)) for different risk-aversion levels τ in Figure 2. We can see that without regulariza-0 200 400 600 800 1000      
+
+> Iteration
+> 0.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> Probability  1[0]
+> Player 1 Policy
+> 0200 400 600 800 1000
+> Iteration
+> 0.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> Probability  2[0]
+> Player 2 Policy
+> =0.1
+> =0.5
+> =1.0
+> =2.0
+> Risk-Neutral ( =0.2)
+> Risk-Neutral ( =0)
+
+Figure 2. GD dynamics for different τ with KL and log-barrier risks, ϵi = 0 .2 and τ1 = τ2.
+
+tion, the risk-neutral gradient descent fails to converge, and when we fix ϵ = 0 .2, larger τ implies faster convergence. Additionally, the RQE is shown in Figure 2 as the policies to which gradient descent converge. For larger τ (more risk-averse), the inspector will less likely choose inspect, and the inspectee will more likely choose comply, leading to a lower utility variance for both players. 
+
+5.2. Gridworld Cooperation Game Experiment 
+
+Our second experiment considers an MARL gridworld envi-ronment with two agents where each step agents can choose between cooperation , which leads to a medium reward each step and defection , which when the other agent cooperates, gets a high reward, but gets no reward when the other agent also defects. We train both agents and compare the train-ing reward curves (moving average of 100 episodes) for risk-averse and risk-neutral training (each for 10 indepen-dent runs) in Figure 3. We can see that risk-averse training curves are much more consistent and converges much faster, while risk-neutral curves are inconsistent across different 0 5000 10000 15000 20000     
+
+> Episode
+> 0
+> 20
+> 40
+> 60
+> 80
+> MA100 Reward
+> Risk-Averse Agent 0
+> Run 0
+> Run 1
+> Run 2
+> Run 3
+> Run 4
+> Run 5
+> Run 6
+> Run 7
+> Run 8
+> Run 9
+> 05000 10000 15000 20000
+> Episode
+> 0
+> 25
+> 50
+> 75
+> 100
+> Risk-Neutral Agent 0
+
+Figure 3. MA100 agent 0 reward curves of gridworld cooperation game for 10 risk-averse and 10 risk-neutral training runs. 
+
+runs and may never converge. Details of the environment and algorithm parameters in Appendix D.1. 
+
+5.3. MPE Simple Tag Experiment 
+
+To illustrate the effectiveness of risk-aversion in a broader class of games, we conduct an experiment on the Simple Tag environment with fixed good agents of Multi Particle Environments (MPE) (Lowe et al., 2017). We adopt an MPE environment with 3 agents where the good agent policy is fixed (1 good agent and 2 adversaries). When an adver-sary hits the good agent, both adversaries receive a positive reward. We plot the reward curves for adversaries under 5 in-dependent runs for risk-averse and risk-neutral respectively in Figure 4. We can see that running risk-averse training 0 10000 20000 30000 40000 50000      
+
+> Episode
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> MA100 Reward
+> Risk-Averse
+> Run 0
+> Run 1
+> Run 2
+> Run 3
+> Run 4
+> 010000 20000 30000 40000 50000
+> Episode
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> MA100 Reward
+> Risk-Neutral
+
+Figure 4. MA100 reward curves of Simple Tag fixing good agents for 5 risk-averse and 5 risk-neutral training runs. 
+
+induces more consistent training curves while having a sim-ilar final performance. This illustrate the effectiveness of risk-aversion even in completing cooperative tasks. Details are provided in Appendix D.2. 
+
+6. Conclusion 
+
+In this work, we have addressed the long-standing challenge of designing provably convergent MARL algorithms for dis-counted general-sum Markov games through shifting the ob-jective from computationally intractable, risk-neutral Nash equilibria to the framework of RQE. Our theoretical analysis demonstrates how risk-aversion effectively regularizes and smoothens the MARL optimization landscape, while our ex-periments verify how risk-aversion changes agent behavior and stabilizes learning. We believe our framework will serve as a foundation for future research in both theoretical and empirical fields, including further improvement in sample efficiency, and designing independent learning algorithms that do not explicitly require opponent policies. 8Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Acknowledgements 
+
+EM acknowledges support from NSF Award 2240110. 
+
+Impact Statement 
+
+This paper advances the theoretical understanding and algo-rithmic development of multi-agent reinforcement learning and game-theoretic solution concepts. Our work focuses on equilibrium computation under risk aversion and bounded rationality, and proposes provably convergent algorithms. The results are mathematical in nature and evaluated in controlled experimental environments; we do not deploy agents in real-world systems nor optimize for human be-havior. We note that multi-agent learning frameworks have potential applications in socio-technical systems involving strategic interactions (e.g., markets, cybersecurity, or auto-mated negotiation). While such domains could carry so-cietal implications depending on the deployment context, the contributions of this work are methodological and do not in themselves present foreseeable direct ethical risks. We therefore believe that the broader societal impact of this paper aligns with that of advancing the field of machine learning more broadly. 
+
+References 
+
+Bai, Y. and Jin, C. Provable self-play algorithms for compet-itive reinforcement learning. In International conference on machine learning , pp. 551–560. PMLR, 2020. Borkar, V. S. Stochastic approximation with two time scales. 
+
+Systems & Control Letters , 29(5):291–294, 1997. Cai, Y. and Zheng, W. Doubly optimal no-regret learning in monotone games. In International Conference on Machine Learning , pp. 3507–3524. PMLR, 2023. Cen, S., Wei, Y., and Chi, Y. Fast policy extragradient meth-ods for competitive games with entropy regularization. 
+
+Journal of machine learning Research , 25(4):1–48, 2024. Chen, X., Deng, X., and Teng, S.-H. Settling the com-plexity of computing two-player nash equilibria. J. ACM , 56(3), May 2009. ISSN 0004-5411. doi: 10. 1145/1516512.1516516. URL https://doi.org/ 10.1145/1516512.1516516 .Chen, Z., Maguluri, S. T., Shakkottai, S., and Shanmugam, K. A lyapunov theory for finite-sample guarantees of asynchronous q-learning and td-learning variants. arXiv preprint arXiv:2102.01567 , 2021. Chen, Z., Khodadadian, S., and Maguluri, S. T. Finite-sample analysis of off-policy natural actor–critic with linear function approximation. IEEE Control Systems Letters , 6:2611–2616, 2022a. Chen, Z., Zhang, S., Doan, T. T., Clarke, J.-P., and Maguluri, S. T. Finite-sample analysis of nonlinear stochastic ap-proximation with applications in reinforcement learning. 
+
+Automatica , 146:110623, 2022b. Chen, Z., Zhang, K., Mazumdar, E., Ozdaglar, A., and Wierman, A. Two-timescale q-learning with function ap-proximation in zero-sum stochastic games. arXiv preprint arXiv:2312.04905 , 2023. Chen, Z., Zhang, K., Mazumdar, E., Ozdaglar, A., and Wierman, A. Last-iterate convergence of payoff-based independent learning in zero-sum stochastic games. arXiv preprint arXiv:2409.01447 , 2024. Dalal, G., Thoppe, G., Sz ¨or ´enyi, B., and Mannor, S. Fi-nite sample analysis of two-timescale stochastic approx-imation with applications to reinforcement learning. In 
+
+Conference On Learning Theory , pp. 1199–1233. PMLR, 2018. Daskalakis, C., Goldberg, P. W., and Papadimitriou, C. H. The complexity of computing a nash equilibrium. SIAM Journal on Computing , 39(1):195–259, 2009. doi: 10.1137/070699652. URL https://doi.org/10. 1137/070699652 .Daskalakis, C., Ilyas, A., Syrgkanis, V., and Zeng, H. Training gans with optimism. arXiv preprint arXiv:1711.00141 , 2017. Daskalakis, C., Golowich, N., and Zhang, K. The com-plexity of markov equilibrium in stochastic games, 2022. URL https://arxiv.org/abs/2204.03991 .Eriksson, H., Basu, D., Alibeigi, M., and Dimitrakakis, C. Risk-sensitive bayesian games for multi-agent reinforce-ment learning under policy uncertainty. arXiv preprint arXiv:2203.10045 , 2022. Even-dar, E., Mansour, Y., and Nadav, U. On the con-vergence of regret minimization dynamics in concave games. In Proceedings of the Forty-First Annual ACM Symposium on Theory of Computing , STOC ’09, pp. 523–532, New York, NY, USA, 2009. Association for Computing Machinery. ISBN 9781605585062. doi: 10. 1145/1536414.1536486. URL https://doi.org/ 10.1145/1536414.1536486 .Foerster, J. N., Chen, R. Y., Al-Shedivat, M., Whiteson, S., Abbeel, P., and Mordatch, I. Learning with opponent-learning awareness. arXiv preprint arXiv:1709.04326 ,2017. F ¨ollmer, H. and Schied, A. Convex measures of risk and trading constraints. Finance and stochastics , 6:429–447, 2002. 9Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Fox, R., Mcaleer, S. M., Overman, W., and Panageas, I. Independent natural policy gradient always con-verges in markov potential games. In Camps-Valls, G., Ruiz, F. J. R., and Valera, I. (eds.), Proceedings of The 25th International Conference on Artificial Intelligence and Statistics , volume 151 of Proceedings of Machine Learning Research , pp. 4414–4425. PMLR, 28–30 Mar 2022. URL https://proceedings.mlr.press/ v151/fox22a.html .Freund, Y. and Schapire, R. E. A decision-theoretic general-ization of on-line learning and an application to boosting. 
+
+Journal of computer and system sciences , 55(1):119–139, 1997. Ganesh, S., Vadori, N., Xu, M., Zheng, H., Reddy, P., and Veloso, M. Reinforcement learning for market making in a multi-agent dealer market. arXiv preprint arXiv:1911.05892 , 2019. Gao, Y., Lui, K. Y. C., and Hernandez-Leal, P. Robust risk-sensitive reinforcement learning agents for trading markets. arXiv preprint arXiv:2107.08083 , 2021. Giannou, A., Vlatakis-Gkaragkounis, E. V., and Mertikopou-los, P. The convergence rate of regularized learning in games: From bandits and uncertainty to optimism and beyond. In NeurIPS , pp. 22655–22666, 2021. Goeree, J. K. and Offerman, T. Efficiency in auctions with private and common values: An experimental study. 
+
+American Economic Review , 92(3):625–643, 2002. Goeree, J. K., Holt, C. A., and Palfrey, T. R. Risk averse behavior in generalized matching pennies games. Games and Economic Behavior , 45(1):97–113, 2003. Gollier, C. The economics of risk and time . MIT press, 2001. Haarnoja, T., Zhou, A., Abbeel, P., and Levine, S. Soft actor-critic: Off-policy maximum entropy deep reinforce-ment learning with a stochastic actor. In International conference on machine learning , pp. 1861–1870. Pmlr, 2018. Hasselt, H. Double q-learning. Advances in neural informa-tion processing systems , 23, 2010. Hu, J. and Wellman, M. P. Nash q-learning for general-sum stochastic games. Journal of machine learning research ,4(Nov):1039–1069, 2003. Ibragimov, I. A. Some limit theorems for stationary pro-cesses. Theory of Probability & Its Applications , 7(4): 349–382, 1962. Iqbal, S. and Sha, F. Actor-attention-critic for multi-agent reinforcement learning. In International conference on machine learning , pp. 2961–2970. PMLR, 2019. Jin, C., Liu, Q., Wang, Y., and Yu, T. V-learning–a simple, efficient, decentralized algorithm for multiagent rl. arXiv preprint arXiv:2110.14555 , 2021. Jin, Y., Muthukumar, V., and Sidford, A. The complexity of infinite-horizon general-sum stochastic games, 2022. Konda, V. and Tsitsiklis, J. Actor-critic algorithms. Ad-vances in neural information processing systems , 12, 1999. Lanctot, M., Zambaldi, V., Gruslys, A., Lazaridou, A., Tuyls, K., P ´erolat, J., Silver, D., and Graepel, T. A uni-fied game-theoretic approach to multiagent reinforcement learning. Advances in neural information processing systems , 30, 2017. Lanzetti, N., Fricker, S., Bolognani, S., D ¨orfler, F., and Paccagnan, D. Strategically robust game theory via opti-mal transport. arXiv preprint arXiv:2507.15325 , 2025. Lauffer, N., Shah, A., Carroll, M., Seshia, S. A., Russell, S., and Dennis, M. Robust and diverse multi-agent learning via rational policy gradient. arXiv preprint arXiv:2511.09535 , 2025. Littman, M. L. Markov games as a framework for multi-agent reinforcement learning. In Machine learning pro-ceedings 1994 , pp. 157–163. Elsevier, 1994. Liu, Q., Yu, T., Bai, Y., and Jin, C. A sharp analysis of model-based reinforcement learning with self-play. In 
+
+International Conference on Machine Learning , pp. 7001– 7010. PMLR, 2021. Lowe, R., Wu, Y., Tamar, A., Harb, J., Abbeel, P., and Mor-datch, I. Multi-agent actor-critic for mixed cooperative-competitive environments. Neural Information Process-ing Systems (NIPS) , 2017. Lu, C., Willi, T., De Witt, C. A. S., and Foerster, J. Model-free opponent shaping. In International Conference on Machine Learning , pp. 14398–14411. PMLR, 2022. Mazumdar, E., Panaganti, K., and Shi, L. Tractable equi-librium computation in markov games through risk aver-sion, 2024. URL https://arxiv.org/abs/2406. 14156 .McKelvey, R. D. and Palfrey, T. R. An experimental study of the centipede game. Econometrica: Journal of the Econometric Society , pp. 803–836, 1992. 10 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+McKelvey, R. D. and Palfrey, T. R. Quantal response equi-libria for normal form games. Games and economic behavior , 10(1):6–38, 1995. McKelvey, R. D. and Palfrey, T. R. Quantal response equi-libria for extensive form games. Experimental economics ,1:9–41, 1998. Mertikopoulos, P. and Sandholm, W. H. Learning in games via reinforcement and regularization. Mathematics of Operations Research , 41(4):1297–1324, 2016. Mertikopoulos, P. and Zhou, Z. Learning in games with continuous action sets and unknown payoff functions. 
+
+Mathematical Programming , 173(1):465–507, 2019. Mertikopoulos, P., Papadimitriou, C., and Piliouras, G. Cy-cles in adversarial regularized learning, 2017. URL 
+
+https://arxiv.org/abs/1709.02738 .Meyn, S. P. and Tweedie, R. L. Markov chains and stochas-tic stability . Springer Science & Business Media, 2012. Mihatsch, O. and Neuneier, R. Risk-sensitive reinforcement learning. Machine learning , 49(2):267–290, 2002. Mnih, V. Playing atari with deep reinforcement learning. 
+
+arXiv preprint arXiv:1312.5602 , 2013. Monderer, D. and Shapley, L. S. Potential games. Games and economic behavior , 14(1):124–143, 1996. Panda, P. and Bhatnagar, S. Two-timescale critic-actor for average reward mdps with function approximation. In 
+
+Proceedings of the AAAI Conference on Artificial Intelli-gence , volume 39, pp. 19813–19820, 2025. Qiu, W., Wang, X., Yu, R., Wang, R., He, X., An, B., Obraztsova, S., and Rabinovich, Z. Rmix: Learning risk-sensitive policies for cooperative reinforcement learning agents. Advances in Neural Information Processing Sys-tems , 34:23049–23062, 2021. Rashid, T., Samvelyan, M., De Witt, C. S., Farquhar, G., Foerster, J., and Whiteson, S. Monotonic value function factorisation for deep multi-agent reinforcement learning. 
+
+Journal of Machine Learning Research , 21(178):1–51, 2020. Robbins, H. and Monro, S. A stochastic approximation method. The annals of mathematical statistics , pp. 400– 407, 1951. Robinson, J. An iterative method of solving a game. Annals of mathematics , 54(2):296–301, 1951. Rockafellar, R. T. and Wets, R. J.-B. Variational analysis ,volume 317. Springer Science & Business Media, 2009. Rosen, J. B. Existence and uniqueness of equilibrium points for concave n-person games. Econometrica: Journal of the Econometric Society , pp. 520–534, 1965. Rudolph, M., Lichtle, N., Mohammadpour, S., Bayen, A., Kolter, J. Z., Zhang, A., Farina, G., Vinitsky, E., and Sokota, S. Reevaluating policy gradient methods for imperfect-information games, 2025. URL https:// arxiv.org/abs/2502.08938 .Samvelyan, M., Rashid, T., de Witt, C. S., Farquhar, G., Nardelli, N., Rudner, T. G. J., Hung, C.-M., Torr, P. H. S., Foerster, J., and Whiteson, S. The starcraft multi-agent challenge, 2019. URL https://arxiv.org/abs/ 1902.04043 .Schulman, J., Wolski, F., Dhariwal, P., Radford, A., and Klimov, O. Proximal policy optimization algo-rithms, 2017. URL https://arxiv.org/abs/ 1707.06347 .Sclar, M., Neubig, G., and Bisk, Y. Symmetric machine theory of mind. In International conference on machine learning , pp. 19450–19466. PMLR, 2022. Shapley, L. S. Stochastic games. Proceedings of the national academy of sciences , 39(10):1095–1100, 1953. Shen, S., Ma, C., Li, C., Liu, W., Fu, Y., Mei, S., Liu, X., and Wang, C. Riskq: risk-sensitive multi-agent reinforce-ment learning value factorization. Advances in Neural Information Processing Systems , 36:34791–34825, 2023. Shen, Y., Tobia, M. J., Sommer, T., and Obermayer, K. Risk-sensitive reinforcement learning. Neural computation , 26 (7):1298–1328, 2014. Silver, D., Huang, A., Maddison, C. J., Guez, A., Sifre, L., Van Den Driessche, G., Schrittwieser, J., Antonoglou, I., Panneershelvam, V., Lanctot, M., et al. Mastering the game of go with deep neural networks and tree search. 
+
+nature , 529(7587):484–489, 2016. Slumbers, O., Mguni, D. H., Blumberg, S. B., Mcaleer, S. M., Yang, Y., and Wang, J. A game-theoretic frame-work for managing risk in multi-agent systems. In Inter-national Conference on Machine Learning , pp. 32059– 32087. PMLR, 2023. Sokota, S., D’Orazio, R., Kolter, J. Z., Loizou, N., Lanctot, M., Mitliagkas, I., Brown, N., and Kroer, C. A uni-fied approach to reinforcement learning, quantal response equilibria, and two-player zero-sum games, 2023. URL 
+
+https://arxiv.org/abs/2206.05825 .Srikant, R. and Ying, L. Finite-time error bounds for linear stochastic approximation andtd learning. In Conference on learning theory , pp. 2803–2830. PMLR, 2019. 11 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Sutton, R. S. and Barto, A. G. Reinforcement learning: An introduction , volume 1. MIT press Cambridge, 1998. Tsitsiklis, J. N. Asynchronous stochastic approximation and q-learning. Machine learning , 16(3):185–202, 1994. Vinyals, O., Babuschkin, I., Czarnecki, W. M., Mathieu, M., Dudzik, A., Chung, J., Choi, D. H., Powell, R., Ewalds, T., Georgiev, P., et al. Grandmaster level in starcraft ii using multi-agent reinforcement learning. nature , 575 (7782):350–354, 2019. Wang, Z., Shen, Y., Zavlanos, M. M., and Johansson, K. H. Learning of nash equilibria in risk-averse games. In 2024 American Control Conference (ACC) , pp. 3270–3275. IEEE, 2024. Wei, C.-Y., Lee, C.-W., Zhang, M., and Luo, H. Last-iterate convergence of decentralized optimistic gradient descent/ascent in infinite-horizon competitive markov games. In Belkin, M. and Kpotufe, S. (eds.), Pro-ceedings of Thirty Fourth Conference on Learning The-ory , volume 134 of Proceedings of Machine Learn-ing Research , pp. 4259–4299. PMLR, 15–19 Aug 2021. URL https://proceedings.mlr.press/ v134/wei21a.html .Wu, Y. F., Zhang, W., Xu, P., and Gu, Q. A finite-time analysis of two time-scale actor-critic methods. Advances in Neural Information Processing Systems , 33:17617– 17628, 2020. Yekkehkhany, A., Murray, T., and Nagi, R. Risk-averse equilibrium for games. arXiv preprint arXiv:2002.08414 ,2020. Yu, C., Velu, A., Vinitsky, E., Gao, J., Wang, Y., Bayen, A., and Wu, Y. The surprising effectiveness of ppo in cooper-ative multi-agent games. Advances in neural information processing systems , 35:24611–24624, 2022. Zehfroosh, A. and Tanner, H. G. Pac reinforcement learning algorithm for general-sum markov games. IEEE transac-tions on automatic control , 68(5):2821–2831, 2022. Zhang, R., Hu, Y., and Li, N. Soft robust mdps and risk-sensitive mdps: Equivalence, policy gradient, and sample complexity, 2024. URL https://arxiv.org/abs/ 2306.11626 .Zhang, R., Li, N., Ozdaglar, A., Shamma, J., and Zardini, G. Optimism as risk-seeking in multi-agent reinforcement learning. IEEE Control Systems Letters , 2025. Zhang, S., Liu, B., Yao, H., and Whiteson, S. Provably con-vergent two-timescale off-policy actor-critic with function approximation. In International Conference on Machine Learning , pp. 11204–11213. PMLR, 2020. Zhang, Y. and Mazumdar, E. Convergent q-learning for infinite-horizon general-sum markov games through be-havioral economics. arXiv preprint arXiv:2508.08669 ,2025. 12 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+A. Notations and Basic Definitions 
+
+The notations used in our analysis is summarized in Table 1. We also clarify the definition of Lipschitz continuity, smoothness and contraction mapping below: 
+
+Definition A.1 (L-Lipschitz Continuity) . A function f : X → Y is said to be L-Lipschitz continuous with respect to the norm ∥ · ∥ if there exists a constant L ≥ 0 such that for all x, y ∈ X ,
+
+∥f (x) − f (y)∥ ≤ L∥x − y∥. (18) By default, we use L2 norm if not specifically mentioned. 
+
+Definition A.2 (S-Smoothness) . A differentiable function f : X → R is said to be S-smooth with respect to the norm ∥ · ∥ 
+
+if its gradient ∇f is S-Lipschitz continuous. That is, for all x, y ∈ X ,
+
+∥∇ f (x) − ∇ f (y)∥∗ ≤ S∥x − y∥, (19) where S ≥ 0 is the smoothness constant and ∥ · ∥ ∗ denotes the dual norm induced by ∥ · ∥ . By default, we use L2 norm (whose dual norm is itself) if not specifically mentioned. 
+
+Definition A.3 (Contraction Mapping) . Let (X , d ) be a complete metric space. A mapping T : X → X is called a 
+
+γ-contraction mapping if there exists a constant γ ∈ [0 , 1) such that for all x, y ∈ X ,
+
+d(T (x), T (y)) ≤ γd (x, y ). (20) In a normed vector space where d(x, y ) = ∥x − y∥, this condition satisfies ∥T (x) − T (y)∥ ≤ γ∥x − y∥. By default, regarding Bellman operators T , Tz operating on Q functions, we use the max-norm ∥ · ∥ if not specifically mentioned. 13 Provably Convergent Actor-Critic in Risk-averse MARL  
+
+> Table 1. Summary of Notations
+
+Notation Description 
+
+General Notation 
+
+x = ( x1, . . . , x n) Tuple constructed by concatenating components for each player (e.g., R := ( R1, R 2)). 
+
+i, −i Indices for the player i and all other players −i.
+
+∥ · ∥ 1, ∥ · ∥ 2, ∥ · ∥ ∞ L1, L 2, and L∞ norms, respectively. 
+
+∥A∥max Max-norm of a matrix A, defined as max i,j Aij .
+
+⟨· , ·⟩ Euclidean inner product. 
+
+⟨x, y ⟩λ λ-weighted inner product P 
+
+> i
+
+λixiyi for λ > 0.
+
+∥x∥λ λ-weighted norm p⟨x, x ⟩λ.sp (R) Span of a matrix R: max i,j Rij − min i,j Rij .sp (R) Maximum span of a tuple of matrices: max k∈[n] sp (Rk).
+
+∥R∥max Maximum max-norm across a tuple: max k∈[n] ∥Rk∥max .Proj K(·) Euclidean projection operator onto a convex set K.
+
+Game & Strategy Parameters 
+
+πi, p i Mixed strategy (policy) of agent i and adversary i.
+
+π, p Unsubscripted symbols represent joint policies for agents ( π) and adversaries ( p). 
+
+z = ( π, p ) Joint strategy profile combining primal agents and adversaries. 
+
+Ai, ∆|A i| Action space and the probability simplex over actions for player i.
+
+τi Risk-aversion parameter for player i.
+
+ϵi Bounded rationality parameter for player i.
+
+Ri, R Payoff matrix for player i and the tuple of matrices (R1, . . . , R n).
+
+γ Discount factor for the Markov game. 
+
+Functions & Operators 
+
+fi(π; R) Global objective function usage in the original 2-player game (e.g., fi(πi, π −i; Ri)). 
+
+Ji(π, p ; R) Global objective function usage in the 4-player game. 
+
+Di(pi, π −i) Penalty function regularizing the adversary (e.g., KL/reverse KL). 
+
+νi(πi) Regularization function for the agent (e.g., Entropy/log-barrier). 
+
+T , Tz Risk-averse Bellman Optimality and Evaluation operators. 
+
+αt, β t Step sizes for Critic (Q-function) and Actor (Policy) updates. 14 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+B. Related Work 
+
+In this section we provide a detailed discussion on related work. Our work primarily considers the solution concept of RQE originally proposed by Mazumdar et al. (2024), where they proved that all CCEs of the 4-player game has its π component being an RQE of the original 2-player game, and provided an extension of the solution concept to finite-horizon Markov games. Working further on RQE, Zhang & Mazumdar (2025) studied the case where the 4-player game is monotone, and proved the uniqueness and Lipschitz continuity of RQE with respect to the payoff matrices. They also considered discounted Markov games and proved the contraction of Bellman operator under the same monotonicity condition. However, the condition provided in (Mazumdar et al., 2024) doesn’t match that in (Zhang & Mazumdar, 2025) (and neither includes the other). To reconcile these disparate conditions, we introduce a generalized class of λ-monotone games and provides a condition that strictly includes both conditions. We additionally provide a practical algorithm that naturally fits into the Actor-Critic framework, not relying on the RQE oracle, which neither work above provides. Our work is situated at the intersection of algorithm design for MARL, learning in games, risk-aversion, robustness and bounded rationality decision-making and stochastic approximation (especially for convergence analysis of Actor-Critic algorithms). We list the related work for each field in the following paragraphs. 
+
+MARL algorithms and approaches. Various distinctive MARL algorithm have been proposed and empirically tested, among which MAPPO (Yu et al., 2022) and QMIX (Rashid et al., 2020) are the most empirically successful for fully cooperative environments. For the environments where agents are not fully cooperative, MADDPG (Lowe et al., 2017), MAAC (Iqbal & Sha, 2019) and even Individual PPO (Schulman et al., 2017) have been tested to have good empirical performance (Rudolph et al., 2025). Focusing on the strategic side of MARL, several techniques have been proposed, including opponent shaping (learning with opponent-learning awareness) (Foerster et al., 2017; Lu et al., 2022), Theory of Mind (Sclar et al., 2022) and Rationality-preserving Policy optimization (Lauffer et al., 2025). Empirical studies of risk-averse MARL have also been extensively conducted (Eriksson et al., 2022; Ganesh et al., 2019; Qiu et al., 2021; Shen et al., 2023). While these methods perform well in practice, they generally lack theoretical convergence guarantee, especially in general-sum environments. 
+
+Learning in normal-form and Markov games. Parallel to empirical advances, the theoretical foundations of learning in games—both normal-form and Markov games (MGs)—have also seen significant development. In normal form games, although Nash equilibria is proven to be computationally intractable for general-sum games (Daskalakis et al., 2009), prior work developed learning algorithms like fictitious play (Robinson, 1951), MWU (Freund & Schapire, 1997) and OMD/OGDA (Daskalakis et al., 2017; Wei et al., 2021) that provably converge to Nash in zero-sum games, or to Coarse Correlated equilibria (CCEs) in general-sum games. In Markov games, Littman (1994) first formalized the notion of Markov games (discounted) and proposed minimax-Q learning that provably converges in 2-player zero-sum MGs. Bai & Jin (2020) provided the first provably sample-efficient self-play algorithm for finite-horizon zero-sum MGs achieving 
+
+O(√T ) regret. For finite-horizon general-sum MGs, Jin et al. (2021) proposed a V-learning framework that provably learns its CCE in polynomial complexity with respect to the number of agents, yet the CCE is typically not a Markov policy, and requires joint randomness to execute. Prior work have also assumed access to equilibrium oracles to solve Markov Games. Hu & Wellman (2003) established Nash Q-learning, which extends Q-learning in single-agent RL to multi-agent RL through solving the stage game at each state. Liu et al. (2021) refined the algorithm for better sample-complexity through the V-learning framework, and Zehfroosh & Tanner (2022) combined the ideas of Nash Q-learning and delayed Q-learning and built a new algorithm for PAC MARL. For general-sum games, in addition to learning CCEs, there are also works that try to learn Nash equilibrium for games with additional structure. Monderer & Shapley (1996) introduced potential games , where a single global function tracks the improvement of any agent’s unilateral move, where Nash equilibria are learnable, and Fox et al. (2022) later generalized this idea to Markov potential games. Rosen (1965) introduced monotone games , where gradient dynamics converges to the unique Nash equilibrium, and many algorithms are designed and proven to have better rates of convergence (Cai & Zheng, 2023), or to be robust to noisy gradient steps (Mertikopoulos & Zhou, 2019). More recently, Even-dar et al. (2009) explored 
+
+socially convex games where the (weighted) sum of player utilities is convex. There is also a line of works exploring the effectiveness of regularization for learning in games (Mertikopoulos & Sandholm, 2016; Giannou et al., 2021; Sokota et al., 2023; Cen et al., 2024). However, as shown by Mertikopoulos et al. (2017), regularization itself doesn’t provide convergence guarantees even for zero-sum games without additional structure. Despite various attempts on learning in normal-form and Markov games, no existing algorithm provide provable guarantee 15 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+for the most natural infinite-horizon general-sum Markov games, as is provided in our work. 
+
+Risk-aversion, robustness and bounded-rationality in decision-making. The solution concept of RQE naturally unifies three paradigms that have gained significant traction in recent years: behavioral robustness, risk-aversion, and bounded rationality in decision-making. In behavioral economics, risk-aversion (Gollier, 2001; Goeree & Offerman, 2002; Goeree et al., 2003) and bounded rationality (McKelvey & Palfrey, 1992; 1995; 1998) in human decision-making has been extensively studied, showing that the solution concept of Nash equilibrium does not necessarily capture real-world human decision-making behaviors, where both risk-aversion and bounded rationality are important aspects. In reinforcement learning, robustness and risk-aversion (proven to be equivalent in (Zhang et al., 2024)) has also been studied to tackle stochasticity and uncertainty in the environment (Mihatsch & Neuneier, 2002; Shen et al., 2014). Several more recent works have focused on the theoretical foundations of risk-sensitive MARL (Gao et al., 2021; Slumbers et al., 2023; Wang et al., 2024; Yekkehkhany et al., 2020), yet most of their results still rely on the game to be structured itself. Recent work (Lanzetti et al., 2025) considered an equilibrium concept of strategically robust equilibrium sharing similar expression to RQE but a different motivation of robustness. Contrary to risk-aversion, risk-seeking has also been studied recently in MARL by Zhang et al. (2025). There are different formulations of risk-aversion used in the works above, among which our work mainly considers a class of convex risk measures proposed by F ¨ollmer & Schied (2002), where they proposed a dual representation theorem connecting risk-aversion to regularization in agent behaviors. Among all these works regarding risk-aversion, our work differentiates itself in two aspects: (i) We mainly consider strategic 
+
+risk-aversion, where agents are risk-averse against the behaviors of other agents rather than the environment; (ii) Our analysis do not rely on the payoff structure of the original game, but only on the level of risk-aversion and bounded rationality. 
+
+Stochastic approximation and Actor-Critic algorithms. Our theoretical analysis is largely based on the stochastic approximation (SA) framework introduced by (Robbins & Monro, 1951) that has served as a fundamental tool for analyzing the convergence of Q-learning (Tsitsiklis, 1994; Chen et al., 2022b) and TD learning (Srikant & Ying, 2019; Chen et al., 2021). Following a two-timescale SA framework (Borkar, 1997), the seminal work of (Konda & Tsitsiklis, 1999) provided the first rigorous convergence proofs, and more recently, different variants of Actor-Critic algorithms (direct parameterization or linear function approximation, policy gradient or natural policy gradient) have been analyzed in different ways (asymptotic or finite-sample analysis) (Dalal et al., 2018; Zhang et al., 2020; Wu et al., 2020; Chen et al., 2022a). SA has also been used to analyze learning in games. For two-player zero-sum MGs, Chen et al. (2023) proved convergence of two-timescale Q-learning with function approximation, and later on provided an independent learning algorithm that enjoys last-iterate convergence in (Chen et al., 2024). While the analysis of Actor-Critic algorithms under the SA framework has been extensively studied, nearly all works are for single agent RL and uses a faster critic and a slower actor, whose final convergence relies on analyzing the policy gradient dynamics, with one exception of the so-called Critic-Actor framework proposed by Panda & Bhatnagar (2025) (yet their convergence analysis still relies on policy gradient instead of contraction). In comparison, In the MARL problem that we consider, policy gradient no longer yields negative drift, making all previous techniques invalid. To circumvent this, we adopt a “reverse” step size order with a slower critic with a faster actor in order to utilize the contraction property of the Bellman operator in our convergence proof. 16 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+C. Algorithm: Multi-agent Risk-averse Actor-Critic 
+
+In this section we present our algorithm of Multi-agent Risk-averse Actor-Critic, as discussed in Section 4.3. 
+
+Algorithm 1 Multi-agent Risk-averse Actor-Critic for n agents 
+
+1: Input: Step sizes {αt}Tt=0 , {βt}Tt=0 , agent regularizers νi(·), D i(·, ·), bounded rationality level ϵi, risk-aversion level τi,weight-vector λ, number of episodes T and number of samples K per update. {Off-policy: Behavior policies {πri }ni=1 .}
+
+2: Initialize the environment and receive initial states s0.
+
+3: Initialize πi, 0, p i, 0 to be uniform policies and Qi, 0 = 0 for all i ∈ { 1, 2, . . . , n }.
+
+4: for episode t = 0 , 1, 2, . . . , T − 1 do 
+
+5: for agent i = 1 , 2, . . . n and all s ∈ S do 
+
+6: Update policy 
+
+πi,t +1 (·| s) ← Proj ∆|A i| (πi,t (·| s) − βtλi[Qi,t (s, ·)pi,t (·| s) + ϵi∇νi(πi,t ; s)]) (21) 
+
+7: Update adversary 
+
+pi,t +1 (·| s) ← Proj ∆|A −i|
+
+
+
+pi,t (·| s) − βtλi[−QTi,t (s, ·)πi,t (·| s) + 1
+
+τi
+
+∇pi Di(pi, π −i; s)] 
+
+
+
+(22) 
+
+8: end for 
+
+9: for timestep k = 0 , 1, 2, . . . , K − 1 do 
+
+10: for agent i = 1 , 2, . . . n do 
+
+11: Sample ai,k ∼ πi,t (·| sk). {Off-policy: ai,k ∼ πri (·| sk)}
+
+12: end for 
+
+13: Play ak = ( ai,k )ni=1 , receive rk = ( ri,k )ni=1 and observe sk+1 .
+
+14: for agent i = 1 , 2, . . . n do 
+
+15: Construct target: 
+
+ˆqi,k = − ri,k + γπ Ti,t +1 (·| sk+1 )Qi,t (sk+1 , ·)pi,t +1 (·| sk+1 )
+
+− γ
+
+ 1
+
+τi
+
+Di(pi,t +1 , π −i,t +1 ; sk+1 ) − ϵiνi(πi,t +1 ; sk+1 )
+
+ (23) 
+
+16: end for 
+
+17: end for 
+
+18: for agent i = 1 , 2, . . . n do 
+
+19: Compute update ˆδi:
+
+ˆδi(s, a) = 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+(ˆ qi,k − Qi,t (sk, ak)) 1[( s, a) = ( sk, ak)] (24) 
+
+20: Update Qi,t +1 (s, a) ← Qi,t (s, a) + αt ˆδi(s, a) for all s ∈ S , a ∈ A .
+
+21: end for 
+
+22: Set s0 ← sK for the next episode. 
+
+23: end for 
+
+24: Output: Policies πi,T , p i,T .
+
+C.1. Practical Implementation of Algorithm 1 
+
+Although Algorithm 1 is already a self-contained MARL algorithm, it doesn’t necessarily perform well on practical environments. Therefore, we provide an adapted version that incorporates several usual implementation tricks, most of which being used on existing actor-critic algorithms like SAC (Haarnoja et al., 2018). The first adaptation we make is to use neural networks to parametrize actor and critic. For actor, we use θi to denote the policy parameter of agent i, and ¯θi to denote the policy parameter of adversary i. For critic, we adopt the double-Q trick (Hasselt, 2010) and target networks (Mnih, 2013) (notice that target networks matches the Q update in line 20 of 17 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Algorithm 1). For agent i, we use ϕ1 
+
+> i
+
+, ϕ 2 
+
+> i
+
+denote two Q networks and ϕtarg ,1 
+
+> i
+
+, ϕ targ ,2 
+
+> i
+
+denote the target networks. The procedure of sampling new transitions only for one update is not sample efficient. Additionally, for large (or continuous) state spaces S we cannot afford updating policy for all states S. Therefore, we introduce a replay buffer D, from which we sample a batch B ∼ D and optimize the following loss functions for actors: 
+
+L(θi; B) = 1
+
+|B|
+
+X
+
+> s∈B
+
+
+
+πθi (·| s)T max {Qϕ1 
+
+> i
+
+, Q ϕ2 
+
+> i
+
+}(s, ·)p¯θi (·| s) + ϵiνi(πθi ; s)
+
+
+
+;
+
+L(¯θi; B) = 1
+
+|B|
+
+X
+
+> s∈B
+
+
+
+−πθi (·| s)T max {Qϕ1 
+
+> i
+
+, Q ϕ2 
+
+> i
+
+}(s, ·)p¯θi (·| s) + 1
+
+τi
+
+Di(p¯θi , π θ−i ; s)
+
+
+
+.
+
+(25) Notice that minimizing (25) can be carried out using any built-in optimizer from various python libraries like torch , and when the batch B precisely consists of every state s ∈ S once, using preconditioned gradient descent to optimize (25) using is equivalent to (21) and (22) . Additionally, when the action space is large or continuous, (25) can be approximated using samples from the current policies πθi and p¯θi using similar trick as in SAC (Haarnoja et al., 2018). For critic update, we construct a loss function as follows: 
+
+L(ϕki ; B) = 1
+
+|B|
+
+X
+
+> (s, a,r,s ′)∈B
+
+(ˆ qtarg  
+
+> i
+
+− Qϕki (s, a)) 2, k ∈ { 1, 2}. (26) where ˆqtarg  
+
+> i
+
+is computed through (23) using target networks for each transition (s, a, r, s ′) ∈ B in the following way: 
+
+ˆqtarg  
+
+> i
+
+= −ri + γ
+
+
+
+πTθi (·| s′) max {Qϕtarg ,1
+
+> i
+
+, Q ϕtarg ,2
+
+> i
+
+}(s, ·)p¯θi (·| s′) − 1
+
+τi
+
+Di(p¯θi , π θ−i ; s′) + ϵiνi(πθi ; s′)
+
+
+
+(27) Similarly, the actor loss (26) can also be optimized using built-in optimizers, and can be estimated using samples for large/continuous action spaces. After conducting an actor update step, we conduct a soft update for the target networks 
+
+ϕtarg ,k i ← (1 − αt)ϕtarg ,k i + αtϕki , k ∈ { 1, 2}. (28) To summarize, we present our practical adaptation of Algorithm 1 in Algorithm 2. 
+
+Algorithm 2 Practical Multi-agent Risk-averse Actor-Critic for n agents. 
+
+1: Input: Regularizers νi(·), D i(·, ·), bounded rationality level ϵi, risk-aversion level τi. Initial network parameters 
+
+θi, ¯θi, ϕ 1 
+
+> i
+
+, ϕ 2 
+
+> i
+
+, ϕ targ ,1 
+
+> i
+
+, ϕ targ ,2 
+
+> i
+
+, empty replay buffer D.
+
+2: repeat 
+
+3: Observe state s and sample joint action a for all agents with either on-policy or off-policy. 
+
+4: Execute a, observe reward r and next state s′.
+
+5: Store (s, a, r, s ′) in replay buffer D.
+
+6: if update now then 
+
+7: Sample a batch B form D.
+
+8: Update actors and adversaries with (25) for all agents. 
+
+9: Update critics with (26) and (27) for all agents. 
+
+10: Update target networks with (28) for all agents. 
+
+11: end if 
+
+12: until convergence Notice that there exists a risk-neutral version of Algorithm 2 that does not maintain adversaries, which we use as benchmarks in our experiments. This can be done by replacing (25) by: 
+
+L(θi; B) = 1
+
+|B|
+
+X
+
+> s∈B
+
+
+
+πθi (·| s)T max {Qϕ1 
+
+> i
+
+, Q ϕ2 
+
+> i
+
+}(s, ·)πθ−i (·| s) + ϵiνi(πθi ; s)
+
+
+
+, (29) and replace (27) by: 
+
+ˆqtarg  
+
+> i
+
+= −ri + γπ Tθi (·| s′) max {Qϕtarg ,1
+
+> i
+
+, Q ϕtarg ,2
+
+> i
+
+}(s, ·)πθ−i (·| s′) + γϵ iνi(πθi ; s′). (30) 18 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+D. Experiment Details 
+
+In this section we provide details for our experiments. 
+
+D.1. Details for Gridworld Cooperation Game 
+
+Here we provide details for our gridworld cooperation game experiment. We first specify our environment setup for gridworld cooperation game, and then provide the table of hyperparameters used in our experiments, followed by a presentation of detailed training data for each individual training run. D.1.1. E NVIRONMENT SPECIFICATION 
+
+The gridworld cooperation game is a fully-observable MARL environment with 2 agents on a 5 × 5 gridworld shown in Figure 5. Gridworld Layout (5×5)   
+
+> 01
+> Figure 5. Gridworld Layout. Agent 0 and agent 1 are shown in blue and red dots on the upper-left corner. The defection zones are painted in blue (for agent 0) and red (for agent 1)
+
+In the gridworld cooperation game, both agents are initialized at the upper-left corner of the grid. There are three special cell. The upper-right corner (painted in blue) and lower-left corner (painted in red) are two defection zones for agent 0 and agent 1 respectively. The lower-right corner (painted in grey) is the cooperation zone . All other cells that are left blank in Figure 5 are called the blank area . At each timestep, if an agent is in the blank area or at the other agent’s defection zone, it is not given any reward. If it is in the cooperation zone, it is given a reward of 0.5 if the other agent is in the defection zone, a reward 1 if the other agent is in the blank area and a reward 2 if the other agent is also in the cooperation zone. If the agent is in its defection zone (indicated with the same color, it gets a reward of 3 if the other agent is in the cooperation zone, and gets 0 otherwise. At each time step, each agent has 5 actions, whether to move to one direction, or to stay in the same cell. If the agent chooses an infeasible action (for example, choosing “up” when at the top row of the grid), it will randomly move to a feasible direction (including staying). When an agent gets into its defection zone, it is forced to stay in its defection zone until the end of the game. When an agent is in the cooperation zone, it is forced to stay in the cooperation zone with a probability of 
+
+0.7 for each step. For the gridworld cooperation game, the social welfare (sum of rewards) is maximized when both agents choose to cooperate. However, when the other agent chooses to cooperate, choosing to defect always yields a higher reward (3 compared to 2). Therefore, on a high-level, when agents are risk-neutral, there are two symmetric Nash equilibria (defect, cooperate) and (cooperate, defect) in this game. This pair of symmetric equilibria makes risk-neutral learning extremely unstable. In comparison, with risk-averse training, both agent expect the other agent to be “adversarial”, so when it chooses to defect, 19 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+the other agent won’t cooperate and would lead to a zero reward for it. This leads to both agent choosing to cooperate and therefore achieves a higher social welfare. D.1.2. H YPERPARAMETER TABLES 
+
+We present the hyperparameters used for training in Table 2. 
+
+Table 2. Hyperparameters used for gridworld cooperation game experiments. 
+
+Category Hyperparameter Value Common Optimizer Adam Actor Learning Rate 5 × 10 −4
+
+Critic Learning Rate 5 × 10 −4
+
+Discount Factor ( γ) 0.99 Batch Size 256 Network Type (both Actor and Critic) MLP Hidden Layers 2Hidden Units per Layer 128 Activation Function ReLU 
+
+Risk-Aversion Risk-Aversion Level τ1, τ 2 5.0, 5.0
+
+Bounded-rationality ϵ1, ϵ 2 0.2, 0.2
+
+Regularizer Type KL / Negative entropy Target Network Update ( α) 0.002 
+
+Environment Horizon 50 steps Training Episodes 20000 Moving Average Window 100 episodes For simplicity, we have fixed the risk-aversion level τ1, τ 2 and bounded rationality level ϵ1, ϵ 2 to be the same for both agents. We choose the regularizer type to be KL and negative entropy instead of KL and log-barrier to relieve the instability induced by the unboundedness of log-barrier functions. D.1.3. D ETAILED TRAINING DATA 
+
+We present the detailed training and evaluation curves and the social welfare comparison for each training run as follows: 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+> Episode
+> 0
+> 50
+> 100
+> 150
+> MA100 Training Reward
+
+Training Rewards - Agent 0         
+
+> Risk-Averse
+> Risk-Neutral
+> 02500 5000 7500 10000 12500 15000 17500 20000
+> Episode
+> 0
+> 50
+> 100
+> 150
+> MA100 Training Reward
+
+Training Rewards - Agent 1         
+
+> Risk-Averse
+> Risk-Neutral
+> 0510 15 20 25 30 35 40
+> Evaluation Episode
+> 0
+> 25
+> 50
+> 75
+> 100
+> 125
+> Evaluation Reward
+
+Evaluation Rewards         
+
+> RA Agent 0
+> RN Agent 0
+> RA Agent 1
+> RN Agent 1
+> 0510 15 20 25 30 35 40
+> Evaluation Episode
+> 0
+> 50
+> 100
+> 150
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+> Risk-Averse
+> Risk-Neutral
+
+Gridworld Cooperation Game Comparison - Repetition 0 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+> Episode
+> 0
+> 50
+> 100
+> 150
+> MA100 Training Reward
+
+Training Rewards - Agent 0         
+
+> Risk-Averse
+> Risk-Neutral
+> 02500 5000 7500 10000 12500 15000 17500 20000
+> Episode
+> 0
+> 50
+> 100
+> 150
+> MA100 Training Reward
+
+Training Rewards - Agent 1         
+
+> Risk-Averse
+> Risk-Neutral
+> 0510 15 20 25 30 35 40
+> Evaluation Episode
+> 0
+> 25
+> 50
+> 75
+> 100
+> 125
+> Evaluation Reward
+
+Evaluation Rewards         
+
+> RA Agent 0
+> RN Agent 0
+> RA Agent 1
+> RN Agent 1
+> 0510 15 20 25 30 35 40
+> Evaluation Episode
+> 0
+> 50
+> 100
+> 150
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+> Risk-Averse
+> Risk-Neutral
+
+Gridworld Cooperation Game Comparison - Repetition 1 
+
+20 Provably Convergent Actor-Critic in Risk-averse MARL 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 2 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 3 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 4 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 5 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 6 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 7 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 8 0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 0 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 2500 5000 7500 10000 12500 15000 17500 20000 
+
+Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> MA100 Training Reward
+
+Training Rewards - Agent 1 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+> Evaluation Reward
+
+Evaluation Rewards 
+
+RA Agent 0 
+
+RN Agent 0 
+
+RA Agent 1 
+
+RN Agent 1 
+
+0 5 10 15 20 25 30 35 40 
+
+Evaluation Episode 
+
+0
+
+50 
+
+100 
+
+150 
+
+> Social Welfare (Sum of Agents)
+
+Social Welfare in Evaluation 
+
+Risk-Averse 
+
+Risk-Neutral 
+
+Gridworld Cooperation Game Comparison - Repetition 9 
+
+Figure 6. Detailed gridworld cooperation game comparison across 10 independent training runs. 
+
+21 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+D.2. Details for MPE Simple Tag 
+
+In this section we present the details of our MPE simple tag experiment, similar to that for the gridworld cooperation game. D.2.1. E NVIRONMENT SPECIFICATION 
+
+Our experiment is based on the Simple Tag environment provided by Multi Particle Environments (MPE) (Lowe et al., 2017). We adopt a 3-agent version of the Simple Tag environment where there are 1 good agent and 2 adversaries, shown in Figure 7.  
+
+> Figure 7. Layout of MPE2 Simple Tag environment with 3 agents. Green circle indicates the good agent, red circles indicate the adversaries, and black circles indicate the obstacles.
+
+The MPE Simple Tag environment is a predator-prey environment. The good agent (green circle) is faster and receive a negative reward −10 for being hit by adversaries. Adversaries (red circle) are slower and are rewarded 10 for hitting good agents. Obstacles (large black circles) block the ways of agents. The agents are also penalized for leaving the dedicated area. In order to create a fully-cooperative environment for MARL based on Simple Tag, we first jointly train three agents using Algorithm 2. After that, we fix the policy of the good agent and turn this environment into a fully cooperative game between two adversaries. D.2.2. H YPERPARAMETER TABLES 
+
+We provide the hyperparameters used in jointly training 3 agents, and training two adversaries to cooperate in Table 3 and Table 4 respectively. In each training, we use the default discrete state and action space for MPE. Compared with 3-player training, in 2-player training we modify the ϵ values to be 0.02 to allow more higher performance in adversary policies (otherwise the adversary policies will be too random to chase the already well-trained good agent). We also increase the number of episodes from 20000 to 50000 for the training rewards to converge. D.2.3. D ETAILED TRAINING DATA 
+
+We present the detailed training curve for each run in Figure 8. 22 Provably Convergent Actor-Critic in Risk-averse MARL  
+
+> Table 3. Hyperparameters used for gridworld cooperation game experiments.
+
+Category Hyperparameter Value Common Optimizer Adam Actor Learning Rate 5 × 10 −4
+
+Critic Learning Rate 5 × 10 −4
+
+Discount Factor ( γ) 0.99 Batch Size 256 Network Type (both Actor and Critic) MLP Hidden Layers 2Hidden Units per Layer 128 Activation Function ReLU 
+
+Risk-Aversion Risk-Aversion Level τ1, τ 2 Risk-neutral Bounded-rationality ϵ1, ϵ 2 0.2, 0.2
+
+Regularizer Type Negative entropy Target Network Update ( α) 0.002 
+
+Environment Horizon 50 steps Training Episodes 20000 Moving Average Window 100 episodes  
+
+> Table 4. Hyperparameters used for gridworld cooperation game experiments.
+
+Category Hyperparameter Value Common Optimizer Adam Actor Learning Rate 5 × 10 −4
+
+Critic Learning Rate 5 × 10 −4
+
+Discount Factor ( γ) 0.99 Batch Size 256 Network Type (both Actor and Critic) MLP Hidden Layers 2Hidden Units per Layer 128 Activation Function ReLU 
+
+Risk-Aversion Risk-Aversion Level τ1, τ 2 1.0, 1.0
+
+Bounded-rationality ϵ1, ϵ 2 0.02 , 0.02 
+
+Regularizer Type KL / Negative entropy Target Network Update ( α) 0.002 
+
+Environment Horizon 50 steps Training Episodes 50000 Moving Average Window 100 episodes 23 Provably Convergent Actor-Critic in Risk-averse MARL 0
+
+50 
+
+100 
+
+150 
+
+> Rep 0 Reward
+
+Repetition 0 
+
+> Risk-Averse
+> Risk-Neutral
+
+0
+
+50 
+
+100 
+
+150 
+
+200 
+
+> Rep 1 Reward
+
+Repetition 1 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+150 
+
+175 
+
+> Rep 2 Reward
+
+Repetition 2 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+150 
+
+175 
+
+> Rep 3 Reward
+
+Repetition 3 
+
+0 10000 20000 30000 40000 50000 
+
+Episode 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+150 
+
+175 
+
+> Rep 4 Reward
+
+Repetition 4 
+
+Simple Tag: Adversary 0 Reward Comparison (RA vs RN) 
+
+Figure 8. Detailed MPE Simple Tag comparison across 5 independent training runs. 
+
+24 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+E. Proof of Proposition 2.6 
+
+In order to prove Proposition 2.6, we first construct an auxiliary system for our analysis. Similar to normal form games, each controlling pi, i ∈ { 1, 2} and maximizes V π,p i (s) for all s ∈ S . This makes the game a 4-player Markov game. In addition to the Bellman optimality operator T and Bellman evaluation operator Tz for some z = ( π, p ), we define 
+
+T∗,π −i,p and Tπ, ∗ (since Qi does not depend on p−i, we drop the notational dependence as well) to be the Bellman optimality operators acting on Qi with respect to only πi or pi as follows: 
+
+T∗,π −i,p Qi(s, a) = −ri(s, a) + γ min 
+
+> πi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] , (31) 
+
+Tπ, ∗Qi(s, a) = −ri(s, a) + γ max 
+
+> pi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] . (32) We can view T∗,π −i,p as optimizing π assuming π−i, p being fixed, corresponding to each player optimizing its own policy assuming fixed opponents’ policies. To utilize the partial zero-sum structure between each player and its adversary in the 4-player game, for fixed π−i, we define 
+
+Tπ−i to be the operator mapping to the minimax solution w.r.t. Qi, as a result of co-optimization between player i and its adversary as follows: 
+
+Tπ−i Qi(s, a) = −ri(s, a) + γ min 
+
+> πi
+
+max 
+
+> pi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] . (33) We have the following contraction property for all these three operators, and the coordinate-wise monotonicity for T∗,π −i,p 
+
+and Tπ, ∗:
+
+Lemma E.1. The Bellman operators T∗,π −i,p , Tπ, ∗ and Tπ−i satisfy ∥T ′Qi − T ′Q′
+
+> i
+
+∥max ≤ γ∥Qi − Q′
+
+> i
+
+∥max , for all 
+
+Qi, Q ′ 
+
+> i
+
+: S × A → R, where T ′ ∈ {T ∗,π −i,p , Tπ, ∗, Tπ−i }. Additionally, when Qi ≥ Q′
+
+> i
+
+, we have T∗,π −i,p Qi ≥ T ∗,π −i,p Q′
+
+> i
+
+and Tπ, ∗Qi ≥ T π, ∗Q′
+
+> i
+
+.Proof. For T∗,π −i,p and Tπ, ∗, the proofs of contraction and coordinate-wise monotonicity are standard using the same argument as that in single agent RL. We now prove the contraction of Tπ−i following a similar outline as in (Shapley, 1953). Let π† 
+
+> i
+
+(·| s′) = arg min πi(·| s′) max pi(·| s′) πTi (·| s′)Q′
+
+> i
+
+(s′, ·)pi(·| s′) − 1 
+
+> τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′) and p† 
+
+> i
+
+(·| s) = arg max pi(·| s′)(π† 
+
+> i
+
+)T (·| s′)Qi(s′, ·)pi(·| s′) − 1 
+
+> τi
+
+Di(pi, π −i; s′) + ϵiνi(π† 
+
+> i
+
+; s′)
+
+∥T π−i Qi − T π−i Q′
+
+> i
+
+∥max 
+
+=∥γ min 
+
+> πi
+
+max 
+
+> pi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] 
+
+− γ min 
+
+> πi
+
+max 
+
+> pi
+
+Es′∼P (·| s, a)[πTi (·| s′)Q′
+
+> i
+
+(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] ∥max 
+
+> (i)
+
+=γ∥Es′∼P (·| s, a)[ min  
+
+> πi(·| s′)
+
+max 
+
+> pi(·| s′)
+
+{πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)}− min  
+
+> π′
+> i(·| s′)
+
+max 
+
+> p′
+> i(·| s′)
+
+{π′Ti (·| s′)Q′
+
+> i
+
+(s′, ·)p′
+
+> i
+
+(·| s′) − 1
+
+τi
+
+Di(p′
+
+> i
+
+, π −i; s′) + ϵiνi(π′
+
+> i
+
+; s′)}]∥max 
+
+> (ii)
+
+≤γ∥Es′∼P (·| s, a)[( π† 
+
+> i
+
+)T (·| s′)( Qi − Q′
+
+> i
+
+)( s′, ·)p† 
+
+> i
+
+(·| s′)] ∥max 
+
+≤γ∥Qi − Q′
+
+> i
+
+∥max 
+
+(34) where (i) holds because πi, p i are defined per state s′ ∈ S , and (ii) holds by: 
+
+min  
+
+> πi(·| s′)
+
+max 
+
+> pi(·| s′)
+
+{πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)}≤ max 
+
+> pi(·| s′)
+
+{(π† 
+
+> i
+
+)T (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(π† 
+
+> i
+
+; s′)}
+
+=( π† 
+
+> i
+
+)T (·| s′)Qi(s′, ·)p† 
+
+> i
+
+(·| s′) − 1
+
+τi
+
+Di(p† 
+
+> i
+
+, π −i; s′) + ϵiνi(π† 
+
+> i
+
+; s′),
+
+(35) 25 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+and similarly, 
+
+min  
+
+> πi(·| s′)
+
+max 
+
+> pi(·| s′)
+
+{πTi (·| s′)Q′
+
+> i
+
+(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)}
+
+= max 
+
+> pi(·| s′)
+
+{(π† 
+
+> i
+
+)T (·| s′)Q′
+
+> i
+
+(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(π† 
+
+> i
+
+; s′)}≥(π† 
+
+> i
+
+)T (·| s′)Q′
+
+> i
+
+(s′, ·)p† 
+
+> i
+
+(·| s′) − 1
+
+τi
+
+Di(p† 
+
+> i
+
+, π −i; s′) + ϵiνi(π† 
+
+> i
+
+; s′).
+
+(36) This completes the proof of the contraction property. Given the contraction property, we proceed to prove the minimax theorem between player i and its adversary in Markov games: 
+
+Lemma E.2. Given fixed π−i, the following holds for all s ∈ S :
+
+min 
+
+> πi
+
+max 
+
+> pi
+
+V πi,π −i,p i 
+
+> i
+
+(s) = max 
+
+> pi
+
+min 
+
+> πi
+
+V πi,π −i,p i 
+
+> i
+
+(s) (37) 
+
+Proof. This proof is also analogous to that given in (Shapley, 1953). By contraction property of Tπ−i and Banach’s fixed point theorem, there exists a unique fixed point Q∗,π −i 
+
+> i
+
+of Tπ−i . Let V ∗,π −i 
+
+> i
+
+be the corresponding value function: 
+
+V ∗,π −i 
+
+> i
+
+(s) = min 
+
+> πi
+
+max 
+
+> pi
+
+πi(·| s)T Q∗,π −i 
+
+> i
+
+(s, ·)pi(·| s) − 1
+
+τi
+
+Di(pi, π −i; s) + ϵiνi(πi; s), (38) and let π∗ 
+
+> i
+
+, p ∗ 
+
+> i
+
+be the corresponding minimax solution, we have that V π∗  
+
+> i,π −i,p ∗
+> i
+> i
+
+= V ∗,π −i 
+
+> i
+
+because: 
+
+Tπ∗  
+
+> i,π −i,p i
+
+Q∗,π −i 
+
+> i
+
+(s, a)= − ri(s, a) + γEs′∼P (·| s, a)[( π∗ 
+
+> i
+
+)T (·| s′)Q∗,π −i 
+
+> i
+
+(s′, ·)p∗ 
+
+> i
+
+(·| s′) − 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π −i; s′) + ϵiνi(π∗ 
+
+> i
+
+; s′)] = − ri(s, a) + γEs′∼P (·| s, a)[min 
+
+> πi
+
+max 
+
+> pi
+
+πTi (·| s′)Q∗,π −i 
+
+> i
+
+(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] =Tπ−i Q∗,π −i 
+
+> i
+
+(s, a)=Q∗,π −i 
+
+> i
+
+(s, a)
+
+(39) so Q∗,π −i 
+
+> i
+
+= Qπ∗  
+
+> i,π −i,p ∗
+> i
+> i
+
+because the unique fixed point of Tπ∗  
+
+> i,π −i,p i
+
+is Qπ∗  
+
+> i,π −i,p ∗
+> i
+> i
+
+(by a similar contraction statement on 
+
+Tπ∗  
+
+> i,π −i,p i
+
+). Similarly, let π† 
+
+> i
+
+, p † 
+
+> i
+
+be the maximin solution to max pi min πi V πi,π −i,p i 
+
+> i
+
+(s), by similar rationale we know that Qπ†  
+
+> i,π −i,p †
+> i
+
+is a unique fixed point of the maximin Bellman operator T ′  
+
+> π∗
+> i,π −i,p i
+
+defined by: 
+
+T ′ 
+
+> π−i
+
+Qi(s, a) = −ri(s, a) + γ max 
+
+> pi
+
+min 
+
+> πi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] . (40) However, for arbitrary Qi function (not as a function of πi and pi) that can be viewed as a matrix, the minimax theorem for normal-form game holds, such that 
+
+max 
+
+> pi
+
+min 
+
+> πi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] = min 
+
+> πi
+
+max 
+
+> pi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)pi(·| s′) − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] 
+
+(41) so that Tπ∗  
+
+> i,π −i,p i
+
+and T ′  
+
+> π∗
+> i,π −i,p i
+
+are indeed identical and share the same fixed point. Therefore, we claim that: 
+
+min 
+
+> πi
+
+max 
+
+> pi
+
+V πi,π −i,p i 
+
+> i
+
+(s) = V π∗  
+
+> i,π −i,p ∗
+> i
+> i
+
+= V ∗,π −i 
+
+> i
+
+= V π†  
+
+> i,π −i,p †
+> i
+> i
+
+= max 
+
+> pi
+
+min 
+
+> πi
+
+V πi,π −i,p i 
+
+> i
+
+(s) (42) 26 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Having established the minimax theorem for Markov games, we now prove that similar to the normal-form case, that a Nash equilibrium of the 4-player Markov game corresponds to an RQE of the two-player game, and vice versa: 
+
+Lemma E.3. Let (π∗, p ∗) be a Nash equilibrium of the 4-player Markov game, we have that π∗ is an RQE of the original two-player Markov game. Furthermore, if π∗ is an RQE of the two-player Markov game, then (π∗, p ∗) is a Nash equilibrium of the 4-player Markov game where p∗ 
+
+> i
+
+= arg max pi:S→ ∆|A −i| V π∗,p i 
+
+> i
+
+(s) for all s ∈ S .Proof. The first statement can be proved using a similar argument as in the proof of Proposition 2.2. Let (π∗, p ∗) be a Nash equilibrium of the 4-player Markov game, by definition we have for all πi : S → ∆|A i| and s ∈ S :
+
+V π∗,p ∗ 
+
+> i
+
+(s) ≤ V πi,π ∗−i,p ∗ 
+
+> i
+
+(s), (43) and for all pi : S → ∆|A −i|:
+
+V π∗,p i,p ∗−i 
+
+> i
+
+(s) ≤ V π∗,p ∗ 
+
+> i
+
+(s). (44) Therefore, we have: 
+
+fi(π∗ 
+
+> i
+
+, π ∗−i; s) = max 
+
+> pi:S→ ∆|A −i|
+
+V π∗,p i (s) = V π∗,p ∗ 
+
+> i
+
+(s)
+
+≤V πi,π ∗−i,p ∗ 
+
+> i
+
+(s) ≤ max 
+
+> p′
+> i:S→ ∆|A −i|
+
+V πi,π ∗−i,p ′ 
+
+> i
+> i
+
+(s)=fi(πi, π ∗−i; s).
+
+(45) For the second statement, let π∗ be an RQE of the two-player Markov game, by the minimax theorem in Markov games, we have a similar argument as in Proposition 2.2 that 
+
+min 
+
+> πi:S→ ∆|A i|
+
+max 
+
+> pi:S→ ∆|A −i|
+
+V πi,π ∗−i,p i 
+
+> i
+
+(s) = min 
+
+> πi:S→ ∆|A i|
+
+V πi,π ∗−i,p ∗ 
+
+> i
+> i
+
+(s), (46) so that for all s ∈ S ,
+
+V π∗,p ∗ 
+
+> i
+
+(s) = min 
+
+> πi:S→ ∆|A i|
+
+max 
+
+> pi:S→ ∆|A −i|
+
+V πi,π ∗−i,p i 
+
+> i
+
+(s) = min 
+
+> πi:S→ ∆|A i|
+
+V πi,π ∗−i,p ∗ 
+
+> i
+> i
+
+(s) ≤ V π′ 
+
+> i,π ∗−i,p ∗
+> i
+> i
+
+(s) (47) for all π′ 
+
+> i
+
+: S → ∆|A i|, which completes the proof. With the auxiliary lemmas stated, we proceed to prove Proposition 2.6. We first prove the first part. Let Q∗ be a fixed point of the Bellman optimality operator and z∗ = ( π∗, p ∗) denote the minimax policies, we first prove that Q∗ = Qz∗
+
+. By the definition (13) of T we have that for all i ∈ { 1, 2} and (s, a) ∈ S × A :
+
+Q∗ 
+
+> i
+
+(s, a)=( T Q∗)i(s, a)= − ri(s, a) + γEs′∼P (·| s, a)[RQE i(−Q∗(s′, ·))] = − ri(s, a) + γEs′∼P (·| s, a)
+
+
+
+(π∗ 
+
+> i
+
+)T (·| s′)Q∗ 
+
+> i
+
+(s′, ·)p∗ 
+
+> i
+
+(·| s′) − 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i; s′) + ϵiνi(π∗ 
+
+> i
+
+; s′)
+
+
+
+= − ri(s, a) + γEs′∼P (·| s, a)
+
+Ji
+
+ π∗ 
+
+> i
+
+(·| s′), π ∗−i(·| s′), p ∗ 
+
+> i
+
+(·| s′); −Q∗(s′, ·) 
+
+(48) We claim that Q∗ = Qz∗
+
+because we have the following for all i ∈ [N ], s ∈ S and a ∈ A :
+
+Q∗ 
+
+> i
+
+(s, a) − Qz∗ 
+
+> i
+
+(s, a)=γEs′∼P (·| s, a)
+
+h
+
+Ji
+
+ π∗ 
+
+> i
+
+(·| s′), π ∗−i(·| s′), p ∗ 
+
+> i
+
+(·| s′); −Q∗(s′, ·) − Ji
+
+
+
+π∗ 
+
+> i
+
+(·| s′), π ∗−i(·| s′), p ∗ 
+
+> i
+
+(·| s′); −Qz∗
+
+(s′, ·)
+
+i 
+
+=γEs′∼P (·| s, a)[( π∗ 
+
+> i
+
+)T (·| s′)( Q∗ 
+
+> i
+
+− Qz∗ 
+
+> i
+
+)( s′, ·)p∗ 
+
+> i
+
+(·| s′)] 
+
+≤γ∥Q∗ − Qz∗
+
+∥max .
+
+(49) Since this inequality holds for all i, s ∈ S and a ∈ A , we know that ∥Q∗ − Qz∗
+
+∥max = 0 .27 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Therefore, we have that for all policy πi and all states s ∈ S ,
+
+fi(πi, π ∗−i; s) = max 
+
+> pi
+
+V πi,π ∗−i,p i (s)= max 
+
+> pi
+
+πi(·| s)T Qπi,π ∗−i,p i (s, ·)pi(·| s) − 1
+
+τi
+
+Di(pi, π ∗−i; s) + ϵiνi(πi; s)
+
+> (i)
+
+≥πi(·| s)T Qπi,π ∗−i,p ∗ 
+
+> i
+
+(s, ·)p∗ 
+
+> i
+
+(·| s) − 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i; s) + ϵiνi(πi; s)
+
+> (ii)
+
+≥(π∗ 
+
+> i
+
+)T (·| s)Q∗ 
+
+> i
+
+(s, ·)p∗ 
+
+> i
+
+(·| s) − 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i; s) + ϵiνi(π∗ 
+
+> i
+
+; s)=RQE i(−Q∗(s, ·)) =RQE i(−Qz∗
+
+(s, ·)) 
+
+(50) where (i) holds because we have taken maximum over pi. Now we prove that (ii) holds. Notice that now π∗−i and p∗ are fixed, the problem becomes a single-agent MDP problem where the only policy to maximize is πi. Recall that T∗,π ∗−i,p ∗ is the Bellman optimality operator acting on Qi with respect to only πi as follows: 
+
+T∗,π ∗−i,p ∗ Qi(s, a) = −ri(s, a) + γ min 
+
+> πi
+
+Es′∼P (·| s, a)[πTi (·| s′)Qi(s′, ·)p∗ 
+
+> i
+
+(·| s′) − 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i; s′) + ϵiνi(πi; s′)] (51) By construction of π∗ 
+
+> i
+
+we know that Q∗ is also a fixed point of T∗,π ∗−i,p ∗ as well. By standard result in single-agent MDPs and π∗ 
+
+> i
+
+is the corresponding optimal policy, we have: 
+
+V πi,π ∗−i,p ∗ 
+
+> i
+
+(s) ≥ V π∗  
+
+> i,π ∗−i,p ∗
+> i
+
+(s), ∀s ∈ S , π i : S → ∆|A i| (52) which immediately implies (ii) and completes the proof of the first part. Now we proceed to prove the second part. Let π∗ be an RQE of the two-player Markov game, we know by Lemma E.3 that 
+
+(π∗, p ∗) is a Nash equilibrium of the 4-player Markov game. By Lemma 10 in (Hu & Wellman, 2003), we know that (π∗, p ∗)
+
+is also a Nash equilibrium of the stage game characterized by Qπ∗,p ∗
+
+(s, ·) for all s ∈ S . Therefore, by Proposition 2.2 we know that π∗ is an RQE of the two-player stage , which suggests that 
+
+V π∗,p ∗ 
+
+> i
+
+(s) = RQE i(−Qπ∗,p ∗
+
+(s, ·)) (53) This leads to the final result: 
+
+(T Qπ∗,p ∗
+
+)i(s, a) = − ri(s, a) + γEs′∼P (·| s, a)[RQE i(−Qπ∗,p ∗
+
+(s′, ·))] = − ri(s, a) + γEs′∼P (·| s, a)[V π∗,p ∗ 
+
+> i
+
+(s′)] =Qπ∗,p ∗ 
+
+> i
+
+(s, a).
+
+(54) which completes the proof of Proposition 2.6. 
+
+F. Proofs and Additional Details for Section 3 
+
+F.1. Proof of Theorem 3.1 
+
+We follow a similar approach as in (Zhang & Mazumdar, 2025). 
+
+Proof of uniqueness. Consider the KKT conditions for the objective functions (6a) and (6b) over the simplex of each player given R, which must be satisfied at equilibrium point z∗. For the original player we have: 
+
+−Rip∗ 
+
+> i
+
++ ϵi∇νi(π∗ 
+
+> i
+
+) − λ(πi) + μ(πi)1 = 0; 
+
+π∗ 
+
+> i
+
+∈ ∆|A i|; λ(πi) ≥ 0; μ(πi) ∈ R; λ(πi)T π∗ 
+
+> i
+
+= 0 . (55) where i ∈ { 1, 2}, λ(πi) and μ(πi) are Lagrange multipliers with respect to the simplex constraint, and λ(πi)T π∗ 
+
+> i
+
+= 0 
+
+denotes complimentary slackness. For the adversaries we have: 
+
+RTi π∗ 
+
+> i
+
++ 1
+
+τi
+
+∇pDi(p∗ 
+
+> i
+
+, π ∗−i) − λ(pi) + μ(pi)1 = 0; 
+
+p∗ 
+
+> i
+
+∈ ∆|A −i|; λ(pi) ≥ 0; μ(pi) ∈ R; λ(pi)T p∗ 
+
+> i
+
+= 0 .
+
+(56) 28 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+where similarly i ∈ { 1, 2}, λ(pi), μ (pi) are Lagrange multipliers and λ(pi)T p∗ 
+
+> i
+
+= 0 denotes complimentary slackness. We can combine (55) and (56) in a more compact form: 
+
+F (z∗; R) = 
+
+
+
+λ(π1) − μ(π1)1 
+
+λ(π2) − μ(π2)1 
+
+λ(p1) − μ(p1)1 
+
+λ(p2) − μ(p2)1 
+
+ . (57) Therefore, for arbitrary z ∈ Z we have: 
+
+⟨z∗ − z, F (z∗; R)⟩λ
+
+> (i)
+
+=λ1⟨π∗ 
+
+> 1
+
+− π1, λ (π1) − μ(π1)1 ⟩ + λ2⟨π∗ 
+
+> 2
+
+− π2, λ (π2) − μ(π2)1 ⟩
+
++ λ1⟨p∗ 
+
+> 1
+
+− p1, λ (p1) − μ(p1)1 ⟩ + λ2⟨p∗ 
+
+> 2
+
+− p2, λ (p2) − μ(p2)1 ⟩
+
+> (ii)
+
+=λ1⟨π∗ 
+
+> 1
+
+− π1, λ (π1)⟩ + λ2⟨π∗ 
+
+> 2
+
+− π2, λ (π2)⟩ + λ1⟨p∗ 
+
+> 1
+
+− p1, λ (p1)⟩ + λ2⟨p∗ 
+
+> 2
+
+− p2, λ (p2)⟩
+
+> (ii)
+
+= − λ1⟨π1, λ (π1)⟩ − λ2⟨π2, λ (π2)⟩ − λ1⟨p1, λ (p1)⟩ − λ2⟨p2, λ (p2)⟩
+
+> (iv)
+
+≤ 0
+
+(58) where (i) uses the definition of λ-weighted inner product, (ii) holds because πi ∈ ∆|A i|, p i ∈ ∆|A −i| so that ⟨π∗ 
+
+> i
+
+−πi, 1⟩ = 0 
+
+and ⟨p∗ 
+
+> i
+
+− pi, 1⟩ = 0 , (iii) holds by complementary slackness and (iv) holds because λi, π i, p i, λ (πi), λ (pi) > 0.If z∗ 
+
+> 1
+
+and z∗ 
+
+> 2
+
+are two Nash equilibria of the 4-player game with respect to R, we must have ⟨z1 − z2, F (z1; R)⟩λ ≤ 0 and 
+
+⟨z2 − z1, F (z2; R)⟩λ ≤ 0. Adding these two inequalities up we have ⟨z1 − z2, F (z1; R) − F (z2; R)⟩λ ≤ 0, combining 
+
+λ-strict monotonicity of F (·; R) we have z1 = z2, indicating the uniqueness of the Nash equilibrium. 
+
+Proof of Lipschitz Continuity. In order to prove the Lipschitz continuity of RQE with respect to payoff matrices, let R
+
+and R′ be two pairs of payoff matrices, notice that (58) implies: 
+
+⟨z∗ − z†, F (z∗; R)⟩λ ≤ 0; ⟨z† − z∗, F (z†; R′)⟩λ ≤ 0. (59) adding these two inequalities up, we have: 
+
+⟨z∗ − z†, F (z∗; R) − F (z†; R′)⟩λ ≤ 0. (60) We split the left hand side into two difference terms and get: 
+
+⟨z∗ − z†, F (z∗; R) − F (z∗; R′)⟩λ + ⟨z∗ − z†, F (z∗; R′) − F (z†; R′)⟩λ ≤ 0. (61) For the first term, we can use Cauchy-Schwarz inequality for λ-weighted norm: 
+
+⟨z∗ − z†, F (z∗; R) − F (z∗; R′)⟩λ
+
+≥ − ∥ λ∥∞∥z∗ − z†∥2∥F (z∗; R) − F (z∗; R′)∥2
+
+(62) For the second term, (μ, λ )-strong monotonicity yields: 
+
+⟨z∗ − z†, F (z∗; R′) − F (z†; R′)⟩λ ≥ μ∥z∗ − z†∥22. (63) Therefore, combining the bounds above, we have: 
+
+μ∥z∗ − z†∥22 ≤ ∥ λ∥∞∥z∗ − z†∥2∥F (z∗; R) − F (z∗; R′)∥2, (64) canceling out ∥z∗ − z†∥λ and rearranging terms we get: 
+
+∥z∗ − z†∥2 ≤ ∥ λ∥∞∥F (z∗; R) − F (z∗; R′)∥2/μ. (65) 29 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Finally, by expanding F (z∗; R) − F (z∗; R′), we obtain: 
+
+∥F (z∗; R) − F (z∗; R′)∥2 =
+
+
+
+−(R1 − R′
+
+> 1
+
+)p∗
+
+> 1
+
+−(R2 − R′
+
+> 2
+
+)p∗
+
+> 2
+
+(R1 − R′
+
+> 1
+
+)T π∗
+
+> 1
+
+(R2 − R′
+
+> 2
+
+)T π∗
+
+> 2
+
+
+
+> 2
+
+≤ 2
+
+p |A 1| + p|A 2|
+
+
+
+∥R − R′∥max , (66) and therefore, 
+
+∥z∗ − z†∥2 ≤
+
+2∥λ∥∞
+
+p|A 1| + p|A 2|
+
+
+
+μ ∥R − R′∥max , (67) which completes the proof. 
+
+F.2. Proof of Theorem 3.2 Part 1: General condition. By Lemma I.1, the monotonicity of the 4-player game (or equivalently, the monotonicity of the gradient operator F ) can be characterized by the positivity of the operator Λ∇F (z) + ∇F (z)T Λ, where Λ = Diag (λ)
+
+is a diagonal matrix with entries identical to λ. Recall the expression (16) of the gradient operator F , we can write the Jacobian of F as: 
+
+∇F (z) = 
+
+
+
+ϵ1∇2ν1 0 −R1 00 ϵ2∇2ν2 0 −R2
+
+RT  
+
+> 11
+> τ1
+
+∇2 
+
+> pπ
+
+D1 1 
+
+> τ1
+
+∇2
+
+> p
+
+D1 0 
+
+> 1
+> τ2
+
+∇2 
+
+> pπ
+
+D2 RT 
+
+> 2
+
+0 1 
+
+> τ2
+
+∇2
+
+> p
+
+D2
+
+ , (68) and therefore, Λ∇F (z) equals: 
+
+Λ∇F (z) = 
+
+
+
+λ1ϵ1∇2ν1 0 −λ1R1 00 λ2ϵ2∇2ν2 0 −λ2R2
+
+λ1RT  
+
+> 1λ1
+> τ1
+
+∇2 
+
+> pπ
+
+D1 λ1 
+
+> τ1
+
+∇2
+
+> p
+
+D1 0 
+
+> λ2
+> τ2
+
+∇2 
+
+> pπ
+
+D2 λ2RT 
+
+> 2
+
+0 λ2 
+
+> τ2
+
+∇2
+
+> p
+
+D2
+
+ . (69) Similarly, we have: 
+
+∇F (z)T Λ = 
+
+
+
+λ1ϵ1∇2ν1 0 λ1R1 λ2 
+
+> τ2
+
+∇2 
+
+> pπ
+
+D2
+
+0 λ2ϵ2∇2ν2 λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1 λ2R2
+
+−λ1RT 
+
+> 1
+
+0 λ1 
+
+> τ1
+
+∇2
+
+> p
+
+D1 00 −λ2RT 
+
+> 2
+
+0 λ2 
+
+> τ2
+
+∇2
+
+> p
+
+D2
+
+ (70) Combining the two expressions above, we obtain: 
+
+Λ∇F (z) + ∇F (z)T Λ = 
+
+
+
+2λ1ϵ1∇2ν1 0 0 λ2 
+
+> τ2
+
+∇2 
+
+> pπ
+
+D2
+
+0 2λ2ϵ2∇2ν2 λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1 00 λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1 2 λ1 
+
+> τ1
+
+∇2
+
+> p
+
+D1 0 
+
+> λ2
+> τ2
+
+∇2 
+
+> pπ
+
+D2 0 0 2 λ2 
+
+> τ2
+
+∇2
+
+> p
+
+D2
+
+ . (71) As a result, the condition stated in Lemma I.1 that Λ∇F (z) + ∇F (z)T Λ ⪰ 2μI becomes: 
+
+
+
+2λ1ϵ1∇2ν1 − 2μI 0 0 λ2 
+
+> τ2
+
+∇2 
+
+> pπ
+
+D2
+
+0 2λ2ϵ2∇2ν2 − 2μI λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1 00 λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1 2 λ1 
+
+> τ1
+
+∇2
+
+> p
+
+D1 − 2μI 0 
+
+> λ2
+> τ2
+
+∇2 
+
+> pπ
+
+D2 0 0 2 λ2 
+
+> τ2
+
+∇2
+
+> p
+
+D2 − 2μI 
+
+ ⪰ 0 (72) By rearranging rows and columns 2 and 4, we turn the matrix into block-diagonal form where positivity condition still holds: 
+
+
+
+2λ1ϵ1∇2ν1 − 2μI λ2 
+
+> τ2
+
+∇2 
+
+> pπ
+
+D2 0 0 
+
+> λ2
+> τ2
+
+∇2 
+
+> pπ
+
+D2 2 λ2 
+
+> τ2
+
+∇2
+
+> p
+
+D2 − 2μI 0 00 0 2λ2ϵ2∇2ν2 − 2μI λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1
+
+0 0 λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1 2 λ1 
+
+> τ1
+
+∇2
+
+> p
+
+D1 − 2μI 
+
+ ⪰ 0, (73) 30 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+this simplifies to the positivity of the two diagonal blocks: 
+
+"
+
+2λ1ϵ1∇2ν1 − 2μI λ2 
+
+> τ2
+
+∇2 
+
+> pπ
+
+D2 
+
+> λ2
+> τ2
+
+∇2 
+
+> pπ
+
+D2 2 λ2 
+
+> τ2
+
+∇2
+
+> p
+
+D2 − 2μI 
+
+#
+
+⪰ 0; 
+
+"
+
+2λ2ϵ2∇2ν2 − 2μI λ1 
+
+> τ1
+
+∇2 
+
+> pπ
+
+D1 
+
+> λ1
+> τ1
+
+∇2 
+
+> pπ
+
+D1 2 λ1 
+
+> τ1
+
+∇2
+
+> p
+
+D1 − 2μI 
+
+#
+
+⪰ 0. (74) This concludes the proof of part 1 in Theorem 3.2. 
+
+More discussion: We can see that a necessary condition for these two matrices to be positive semidefinite is: 
+
+∇2νi ⪰ μϵiλi
+
+I; ∇2
+
+> p
+
+Di ⪰ μτ i
+
+λi
+
+I, i ∈ { 1, 2}. (75) Notice that we further have: 
+
+"2λiϵi∇2νi − 2μI λ−i 
+
+> τ−i
+
+∇2 
+
+> pπ
+
+D−iλ−i 
+
+> τ−i
+
+∇2 
+
+> pπ
+
+D−i 2 λ−i 
+
+> τ−i
+
+∇2
+
+> p
+
+D−i − 2μI 
+
+#
+
+= λ−i
+
+τ−i
+
+ ∇2 
+
+> π
+
+D−i ∇2 
+
+> pπ
+
+D−i
+
+∇2 
+
+> pπ
+
+D−i ∇2
+
+> p
+
+D−i
+
+
+
++
+
+"2λiϵi∇2νi − λ−i 
+
+> τ−i
+
+∇2 
+
+> π
+
+D−i − 2μI 00 λ−i 
+
+> τ−i
+
+∇2
+
+> p
+
+D−i − 2μI 
+
+#
+
+,
+
+(76) where the first term is always positive by joint convexity of D1. Therefore, a sufficient condition for this matrix to be positive semidefinite is: 
+
+λ−i
+
+τ−i
+
+∇2
+
+> p
+
+D−i − 2μI ⪰ 0; 2λiϵi∇2νi − λ−i
+
+τ−i
+
+∇2 
+
+> π
+
+D−i − 2μI ⪰ 0, i ∈ { 1, 2}. (77) If there exists some μ > 0 such that the conditions above are satisfied, we have: 
+
+2λiϵi∇2νi − λ−i
+
+τ−i
+
+∇2 
+
+> π
+
+D−i ⪰ 0. (78) 
+
+Part 1: Log-barrier and KL If νi(·) are log-barrier function and Di(·, ·) are KL divergence, we have that: 
+
+∇2νi(πi) = diag (πi)−2; ∇2 
+
+> π−i
+
+Di(pi, π −i) = diag (pi)diag (π−i)−2;
+
+∇2 
+
+> pi
+
+Di(pi, π −i) = diag (pi)−1; ∇2 
+
+> pi,π −i
+
+Di(pi, π −i) = −diag (π−i)−1. (79) Therefore, the original condition: " 2λiϵi∇2νi λ−i 
+
+> τ−i
+
+∇2 
+
+> pπ
+
+DT 
+
+> −iλ−i
+> τ−i
+
+∇2 
+
+> pπ
+
+D−i 2 λ−i 
+
+> τ−i
+
+∇2
+
+> p
+
+D−i
+
+#
+
+⪰ 2μI (80) can be turned using Schur complement into: 
+
+λ−i
+
+τ−i
+
+diag (pi)−1 − μI ⪰ λ2
+
+> −i
+
+4τ 2
+
+> −i
+
+diag (πi)−1  λiϵidiag (πi)−2 − μI −1 diag (πi)−1 (81) this can be further rearranged into: 
+
+ λ−i
+
+τ−i
+
+diag (pi)−1 − μI 
+
+  λiϵidiag (πi)−2 − μI  ⪰ λ2
+
+> −i
+
+4τ 2
+
+> −i
+
+diag (πi)−2. (82) To guarantee there exists μ > 0 such that the above condition holds, it suffices to have (taking μ → 0): 
+
+λiϵidiag (pi)−1 ≻ λ−i
+
+4τ−i
+
+I, (83) and since diag (pi) ≺ I, the condition can be simplified as: 
+
+4ϵiτ−i ≥ λ−i
+
+λi
+
+. (84) If we only require there exists some λ satisfying this condition, we would only need: 
+
+4ϵ1τ2 ≥ λ2
+
+λ1
+
+≥ 14ϵ2τ1
+
+, (85) that is, 16 ϵ1ϵ2τ1τ2 > 1.31 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Part 2: Negative entropy and reverse KL. If νi(·) are negative entropy and Di(·, ·) are reverse KL divergence, we have that: ∇2νi(πi) = diag (πi)−1; ∇2 
+
+> π−i
+
+Di(pi, π −i) = diag (π−i)−1;
+
+∇2 
+
+> pi
+
+Di(pi, π −i) = diag (π−i)diag (pi)−2; ∇2 
+
+> pi,π −i
+
+Di(pi, π −i) = −diag (pi)−1. (86) Following a similar argument we have: 
+
+ λ−i
+
+τ−i
+
+diag (πi)diag (pi)−2 − μI 
+
+  λiϵidiag (πi)−1 − μI  ⪰ λ2
+
+> −i
+
+4τ 2
+
+> −i
+
+diag (pi)−2 (87) so we get the same strict monotonicity condition 4ϵiτ−i > λ−i 
+
+> λi
+
+. Therefore, as long as 16 ϵ1ϵ2τ1τ2 > 1, there exists λ such that the game is strictly monotone. 
+
+G. Proofs for Section 4 
+
+G.1. Detailed Statement and Proof of Proposition 4.2 
+
+We now provide a more detailed version of Proposition 4.2 as follows: 
+
+Proposition G.1 (Proposition 4.2, detailed) . If the 4-player stage game specified by (11) is μ-strongly monotone for every state s ∈ S (notice that whether a stage game is monotone does not depend on the Q functions but only the regularizers), then we have the following: 1. If the regularizers Di(·, ·) are LD -Lipschitz metrics that satisfy triangle inequality, and the discount factor γ satisfies: 
+
+γ ≤ τmin μτmin μ + 2 ∥λ∥∞LD (p|A 1| + p|A 2|) , (88) 
+
+where τmin = min {τ1, τ 2}, then the Bellman optimality operator T is a γ0-contraction mapping for γ0 =
+
+γ
+
+
+
+1 + 2∥λ∥∞LD
+
+> 
+
+√|A 1|+√|A 2|
+
+> 
+> τmin μ
+
+
+
+.2. If Di(·, ·) are KL-divergence and νi(·) are log-barrier functions, given 
+
+γ0 = γ
+
+1 + 2 ∥λ∥∞
+
+
+
+|A max | + max {sp (Q), sp (Q′)}
+
+ϵmin 
+
+ p|A 1| + p|A 2|
+
+
+
+τ 2min μ
+
+ < 1, (89) 
+
+where ϵmin = min {ϵ1, ϵ 2} and |A max | = max {|A 1|, |A 2|} , then the Bellman optimality operator T is a γ0-contraction mapping. Proof. For two Q function pairs Q and Q′, we have: 
+
+(T Q − T Q′)i(s, a) ≤ γEs′∼P (·| s, a) [RQE i(Q′(s′, ·)) − RQE i(Q(s′, ·))] (90) For two different payoff matrices R and R′, (π∗, p ∗) and (π†, p †) are the RQEs w.r.t. R and R′ respectively, we have the following bound for the RQE difference term: 
+
+RQE i(R) − RQE i(R′)= − (π∗ 
+
+> i
+
+)T Rip∗ 
+
+> i
+
+− 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i) + ϵiνi(π∗ 
+
+> i
+
+) + ( π† 
+
+> i
+
+)T R′
+
+> i
+
+p† 
+
+> i
+
++ 1
+
+τi
+
+Di(p† 
+
+> i
+
+, π †−i) − ϵiνi(π† 
+
+> i
+
+)
+
+≤ − (π† 
+
+> i
+
+)T Rip∗ 
+
+> i
+
+− 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i) + ϵiνi(π† 
+
+> i
+
+) + ( π† 
+
+> i
+
+)T R′
+
+> i
+
+p† 
+
+> i
+
++ 1
+
+τi
+
+Di(p† 
+
+> i
+
+, π †−i) − ϵiνi(π† 
+
+> i
+
+)=( π† 
+
+> i
+
+)T (R′
+
+> i
+
+p† 
+
+> i
+
+− Rip∗ 
+
+> i
+
+) − 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i) + 1
+
+τi
+
+Di(p† 
+
+> i
+
+, π †−i)
+
+≤(π† 
+
+> i
+
+)T (R′ 
+
+> i
+
+− Ri)p∗ 
+
+> i
+
+− 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i) + 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π †−i)
+
+with the inequalities follow from Definition 2.1. 32 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Proof for Part 1. We first consider the case that Di are LD -Lipschitz and satisfies triangle inequality, by Theorem 3.1 we have: RQE i(R) − RQE i(R′)
+
+≤(π† 
+
+> i
+
+)T (R′ 
+
+> i
+
+− Ri)p∗ 
+
+> i
+
++ 1
+
+τi
+
+Di(π∗−i, π †−i)
+
+≤(π† 
+
+> i
+
+)T (R′ 
+
+> i
+
+− Ri)p∗ 
+
+> i
+
++ LD
+
+τi
+
+∥π∗−i − π†−i∥2
+
+≤
+
+1 + 2∥λ∥∞LD
+
+p|A 1| + p|A 2|
+
+
+
+τiμ
+
+ ∥R − R′∥max .
+
+(91) Now we take max-norm with respect to all possible (s, a) pairs in (90) and obtain: 
+
+∥(T Q − T Q′)i∥max ≤ γ
+
+1 + 2∥λ∥∞LD
+
+p|A 1| + p|A 2|
+
+
+
+τiμ
+
+ ∥Q − Q′∥max (92) since this upper bound holds for both i ∈ { 1, 2}, the left hand side can be simply rewritten as ∥T Q − T Q′∥max , therefore 
+
+T is a contraction when 
+
+γ
+
+1 + 2∥λ∥∞LD
+
+p|A 1| + p|A 2|
+
+
+
+τiμ
+
+ ≤ 1. (93) 
+
+Proof for Part 2. For the case where Di are KL-divergence and νi are log-barrier functions, from Lemma I.2 we obtain that π∗, π † are bounded below by π = ϵi 
+
+> ϵi|A i|+max {sp (R),sp (R′)}
+
+, and therefore: 
+
+Di(p∗ 
+
+> i
+
+, π ∗−i) − Di(p∗ 
+
+> i
+
+, π †−i)= ( p∗ 
+
+> i
+
+)T (log π†−i − log π∗−i)
+
+≤ ∥ p∗ 
+
+> i
+
+∥2∥ π†−i − π∗−i
+
+π ∥2
+
+≤ 1
+
+π ∥π†−i − π∗−i∥2
+
+=
+
+
+
+|A i| + max {sp (R), sp (R′)}
+
+ϵi
+
+
+
+∥π†−i − π∗−i∥2,
+
+(94) this gives the result that: 
+
+RQE i(R) − RQE i(R′)
+
+≤(π† 
+
+> i
+
+)T (R′ 
+
+> i
+
+− Ri)p∗ 
+
+> i
+
+− 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i) + 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π †−i)
+
+≤(π† 
+
+> i
+
+)T (R′ 
+
+> i
+
+− Ri)p∗ 
+
+> i
+
++
+
+ |A i|
+
+τi
+
++ max {sp (R), sp (R′)}
+
+ϵiτi
+
+
+
+∥π†−i − π∗−i∥2
+
+≤∥ R − R′∥max + ∥λ∥∞
+
+ |A i|
+
+τi
+
++ max {sp (R), sp (R′)}
+
+ϵiτi
+
+ 2
+
+p|A 1| + p|A 2|
+
+
+
+τmin μ ∥R − R′∥max 
+
+≤
+
+1 + 2 ∥λ∥∞
+
+
+
+|A i| + max {sp (R), sp (R′)}
+
+ϵmin 
+
+ p|A 1| + p|A 2|
+
+
+
+τ 2min μ
+
+ ∥R − R′∥max ,
+
+(95) so that 
+
+∥T Q − T Q′∥max ≤ γ
+
+1 + 2 ∥λ∥∞
+
+
+
+|A max | + max {sp (Q), sp (Q′)}
+
+ϵmin 
+
+ p|A 1| + p|A 2|
+
+
+
+τ 2min μ
+
+ ∥Q − Q′∥max . (96) which completes the proof. 33 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+G.2. Detailed Statement and Proof of Theorem 4.4 
+
+We first provide a detailed statement of Theorem 4.4 as follows: 
+
+Theorem G.2 (Theorem 4.4, detailed) . If there exists γ0 such that the Bellman optimality operator T is a contraction mapping, and additionally Di(·, ·) are LD -Lipschitz in either argument when the other is fixed, νi(·) are Lν -Lipschitz with respect to its input, and the gradient operator of the modified 4-player game is (μ, λ )-strongly monotone and LF -Lipschitz for every state s ∈ S , let 
+
+CT = γ(
+
+p|A max |
+
+2(1 − γ) 1 + γ( 2√2LD
+
+τmin 
+
++ √2ϵmax Lν )
+
+!
+
++ LD
+
+τmin 
+
++ max { LD
+
+τmin 
+
+, ϵ max Lν }) (97) 
+
+then (17) with a two-timescale stepsize choice satisfying the following: 
+
+βt ≤ min { 1
+
+μ , μL2
+
+> F
+
+};
+
+βt
+
+αt
+
+≥
+
+
+
+(1 − γ0) + 2 LRQE CT
+
+
+
+1 − γ0 + 2 1 + γ0
+
+1 − γ0
+
+ 
+
+.
+
+(98) 
+
+where LRQE is the Lipschitz continuity constant of RQE with respect to the payoff matrix in normal form games as indicated by Theorem 3.1, then the sequence of zt converges to the RQE z∗ of the Markov game and the Q function Qt converges to the corresponding Q∗ to z∗ at the following rates: 1. If we use constant step sizes αt = α, β t = β, then ∀s ∈ S :
+
+∥zt(·| s) − z∗(·| s)∥2 ≤
+
+
+
+1 − ˜α
+
+2
+
+t 
+
+1 + LRQE 
+
+C2
+
+ p |A 1| + p|A 2|
+
+
+
++ C2Qmax 
+
+
+
+;
+
+∥Qt − Q∗∥max ≤
+
+
+
+1 − ˜α
+
+2
+
+t  1
+
+C2
+
+p |A 1| + p|A 2|
+
+
+
++ Qmax 
+
+
+
+.
+
+(99) 
+
+where ˜α = (1 − γ0)α, C2 = 1+ γ0 
+
+> 1−γ0
+
+LRQE , and 
+
+Qmax = 11 − γ + γ
+
+1 − γ
+
+ 1
+
+τmin 
+
+(Dmin + 2 √2LD ) + ϵmax 
+
+
+
+νmin + √2Lν
+
+
+
+. (100) 
+
+2. If we use diminishing step sizes αt = αt+h and βt = βt+h , then ∀s ∈ S :
+
+∥zt(·| s) − z∗(·| s)∥2 ≤
+
+
+
+1 + LRQE 
+
+C2
+
+ p |A 1| + p|A 2|
+
+
+
++ C2Qmax 
+
+  hh + t + 1 
+
+ ˜α
+
+> 2
+
+;
+
+∥Qt − Q∗∥max ≤
+
+ 1
+
+C2
+
+p |A 1| + p|A 2|
+
+
+
++ Qmax 
+
+  hh + t + 1 
+
+ ˜α
+
+> 2
+
+.
+
+(101) 
+
+where ˜α, C 2 and Qmax the same as above. 
+
+Although the conditions of Theorem G.2 look stronger than Theorem 4.4, the condition that Di(·, ·) and νi(·) are both smooth indeed implies the conditions in Theorem G.2. This is because the domains of Di and νi are both compact sets, where smoothness implies they are Lipschitz continuous, and Lemma I.4 implies the Lipschitz continuity of F as well. 
+
+Proof of Theorem G.2. For notational simplicity, we use Ft(·) to denote F (·; −Qt). Let z∗ 
+
+> t
+
+(·| s) denote the state-wise RQE induced by Qt(s, ·). We first prove that the Q iterations are bounded throughout: 
+
+Lemma G.3. If Di(·, ·) are LD -Lipschitz and νi(·) are Lν -Lipschitz, then we have: 
+
+sp (Qt) ≤ Qspan , ∀t. sp (Q∗) ≤ Qspan . (102) 34 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+where 
+
+Qspan = 11 − γ 1 + γ( 2√2LD
+
+τmin 
+
++ √2ϵmax Lν )
+
+!
+
+. (103) 
+
+Additionally, we have: 
+
+∥Qt∥max ≤ Qmax , ∀t. ∥Q∗∥max ≤ Qmax . (104) 
+
+where 
+
+Qmax = 11 − γ + γ
+
+1 − γ
+
+ 1
+
+τmin 
+
+(Dmin + 2 √2LD ) + ϵmax 
+
+
+
+νmin + √2Lν
+
+
+
+. (105) 
+
+Proof. We provide proofs for span and max-norm respectively. 
+
+Result for span of Q. By the update rule 
+
+Qt+1 = (1 − αt)Qt + αtTzt+1 Qt (106) we have that sp (Qt+1 ) ≤ (1 − αt)sp (Qt) + αtsp (Tzt+1 Qt) (107) for the latter term, recall the definition (14) of Tzt+1 , we have: sp (Tzt+1 Qt)= max 
+
+> i,s
+
+
+
+max  
+
+> a
+
+(Tzt+1 Qt)i(s, a) − min  
+
+> a′
+
+(Tzt+1 Qt)i(s, a′)
+
+
+
+≤ max  
+
+> i,s
+
+max  
+
+> a
+
+{− ri(s, a) + γEs′∼P (·| s, a)[πTi,t +1 (·| s′)Qi,t (s′, ·)pi,t +1 (·| s′) − 1
+
+τi
+
+Di(pi,t +1 , π −i,t +1 ; s′) + ϵiνi(πi,t +1 ; s′)] }− min  
+
+> a′
+
+{− ri(s, a′) + γEs′∼P (·| s, a′)[πTi,t +1 (·| s′)Qi,t (s′, ·)pi,t +1 (·| s′) − 1
+
+τi
+
+Di(pi,t +1 , π −i,t +1 ; s′) + ϵiνi(πi,t +1 ; s′)] }
+
+!
+
+≤1 + γ max 
+
+> i
+
+
+
+max  
+
+> s, a
+
+Qi,t (s, a) − min  
+
+> s, a
+
+Qi,t (s, a)
+
+
+
++ γ max 
+
+> i
+
+1
+
+τi
+
+
+
+max  
+
+> p,π
+
+Di(p, π ) − min  
+
+> p,π
+
+Di(p, π )
+
+
+
++ γ max  
+
+> i
+
+ϵi
+
+
+
+max  
+
+> π
+
+νi(π) − min  
+
+> π
+
+νi(π)
+
+
+
+(108) Since νi(·) are Lν -Lipschitz and π ∈ ∆, we have: 
+
+max  
+
+> π
+
+νi(π) − min  
+
+> π
+
+νi(π) ≤ √2Lν , (109) and similarly, 
+
+max  
+
+> p,π
+
+Di(p, π ) − min  
+
+> p,π
+
+Di(p, π ) ≤ 2√2LD (110) therefore, we have: sp (Tzt+1 Qt) ≤ 1 + γsp (Qt) + γ( 2√2LD
+
+τmin 
+
++ √2ϵmax Lν ) (111) Therefore, we have: sp (Qt+1 ) ≤(1 − αt)sp (Qt) + αtsp (Tzt+1 Qt)
+
+≤(1 − (1 − γ)αt)sp (Qt) + αt 1 + γ( 2√2LD
+
+τmin 
+
++ √2ϵmax Lν )
+
+! (112) since Q0 = 0 , using a simple induction argument we obtain: sp (Qt) ≤ 11 − γ 1 + γ( 2√2LD
+
+τmin 
+
++ √2ϵmax Lν )
+
+!
+
+, ∀t. (113) For sp (Q∗), notice that Q∗ = Tz∗ Q∗ and the span bound holds for all zt+1 gives the result. 35 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Result for max-norm of Q. Similarly by the update rule, we only have to control ∥T zt+1 Qt∥max . We have: 
+
+∥T zt+1 Qt∥max 
+
+= max  
+
+> i,s, a
+
+{| − ri(s, a) + γEs′∼P (·| s, a)[πTi,t +1 (·| s′)Qi,t (s′, ·)pi,t +1 (·| s′) − 1
+
+τi
+
+Di(pi,t +1 , π −i,t +1 ; s′) + ϵiνi(πi,t +1 ; s′)] |} ≤γ
+
+
+
+1 + ∥Qt∥max + 1
+
+τmin 
+
+(Dmin + 2 √2LD ) + ϵmax 
+
+
+
+νmin + √2Lν
+
+
+
+(114) where we have used (109) and (110) in the inequality. Using the same reasoning as above, we have: 
+
+∥Qt∥max ≤ 11 − γ + γ
+
+1 − γ
+
+ 1
+
+τmin 
+
+(Dmin + 2 √2LD ) + ϵmax 
+
+
+
+νmin + √2Lν
+
+
+
+, (115) and using the same argument again, we have: 
+
+∥Q∗∥max ≤ 11 − γ + γ
+
+1 − γ
+
+ 1
+
+τmin 
+
+(Dmin + 2 √2LD ) + ϵmax 
+
+
+
+νmin + √2Lν
+
+
+
+, (116) which completes the proof. We now focus on the z update. We have the following lemma on the update rule of zt for arbitrary s ∈ S , where we drop the dependence on s for simplicity: 
+
+Lemma G.4. Consider the following update rule on z:
+
+zt+1 ← Proj (zt − βtΛFt(zt)) , (117) 
+
+If Ft is LF -Lipschitz continuous and (μ, λ )-strongly monotone in z, we have the following: 
+
+∥zt+1 − z∗ 
+
+> t
+
+∥2 ≤
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2; (118) 
+
+∥zt+1 − z∗
+
+> t+1
+
+∥2 ≤
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2 + ∥z∗ 
+
+> t+1
+
+− z∗ 
+
+> t
+
+∥2. (119) 
+
+Proof. For ∥zt+1 − z∗ 
+
+> t
+
+∥2, we obtain by our update rule and Lemma I.3 that: 
+
+∥zt+1 − z∗ 
+
+> t
+
+∥2 ≤∥ Proj (zt − βtΛFt(zt)) − Proj (z∗ 
+
+> t
+
+− βtΛFt(z∗ 
+
+> t
+
+)) ∥2
+
+≤∥ zt − z∗ 
+
+> t
+
+− βtΛ( Ft(zt) − Ft(z∗ 
+
+> t
+
+)) ∥2
+
+(120) Notice that we further have: 
+
+∥zt − z∗ 
+
+> t
+
+− βtΛ( Ft(zt) − Ft(z∗ 
+
+> t
+
+)) ∥22
+
+=∥zt − z∗ 
+
+> t
+
+∥22 − 2βt⟨zt − z∗ 
+
+> t
+
+, F t(zt) − Ft(z∗ 
+
+> t
+
+)⟩λ + β2 
+
+> t
+
+∥Ft(zt) − Ft(z∗ 
+
+> t
+
+)∥22
+
+≤∥ zt − z∗ 
+
+> t
+
+∥22 − 2βtμ∥zt − z∗ 
+
+> t
+
+∥22 + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥22
+
+=(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
+(121) where we have used the (μ, λ )-strong monotonicity of Ft and LF -Lipschitz continuity of Ft in the inequality, we conclude that the first line of our results hold. The second line holds by noticing that: 
+
+∥zt+1 − z∗
+
+> t+1
+
+∥2 ≤∥ zt+1 − z∗ 
+
+> t
+
+∥2 + ∥z∗ 
+
+> t+1
+
+− z∗ 
+
+> t
+
+∥2
+
+≤
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2 + ∥z∗ 
+
+> t+1
+
+− z∗ 
+
+> t
+
+∥2, (122) which completes the proof of Lemma G.4. 36 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Notice that z∗ 
+
+> t+1
+
+is the state-wise RQE of Qt+1 and z∗ 
+
+> t
+
+is the state-wise RQE of (the normal form) Q, we have: 
+
+∥z∗ 
+
+> t+1
+
+− z∗ 
+
+> t
+
+∥2 ≤LRQE ∥Qt+1 − Qt∥max 
+
+=αtLRQE ∥T zt+1 Qt − Qt∥max 
+
+≤αtLRQE 
+
+ ∥T zt+1 Qt − T Qt∥max + ∥T Qt − Qt∥max 
+
+
+
+=αtLRQE 
+
+ ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + ∥T Qt − Qt∥max 
+
+
+
+≤αtLRQE 
+
+ ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + ∥T Qt − T Q∗∥max + ∥T Q∗ − Qt∥max 
+
+
+
+≤αtLRQE 
+
+ ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + γ0∥Qt − Q∗∥max + ∥Q∗ − Qt∥max 
+
+
+
+=αtLRQE 
+
+ ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + (1 + γ0)∥Qt − Q∗∥max 
+
+ ,
+
+(123) where LRQE is the Lipschitz continuity constant of RQE given by Theorem 3.1 with respect to the difference term 
+
+∥zt+1 − zt∥2.Now we consider the iteration step of Q. Let Q∗ be the Q function corresponding to the RQE of the Markov game, we have: 
+
+∥Qt+1 − Q∗∥max ≤(1 − αt)∥Qt − Q∗∥max + αt∥T zt+1 Qt − T Qt∥max + αt∥T Qt − T Q∗∥max 
+
+≤ (1 − (1 − γ0)αt) ∥Qt − Q∗∥max + αt∥T zt+1 Qt − T Qt∥max 
+
+= (1 − (1 − γ0)αt) ∥Qt − Q∗∥max + αt∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max ,
+
+(124) where we have used the γ0-contraction property of T in the second inequality, and the fact that z∗ 
+
+> t
+
+is the state-wise RQE of 
+
+Qt. For the difference term ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max , we have the following lemma: 
+
+Lemma G.5. Given a set of Q functions Q, for arbitrary z ∈ ∆|A 1| × ∆|A 2| × ∆|A 2| × ∆|A 1|, the following bound holds: 
+
+∥T z Q − T Q∥max ≤ γ(
+
+p|A max |
+
+2 sp (Q) + LD
+
+τmin 
+
++ max { LD
+
+τmin 
+
+, ϵ max Lν })∥z − z∗∥2 (125) 
+
+where z∗ is the state-wise RQE of Q and LD , L ν are the maximum Lipschitz continuity constant of Di and νi respectively. Proof. Given state-action pair (s, a), let z = ( π1, π 2, p 1, p 2) and z∗ = ( π∗ 
+
+> 1
+
+, π ∗ 
+
+> 2
+
+, p ∗
+
+> 1
+
+, p ∗
+
+> 2
+
+), we have the following lower bound: 
+
+(Tz Q − T Q)i(s, a)=γEs′∼P (·| s, a)[πTi Qi(s′, ·)pi − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] 
+
+− γEs′∼P (·| s, a)[( π∗ 
+
+> i
+
+)T Qi(s′, ·)p∗ 
+
+> i
+
+− 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i; s′) + ϵiνi(π∗ 
+
+> i
+
+; s′)] 
+
+≥γEs′∼P (·| s, a)[πTi Qi(s′, ·)pi − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] 
+
+− γEs′∼P (·| s, a)[πTi Qi(s′, ·)p∗ 
+
+> i
+
+− 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i; s′) + ϵiνi(πi; s′)] =γEs′∼P (·| s, a)[πTi Qi(s′, ·)( pi − p∗ 
+
+> i
+
+) − 1
+
+τi
+
+(Di(pi, π −i; s′) − Di(p∗ 
+
+> i
+
+, π ∗−i; s′))] 
+
+≥ − γ(
+
+p|A −i|
+
+2 sp (Qi) + 2LD
+
+τi
+
+)∥z − z∗∥2,
+
+(126) 37 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+and a similar upper bound: 
+
+(Tz Q − T z∗ Q)i(s, a)=γEs′∼P (·| s, a)[πTi Qi(s′, ·)pi − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] 
+
+− γEs′∼P (·| s, a)[( π∗ 
+
+> i
+
+)T Qi(s′, ·)p∗ 
+
+> i
+
+− 1
+
+τi
+
+Di(p∗ 
+
+> i
+
+, π ∗−i; s′) + ϵiνi(π∗ 
+
+> i
+
+; s′)] 
+
+≤γEs′∼P (·| s, a)[πTi Qi(s′, ·)pi − 1
+
+τi
+
+Di(pi, π −i; s′) + ϵiνi(πi; s′)] 
+
+− γEs′∼P (·| s, a)[( π∗ 
+
+> i
+
+)T Qi(s′, ·)pi − 1
+
+τi
+
+Di(pi, π ∗−i; s′) + ϵiνi(π∗ 
+
+> i
+
+; s′)] =γEs′∼P (·| s, a)[( πi − π∗ 
+
+> i
+
+)T Qi(s′, ·)pi
+
+− Di(pi, π −i; s′) − Di(pi, π ∗−i; s′)
+
+τi
+
++ ϵi(νi(πi; s′) − νi(π∗ 
+
+> i
+
+; s′))] 
+
+≤γ(
+
+p|A i|
+
+2 sp (Qi) + LD
+
+τi
+
++ ϵiLν )∥z − z∗∥2
+
+(127) taking max-norm on all possible (s, a) pairs completes the proof. Using Lemma G.5, we obtain: 
+
+∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max ≤ γ(
+
+p|A max |
+
+2 sp (Qt) + LD
+
+τmin 
+
++ max { LD
+
+τmin 
+
+, ϵ max Lν })∥zt+1 − z∗ 
+
+> t
+
+∥2
+
+≤ γ(
+
+p|A max |
+
+2 Qspan + LD
+
+τmin 
+
++ max { LD
+
+τmin 
+
+, ϵ max Lν })∥zt+1 − z∗ 
+
+> t
+
+∥2
+
+(128) Let CT = γ(
+
+√|A max | 
+
+> 2
+
+Qspan + LD 
+
+> τmin
+
++ max { LD 
+
+> τmin
+
+, ϵ max Lν }) denote this coefficient, our iteration dynamics can be written as: ∥zt+1 − z∗
+
+> t+1
+
+∥2
+
+≤
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2 + αtLRQE 
+
+ ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + (1 + γ0)∥Qt − Q∗∥max 
+
+
+
+=
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2 + αtLRQE (CT ∥zt+1 − z∗ 
+
+> t
+
+∥2 + (1 + γ0)∥Qt − Q∗∥max )
+
+≤
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2
+
++ αtLRQE 
+
+
+
+CT
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2 + (1 + γ0)∥Qt − Q∗∥max 
+
+
+
+=(1 + αtLRQE CT )
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2 + (1 + γ0)αtLRQE ∥Qt − Q∗∥max .
+
+(129) where we have used (121) in the second inequality, and 
+
+∥Qt+1 − Q∗∥max ≤ (1 − (1 − γ0)αt) ∥Qt − Q∗∥max + αt∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max 
+
+≤ (1 − (1 − γ0)αt) ∥Qt − Q∗∥max + αtCT ∥zt+1 − z∗ 
+
+> t
+
+∥2
+
+= (1 − (1 − γ0)αt) ∥Qt − Q∗∥max + αtCT
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2.
+
+(130) Notice that when βt ≤ min { 1 
+
+> μ
+
+, μL2
+
+> F
+
+}, we have: 
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+≤ 1 − βtμ + β2 
+
+> t
+
+L2
+
+> F
+
+2 ≤ 1 − βt
+
+2 μ (131) Let ˜αt = (1 − γ0)αt and ˜βt = μ 
+
+> 2
+
+βt, our recursion becomes: 
+
+∥zt+1 − z∗
+
+> t+1
+
+∥2 ≤(1 + C1 ˜αt)(1 − ˜βt)∥zt − z∗ 
+
+> t
+
+∥2 + C2 ˜αt∥Qt − Q∗∥max (132) 
+
+∥Qt+1 − Q∗∥max ≤(1 − ˜αt)∥Qt − Q∗∥max + C3 ˜αt(1 − ˜βt)∥zt − z∗ 
+
+> t
+
+∥2 (133) 38 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+where C1 = LRQE CT , C 2 = 1+ γ0 
+
+> 1−γ0
+
+LRQE and C3 = CT 
+
+> 1−γ0
+
+. Let vt = ∥Qt − Q∗∥max and ut = ∥zt − z∗ 
+
+> t
+
+∥2, we can rewrite the recursion in vector form: ut+1 
+
+vt+1 
+
+
+
+≤
+
+(1 + C1 ˜αt)(1 − ˜βt) C2 ˜αt
+
+C3 ˜αt(1 − ˜βt) 1 − ˜αt
+
+
+
+·
+
+ut
+
+vt
+
+
+
+(134) we give different convergence results under different step size assumptions: 
+
+Scenario 1: Assume we are using constant step sizes ˜αt = ˜ α, ˜βt = ˜β, ˜α ≪ ˜β. The recursion becomes: 
+
+ut+1 
+
+vt+1 
+
+
+
+≤
+
+(1 + C1 ˜α)(1 − ˜β) C2 ˜αC3 ˜α(1 − ˜β) 1 − ˜α
+
+
+
+·
+
+ut
+
+vt
+
+
+
+(135) Let Wt = ut + kv t for some k > 0, we have: 
+
+Wt+1 =ut+1 + kv t+1 
+
+=
+
+
+
+(1 + C1 ˜α)(1 − ˜β) + kC 3 ˜α(1 − ˜β)
+
+
+
+ut + ( C2 ˜α + k(1 − ˜α)) vt
+
+≤ max 
+
+
+
+(1 + C1 ˜α)(1 − ˜β) + kC 3 ˜α(1 − ˜β), C2 ˜αk + (1 − ˜α)
+
+
+
+(ut + kv t)= max 
+
+
+
+(1 + ( C1 + kC 3)˜ α)(1 − ˜β), C2 ˜αk + (1 − ˜α)
+
+
+
+Wt
+
+≤ max 
+
+
+
+1 − ˜β + ( C1 + kC 3)˜ α, 1 − (1 − C2
+
+k )˜ α
+
+
+
+Wt
+
+(136) take k = 2 C2 and ˜β ≥   12 + C1 + 2 C2C3
+
+ ˜α, we have: 
+
+Wt ≤
+
+
+
+1 − ˜α
+
+2
+
+t
+
+W0 ≤
+
+
+
+1 − ˜α
+
+2
+
+t 
+
+2
+
+p |A 1| + p|A 2|
+
+
+
++ k∥Q∗∥max 
+
+
+
+, (137) and consequently, 
+
+∥zt − z∗ 
+
+> t
+
+∥2 ≤ Wt ≤ 2
+
+
+
+1 − ˜α
+
+2
+
+t p |A 1| + p|A 2|
+
+
+
++ C2Qmax 
+
+
+
+; (138) 
+
+∥Qt − Q∗∥max ≤ Wt
+
+k ≤
+
+
+
+1 − ˜α
+
+2
+
+t  1
+
+C2
+
+p |A 1| + p|A 2|
+
+
+
++ Qmax 
+
+
+
+. (139) Let z∗ be the RQE of the Markov game, we know that z∗ is also the state-wise RQE of Q∗. Theorem 3.1 implies: 
+
+∥z∗ 
+
+> t
+
+− z∗∥2 ≤ LRQE ∥Qt − Q∗∥max , (140) so that ∥zt − z∗∥2 ≤∥ zt − z∗ 
+
+> t
+
+∥2 + ∥z∗ 
+
+> t
+
+− z∗∥2
+
+≤
+
+
+
+1 − ˜α
+
+2
+
+t p |A 1| + p|A 2|
+
+
+
++ C2Qmax 
+
+
+
++ LRQE 
+
+
+
+1 − ˜α
+
+2
+
+t  1
+
+C2
+
+p |A 1| + p|A 2|
+
+
+
++ ∥Q∗∥max 
+
+
+
+≤
+
+
+
+1 − ˜α
+
+2
+
+t 
+
+1 + LRQE 
+
+C2
+
+ p |A 1| + p|A 2|
+
+
+
++ C2Qmax 
+
+
+
+.
+
+(141) 
+
+Scenario 2: Assume we are using diminishing step sizes where ˜αt = ˜αt+h and ˜βt = ˜βt+h , ˜α ≪ ˜β for some fixed integer h.The recursion now has the form: 
+
+ut+1 
+
+vt+1 
+
+
+
+≤
+
+"
+
+(1 + C1 ˜αt+h )(1 − ˜βt+h ) C2 ˜αt+h
+
+C3 ˜αt+h (1 − ˜βt+h ) 1 − ˜αt+h
+
+#
+
+·
+
+ut
+
+vt
+
+
+
+. (142) 39 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Similarly, let Wt = ut + kv t for some k > 0, the recursion on Wt becomes: 
+
+Wt+1 =ut+1 + kv t+1 
+
+= (1 + C1
+
+˜αt + h )(1 − ˜βt + h ) + kC 3
+
+˜αt + h (1 − ˜βt + h )
+
+!
+
+ut +
+
+
+
+C2
+
+˜αt + h + k(1 − ˜αt + h )
+
+
+
+vt
+
+≤ max 
+
+(
+
+(1 + C1
+
+˜αt + h )(1 − ˜βt + h ) + kC 3
+
+˜αt + h (1 − ˜βt + h ), C2
+
+k
+
+˜αt + h + (1 − ˜αt + h )
+
+)
+
+(ut + kv t)
+
+≤ max 
+
+(
+
+(1 + ( C1 + kC 3) ˜αt + h )(1 − ˜βt + h ), C2
+
+k
+
+˜αt + h + (1 − ˜αt + h )
+
+)
+
+Wt
+
+≤ max 
+
+(
+
+1 − ˜β − ˜α(C1 + kC 3)
+
+t + h , 1 − (1 − C2/k )˜ αt + h
+
+)
+
+Wt.
+
+(143) Setting k = 2 C2 and ˜β ≥   12 + C1 + 2 C2C3
+
+ ˜α, we have: 
+
+Wt+1 ≤
+
+
+
+1 − ˜α
+
+2( t + h)
+
+
+
+Wt (144) and as a result, 
+
+Wt+1 ≤W0
+
+> t
+
+Y
+
+> i=0
+
+
+
+1 − ˜α
+
+2( i + h)
+
+
+
+≤W0
+
+> t
+
+Y
+
+> i=0
+
+exp 
+
+
+
+− ˜α
+
+2( i + h)
+
+
+
+≤W0 exp − ˜α
+
+2
+
+> t
+
+X
+
+> i=0
+
+1
+
+i + h
+
+!
+
+=W0 exp 
+
+
+
+− ˜α
+
+2 (Hh+t − Hh−1)
+
+
+
+.
+
+(145) where Ht denotes the harmonic series. Since we have the following upper bound: 
+
+Hh−1 − Hh+t ≤ log hh + t + 1 (146) we obtain the upper bound of: 
+
+Wt+1 ≤ W0
+
+ hh + t + 1 
+
+ ˜α
+
+> 2
+
+(147) which leads to the final result: 
+
+∥zt − z∗ 
+
+> t
+
+∥2 ≤2
+
+p |A 1| + p|A 2|
+
+
+
++ C2Qmax 
+
+  hh + t + 1 
+
+ ˜α
+
+> 2
+
+; (148) 
+
+∥Qt − Q∗∥max ≤
+
+ 1
+
+C2
+
+p |A 1| + p|A 2|
+
+
+
++ Qmax 
+
+  hh + t + 1 
+
+ ˜α
+
+> 2
+
+. (149) and: 
+
+∥zt − z∗∥2 ≤
+
+
+
+1 + LRQE 
+
+C2
+
+ p |A 1| + p|A 2|
+
+
+
++ C2Qmax 
+
+  hh + t + 1 
+
+ ˜α
+
+> 2
+
+. (150) 40 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+H. Detailed Statement and Proof of Theorem 4.7 
+
+We first present a more detailed statement of Theorem 4.7 as follows: 
+
+Theorem H.1 (Theorem 4.7, detailed) . Under Assumptions 4.5 and 4.6, if there exists γ0 such that the Bellman optimality operator T is a contraction mapping, and additionally Di(·, ·) are LD -Lipschitz in either argument when the other is fixed, 
+
+νi(·) are Lν -Lipschitz with respect to its input, and the gradient operator of the modified 4-player game is (μ, λ )-strongly monotone and LF -Lipschitz for every state s ∈ S , then both on- and off-policy variants of Algorithm 1 with the following parameters: 
+
+K ≥ 4√2C
+
+(1 − ρ)(1 − γ0)dmin 
+
+; (151) 
+
+αt <1; (152) 
+
+βt ≤ min { 1
+
+μ , μL2
+
+> F
+
+}; (153) 
+
+βt
+
+αt
+
+≥
+
+(1 − γ0)dmin /2 + 
+
+
+
+1 + (1 + γ0)2 + 2 CT + 8γ2C2
+
+> T
+> d3min
+
+ 1+ γ0
+
+> 1−γ0
+
+2
+
+LRQE 
+
+μ +
+
+
+
+1 + (1 + γ0)2 + 2 CT + 8γ2C2
+
+> T
+> d3min
+
+ 1+ γ0
+
+> 1−γ0
+
+2
+
+LRQE 
+
+. (154) 
+
+then in expectation, the sequence of zt converges to the RQE z∗ of the Markov game and the Q function Qt converges to the corresponding Q∗ to z∗ at the following rates: 1. If we use constant step sizes αt = α, β t = β, then ∀s ∈ S :
+
+E[∥Qt − Q∗∥2max ] ≤ (1 − 12 (1 − γ0)dmin α)t(Q2max + 8 k) + 2( C3 + kC 6)(1 − γ0)dmin 
+
+α;
+
+E[∥zt(·| s) − z∗(·| s)∥22] ≤ (2 + 2 kL 2 
+
+> RQE
+
+)
+
+
+
+(1 − 12 (1 − γ0)dmin α)t(Q2max /k + 8) + 2( C3/k + C6)(1 − γ0)dmin 
+
+α
+
+
+
+.
+
+(155) 
+
+2. If we use diminishing step sizes αt = αt+h , β t = βt+h for some h ≥ 1, then ∀s ∈ S :
+
+E[∥Qt − Q∗∥2max ] ≤
+
+
+
+Q2max + 8 k + (C3 + kC 6)α2
+
+h2
+
+h + 2 − 12 (1 − γ0)dmin α
+
+1 − 12 (1 − γ0)dmin α
+
+  h + 1 
+
+h + t
+
+ 12 (1 −γ0)dmin α
+
+;
+
+E[∥zt(·| s) − z∗(·| s)∥22] ≤ (2 /k + 2 L2 
+
+> RQE
+
+)
+
+
+
+Q2max + 8 k + (C3 + kC 6)α2
+
+h2
+
+h + 2 − 12 (1 − γ0)dmin α
+
+1 − 12 (1 − γ0)dmin α
+
+  h + 1 
+
+h + t
+
+ 12 (1 −γ0)dmin α
+
+.
+
+(156) 
+
+where in both cases, 
+
+dmin =μπ ;
+
+k = (1 − γ0)dmin 
+
+4LRQE (1 + γ0)2 ;
+
+C3 =4(1 − γ0)2 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+Q2max 
+
++ 1 + 12 (1 − γ0)dmin α + 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+× 8γ2C2 
+
+> T
+
+(1 − β)2 + 8
+
+K Q2
+
+> span
+
+;
+
+C6 =(2 + CT )L2 
+
+> RQE
+
+CT (1 − β)2 + L3 
+
+> RQE
+
+C2 
+
+> T
+
+αt(1 − β)2 + 4 L2 
+
+> RQE
+
+(1 + γ0)2Qmax 
+
+here Qmax , Q span are those provided in Lemma G.3, and LRQE , C T are the same as those in Theorem G.2. 
+
+41 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Proof of Theorem H.1: 
+
+In this section, we provide a proof of Theorem H.1 following similar ideas as that of Theorem G.2. However, since the iterates of Algorithm 1 incurs coupled random updates, we use a coupled Lyapunov drift approach following prior work in stochastic approximation that considers the Lyapunov function of ∥Q − Q′∥2max as opposed to ∥Q − Q′∥max in the proof of Theorem G.2. We present the coupled Lyapunov drift inequalities respectively in this section. 
+
+H.1. Lyapunov Drift Inequality for Q Functions 
+
+Before presenting the Lyapunov drift inequality, we first prove a lemma that will be useful throughout: 
+
+Lemma H.2. Assume the Bellman optimality operator satisfy γ0-contraction property, the following bound holds for all t
+
+and arbitrary constant c > 0:
+
+∥T zt+1 Qt − Qt∥2max ≤ (1 + c)∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max +
+
+
+
+1 + 1
+
+c
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max . (157) 
+
+Proof. We can write the difference term as: 
+
+∥T zt+1 Qt − Qt∥max 
+
+=∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt + Tz∗ 
+
+> t
+
+Qt − Q∗ − Qt + Q∗∥max 
+
+≤∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + ∥T z∗ 
+
+> t
+
+Qt − T Q∗ − Qt + Q∗∥max 
+
+≤∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + (1 − γ0)∥Qt − Q∗∥max 
+
+(158) therefore, we can bound the square term as: 
+
+∥T zt+1 Qt − Qt∥2max 
+
+≤  ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max + (1 − γ0)∥Qt − Q∗∥max 
+
+2
+
+≤(1 + c)∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max +
+
+
+
+1 + 1
+
+c
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
+(159) where we have used Lemma I.7 in the last inequality. Let Ft,k denote the filtration at timestep k in episode t and Ft denote Ft, 0, for wi,k = ˆ qi,k − T zt+1 Qi,t (sk, ak), we have that E[wi,k |F t,k ] = 0 . Therefore, let ξi,k (s, a) denote ξi,k (s, a) = wi,k 1[( s, a) = ( sk, ak)] , for the conditional expectation given Ft, it holds that: 
+
+E[ξi,k (s, a)|F t,k ] = E[wi,k 1[( s, a) = ( sk, ak)] |F t,k ]=E[wi,k |F t,k ]1[( s, a) = ( sk, ak)] =0 
+
+(160) and 
+
+E[ξi,k (s, a)|F t] = E[wi,k 1[( s, a) = ( sk, ak)] |F t]=E[E[wi,k 1[( s, a) = ( sk, ak)] |F t,k ]|F t]=E[E[wi,k |F t,k ]1[( s, a) = ( sk, ak)] |F t]=0 
+
+(161) therefore, ξi,k (s, a) is a martingale difference sequence with respect to {F t,k }. Let Mi,t (s, a) = 1
+
+> K
+
+PK−1 
+
+> k=0
+
+ξi,k (s, a), we 42 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+can see that E[Mi,t (s, a)|F t] = 0 . For the update ˆδi, we have: 
+
+E[ˆδi(s, a)|F t]= 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+E [(ˆ qi,k − Qi,t (sk, ak)) 1[( s, a) = ( sk, ak)] |F t]= 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+E   wi,k + Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] Ft
+
+
+
+= 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+E   Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] Ft
+
+ + E[Mi,t (s, a)|F t]= 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+E   Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] Ft
+
+
+
+= 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+E   Tzt+1 Qi,t (s, a) − Qi,t (s, a) 1[( s, a) = ( sk, ak)] Ft
+
+
+
+=  Tzt+1 Qi,t (s, a) − Qi,t (s, a) 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+Pr(( sk, ak) = ( s, a)|F t)
+
+(162) let ¯PK (s, a|F t) denote 1
+
+> K
+
+PK−1 
+
+> k=0
+
+Pr(( sk, ak) = ( s, a)|F t), we conclude that 
+
+E[ˆδi(s, a)|F t] = ¯PK (s, a|F t)  Tzt+1 Qi,t (s, a) − Qi,t (s, a) (163) 
+
+Critic Update Decomposition. We first provide a decomposition result for (Qi,t +1 (s, a) − Q∗ 
+
+> i
+
+(s, a)) 2, notice that the update rule of Algorithm 1 can be rewritten as: 
+
+Qi,t +1 (s, a) = Qi,t (s, a) + αt ˆδi(s, a)=Qi,t (s, a) + αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+(ˆ qi,k − Qi,t (sk, ak)) 1[( s, a) = ( sk, ak)] =Qi,t (s, a) + αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ wi,k + Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] =Qi,t (s, a) + αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] =Qi,t (s, a) + αtE[ˆδi(s, a)|F t]+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] − αtE[ˆδi(s, a)|F t]+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)
+
+(164) 43 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+since we have that 
+
+E
+
+"
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)
+
+
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)
+
+!
+
+Ft
+
+#
+
+=
+
+
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)
+
+
+
+E
+
+"
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)
+
+!
+
+Ft
+
+#
+
+=
+
+
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)
+
+
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+E [ξi,k (s, a)|F t]=0; 
+
+(165) and 
+
+E
+
+" 
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)
+
+
+
+×
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] − αtE[ˆδi(s, a)|F t]
+
+!
+
+Ft
+
+#
+
+=
+
+
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)
+
+
+
+×
+
+E
+
+"
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] − αtE[ˆδi(s, a)|F t] Ft
+
+#
+
+=
+
+
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)
+
+
+
+×
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+E   Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] Ft
+
+ − αtE[ˆδi(s, a)|F t]
+
+!
+
+=0 .
+
+(166) We can rewrite the squared difference term (Qi,t +1 (s, a) − Q∗ 
+
+> i
+
+(s, a)) 2 into the sum of 4 different terms: 
+
+E
+
+h
+
+(Qi,t +1 (s, a) − Q∗ 
+
+> i
+
+(s, a)) 2 Ft
+
+i
+
+= E
+
+
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)
+
+2
+
+Ft
+
+| {z }
+
+> L′
+> 1
+
++ E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] − αtE[ˆδi(s, a)|F t]
+
+!2
+
+Ft
+
+| {z }
+
+> L′
+> 2
+
++ E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)
+
+!2
+
+Ft
+
+| {z }
+
+> L′
+> 3
+
++ 2 E
+
+"
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)
+
+!
+
+×
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] − αtE[ˆδi(s, a)|F t]
+
+!
+
+Ft
+
+#| {z }
+
+> L′
+> 4
+
+(167) 44 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Here L′ 
+
+> 1
+
+indicates the expected update of Qi conditioned on Ft, L′
+
+> 2
+
+, L′ 
+
+> 3
+
+and L′ 
+
+> 4
+
+are error terms induced by the stochasticity induced by sampling in the update rule of Algorithm 1. We can take max-norm on both sides of (167) and get: 
+
+E ∥Qt+1 − Q∗∥2max Ft
+
+
+
+≤ E
+
+
+
+Qt + αtE[ˆδ|F t] − Q∗ 2max 
+
+Ft
+
+| {z }
+
+> L1
+
++ E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qt(sk, ak) − Qt(sk, ak) ⊗ e(sk ,ak ) − αtE[ˆδ|F t]
+
+> 2max
+
+Ft
+
+| {z }
+
+> L2
+
++ E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξk
+
+> 2max
+
+Ft
+
+| {z }
+
+> L3
+
++ 2 E
+
+"
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qt(sk, ak) − Qt(sk, ak) ⊗ e(sk ,ak ) − αtE[ˆδ|F t]
+
+> max
+
+× αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξk
+
+> max
+
+Ft
+
+#| {z }
+
+> L4
+
+(168) To obtain a Lyapunov drift inequality on ∥Qt − Q∗∥2max , we only have to bound L1, L2, L3 and L4, and each Li term can be bounded individually, as we will show as follows. 
+
+Further decomposing the expected update term L1. Although the update expressed in term L1 is no longer stochastic conditioned on Ft, it is not directly tied to the Bellman operator Tzt+1 and therefore cannot directly be processed by a contraction argument. Therefore, we have to further decompose L1 into terms that we can directly bound. To accommodate a cleaner representation, notice that 
+
+Qi,t (s, a) + αtE[ˆδi(s, a)|F t] − Q∗ 
+
+> i
+
+(s, a)=Qi,t (s, a) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)+ αtE[ˆδi(s, a)|F t] − αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a) (169) we have the following decomposition for L′
+
+> 1
+
+:
+
+L′ 
+
+> 1
+
+= L′ 
+
+> 1,1
+
++ 2 αtL′ 
+
+> 1,2
+
++ α2 
+
+> t
+
+L′ 
+
+> 1,3
+
+(170) where 
+
+L′ 
+
+> 1,1
+
+=E
+
+h Qi,t (s, a) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)2 Ft
+
+i
+
+; (171) 
+
+L′ 
+
+> 1,2
+
+=E
+
+h  Qi,t (s, a) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)
+
+×
+
+
+
+E[ˆδi(s, a)|F t] − dt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a)
+
+Ft
+
+i
+
+; (172) 
+
+L′ 
+
+> 1,3
+
+=E
+
+
+
+E[ˆδi(s, a)|F t] − dt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a)2
+
+Ft
+
+
+
+. (173) here dt+1 is the steady state-action distribution induced by the sampling policy at time step t + 1 : For on-policy updates, 
+
+dt+1 (s, a) = μπt+1 (s)πt+1 (a|s). (174) and for off-policy updates, 
+
+dt+1 (s, a) = μπr (s)πr (a|s). (175) 45 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+for the corresponding state distribution μπt+1 or μπr . Taking max-norm of each term above, we obtain the following bound: 
+
+L1 ≤ L 1,1 + 2 αtL1,2 + α2 
+
+> t
+
+L1,3 (176) where 
+
+L1,1 =E
+
+h
+
+Qt + αtdt+1 ⊙  Tzt+1 Qt − Qt
+
+ − Q∗ 2max Ft
+
+i
+
+; (177) 
+
+L1,2 =E
+
+h
+
+Qt + αtdt+1 ⊙  Tzt+1 Qt − Qt
+
+ − Q∗ 
+
+> max
+
+× E[ˆδ|F t] − dt+1 ⊙  Tzt+1 Qt − Qt
+
+
+
+> max
+
+Ft
+
+i
+
+; (178) 
+
+L1,3 =E
+
+
+
+E[ˆδ|F t] − dt+1 ⊙  Tzt+1 Qt − Qt
+
+ 2max 
+
+Ft
+
+
+
+. (179) Notice that we have the following decomposition: 
+
+Qi,t (s, a) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)=(1 − αtdt+1 (s, a))( Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − T z∗ Q∗ 
+
+> i
+
+(s, a)
+
+=(1 − αtdt+1 (s, a))( Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − T z∗ 
+
+> t
+
+Qi,t (s, a) + Tz∗ 
+
+> t
+
+Qi,t (s, a) − T z∗ Q∗ 
+
+> i
+
+(s, a)
+
+=(1 − αtdt+1 (s, a))( Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)) + αtdt+1 (s, a)( T Qi,t (s, a) − T Q∗ 
+
+> i
+
+(s, a)) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − T z∗ 
+
+> t
+
+Qi,t (s, a)
+
+(180) where we have used the fact that Tz∗ 
+
+> t
+
+Qi,t = T Qi,t , Tz∗ Q∗ 
+
+> i
+
+= T Q∗ 
+
+> i
+
+in the last equality. Therefore, we have: 
+
+Qt + αtdt+1 ⊙  Tzt+1 Qt − Qt
+
+ − Q∗
+
+> max
+
+= max  
+
+> i,s, a
+
+{Qi,t (s, a) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)}
+
+= max  
+
+> i,s, a
+
+{(1 − αtdt+1 (s, a))( Qi,t (s, a) − Q∗ 
+
+> i
+
+(s, a)) + αtdt+1 (s, a)( T Qi,t (s, a) − T Q∗ 
+
+> i
+
+(s, a)) + αtdt+1 (s, a)  Tzt+1 Qi,t (s, a) − T z∗ 
+
+> t
+
+Qi,t (s, a)}≤(1 − αtdt+1 ,min )∥Qt − Q∗∥max + γ0αtdt+1 ,max ∥Qt − Q∗∥max + αtdt+1 ,max ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max 
+
+≤(1 − (1 − γ0)αtdt+1 ,min )∥Qt − Q∗∥max + αtdt+1 ,max ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max 
+
+(181) where dt+1 ,min = min s, a dt+1 (s, a) and dt+1 ,max = max s, a dt+1 (s, a). We can now rewrite the non-stochastic drift term 
+
+L1,1 as: 
+
+L1,1
+
+=E
+
+h
+
+Qt + αtdt+1 ⊙  Tzt+1 Qt − Qt
+
+ − Q∗ 2max Ft
+
+i
+
+≤  (1 − (1 − γ0)αtdt+1 ,min )∥Qt − Q∗∥max + αtdt+1 ,max ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max 
+
+2
+
+≤(1 + c1)(1 − (1 − γ0)αtdt+1 ,min )2∥Qt − Q∗∥2max +
+
+
+
+1 + 1
+
+c1
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max 
+
+(182) where we have used (181) in the first inequality and Lemma I.7 in the second inequality. Recall Lemma G.4 and Lemma G.5, we have that (notice that we are still taking maximum over all s ∈ S for z, such that ∥zt − z∗ 
+
+> t
+
+∥2 = max s∈S ∥zt(·| s) −
+
+z∗ 
+
+> t
+
+(·| s)∥2): 
+
+∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max ≤ γ2C2 
+
+> T
+
+∥zt+1 − z∗ 
+
+> t
+
+∥22 ≤ γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22. (183) Combining (182) and (183) we obtain: 
+
+L1,1 ≤(1 + c1)(1 − (1 − γ0)αtdt+1 ,min )2∥Qt − Q∗∥2max 
+
++
+
+
+
+1 + 1
+
+c1
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22. (184) 46 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+For term L1,2, recall that ¯PK (s, a|F t) = 1
+
+> K
+
+PK−1 
+
+> k=0
+
+Pr(( sk, ak) = ( s, a)|F t), by Assumption 4.5, we know that ¯PK (s, a|F t)
+
+converges to dt+1 with a rate of (here we focus on the on-policy case, the same proof goes through for the off-policy case as well): 
+
+| Pr(( sk, ak) = ( s, a)|F t) − dt+1 (s, a)| =|P kπt+1 (s0, s |F t)πt+1 (a|s) − dt+1 (s, a)|≤∥ P kπt+1 (s0, s |F t) − μπt+1 (·)∥TV 
+
+≤Cρ k
+
+(185) and therefore: 
+
+| ¯PK (s, a|F t) − dt+1 (s, a)|
+
+=| 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+Pr(( sk, ak) = ( s, a)|F t) − dt+1 (s, a)|≤ 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+| Pr(( sk, ak) = ( s, a)|F t) − dt+1 (s, a)|≤ CK
+
+> K−1
+
+X
+
+> k=0
+
+ρk
+
+≤ CK
+
+1 − ρK
+
+1 − ρ
+
+≤ C
+
+(1 − ρ)K .
+
+(186) Recall (163), we have the following upper bound on L1,2:
+
+L1,2
+
+=E
+
+h
+
+Qt + αtdt+1 ⊙  Tzt+1 Qt − Qt
+
+ − Q∗ 
+
+> max
+
+× E[ˆδ|F t] − dt+1 ⊙  Tzt+1 Qt − Qt
+
+
+
+> max
+
+Ft
+
+i
+
+=E
+
+h
+
+Qt + αtdt+1 ⊙  Tzt+1 Qt − Qt
+
+ − Q∗ 
+
+> max
+
+× ( ¯PK (·, ·|F t) − dt+1 ) ⊙  Tzt+1 Qt − Qt
+
+ 
+
+> max
+
+Ft
+
+i
+
+=E
+
+h
+
+Qt + αtdt+1 ⊙  Tzt+1 Qt − Qt
+
+ − Q∗ 
+
+> max
+
+Ft
+
+i
+
+× ( ¯PK (·, ·|F t) − dt+1 ) ⊙  Tzt+1 Qt − Qt
+
+
+
+> max
+> (i)
+
+≤  (1 − (1 − γ0)αtdt+1 ,min )∥Qt − Q∗∥max + αtdt+1 ,max ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max 
+
+
+
+× C
+
+(1 − ρ)K ∥T zt+1 Qt − Qt∥max 
+
+> (ii)
+
+≤ c2
+
+2
+
+ (1 − (1 − γ0)αtdt+1 ,min )∥Qt − Q∗∥max + αtdt+1 ,max ∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥max 
+
+2
+
++ 12c2
+
+ C
+
+(1 − ρ)K ∥T zt+1 Qt − Qt∥max 
+
+2
+
+> (iii)
+
+≤ c2
+
+2 (1 + c3)(1 − (1 − γ0)αtdt+1 ,min )2∥Qt − Q∗∥2max + c2
+
+2
+
+
+
+1 + 1
+
+c3
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max 
+
++ 12c2
+
+ C
+
+(1 − ρ)K ∥T zt+1 Qt − Qt∥max 
+
+2
+
+(187) where the (i) holds by (181) , (ii) holds because ab = √c2a · b√c2 < c2 
+
+> 2
+
+a2 + 12c2 b2 and (iii) uses Lemma I.7. We further 47 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+apply (183) and Lemma H.2 to the last line and and obtain: 
+
+L1,2
+
+≤ c2
+
+2 (1 + c3)(1 − (1 − γ0)αtdt+1 ,min )2∥Qt − Q∗∥2max 
+
++ c2
+
+2
+
+
+
+1 + 1
+
+c3
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max 
+
++ 12c2
+
+ C
+
+(1 − ρ)K
+
+2 
+
+(1 + c4)∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max +
+
+
+
+1 + 1
+
+c4
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
+
+
+= c2
+
+2 (1 + c3)(1 − (1 − γ0)αtdt+1 ,min )2 + 12c2
+
+ C
+
+(1 − ρ)K
+
+2 
+
+1 + 1
+
+c4
+
+
+
+(1 − γ0)2
+
+!
+
+∥Qt − Q∗∥2max 
+
++ c2
+
+2
+
+
+
+1 + 1
+
+c3
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
++ 1 + c4
+
+2c2
+
+ C
+
+(1 − ρ)K
+
+2!
+
+∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max 
+
+≤ c2
+
+2 (1 + c3)(1 − (1 − γ0)αtdt+1 ,min )2 + 12c2
+
+ C
+
+(1 − ρ)K
+
+2 
+
+1 + 1
+
+c4
+
+
+
+(1 − γ0)2
+
+!
+
+∥Qt − Q∗∥2max 
+
++ c2
+
+2
+
+
+
+1 + 1
+
+c3
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
++ 1 + c4
+
+2c2
+
+ C
+
+(1 − ρ)K
+
+2!
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
+(188) Similarly, for term L1,3, combining (163) and (186) we obtain: 
+
+L1,3 ≤
+
+ C
+
+(1 − ρ)K ∥T zt+1 Qt − Qt∥max 
+
+2
+
+, (189) which can be further transformed using (183) and Lemma H.2 to: 
+
+L1,3 ≤
+
+ C
+
+(1 − ρ)K
+
+2 
+
+(1 + c5)∥T zt+1 Qt − T z∗ 
+
+> t
+
+Qt∥2max +
+
+
+
+1 + 1
+
+c5
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
+
+
+≤
+
+ C
+
+(1 − ρ)K
+
+2 
+
+(1 + c5)γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22 +
+
+
+
+1 + 1
+
+c5
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
+
+
+.
+
+(190) Having each individual term bounded in (184) , (188) and (190) respectively, we can now sum them up to get an overall 48 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+bound for L1 using (176) as follows: 
+
+L1
+
+≤L 1,1 + 2 αtL1,2 + α2 
+
+> t
+
+L1,3
+
+≤(1 + c1)(1 − (1 − γ0)αtdt+1 ,min )2∥Qt − Q∗∥2max 
+
++
+
+
+
+1 + 1
+
+c1
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ αt c2(1 + c3)(1 − (1 − γ0)αtdt+1 ,min )2 + 1
+
+c2
+
+ C
+
+(1 − ρ)K
+
+2 
+
+1 + 1
+
+c4
+
+
+
+(1 − γ0)2
+
+!
+
+∥Qt − Q∗∥2max 
+
++ αt c2
+
+
+
+1 + 1
+
+c3
+
+
+
+α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
++ (1 + c4)
+
+c2
+
+ C
+
+(1 − ρ)K
+
+2!
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ α2
+
+> t
+
+ C
+
+(1 − ρ)K
+
+2
+
+(1 + c5)γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ α2
+
+> t
+
+ C
+
+(1 − ρ)K
+
+2 
+
+1 + 1
+
+c5
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
+= (1 + c1 + c2αt(1 + c3))(1 − (1 − γ0)αtdt+1 ,min )2
+
++
+
+ 1
+
+c2
+
+αt
+
+
+
+1 + 1
+
+c4
+
+
+
++ α2
+
+> t
+
+
+
+1 + 1
+
+c5
+
+  C
+
+(1 − ρ)K
+
+2
+
+(1 − γ0)2
+
+!
+
+∥Qt − Q∗∥2max 
+
++
+
+
+
+1 + 1
+
+c1
+
++ c2αt
+
+
+
+1 + 1
+
+c3
+
+ 
+
+α2 
+
+> t
+
+d2
+
+> t+1 ,max
+
++ ( 1
+
+c2
+
+αt(1 + c4) + α2 
+
+> t
+
+(1 + c5)) 
+
+ C
+
+(1 − ρ)K
+
+2 !
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
+(191) For simplicity, we take c1 = cα t, c2 = c 
+
+> 2
+
+where c = 12 (1 − γ0)dt+1 ,min and c3 = c4 = c5 = 1, when 49 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+K ≥ 2√2C 
+
+> (1 −ρ)(1 −γ0)dt+1 ,min
+
+, we have: 
+
+L1 ≤
+
+(1 + ( c + 2 c2)αt)(1 − (1 − γ0)αtdt+1 ,min )2∥Qt − Q∗∥2max + 2( 1
+
+c2
+
+αt + α2 
+
+> t
+
+)
+
+ C
+
+(1 − ρ)K
+
+2
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
++ αt
+
+c d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22 + (1 + 2 c2αt)α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ 2( 1
+
+c2
+
+αt + α2 
+
+> t
+
+)
+
+ C
+
+(1 − ρ)K
+
+2
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
+≤(1 + (1 − γ0)αtdt+1 ,min αt)(1 − (1 − γ0)αtdt+1 ,min )2∥Qt − Q∗∥2max 
+
++ 2( 4(1 − γ0)dt+1 ,min 
+
+αt + α2 
+
+> t
+
+)
+
+ C
+
+(1 − ρ)K
+
+2
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
++ 2αt
+
+(1 − γ0)dt+1 ,min 
+
+d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ (1 + 12 (1 − γ0)dt+1 ,min αt)α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ 2( 4(1 − γ0)dt+1 ,min 
+
+αt + α2 
+
+> t
+
+)
+
+ C
+
+(1 − ρ)K
+
+2
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
+≤(1 − (1 − γ0)αtdt+1 ,min )∥Qt − Q∗∥2max 
+
++ 2( 4(1 − γ0)dt+1 ,min 
+
+αt + α2 
+
+> t
+
+)
+
+ C
+
+(1 − ρ)K
+
+2
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
++ 2αt
+
+(1 − γ0)dt+1 ,min 
+
+d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ (1 + 12 (1 − γ0)dt+1 ,min αt)α2 
+
+> t
+
+d2 
+
+> t+1 ,max
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ 2( 4(1 − γ0)dt+1 ,min 
+
+αt + α2 
+
+> t
+
+)
+
+ C
+
+(1 − ρ)K
+
+2
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
+≤ 1 − (1 − γ0)dt+1 ,min − 8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+αt
+
+!
+
+∥Qt − Q∗∥2max 
+
++ 2 α2
+
+> t
+
+ C
+
+(1 − ρ)K
+
+2
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
++ 2d2
+
+> t+1 ,max
+
+(1 − γ0)dt+1 ,min 
+
++ 8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+αtγ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ (1 + 12 (1 − γ0)dt+1 ,min αt)d2 
+
+> t+1 ,max
+
++ 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+α2 
+
+> t
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
+(192) 
+
+Bounding the additional error terms L2, L3 and L4. We now focus on the additional bias terms L2, L3 and L4. Since each of the terms is in the order of α2 
+
+> t
+
+, we only need to bound the scales of each term in order to obtain the convergence result. For L2, notice that L2 can be obtained by directly taking max-norm on L′
+
+> 2
+
+, we analyze L′ 
+
+> 2
+
+instead. Recall the 50 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+definition of ¯PK (s, a|F t) and (163), we have: 
+
+L′
+
+> 2
+
+=E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (sk, ak) − Qi,t (sk, ak) 1[( s, a) = ( sk, ak)] − αtE[ˆδi(s, a)|F t]
+
+!2
+
+Ft
+
+
+
+=E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qi,t (s, a) − Qi,t (s, a)   1[( s, a) = ( sk, ak)] − ¯PK (s, a|F t)!2
+
+Ft
+
+
+
+=E
+
+α2
+
+> t
+
+ Tzt+1 Qi,t (s, a) − Qi,t (s, a)2 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ 1[( s, a) = ( sk, ak)] − ¯PK (s, a|F t)!2
+
+Ft
+
+
+
+=α2
+
+> t
+
+ Tzt+1 Qi,t (s, a) − Qi,t (s, a)2 E
+
+ 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ 1[( s, a) = ( sk, ak)] − ¯PK (s, a|F t)!2
+
+Ft
+
+
+
+(193) The term inside the expectation can be bounded using geometric ergodicity: Let Yk = 1[( sk, ak) = ( s, a)] − Pr(( sk, ak) = (s, a)|F t)
+
+E
+
+ 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ 1[( s, a) = ( sk, ak)] − ¯PK (s, a|F t)!2
+
+Ft
+
+
+
+=E
+
+ 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+Yk
+
+!2
+
+Ft
+
+
+
+= 1
+
+K2
+
+
+
+> K−1
+
+X
+
+> k=0
+
+Var (Yk) + X 
+
+> 0≤k1̸=k2≤K−1
+
+Cov (Yk1 , Y k2 )
+
+
+
+(194) Since E[Yk] = 0 and Yk only takes two values, we have Var (Yk) ≤ 14 . For Cov (Yk1 , Y k2 ) we obtain from Lemma I.5 and Lemma I.6 that Cov (Yk1 , Y k2 ) ≤ 8Cρ |k1−k2| (195) combining the two equations above, we have: 
+
+E
+
+ 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ 1[( s, a) = ( sk, ak)] − ¯PK (s, a|F t)!2
+
+Ft
+
+ ≤ 14K + 16 Cρ 
+
+(1 − ρ)K (196) and as a result, 
+
+L′ 
+
+> 2
+
+≤ α2
+
+> t
+
+ Tzt+1 Qi,t (s, a) − Qi,t (s, a)2
+
+ 14K + 16 Cρ 
+
+(1 − ρ)K
+
+
+
+. (197) Now we take max-norm and obtain the bound for L2:
+
+L2 ≤ α2
+
+> t
+
+ 14K + 16 Cρ 
+
+(1 − ρ)K
+
+
+
+∥T zt+1 Qt − Qt∥2max . (198) Using (183) and Lemma H.2 with c = 1 we obtain: 
+
+L2 ≤α2
+
+> t
+
+ 12K + 32 Cρ 
+
+(1 − ρ)K
+
+
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ α2
+
+> t
+
+ 12K + 32 Cρ 
+
+(1 − ρ)K
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
+(199) 51 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+For L3, recall the definition Mi,t (s, a) = 1
+
+> K
+
+PK−1 
+
+> k=0
+
+ξi,k (s, a) and the property that E[Mi,t (s, a)|F t] = 0 , we have: 
+
+E[M 2
+
+> i,t
+
+(s, a)|F t] = E
+
+ 1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)
+
+!2
+
+Ft
+
+
+
+= 1
+
+K2 E
+
+"K−1X
+
+> k=0
+
+ξ2
+
+> i,k
+
+(s, a) Ft
+
+#
+
++ 1
+
+K2 E
+
+
+
+> K−1
+
+X 
+
+> k1̸=k2
+
+ξi,k 1 (s, a)ξi,k 2 (s, a) Ft
+
+
+
+= 1
+
+K2
+
+> K−1
+
+X
+
+> k=0
+
+E ξ2
+
+> i,k
+
+(s, a) Ft
+
+ + 1
+
+K2
+
+> K−1
+
+X 
+
+> k1̸=k2
+
+E [ξi,k 1 (s, a)ξi,k 2 (s, a)|F t]= 1
+
+K2
+
+> K−1
+
+X
+
+> k=0
+
+E ξ2
+
+> i,k
+
+(s, a) Ft
+
+ + 2
+
+K2
+
+> K−1
+
+X
+
+> k1<k 2
+
+E [E[ξi,k 1 (s, a)ξi,k 2 (s, a)|F t,k 1 ]|F t]= 1
+
+K2
+
+> K−1
+
+X
+
+> k=0
+
+E ξ2
+
+> i,k
+
+(s, a) Ft
+
+ + 2
+
+K2
+
+> K−1
+
+X
+
+> k1<k 2
+
+E [E[ξi,k 2 (s, a)|F t,k 1 ]ξi,k 1 (s, a)|F t]= 1
+
+K2
+
+> K−1
+
+X
+
+> k=0
+
+E ξ2
+
+> i,k
+
+(s, a) Ft
+
+ + 2
+
+K2
+
+> K−1
+
+X
+
+> k1<k 2
+
+E [E[E[ξi,k 2 (s, a)|F t,k 2 ]|F t,k 1 ]ξi,k 1 (s, a)|F t]= 1
+
+K2
+
+> K−1
+
+X
+
+> k=0
+
+E ξ2
+
+> i,k
+
+(s, a) Ft
+
+
+
+(200) and as a result, 
+
+E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξi,k (s, a)
+
+!2
+
+Ft
+
+ ≤ α2
+
+> t
+
+K2
+
+> K−1
+
+X
+
+> k=0
+
+E[ξ2
+
+> i,k
+
+(s, a)|F t] ≤ α2
+
+> t
+
+K max  
+
+> k
+
+∥ξi,k ∥2max (201) and since this bound hold for all (s, a) pairs, we have: 
+
+L3 ≤ α2
+
+> t
+
+K max  
+
+> k
+
+∥ξi,k ∥2max ≤ 4α2
+
+> t
+
+K sp (Q)2. (202) For L4, by using the fact that ab ≤ 12 a2 + 12 b2, we obtain: 
+
+2L4 =2 E
+
+"
+
+αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qt(sk, ak) − Qt(sk, ak) ⊗ e(sk ,ak ) − αtE[ˆδ|F t]
+
+> max
+
+× αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξk
+
+> max
+
+Ft
+
+#
+
+≤E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ Tzt+1 Qt(sk, ak) − Qt(sk, ak) ⊗ e(sk ,ak ) − αtE[ˆδ|F t]
+
+> 2max
+
+Ft
+
+
+
++ E
+
+ αt
+
+1
+
+K
+
+> K−1
+
+X
+
+> k=0
+
+ξk
+
+> 2max
+
+Ft
+
+
+
+=L2 + L3
+
+≤α2
+
+> t
+
+ 12K + 32 Cρ 
+
+(1 − ρ)K
+
+
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ α2
+
+> t
+
+ 12K + 32 Cρ 
+
+(1 − ρ)K
+
+
+
+(1 − γ0)2∥Qt − Q∗∥2max + 4α2
+
+> t
+
+K sp (Q)2
+
+(203) 
+
+Obtaining the Lyapunov Drift Inequality for Q. Having obtained the upper bounds for L1, L2, L3 and L4, we finally combine the error terms to obtain the Lyapunov drift inequality for Q functions. Recall (168) and substituting in (192) ,52 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+(199), (202), and (203), we have: 
+
+E ∥Qt+1 − Q∗∥2max Ft
+
+
+
+≤L 1 + L2 + L3 + 2 L4
+
+= 1 − (1 − γ0)dt+1 ,min − 8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+αt
+
+!
+
+∥Qt − Q∗∥2max 
+
++ 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+α2 
+
+> t
+
+(1 − γ0)2∥Qt − Q∗∥2max 
+
++ 2dt+1 ,max 
+
+(1 − γ0)d2
+
+> t+1 ,min
+
++ 8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+αtγ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22
+
++ (1 + 12 (1 − γ0)dt+1 ,min αt)d2 
+
+> t+1 ,max
+
++ 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+× α2 
+
+> t
+
+γ2C2 
+
+> T
+
+(1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+)∥zt − z∗ 
+
+> t
+
+∥22 + 8α2
+
+> t
+
+K sp (Q)2
+
+(204) 
+
+H.2. Lyapunov Drift Inequality for Policies 
+
+We now shift our focus on the Lyapunov drift inequality for policies. Notice that given the Q function Qt at time step t, the policy update is exactly the same as the non-stochastic update rule (17) because: 
+
+ΛF (z; −Qt(s, ·)) = 
+
+
+
+λ1(Q1(s, ·)p1(·| s) + ϵ1∇ν1(π1; s)) 
+
+λ2(Q2(s, ·)p2(·| s) + ϵ2∇ν2(π2; s)) 
+
+λ1(−QT 
+
+> 1
+
+(s, ·)π1(·| s) + 1 
+
+> τ1
+
+∇p1 D1(p1, π 2; s)) 
+
+λ2(−QT 
+
+> 2
+
+(s, ·)π2(·| s) + 1 
+
+> τ2
+
+∇p2 D2(p2, π 1; s)) 
+
+ (205) this provides the same iteration dynamic as (129): 
+
+∥zt+1 − z∗
+
+> t+1
+
+∥2 ≤ (1 + αtLRQE CT )
+
+q
+
+1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+∥zt − z∗ 
+
+> t
+
+∥2 + (1 + γ0)αtLRQE ∥Qt − Q∗∥max . (206) However, in order to fit the squared term in the drift inequality for Q functions, we apply Lemma I.7 to the above inequality and obtain: 
+
+∥zt+1 − z∗
+
+> t+1
+
+∥22 ≤(1 + cz )(1 + αtLRQE CT )2  1 − 2βtμ + β2 
+
+> t
+
+L2
+
+> F
+
+ ∥zt − z∗ 
+
+> t
+
+∥22
+
++
+
+
+
+1 + 1
+
+cz
+
+
+
+(1 + γ0)2α2 
+
+> t
+
+L2 
+
+> RQE
+
+∥Qt − Q∗∥2max . (207) Taking cz = c6αtLRQE , we obtain: 
+
+∥zt+1 − z∗
+
+> t+1
+
+∥22 ≤(1 + c6αtLRQE )(1 + αtLRQE CT )2  1 − 2βtμ + β2 
+
+> t
+
+L2
+
+> F
+
+ ∥zt − z∗ 
+
+> t
+
+∥22
+
++
+
+
+
+α2 
+
+> t
+
+L2 
+
+> RQE
+
++ αtLRQE 
+
+c6
+
+
+
+(1 + γ0)2∥Qt − Q∗∥2max . (208) 
+
+H.3. Solving the Coupled Lyapunov Inequalities 
+
+Having obtained the Lyapunov drift inequality (204) for Q and (208) for z, we now proceed to solve the coupled Lyapunov drift inequalities. We first simplify (204) as follows: For Q functions, assume the iterates Qt are bounded, the coefficient with term α2 
+
+> t
+
+is bounded, and we can write (204) as: 
+
+E ∥Qt+1 − Q∗∥2max Ft
+
+ ≤ (1 − C1αt)∥Qt − Q∗∥2max + C2αt(1 − ˜βt)2∥zt − z∗ 
+
+> t
+
+∥22 + C3α2 
+
+> t
+
+(209) 53 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+where 
+
+C1 =(1 − γ0)dt+1 ,min − 8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2
+
+; (210) 
+
+C2 =γ2C2
+
+> T
+
+2dt+1 ,max 
+
+(1 − γ0)d2
+
+> t+1 ,min
+
++ 8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+; (211) 
+
+C3 = max  
+
+> t
+
+(1 − γ0)2 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+∥Qt − Q∗∥2max (212) 
+
++ (1 + 12 (1 − γ0)dt+1 ,min αt)d2 
+
+> t+1 ,max
+
++ 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+× γ2C2 
+
+> T
+
+(1 − ˜βt)2∥zt − z∗ 
+
+> t
+
+∥22 + 8
+
+K sp (Q)2.
+
+Similarly, we can rewrite (208) as: 
+
+∥zt+1 − z∗
+
+> t+1
+
+∥22 ≤ (1 + C4αt)(1 − ˜βt)2∥zt − z∗ 
+
+> t
+
+∥22 + C5αt∥Qt − Q∥2max + C6α2 
+
+> t
+
+(213) where (for simplicity we take c6 = 1 ): 
+
+C4 =(2 CT + 1) LRQE ; (214) 
+
+C5 =LRQE (1 + γ0)2; (215) 
+
+C6 = max  
+
+> t
+
+(2 + CT )L2 
+
+> RQE
+
+CT (1 − ˜βt)2 + L3 
+
+> RQE
+
+C2 
+
+> T
+
+αt(1 − ˜βt)2 (216) 
+
++ L2 
+
+> RQE
+
+(1 + γ0)2∥Qt − Q∗∥2max .
+
+Let Ut = E[∥Qt − Q∗∥2max ] and Vt = E[∥zt − z∗ 
+
+> t
+
+∥22], by taking expectations on both sides of (209) and (213), we obtain: 
+
+Ut+1 + kV t+1 ≤(1 − C1αt)Ut + C2αt(1 − ˜βt)2Vt + C3α2
+
+> t
+
++ k(1 + C4αt)(1 − ˜βt)2Vt + kC 5αtUt + kC 6α2
+
+> t
+
+=(1 − (C1 − kC 5)αt)Ut + ( k + ( C2 + kC 4)αt)(1 − ˜βt)2Vt + ( C3 + kC 6)α2
+
+> t
+
+≤ max {(1 − (C1 − kC 5)αt), (1 + ( C4 + C2/k )αt)(1 − ˜βt)2}(Ut + kV t) + ( C3 + kC 6)α2 
+
+> t
+
+,
+
+(217) We can now set conditions of K and k to simplify the above expression. When K satisfies: 
+
+K ≥ 4√2C
+
+(1 − γ0)(1 − ρ)dt+1 ,min 
+
+, (218) we have: 
+
+8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2
+
+≤ (1 − γ0)dt+1 ,min 
+
+4 , (219) and when 
+
+k = (1 − γ0)dt+1 ,min 
+
+4LRQE (1 + γ0)2 . (220) we further have: 
+
+C1 − kC 5 ≥(1 − γ0)dt+1 ,min − 14 (1 − γ0)dt+1 ,min − 14 (1 − γ0)dt+1 ,min 
+
+= 12 (1 − γ0)dt+1 ,min 
+
+(221) so that 
+
+1 − (C1 − kC 5)αt ≤ 1 − 12 (1 − γ0)dt+1 ,min αt. (222) 54 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Also, we have: 
+
+C4 + C2
+
+k ≤(2 CT + 1) LRQE + γ2C2
+
+> T
+
+2dt+1 ,max 
+
+(1 − γ0)d2
+
+> t+1 ,min
+
++ 8(1 − γ0)dt+1 ,min 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+4LRQE (1 + γ0)2
+
+(1 − γ0)dt+1 ,min 
+
+≤(2 CT + 1) LRQE + γ2C2
+
+> T
+
+2dt+1 ,max 
+
+(1 − γ0)d2
+
+> t+1 ,min
+
++ (1 − γ0)dt+1 ,min 
+
+4
+
+!
+
+4LRQE (1 + γ0)2
+
+(1 − γ0)dt+1 ,min 
+
+=  2CT + 1 + (1 + γ0)2 LRQE + 8 LRQE γ2C2
+
+> T
+
+ 1 + γ0
+
+1 − γ0
+
+2 dt+1 ,max 
+
+d3
+
+> t+1 ,min
+
+= 1 + (1 + γ0)2 + 2 CT + 8 γ2C2
+
+> T
+
+ 1 + γ0
+
+1 − γ0
+
+2 dt+1 ,max 
+
+d3
+
+> t+1 ,min
+
+!
+
+LRQE 
+
+(223) recall that when βt ≤ min { 1 
+
+> μ
+
+, μL2
+
+> F
+
+}, we have (1 − ˜βt)2 = 1 − 2βtμ + β2 
+
+> t
+
+L2 
+
+> F
+
+≤ 1 − βtμ, and when 
+
+(C1 − kC 5 + C4 + C2
+
+k )αt ≤ μβ t + ( C4 + C2
+
+k )αtβt (224) we would have 1 − (C1 − kC 5)αt ≥ (1 + ( C4 + C2/k )αt)(1 − ˜βt)2. Let αt < 1 and combining the conditions above, and then (224) simplifies to: 
+
+βt
+
+αt
+
+≥ C1 − kC 5 + C4 + C2/k μ + C4 + C2/k 
+
+=(1 − γ0)dt+1 ,min /2 + 
+
+
+
+1 + (1 + γ0)2 + 2 CT + 8 γ2C2
+
+> T
+
+ 1+ γ0
+
+> 1−γ0
+
+2 dt+1 ,max 
+
+> d3
+> t+1 ,min
+
+
+
+LRQE 
+
+μ +
+
+
+
+1 + (1 + γ0)2 + 2 CT + 8 γ2C2
+
+> T
+
+ 1+ γ0
+
+> 1−γ0
+
+2 dt+1 ,max 
+
+> d3
+> t+1 ,min
+
+
+
+LRQE 
+
+.
+
+(225) When (218), (220) and (225) are satisfied, our recursion becomes: 
+
+Ut+1 + kV t+1 ≤ (1 − 12 (1 − γ0)dt+1 ,min αt)( UT + kV t) + ( C3 + kC 6)α2 
+
+> t
+
+(226) To clean up the recursion, notice that we naturally have dt+1 ,max ≤ 1, and by Assumption 4.5 and Assumption 4.6, we have 
+
+dt+1 ,min ≥ dmin := μπ (227) and by a similar argument to Lemma G.3, we have ∥Qt∥max ≤ Qmax , sp (Qt) ≤ Qspan and ∥Q∗∥max ≤ Qmax , and therefore, C3 can be rewritten as: 
+
+C3 =4(1 − γ0)2 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+Q2max 
+
++ 1 + 12 (1 − γ0)dmin αt + 1
+
+K + 64 Cρ 
+
+(1 − ρ)K + 2 
+
+ C
+
+(1 − ρ)K
+
+2!
+
+× γ2C2 
+
+> T
+
+(1 − ˜βt)2∥zt − z∗ 
+
+> t
+
+∥22 + 8
+
+K Q2
+
+> span
+
+,
+
+and C6 can be written as: 
+
+C6 =(2 + CT )L2 
+
+> RQE
+
+CT (1 − β)2 + L3 
+
+> RQE
+
+C2 
+
+> T
+
+αt(1 − β)2 + 4 L2 
+
+> RQE
+
+(1 + γ0)2Qmax . (228) Additionally, Equation (225) further simplifies to: 
+
+βt
+
+αt
+
+≥
+
+(1 − γ0)dmin /2 + 
+
+
+
+1 + (1 + γ0)2 + 2 CT + 8γ2C2
+
+> T
+> d3min
+
+ 1+ γ0
+
+> 1−γ0
+
+2
+
+LRQE 
+
+μ +
+
+
+
+1 + (1 + γ0)2 + 2 CT + 8γ2C2
+
+> T
+> d3min
+
+ 1+ γ0
+
+> 1−γ0
+
+2
+
+LRQE 
+
+. (229) 55 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Now by applying Lemma I.8, we obtain: 
+
+Scenario 1: Assuming we are using constant step sizes αt = α, βt = β, we have: 
+
+Ut + kV t ≤ (1 − 12 (1 − γ0)dmin α)t(U0 + kV 0) + 2( C3 + kC 6)(1 − γ0)dmin 
+
+α (230) and therefore, 
+
+E[∥Qt − Q∗∥2max ] ≤ (1 − 12 (1 − γ0)dmin α)t(Q2max + 8 k) + 2( C3 + kC 6)(1 − γ0)dmin 
+
+α (231) and 
+
+E[∥zt − z∗ 
+
+> t
+
+∥22] ≤ (1 − 12 (1 − γ0)dmin α)t(Q2max /k + 8) + 2( C3/k + C6)(1 − γ0)dmin 
+
+α (232) and since 
+
+∥zt − z∗∥22 ≤(∥zt − z∗ 
+
+> t
+
+∥2 + ∥z∗ 
+
+> t
+
+− z∗∥2)2
+
+≤(∥zt − z∗ 
+
+> t
+
+∥2 + LRQE ∥Qt − Q∗∥max )2
+
+≤2∥zt − z∗ 
+
+> t
+
+∥22 + 2 L2 
+
+> RQE
+
+∥Qt − Q∗∥2max 
+
+(233) we have: 
+
+E[∥zt − z∗∥22] ≤2E[∥zt − z∗ 
+
+> t
+
+∥22] + 2 L2 
+
+> RQE
+
+E[∥Qt − Q∗∥2max ]
+
+≤(2 + 2 kL 2 
+
+> RQE
+
+)
+
+
+
+(1 − 12 (1 − γ0)dmin α)t(Q2max /k + 8) + 2( C3/k + C6)(1 − γ0)dmin 
+
+α
+
+ (234) 
+
+Scenario 2: Assuming we are using diminishing step sizes αt = αt+h , βt = βt+h , we have: 
+
+Ut + kV t ≤
+
+
+
+U0 + kV 0 + (C3 + kC 6)α2
+
+h2
+
+h + 2 − 12 (1 − γ0)dmin α
+
+1 − 12 (1 − γ0)dmin α
+
+  h + 1 
+
+h + t
+
+ 12 (1 −γ0)dmin α
+
+, (235) as a result, 
+
+E[∥Qt − Q∗∥2max ] ≤
+
+
+
+Q2max + 8 k + (C3 + kC 6)α2
+
+h2
+
+h + 2 − 12 (1 − γ0)dmin α
+
+1 − 12 (1 − γ0)dmin α
+
+  h + 1 
+
+h + t
+
+ 12 (1 −γ0)dmin α
+
+, (236) and 
+
+E[∥zt − z∗∥22] ≤ (2 /k + 2 L2 
+
+> RQE
+
+)
+
+
+
+Q2max + 8 k + (C3 + kC 6)α2
+
+h2
+
+h + 2 − 12 (1 − γ0)dmin α
+
+1 − 12 (1 − γ0)dmin α
+
+  h + 1 
+
+h + t
+
+ 12 (1 −γ0)dmin α
+
+(237) 
+
+I. Auxiliary Lemmas 
+
+In this section we state and prove some auxiliary lemmas that are used in our proofs. 
+
+Lemma I.1. Let Λ = Diag (λ) , a differentiable mapping F : Z → RN is λ-strictly monotone if for all z ∈ Z ,
+
+Λ∇F (z) + ∇F (z)T Λ ≻ 0. (238) 
+
+Further, it is (μ, λ )-strongly monotone if and only if for all z ∈ Z ,
+
+Λ∇F (z) + ∇F (z)T Λ ⪰ 2μI. (239) 
+
+Here ∇F (z) denotes the Jacobian of F (z).
+
+56 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Proof. We provide a proof for general Λ. For z, z ′ ∈ Z and v = z′ − z, let 
+
+S(z) = Λ∇F (z) + ∇F (z)T Λ2 , (240) define a function φ(t) := z + tv, t ∈ [0 , 1] , we have that φ(0) = z and φ(1) = z′. Consider the function 
+
+g(t) := F (φ(t)) T Λv, (241) we have that: 
+
+⟨F (z′) − F (z), z ′ − z⟩Λ
+
+=⟨F (z′) − F (z), v ⟩Λ
+
+= ( F (z′) − F (z)) T Λv
+
+=g(1) − g(0) .
+
+(242) For g(1) − g(0) , we can write is as the following integral: 
+
+g(1) − g(0) = 
+
+Z 10
+
+g′(t) d t
+
+=
+
+Z 10
+
+ddt
+
+ F (φ(t)) T Λv dt
+
+=
+
+Z 10
+
+vT ∇F (φ(t)) T Λv dt. 
+
+(243) Also, a symmetric expansion of ddt
+
+ F (φ(t)) T Λv yields: 
+
+g(1) − g(0) = 
+
+Z 10
+
+vT Λ∇F (φ(t)) v dt. (244) Therefore, we have that: 
+
+g(1) − g(0) = 
+
+Z 10
+
+vT S(φ(t)) v dt. (245) 
+
+From Jacobian condition to monotonicity. If S(z) ≻ 0, we have that vT S(φ(t)) v > 0 for all t, and therefore, 
+
+⟨F (z′) − F (z), z ′ − z⟩Λ = g(1) − g(0) > 0, λ-strict monotonicity holds. If we further have 
+
+S(z) ⪰ μI, (246) it holds that 
+
+⟨F (z′) − F (z), z ′ − z⟩Λ
+
+=g(1) − g(0) =
+
+Z 10
+
+vT S(φ(t)) v dt
+
+≥μ
+
+Z 10
+
+vT v dt
+
+=μ∥v∥22
+
+=μ∥z′ − z∥22,
+
+(247) indicating that (μ, λ )-strong monotonicity holds. 57 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+From strong monotonicity to Jacobian Condition. If F is (μ, λ )-strongly monotone, for all t1 < t 2, t 1, t 2 ∈ [0 , 1] , we have that 
+
+(t2 − t1) ( g(t2) − g(t1)) = ⟨F (z + t2v) − F (z + t1v), t 2v − t1v⟩Λ ≥ μ(t2 − t1)2∥v∥22 (248) and therefore, 
+
+g(t2) − g(t1) ≥ μ(t2 − t1)∥v∥22. (249) Since F is differentiable, we have that g′(t) ≥ ∥ v∥22. Now we expand g′(t) to obtain: 
+
+g′(t) = ddt
+
+ F (φ(t)) T Λv = vT ∇F (φ(t)) T Λv (250) and similarly using symmetry, 
+
+g′(t) = vT Λ∇F (φ(t)) v (251) we have that: 
+
+vT  Λ∇F (φ(t)) + ∇F (φ(t)) T Λ v ≥ 2μv T v, (252) that gives: 
+
+Λ∇F (φ(t)) + ∇F (φ(t)) T Λ ⪰ 2μI. (253) This completes the proof. 
+
+Lemma I.2. Consider a normal form game with bounded payoff matrices R, under the following cases the RQE of the game is bounded away from zero: 1. Di(·, ·) are KL-divergence and νi(·) are log-barrier functions, then π∗ 
+
+> i
+
+≥ ϵi 
+
+> ϵi|A i|+sp (R)
+
+;2. Di(·, ·) are reverse KL-divergence and νi(·) are negative entropy, then π∗ 
+
+> i
+
+≥ 1 
+
+> |A i|
+
+exp ( −sp (R)) and pi ≥ 
+
+> exp( −sp (R))
+> |A i|(|A −i|+τisp (R))
+
+.Proof. Consider the gradient operator of the game: 
+
+F (z; R) = 
+
+
+
+−R1p1 + ϵ1∇ν1(π1)
+
+−R2p2 + ϵ2∇ν2(π2)
+
+RT 
+
+> 1
+
+π1 + 1 
+
+> τ1
+
+∇p1 D1(p1, π 2)
+
+RT 
+
+> 2
+
+π2 + 1 
+
+> τ2
+
+∇p2 D2(p2, π 1)
+
+ (254) 
+
+Case 1: When Di are KL-divergence and νi are log-barrier functions, their gradients can be written as: 
+
+∇νi(πi) = −(πi)−1; ∇pi Di(pi, π −i) = log pi
+
+π−i
+
++ 1 . (255) Since ν1(π1) and ν2(π2) goes to infinity on the boundary of the simplex, the RQE π∗ must satisfy the KKT condition for its optimality: 
+
+Rip∗ 
+
+> i
+
+− μ1 = ϵi∇νi(π∗ 
+
+> i
+
+) = − ϵi
+
+π∗
+
+> i
+
+. (256) which implies that π∗ 
+
+> i
+
+has the form: 
+
+π∗ 
+
+> i
+
+(a) = ϵi
+
+μ − Rip∗ 
+
+> i
+
+(a) (257) here we overload the notation μ to denote Lagrange multiplier such that: 
+
+X
+
+> a∈A i
+
+ϵi
+
+μ − Rip∗ 
+
+> i
+
+(a) = 1 . (258) Let amax = arg max a∈A i Rip∗ 
+
+> i
+
+(a), since the probability of choosing amax is at least 1 
+
+> |A i|
+
+, we have: 
+
+ϵi
+
+μ − Rip∗ 
+
+> i
+
+(amax ) ≥ 1
+
+|A i| (259) 58 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+which implies: 
+
+μ ≤ Rip∗ 
+
+> i
+
+(amax ) + ϵi|A i| (260) This leads to the conclusion that: 
+
+π∗ 
+
+> i
+
+(a) ≥ ϵi
+
+ϵi|A i| + Rip∗ 
+
+> i
+
+(amax ) − Rip∗ 
+
+> i
+
+(a) ≥ ϵi
+
+ϵi|A i| + sp (R) . (261) 
+
+Case 2: When Di are reverse KL-divergence and νi are negative entropy, their gradients can be written as: 
+
+∇νi(πi) = log πi + 1; ∇pi Di(pi, π −i) = − π−i
+
+pi
+
+. (262) Similarly, we have that 
+
+π∗ 
+
+> i
+
+(a) = exp 
+
+ Rip∗ 
+
+> i(a)
+> ϵi
+
+P 
+
+> a′
+
+exp 
+
+ Rip∗ 
+
+> i(a)
+> ϵi
+
+ ≥ 1
+
+|A i| exp ( −sp (R)) (263) and additionally we have: 
+
+pi ≥ exp ( −sp (R)) 
+
+|A i|(|A −i| + τisp (R)) . (264) 
+
+Lemma I.3. Let F be a strictly λ-monotone mapping and z∗ be the unique solution to the λ-weighted variational inequality: 
+
+⟨z∗ − z, F (z∗)⟩λ ≤ 0, ∀z ∈ ∆ (265) 
+
+in some closed convex set ∆, let Proj denote the Euclidean projection onto ∆, we have that: 
+
+Proj (z∗ − ηΛF (z∗)) = z∗, (266) 
+
+where Λ = Diag (λ).Proof. Recall that Euclidean projection ˆz of z∗ − ηΛF (z∗) is characterized by: 
+
+⟨z∗ − ηΛF (z∗) − ˆz, z − ˆz⟩ ≤ 0, ∀z ∈ ∆ (267) Notice that the optimality condition of z∗ 
+
+> t
+
+:
+
+⟨z∗ − z, F (z∗)⟩λ = ( z∗ − z)T ΛF (z∗) ≤ 0, ∀z ∈ ∆ (268) would immediately imply that taking ˆz = z∗ satisfies the characterization, conclude that z∗ is the projection. 
+
+Lemma I.4. If the payoff matrix R is bounded and the regularizers νi(·) are Sν -smooth and Di(pi, π −i) are SD -smooth, then the gradient operator given by: 
+
+F (z; R) = 
+
+
+
+−R1p1 + ϵ1∇ν1(π1)
+
+−R2p2 + ϵ2∇ν2(π2)
+
+RT 
+
+> 1
+
+π1 + 1 
+
+> τ1
+
+∇p1 D1(p1, π 2)
+
+RT 
+
+> 2
+
+π2 + 1 
+
+> τ2
+
+∇p2 D2(p2, π 1)
+
+ (269) 
+
+is LF -Lipschitz continuous for 
+
+LF = 2 p|A 1||A 2|sp (R) + ( ϵ1 + ϵ2)Sν + ( 1
+
+τ1
+
++ 1
+
+τ2
+
+)SD . (270) 59 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Proof. To prove the Lipschitz continuity of F , we consider the difference between F (z; R) and F (z′; R) for z =(π1, π 2, p 1, p 2) and z′ = ( π′
+
+> 1
+
+, π ′
+
+> 2
+
+, p ′
+
+> 1
+
+, p ′
+
+> 2
+
+). We have: 
+
+∥F (z; R) − F (z′; R)∥2
+
+=
+
+
+
+−R1(p1 − p′
+
+> 1
+
+) + ϵ1(∇ν1(π1) − ∇ ν1(π′
+
+> 1
+
+)) 
+
+−R2(p2 − p′
+
+> 2
+
+) + ϵ2(∇ν2(π2) − ∇ ν2(π′
+
+> 2
+
+)) 
+
+RT 
+
+> 1
+
+(π1 − π′
+
+> 1
+
+) + 1 
+
+> τ1
+
+(∇p1 D1(p1, π 2) − ∇ p1 D1(p′
+
+> 1
+
+, π ′
+
+> 2
+
+)) 
+
+RT 
+
+> 2
+
+(π2 − π′
+
+> 2
+
+) + 1 
+
+> τ2
+
+(∇p2 D2(p2, π 1) − ∇ p2 D2(p′
+
+> 2
+
+, π ′
+
+> 1
+
+)) 
+
+
+
+> 2
+
+≤
+
+
+
+−R1(p1 − p′
+
+> 1
+
+)
+
+−R2(p2 − p′
+
+> 2
+
+)
+
+RT 
+
+> 1
+
+(π1 − π′
+
+> 1
+
+)
+
+RT 
+
+> 2
+
+(π2 − π′
+
+> 2
+
+)
+
+
+
+> 2
+
++
+
+
+
+ϵ1(∇ν1(π1) − ∇ ν1(π′
+
+> 1
+
+)) 
+
+ϵ2(∇ν2(π2) − ∇ ν2(π′
+
+> 2
+
+))  
+
+> 1
+> τ1
+
+(∇p1 D1(p1, π 2) − ∇ p1 D1(p′
+
+> 1
+
+, π ′
+
+> 2
+
+))  
+
+> 1
+> τ2
+
+(∇p2 D2(p2, π 1) − ∇ p2 D2(p′
+
+> 2
+
+, π ′
+
+> 1
+
+)) 
+
+
+
+> 2
+> (i)
+
+≤2p|A 1||A 2|sp (R)∥z − z′∥2 + ϵ1∥∇ ν1(π1) − ∇ ν1(π′
+
+> 1
+
+)∥2 + ϵ2∥∇ ν2(π2) − ∇ ν2(π′
+
+> 2
+
+)∥2
+
++ 1
+
+τ1
+
+∥∇ p1 D1(p1, π 2) − ∇ p1 D1(p′
+
+> 1
+
+, π ′
+
+> 2
+
+)∥2 + 1
+
+τ2
+
+∥∇ p2 D2(p2, π 1) − ∇ p2 D2(p′
+
+> 2
+
+, π ′
+
+> 1
+
+)∥2
+
+≤2p|A 1||A 2|sp (R)∥z − z′∥2 + ϵ1Sν ∥π1 − π′
+
+> 1
+
+∥2 + ϵ2Sν ∥π2 − π′
+
+> 2
+
+∥2
+
++ SD
+
+τ1
+
+∥(p1, π 2) − (p′
+
+> 1
+
+, π ′
+
+> 2
+
+)∥2 + SD
+
+τ2
+
+∥(p2, π 1) − (p′
+
+> 2
+
+, π ′
+
+> 1
+
+)∥2
+
+≤
+
+
+
+2p|A 1||A 2|sp (R) + ( ϵ1 + ϵ2)Sν + ( 1
+
+τ1
+
++ 1
+
+τ2
+
+)SD
+
+
+
+∥z − z′∥2,
+
+(271) where we have used the fact that πi, p i are on the simplex in (i). This completes the proof. 
+
+Lemma I.5. [Covariance bound for α-mixing sequences, Lemma 1.2 in (Ibragimov, 1962)] Let U and V be bounded random variables such that U is measurable with respect to Ft 
+
+> −∞
+
+and V with respect to F+∞ 
+
+> t+k
+
+. Then 
+
+Cov( U, V ) ≤ 4 α(k) ∥U ∥∞ ∥V ∥∞, (272) 
+
+where 
+
+α(k) = sup 
+
+> t∈Z
+
+sup 
+
+> A∈F t
+> −∞ ,B ∈F +∞
+> t+k
+
+| Pr( A ∩ B) − Pr( A) Pr( B)| (273) 
+
+α(k) is the α-mixing coefficient at lag k.
+
+Lemma I.6. [(Meyn & Tweedie, 2012)] If a Markov chain {Xt} is uniformly geometrically ergodic, then the chain is geometrically α-mixing with α(k) ≤ 2Cρ k.
+
+Lemma I.7. For real numbers a, b and constant c > 0, it holds that: 
+
+(a + b)2 ≤ (1 + c)a2 + (1 + 1
+
+c )b2. (274) 
+
+Furthermore, for real matrices A and B, it holds that: 
+
+∥A + B∥2max ≤ (1 + c)∥A∥2max + (1 + 1
+
+c )∥B∥2max . (275) 
+
+Proof. We have that 
+
+(a + b)2 =a2 + 2 ab + b2
+
+=a2 + b2 + 2( √ca · b
+
+√c )
+
+> (i)
+
+≤(1 + c)a2 + (1 + 1
+
+c )b2
+
+(276) where (i) comes from the AM-GM inequality. The inequality for the matrix holds by applying the above inequality element-wise: 
+
+(Aij + Bij )2 ≤ (1 + c)A2 
+
+> ij
+
++ (1 + 1
+
+c )B2 
+
+> ij
+
+≤ (1 + c)∥A∥2max + (1 + 1
+
+c )∥B∥2max . (277) and the result holds because the inequality above holds for all i, j .60 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+Lemma I.8. Consider a series {wt}t≥0 satisfying the following inequality: 
+
+wt+1 ≤ (1 − kα t)wt + Cα 2 
+
+> t
+
+(278) 
+
+for some k > 0 such that kα t < 1, we have for all t:
+
+wt ≤ (1 − kα )tw0 + Ck α, (279) 
+
+if we use constant step size αt = α, and 
+
+wt ≤
+
+
+
+w0 + Cα 2
+
+h2
+
+h + 2 − kα 
+
+1 − kα 
+
+  h + 1 
+
+h + t
+
+kα 
+
+, (280) 
+
+if we use diminishing step sizes αt = αt+h .Proof. Unrolling the recursion we obtain: 
+
+wT +1 ≤(1 − kα T )wT + Cα 2
+
+> T
+
+≤(1 − kα T )(1 − kα T −1)wT −1 + Cα 2 
+
+> T
+
++ C(1 − kα T )α2 
+
+> T−1
+
+≤ . . . 
+
+≤
+
+> T
+
+Y
+
+> t=0
+
+(1 − kα t)w0 + C
+
+> T
+
+X
+
+> t=0
+
+α2
+
+> tT
+
+Y
+
+> s=t+1
+
+(1 − kα s).
+
+(281) For constant step size αt = α, the inequality above can be simplified as: 
+
+wT +1 ≤(1 − kα )T +1 w0 + C
+
+> T
+
+X
+
+> t=0
+
+α2(1 − kα )T −t
+
+=(1 − kα )T +1 w0 + Cα 2
+
+> T
+
+X
+
+> t=0
+
+(1 − kα )t
+
+=(1 − kα )T +1 w0 + Cα 2 1 − (1 − kα )T +1 
+
+kα 
+
+≤(1 − kα )T +1 w0 + Ck α. 
+
+(282) For deminishing step sizes αt = αt+h , we have: 
+
+> T
+
+Y
+
+> t=0
+
+(1 − kα t) = 
+
+> T
+
+Y
+
+> t=0
+
+(1 − kα t + h )= exp 
+
+> T
+
+X
+
+> t=0
+
+log(1 − kα t + h )
+
+!
+
+≤ exp −kα 
+
+> T
+
+X
+
+> t=0
+
+1
+
+t + h
+
+!
+
+≤ exp ( −kα (Hh+T − Hh−1)) 
+
+≤
+
+ hh + T + 1 
+
+kα 
+
+(283) 61 Provably Convergent Actor-Critic in Risk-averse MARL 
+
+and similarly, TY
+
+> s=t+1
+
+(1 − kα s) = exp 
+
+> T
+
+X
+
+> s=t+1
+
+log(1 − kα s + h )
+
+!
+
+≤ exp −kα 
+
+> T
+
+X
+
+> s=t+1
+
+1
+
+s + h
+
+!
+
+≤ exp ( −kα (Hh+T − Hh+t)) 
+
+≤
+
+ h + t + 1 
+
+h + T + 1 
+
+kα 
+
+.
+
+(284) Therefore, the bound for wT +1 can be simplified as: 
+
+wT +1 ≤
+
+ hh + T + 1 
+
+kα 
+
+w0 + Cα 2
+
+> T
+
+X
+
+> t=0
+
+1(t + h)2
+
+ h + t + 1 
+
+h + T + 1 
+
+kα 
+
+=
+
+ hh + T + 1 
+
+kα 
+
+w0 + Cα 2 1(h + T + 1) kα TX
+
+> t=0
+
+(t + h + 1) kα 
+
+(t + h)2
+
+≤
+
+ hh + T + 1 
+
+kα 
+
+w0 + Cα 2 1(h + T + 1) kα 
+
+ h + 1 
+
+h
+
+2 TX
+
+> t=0
+
+(t + h + 1) kα −2
+
+(285) Notice that: 
+
+> T
+
+X
+
+> t=0
+
+(t + h + 1) kα −2 ≤ (h + 1) kα −2 +
+
+Z h+T +2 
+
+> h+1
+
+xkα −2 dx ≤ (h + 1) kα −2 + (h + 1) kα −1
+
+1 − kα (286) we obtain the final bound of: 
+
+wT +1 ≤
+
+ hh + T + 1 
+
+kα 
+
+w0 + Cα 2 1(h + T + 1) kα 
+
+ h + 1 
+
+h
+
+2 
+
+(h + 1) kα −2 + (h + 1) kα −1
+
+1 − kα 
+
+
+
+≤
+
+
+
+w0 + Cα 2
+
+h2
+
+h + 2 − kα 
+
+1 − kα 
+
+  h + 1 
+
+h + T + 1 
+
+kα (287) 62

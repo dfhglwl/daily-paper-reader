@@ -1,0 +1,398 @@
+Title: Efficient Knowledge Transfer for Jump-Starting Control Policy Learning of Multirotors through Physics-Aware Neural Architectures
+
+URL Source: https://arxiv.org/pdf/2602.15533v1
+
+Published Time: Wed, 18 Feb 2026 01:49:58 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED FEBRUARY, 2026 1
+
+# Efficient Knowledge Transfer for Jump-Starting Control Policy Learning of Multirotors through Physics-Aware Neural Architectures 
+
+Welf Rehberg, Mihir Kulkarni, Philipp Weiss and Kostas Alexis 
+
+Abstract —Efficiently training control policies for robots is a major challenge that can greatly benefit from utilizing knowledge gained from training similar systems through cross-embodiment knowledge transfer. In this work, we focus on accelerating policy training using a library-based initialization scheme that enables effective knowledge transfer across multirotor configurations. By leveraging a physics-aware neural control architecture that com-bines a reinforcement learning-based controller and a supervised control allocation network, we enable the reuse of previously trained policies. To this end, we utilize a policy evaluation-based similarity measure that identifies suitable policies for initialization from a library. We demonstrate that this mea-sure correlates with the reduction in environment interactions needed to reach target performance and is therefore suited for initialization. Extensive simulation and real-world experiments confirm that our control architecture achieves state-of-the-art control performance, and that our initialization scheme saves on average up to 73 .5% of environment interactions (compared to training a policy from scratch) across diverse quadrotor and hexarotor designs, paving the way for efficient cross-embodiment transfer in reinforcement learning. 
+
+Index Terms —Aerial Systems: Mechanics and Control, Rein-forcement Learning. 
+
+I. I NTRODUCTION 
+
+# MULTIROTORS are popular for their agility and simple design, with recent advances in onboard autonomy leading to deployments in diverse environments [1]–[3] and even outperforming expert-level pilots in drone racing [4]. Yet, design still follows the traditional sequence: airframe first, then control policy. An emerging paradigm frames au-tonomous multirotor design as a computational co-design problem, jointly optimizing airframe and control policy [5]– [7]. This approach envisions evaluating thousands of candidate designs by training a policy for each, but is fundamentally limited by the prohibitive cost of training so many policies. Training reinforcement learning (RL) policies is computa-tionally intensive, and thus, suitable initialization can greatly 
+
+Manuscript received: October, 01, 2025; Revised December, 09, 2025; Accepted February, 13, 2026. This paper was recommended for publication by Editor Giuseppe Loianno upon evaluation of the Associate Editor and Reviewers’ comments. This work was supported by the Horizon Europe Grant Agreement No. 101119774 and the NVIDIA Academic Grant Program using NVIDIA RTX PRO 6000 Blackwell Max-Q and A100 GPU-Hours on Saturn Cloud. (Corresponding author: Welf Rehberg) 
+
+All authors are with the Department of Engineering Cybernetics at the Nor-wegian University of Science and Technology, O.S. Bragstads Plass 2D, 7034, Trondheim, Norway (e-mails: {welf.rehberg, mihir.kulkarni, philipp.weiss, konstantinos.alexis }@ntnu.no ). Digital Object Identifier (DOI): see top of the page. New Configuration  
+
+> Library of Policies ( )
+> Control Allocation
+> Supervised Learning
+> Position Controller
+> Reinforcement Learning
+> Network Initialization Initialize network weights of controller network:
+> Similarity Measure Choose configuration for initialization using reward-based similarity measure:
+
+Fig. 1: The proposed library-based initialization scheme: For training a policy for a new configuration, we first train a configuration-specific control alloca-tion network. Subsequently, a suitable policy for initializating the training of the control policy is picked from a library of policies using a reward-based similarity measure. The resulting training time is significantly lower than training a policy from scratch. 
+
+accelerate convergence. A promising strategy is to leverage policies pre-trained on related configurations, either to ini-tialize parameters [8] or guide exploration [9]. This relies on control policies generalizing across similar systems, a premise supported, among others, by domain randomization, which produces controllers effective not only for a nominal design in simulation but also for nearby system variations in reality. We propose an efficient knowledge-transfer procedure for policy learning across diverse multirotor configurations, en-abling fast training of large numbers of robots within the same system family. This challenge is not unique to co-optimization and also arises in general control-policy learning settings [10]. Our physics-aware neural architecture separates control into two parts: an RL-trained feedback policy mapping states to wrench vectors, and an allocation network trained via supervised learning guided by a Quadratic Programming (QP) expert. This physics-aware architecture enables separate verification of controller and control allocation and supports reusing policies to jump-start learning for new airframe de-signs. To accelerate learning, we maintain a library of air-frame–policy pairs. Using a similarity measure, a suitable prior configuration is selected whose policy and optimizer states are used to initialize training for new airframes. In turn, this greatly reduces the RL effort of training the controller, while  
+
+> arXiv:2602.15533v1 [cs.RO] 17 Feb 2026 2IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED FEBRUARY, 2026
+
+the allocation network is always exclusively trained for the system at hand. We validate our approach through simulations, ablation studies, and real-world experiments, verifying its core contributions:  
+
+> •
+
+A library-based initialization scheme for control policy learning, saving on average up to 73 .5% of environment interactions (compared to training a policy from scratch) across diverse quadrotor and hexarotor designs  
+
+> •
+
+A physics-aware neural control architecture, facilitating policy initialization and improved interpretability The remainder of this paper is structured as follows: Sec-tion II reviews related work; Section III presents the methods, including the multirotor dynamics, policy architecture, and initialization scheme; Section IV reports real and simulated evaluations; and Section V provides a summary and outlook. II. R ELATED WORK 
+
+Work on cross-embodiment policy transfer has focused mainly on manipulation tasks. Chen et al. [11] propose zero-shot transfer, while Wang et al. [12] retrain network compo-nents to align action and state spaces. Uchendu et al. [9] reuse suboptimal policies as guides in a curriculum to accelerate exploration, and Julian et al. [8] show that fine-tuning policies initialized from other tasks reduces training time. While these works demonstrate transfer across configurations, they do not address how to select an initialization policy. Earlier work on embodiment transfer in design optimization includes training general policies for efficient initialization [13], [14], trans-ferring via intermediate embodiments [6], [15], and selecting from a discrete set of pretrained policies [6], [16]. General-policy initialization requires either pretraining a broad policy [14] or training multiple networks in parallel [13], with both approaches constrained by the need for identical network architectures, limiting individual policy size. While general policies for multirotor control have not, to our knowledge, been applied to design optimization, they exhibit similar short-comings [10] and are targeted to planar quadrotors so far [10], [17]. While using a curriculum of transitioning configurations in training is able to transfer policies for complex systems and tasks like object manipulation with robotic hands [15], they do not mention how the policy for initialization is picked among multiple already trained configurations, and the method adds significant additional complexity to the training process by making continuous changes to the robot model necessary. Earlier works on library-based approaches [6], [16] mitigate these issues by using the original policies trained for individual configurations and reusing the experience gained with already trained policies. While [16] reuses the best policy for each actuator-sensor combination, they do not consider the dynamical differences due to the different placement and orientation of the actuators and sensors. In [6], the authors take the differences into account by approximating how sim-ilar two configurations are based on the difference of the parameter vector fully defining the configuration. Although this method offers a computationally efficient way to ap-proximate how suitable a configuration is for initialization, it does not necessarily correlate well with improvements in sample efficiency when used for policy selection, as we will 
+
+> Fig. 2: Description of arbitrary airframes considered in this work.
+
+demonstrate later in this work. Additionally, no evaluation of the initialization scheme was conducted. Last, we note that prior work on reinforcement learning for multirotors [18], [19] often uses end-to-end policies mapping states directly to motor commands. Drawing inspiration from classical control, we propose a modular framework in which one module generates wrench commands while another allocates actuator inputs. This separation enhances interpretability, particularly for arbi-trary multirotor configurations. Building on this architecture, we further introduce a library-based initialization scheme that leverages a similarity measure and present an evaluation of its efficiency. III. A PPROACH 
+
+A. Dynamical Systems Representation 
+
+The morphology of the individuals of the multirotor family considered in this work is defined by the parameter vector: 
+
+c = [[ t1, ..., t nm ], [vec (R1), ..., vec (Rnm )]] . (1) with nm ∈ R being the motor number and ti ∈ R3 and Ri ∈
+
+SO (3) being translations and orientations of the i-th rotor with respect to the body frame B placed at the center of mass as shown in Fig. 2. vec () describes flattening the lower-triangle matrix into a vector. In this work, we consider systems with 
+
+nm ∈ { 4, 6} (i.e., quadrotors and hexarotors). The system state is described by x = [ p, v, q, ω B ]T ∈ R13 , with p ∈ R3 being the position, v ∈ R3 being the velocity (both expressed in the world frame W), q ∈ H being the unit quaternion rotation (parametrizing the rotation matrix R(q)), and ωB ∈ R3 being the rotational velocity in the body frame. The system dynamics can therefore be written as [20]: 
+
+˙p = v (2) 
+
+˙v = 1
+
+m R(q)F + g (3) 
+
+˙q = 12 q ⊗
+
+ 0
+
+ωB
+
+
+
+(4) 
+
+˙ωB = J−1(τ −ωB ×JωB ). (5) where J ∈ R3×3 denotes the inertia matrix of the system in B depending on the motor positions, m ∈ R its mass, 
+
+g = [0 , 0, −9.81 m/s 2]T the gravity vector, F ∈ R3 the applied combined force, τ ∈ R3 the applied torque in B, and 
+
+⊗ denotes the quaternion product. We assume all systems to have the same payload and assume that the mass difference resulting from different arm lengths is negligible. The applied thrust and torque are related to the commanded motor thrusts 
+
+u ∈ Rnm as follows:  Fτ
+
+
+
+= Fu, (6) REHBERG et al. : EFFICIENT KNOWLEDGE TRANSFER FOR JUMP-STARTING CONTROL POLICY LEARNING OF MULTIROTORS 3Training Data for NN-allocation Admissible Wrench Set Normalized Wrench Command Physical Wrench Command Controller Network Allocation Network Scaling 
+
+> Fig. 3: Proposed physics-aware neural control architecture. The architecture is split into a controller and an allocation network, which are trained separately. The control network is trained using RL, while the allocation network is trained via supervised learning.
+
+F =
+
+ R1zm1 ... t1 × R1zm1 − α1cq R1zm1 ... 
+
+Rnm zmnm 
+
+tnm × Rnm zmnm − αnm cq Rnm zmnm 
+
+
+
+. (7) with F ∈ R6×nm representing the allocation matrix of the system, αi ∈ { 1, −1} representing the rotation direction of rotor i, cq ∈ R being the torque to thrust ratio of the motors and zmi ∈ R3 representing the thrust direction of motor i in motor frame ( [0 , 0, 1] T for all motors). The relation between the commanded motor thrust and the rotational velocity ( ωi)of motor i is defined by ui = ctω2 
+
+> i
+
+with ct ∈ R being the thrust coefficient. 
+
+B. Physics-aware Control Policy Learning 
+
+In this work, we depart from earlier efforts on learning position controllers that directly output motor commands through a single neural network [18], [19] and propose a two-step approach that employs a physics-aware neural architecture trained with a combination of reinforcement and supervised learning. The proposed neural architecture is depicted in Fig. 3. As shown, the method involves first learning the control allocation (from desired wrench to motor commands) in a supervised manner and then fixing that learned net-work while training a position controller outputting wrenches (w = [ F, τ ]T ) through reinforcement learning. Splitting the controller into two parts leaves us with a network where the first part depends on the admissible wrench set, the mass, and the inertia of the system, while the second part is specific to the system’s allocation matrix. Since the first part of the controller commands forces and torques to a rigid body, this is hypothesized and demonstrated in practice that it generalizes between different system configurations (including different motor numbers) and can, therefore, be initialized ef-ficiently from already trained policies for other configurations. Additionally, the state between the two networks (wrench) is physically meaningful, thus adding interpretability to the controller. 
+
+1) Learning-based Control Allocation 
+
+Learning the control allocation, compared to using the pseudo-inverse of the allocation matrix or solving an optimiza-tion problem, comes with three advantages. First, compared to pseudo-inverse methods that find a solution solving the unconstrained allocation [21], the learned control allocation can be trained to mimic an expert that accounts for constraints as described in this section. This is increasingly important for Minimum Enclosing 
+
+> Bounding Box Admissible Wrench Set
+> Fig. 4: Transformation of wrench commands.
+
+systems with a low thrust-to-weight ratio. Second, solving the constrained allocation optimization problem at each timestep during training slows down the training process (solving the optimization problem is significantly more expensive than the forward path through a network), which is especially problematic when large numbers of different systems have to be trained. Third, at runtime, performing inference through that network comes with predictable computation time as opposed to algorithms that iteratively solve for the constrained control allocation [22]. To learn the control allocation, we generate training data by sampling wrenches uniformly from a hyper-cube containing the admissible set of the configuration. Choos-ing the space from which the training data is sampled to be a hypercube is motivated by the fact that normalized commands (between −1 and 1) generated by the control network can be mapped directly (without solving a linear problem) onto the training envelope, guaranteeing the allocation network is not confronted with data unseen in training. Our experiments have shown that the achievable accuracy of the allocation network is highly dependent on the hyper-volume ratio between the chosen sample space and the admissible set. To minimize this ratio, we calculate an axis-aligned minimum enclosing bounding box that is aligned with the principal components of the vertices of the convex hull of the admissible set. During inference, the normalized commands of the controller network are scaled according to the limits of the bounding box in the frame P defined by the principal components as shown in Fig. 4. Then, the commands are transformed from P to the frame S of the admissible wrench space. For generating the corresponding motor forces from the sampled wrenches, we formulate the control allocation as a slack-constrained quadratic program following [23], minimiz-ing projection error and motor forces: 
+
+min  
+
+> u,s
+
+|| u|| + || s|| 
+
+s.t. umin ≤ ui ≤ umax ∀i
+
+Fu − wd = s. 
+
+(8) with wd ∈ R6 being the commanded wrench, umin ∈ Rnm
+
+and umax ∈ Rnm being the minimum and maximum motor thrust and s ∈ R6 being a slack variable. Introducing s
+
+is necessary since it is not guaranteed that the commanded wrench is within the admissible wrench set. The optimization problem is solved for multiple data points in parallel using the qpth-solver [24] to speed up the data generation. The allocation network is a simple MLP with different layer sizes, network depth and activation function depending on whether constraints should be enforced. Since a network imitating the unconstrained control allocation QP is equivalent to the solution obtained with the pseudo-inverse, small layer sizes are sufficient and no non-linear activation functions are needed. 4 IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED FEBRUARY, 2026 
+
+For unconstrained control allocation, a network with one layer and 32 neurons is chosen. Introducing constraints renders the problem highly non-linear and requires larger networks and non-linear activations. Therefore, a network with 3 layers with 
+
+100 neurons each and Leaky ReLU as an activation function is chosen. 
+
+2) Learned Position Controller 
+
+For training the controller network, we formulate the con-trol problem as a Markov Decision Process (MDP) using reinforcement learning. As input, the network receives the state representation x where we replace the position with the position error pe and the quaternions with the 6-D rotation representation ( R6D ) introduced in [25] to avoid double cov-erage of SO (3) without introducing redundancy. This results in the observations o = [ pe, v, R 6D, ω ] ∈ R15 .The used reward is based on the following quantities: 
+
+hp = [ pex , p ey , p ez ], h v = [ vx, v y , v z ], (9) 
+
+hΩ = [ ωx, ω y , ω z ], (10) 
+
+huabs = [ u1 − ˆu1, ..., u 4 − ˆu4], (11) 
+
+hup = 1 − (qe 3q−1)z , h f orw = 1 − (qe 1q−1)x. (12) The quantities hp, hv and hΩ are terms based on the position offset from the provided reference, the linear velocity and the angular rates. The term huabs is based on the differ-ence between each commanded motor thrust and the thrust necessary for hovering ( ˆu). To incentivize smooth actions, we add temporal smoothness regularization terms and spatial smoothness terms to the policy loss as described in [26]. The quantity hup is based on the alignment of the z-axis of 
+
+B and the z-axis of W. This is calculated by rotating the corresponding unit vector e3 by the quaternion representing the orientation of the system q and evaluating its alignment, where 
+
+hup = 0 for perfect alignment. hf orw is equivalently based on the alignment of the x-axis of W and B. Note that strictly speaking, only hp is relevant for the position tracking task and the other terms are only to ensure a desired behavior from a sim-to-real standpoint. The terms in equation 9 - 12 described quantities h which are used to calculate the individual parts rk
+
+of the reward function using exponential kernels as follows: 
+
+rk = X
+
+> i
+
+ae −bh 2 
+
+> i
+
+, (13) where the coefficients a ∈ R and b ∈ R of the exponential kernel are adequately chosen weights defining its magnitude and width and k indicates the quantity the reward is based on ( p, v, Ω, ... ). The obtained individual reward terms are combined into the following cumulative reward: 
+
+r = rp(rf orw + rv + rΩ) + rp + rv + rup + raabs . (14) Multiplying rf orw , rv and rΩ with rp leads to a weighted reward allowing for high linear velocities, angular rates and orientation offsets far away from the target location. The controller network consists of two layers with 32 and 24 
+
+neurons with tanh as activation function. Additionally, we employ tanh -squashing after the last layer to bound the generated outputs to a [−1, 1] -hypercube. During training, no specific trajectories are sampled. Instead, we sample an initial state of the system and the reward function penalizes deviations from the origin of the state space. 
+
+C. Initializing Policies to Jump-Start Policy Learning 
+
+To accelerate the training of a new configuration, we pro-pose a library-based initialization scheme shown in Fig. 1 and Algorithm 1, maintaining a fixed number of candidate policies. For a new configuration defined by the parameter vector cn,first, a network for control allocation is trained. To pick the initial weights for the controller network, all configurations 
+
+ck ∈ L = {c1, ..., c L} in the library L are evaluated regarding their suitability for initialization based on a similarity measure 
+
+m(ci, c k). The policy weights of the configuration with the best score are picked as initial values for the training of the new configuration. Initializing the actor weights alone is not sufficient and will result in a poor learning signal provided by the untrained critic, as described in [9]. We therefore initialize the critic in the same way as the actor, similar to [14]. Additionally, we found that transferring the current optimizer state (first and second moments of the gradients for Adam) of the policy used for initialization resulted in significantly better performance. Subsequently, the configuration is fine-tuned until convergence. Our approach requires an efficient 
+
+Algorithm 1 Library-Based Initialization 
+
+Given: Parameter vector of the configuration to train c, li-brary of already trained configurations L, similarity measure 
+
+m( ci,ck), RL training method train( c,Θ,γ).initialize empty list M
+
+for ck in L do 
+
+Append m(c, c k) to M ▷ compute similarity measure 
+
+end for 
+
+cinit = L(arg max( M )) ▷ pick config for initialization (arg min for mc, m wd )
+
+Θ = Θ init ▷ initialize policy parameters 
+
+γ = γinit ▷ initialize optimizer states 
+
+train( c,Θ,γ) ▷ train config c until convergence method for selecting a policy for initialization from the library. In this work, two avenues are explored to select a configuration for initialization: first, selecting a configuration based on a measure over the physical properties of the airframe, and second, evaluating the properties of the policy. This led to the 3 following similarity measures considered in this work: 1) A straightforward choice for comparing the physical properties of two systems is to evaluate the norm of the difference of their augmented parameter vectors, like in [6]. The augmented parameter vector is defined as 
+
+caug = [c, vec (J)] and the corresponding measure is defined as: 
+
+mc(caug i , c aug k ) = || caug i − caug k || 2. (15) 2) The admissible set of linear and angular accelerations that a configuration can produce instantaneously closely relates to the interface between the policy and the system, while implicitly providing information on all physical properties of the airframe (mass, inertia, and motor posi-tion and orientation). However, comparing the admissible REHBERG et al. : EFFICIENT KNOWLEDGE TRANSFER FOR JUMP-STARTING CONTROL POLICY LEARNING OF MULTIROTORS 5
+
+acceleration sets for two arbitrary configurations is not straightforward (e.g., collapsing overlapping volume of the convex hulls). Instead, we propose a measure based on the Wasserstein distance [27] between two distribu-tions ( X, Y ) representing the admissible acceleration sets (A(c)): 
+
+X ∼ A(ci), Y ∼ A(ck), (16) 
+
+mwd (ci, c k) = inf  
+
+> π
+
+(1 /n 
+
+> n
+
+X
+
+> j=1
+
+|| Xj − Yπ(j)|| 2)(1 /2) . (17) where the infimum is over all permutations π with n
+
+being the number of samples drawn from a uniform distribution bounded by the convex hull of the admissible set. Intuitively, the measure can be interpreted as the “effort” necessary to transform one set into the other. 3) Instead of choosing a configuration based on the physical properties, we also explore directly evaluating the poli-cies of the configurations in the library. To approximate how well a configuration is suited for initialization, we deploy its policy on the newly sampled configuration and evaluate the accumulated reward. Using modern massively parallelized simulators, this can be done for large numbers of configurations in parallel. The resulting measure can be formulated as: 
+
+mr (ci, c k) = E[
+
+> T
+
+X
+
+> t=0
+
+r(xt, u t, c i)|
+
+x0 = xinit , u t ∼ πck (xt)] . (18) with T being the number of evaluation time steps, πck be-ing the policy corresponding to the configuration defined by the parameter vector ck, and xinit being the initial state. IV. E VALUATION 
+
+To show the validity of our proposed initialization scheme and controller structure, we run multiple simulations and real-world experiments. First, we perform extensive simulation studies to evaluate the efficiency of our library-based initializa-tion scheme and how it leads to computational improvements. Subsequently, we evaluate the accuracy of the learned control allocation networks by comparing them to the QP-expert used for training. Finally, we demonstrate the proposed controller structure, consisting of the controller network and the alloca-tion network, in real-world scenarios. 
+
+A. Evaluation of the Library-based Initialization Scheme 
+
+The experiments to evaluate the proposed initialization scheme are twofold. First, the correlation of the similarity measures with the number of saved environment interactions are evaluated to decide which one should be used in the initialization scheme. Second, the initialization scheme based on the selected similarity measure is evaluated. To evaluate the proposed initialization scheme, a library of 40 configurations is sampled with 4 motors and with 6
+
+motors, while a control policy providing wrench commands to an unconstrained control allocation network is trained        
+
+> Fig. 5: Sampling range for sampling the configurations in the pool. With
+> lmin = 0 .1m,lmax = 0 .35 m,γ= 60 ° and ϕ= 20 °.
+> Fig. 6: Example configurations from the sampled library of configurations with two of their closely sampled configurations in greyscale (quadcopters left and hexacopters right).
+
+for each configuration from scratch until convergence for 3
+
+different seeds. We choose to evaluate the initialization scheme using unconstrained networks because training the constrained control allocation takes significantly more time. The motor positions are uniformly sampled from a cone stump centered at the nominal motor position of the standard quad- and hexacopter. The two faces are defined by the maximum and minimum arm length ( lmin , lmax ), while the cone angle γ
+
+defines the angle limits of the arm. The motor orientations are uniformly sampled such that the motor z-axis does not deviate from the body z-axis by more than ϕ. This is illustrated by Fig. 5. The high-dimensional sampling space induced by the large number of morphology parameters implies that dense sampling across all of it is computationally expensive. For the purposes of the presented evaluation, we restrict the sampling space to a localized region to obtain meaningfully close configurations for initialization. In order to still be able to evaluate diverse airframes, we sample 3 additional config-urations uniformly from a distribution centered around each of the 40 configurations, allowing for a maximum deviation of 5° in motor angle and 5cm in motor position (examples shown in Fig. 6). Those configurations are added to the library ( 160 configurations in total). Compared to simulating the real system, the configurations in the pool are simulated with a lower fidelity simulation. This includes calculating the system’s inertia from a point mass model and removing sensor noise and the motor model from the simulation. Additionally, the reward function is condensed to include only terms that matter for the task of position control (purely based on the position error). The lower fidelity simulation and only using position terms facilitates using the same reward function across the whole system family. Additionally, we check that the sampled configurations are able to hover and have control authority around all axes. Configurations that are still not able to learn in any of the tried seeds are discarded after training. 
+
+1) Similarity Measures 
+
+We assess the effectiveness of the proposed similarity measures in predicting whether a configuration is suitable for initialization by examining the correlation between the simi-larity measure and the change in the number of environment interactions necessary to reach a goal reward. To this end, we 6 IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED FEBRUARY, 2026                     
+
+> TABLE I: Statistical evaluation of the similarity metric.
+> Similarity Measure Abs. Corr. Coefficient p-value
+> Quad Hex Quad Hex
+> mc0.11 0.23 0.54 0.26
+> mwd 0.39 0.10 0.03 0.65
+> mr0.52 0.55 2.5×10 −34.4×10 −3
+
+retrain every configuration in the pool while initializing the training with randomly picked configurations from the other configurations in the pool. We then compute the Spearman correlation coefficient and corresponding p-value to assess the relationship between the similarity measure calculated for two configurations and the resulting change in required environ-ment interactions when one is used to initialize the other. Since with a flattening reward curve, the randomness in the training process has an increasing influence on the exact number of saved environment interactions, the correlation becomes less strong. We therefore evaluate the correlation and statistical significance at multiple reward goals over the full reward range and report the values for the highest reward a p-value ≤ 0.01 
+
+was obtained to ensure high significance. The corresponding results are summarized in Table I. The results show that the two measures based on evaluating physical properties of the configuration correlate less well than the measure mr based on evaluating the policy directly. Note that the p-values of the evaluations of mc and mwd show no statistical significance and have a smaller correlation coefficient over the whole range. 
+
+2) Initialization Scheme 
+
+Subsequently, each configuration in the pool is retrained while picking a policy for initialization based on the reward-based similarity measure. All training runs were repeated using 3 different seeds. To show that choosing a configuration based on the proposed similarity measure is important, we compare our library-based initialization scheme to randomly choosing configurations from the library. This shows that the constraints on the configuration space we impose do not render the configurations so close to each other that picking arbitrary configurations will yield similar results as using the proposed metric. Additionally, we conduct experiments initializing only from the original (sparse) library, not containing close neigh-boring configurations and initializing from policies trained for a different motor number. In Fig. 7, the median of the reward curves for all systems and the mean of the standard deviation over seeds for each configuration are reported. The experi-ments show that the proposed initialization scheme reduces required environment interactions by ≈ 71 /76% (quadro-tor/hexarotor) with close configurations, ≈ 50 /65% with the sparse library, and ≈ 49 /65% when using a policy from a system with a different motor number. Note that computing the similarity measure increases the environment interactions (accounted for in the figure), but choosing a system afterward is trivial. Fig. 7 shows a significant difference when selecting a random configuration for initializing the hexacopter training. This difference can be attributed to the greater number of randomly sampled motors, which, on average, results in an admissible set that more uniformly covers the wrench space. As a result, the overlap between the admissible sets of the two configurations increases, facilitating smoother initialization. 2 4 6 8       
+
+> ×10 7
+> 1000 5000 10000 15000 18000 Reward Quadcopter 2468# Environment Interactions ×10 7
+> 1000 5000 10000 15000 18000 Reward Hexacopter From Scratch Initialized (Random) Initialized (Similarity Measure) Initialized (Similarity Measure - Sparse Library) Initialized (Similarity Measure - Cross Library) Initialized (Similarity Measure - Cross Library)
+> Fig. 7: Results of the policy initialization experiments. The blue line shows training from scratch, the green line shows initialization with a random config-uration, the red line shows initialization using the proposed similarity measure, selecting policies from the original 40 configurations without the added close neighbors and the orange line shows initialization using the similarity measure, selecting policies from the full library of systems, including close neighbors. The violet line shows initialization using the proposed measure, picking policies for initialization from the library of systems with another motor number.
+
+B. Evaluation of the Learned Control Allocation 
+
+In the following, the learned control allocation is compared to the QP-expert solving the constrained and unconstrained control allocation. For evaluation, 3 configurations having 4
+
+motors and 3 configurations having 6 motors were used. For both motor numbers, the standard configuration (all thrust axes parallel), a configuration where all motors are tilted by 10 ◦
+
+outwards, and a random configuration were chosen. Table II shows the average and maximum errors normalized to the thrust range between the output of the learned allocation model and the solution to the quadratic problem over 1e5 random samples. In practice, this gives an intuition of how close the outputs of the controller network will be to physically mean-ingful wrenches. Since the unconstrained control allocation is a linear mapping, the network is able to reproduce the expert outputs with very high precision. The constrained control allo-cation, on the other hand, is a nonlinear relation requiring more complex networks. Our experiments show that the accuracy of the learned control allocation drops for higher motor numbers. This is likely due to the higher-dimensional output space (reflecting the actual control allocation of the system) and, therefore, more complex mapping. Learning the constrained control allocation can still be beneficial for arbitrary designs since it allows for constraint-aware allocation and, therefore, redistribution of effort in the case of saturation. The observed errors, particularly during training of the constrained control allocation network, do not hinder the controller network, as it learns to compensate for these inaccuracies by adapting its control strategy accordingly. Additionally, sensitivity curves of the closed-loop tracking performance of a frozen control network with respect to the allocation error are shown in Fig. 8. It is observed that even without allowing the network REHBERG et al. : EFFICIENT KNOWLEDGE TRANSFER FOR JUMP-STARTING CONTROL POLICY LEARNING OF MULTIROTORS 7
+
+TABLE II: Maximum ( |e|max ) and average ( ¯|e|) absolute errors of the control allocation normalized to the thrust range                                     
+
+> Constrained
+> |e|max ,¯|e|
+> Unconstrained
+> |e|max ,¯|e|
+> Quadrotor 2.7e −2,1.2e −34.4e −5,5.2e −6
+> Quadrotor with Tilted Propellers ( 10 ◦)2.5e −2,1.3e −34.0e −5,5.0e −6
+> Random Quadrotor 4.3e −2,1.8e −38.4e −5,8.1e −6
+> Hexarotor 9.0e −2,6.0e −35.9e −4,1.4e −5
+> Hexarotor with Tilted Propellers ( 10 ◦)15 .0e −1,7e −31.7e −3,3.8e −4
+> Random Hexarotor 11 .0e −1,4e −38.7e−5,7.4e −610 −510 −310 −1
+> 0.0
+> 2.5
+> 5.0
+> ¯pe [m]
+> Hex (Non-Planar) - Unconstrained
+> Mean Max
+> 10 −510 −310 −1
+> 0.0
+> 2.5
+> 5.0
+> Hex - Unconstrained
+> Mean Max
+> 10 −510 −310 −1
+> Normalized ¯|e|
+> 0.0
+> 2.5
+> 5.0
+> ¯pe [m]
+> Quad - Constrained
+> Mean Max
+> 10 −510 −310 −1
+> Normalized ¯|e|
+> 0.0
+> 2.5
+> 5.0
+> Quad - Unconstrained
+> Mean Max
+
+Fig. 8: Closed-loop trajectory tracking error with respect to the mean absolute allocation error normalized to the thrust range of the networks. 
+
+to adapt to the allocation error, there is a significant margin before the allocation error significantly influences the closed-loop tracking error. 
+
+C. Evaluation of the Proposed Controller Architecture 
+
+We train our RL policies with Proximal Policy Optimization (PPO) [28] using a customized version of Sample-Factory [29] and simulate the system in the Aerial Gym Simulator [30]. All policies are trained on a Lenovo ThinkPad P1 Gen 6 from 2024 with a GeForce RTX 4090 GPU and deployed on a system with a ModalAI Voxl 2 Mini board and a ModalAI Voxl ESC. To guarantee robust sim-to-real transfer, we incorporate sensor noise and highly accurate approximations of the robot’s inertia obtained from the CAD model and the true robot mass into the simulator. We additionally simulate the motor dynamics using a first-order model with a time constant obtained from RPM step-response experiments on the real system. All policies are trained with a physics time step size of 0.01 s and deployed with a control frequency of 250 Hz. The trained networks were deployed on the compute board with a custom PX4 module. We evaluate the proposed controller architecture in 2
+
+different experiments. First, we deploy a trained policy to track a Lissajous trajectory with a loop time of 5.5s for a planar hexacopter ( 14 cm arm length and a total weight of 421 g) and quadcopter ( 23 cm arm length and a total weight of 373 g)configuration and a non-planar system from the library ( 14 cm 
+
+arm length on average and a total weight of 402 g) with an unconstrained allocation network. Note that we slightly adjust the non-planar system’s arm angles and lengths to avoid self-collision and fit the arms to the body of an existing frame. For dynamic trajectories, the network receives the velocity error to a setpoint instead of the system velocity. The resulting −0.5  
+
+> 0.0
+> 0.5y [m]
+> Hex Setpoints
+> −0.5
+> 0.0
+> 0.5y [m]
+> Hex (Non-Planar)
+> −101x [m]
+> −0.5
+> 0.0
+> 0.5y [m]
+> Quad
+> 0.25 0.50 0.75 1.00 1.25 1.50 1.75 Velocity [m/s]
+
+Fig. 9: Results of the real-world trajectory tracking experiments using an unconstrained control allocation network. 
+
+trajectories are shown in Fig. 9. Subsequently, we deploy a trained policy for a standard quadcopter configuration with a constrained allocation network in a static setpoint tracking task (shown in Fig. 10). Fig. 10 shows a constant offset in the commanded thrust values, which is not seen in simulation. This is likely due to unmodeled shifts in the center of mass or differing thrust coefficients between motors. We achieve state-of-the-art [30] steady state position error ≤ 0.055 m and a mean trajectory tracking error of 0.26 m for the quadrotor, 
+
+0.17 m for the planar hexacopter and 0.24 m for the non-planar hexacopter. V. C ONCLUSION AND FUTURE WORK 
+
+In this work, we presented a library-based policy initial-ization scheme aimed at accelerating the training of control policies for diverse multirotor configurations. By leveraging a physics-aware, modular control architecture and introduc-ing a policy evaluation-based similarity measure, we enable the efficient cross-embodiment transfer of previously trained policies to jump-start learning for novel designs. Our results in simulation and the real world a) demonstrate substantial improvements in sample efficiency and training time and b) showcase that the proposed control architecture is capable of state-of-the-art performance. We further show that the similarity measure based on policy behavior significantly outperforms those based purely on physical configuration parameters in predicting initialization success. This highlights the importance of task-specific evaluation criteria for policy transfer. In the future, the presented work could be extended by initializing navigation policies for systems with differently placed exteroceptive sensors. REFERENCES [1] A. Pretto, S. Aravecchia, W. Burgard, N. Chebrolu, C. Dornhege, T. Falck, F. Fleckenstein, A. Fontenla, M. Imperoli, R. Khanna et al. ,8 IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED FEBRUARY, 2026 0 20 40 Time [ s]       
+
+> −1
+> 0
+> 1
+> Position Error [ m]
+> px
+> py
+> pz
+> 020 40 Time [ s]
+> −2
+> −1
+> 0
+> 1
+> 2
+> Velocity [ ms]
+> vx
+> vy
+> vz
+> 020 40 Time [ s]
+> 0.25
+> 0.50
+> 0.75
+> 1.00
+> 1.25
+> Motor Thrust [ N]
+> u1
+> u2
+> u3
+> u4
+
+Fig. 10: Left: results of the real-world experiments using a constrained control allocation network. Right: systems used for real-world experiments ( a) planar hexarotor, b) non-planar hexarotor, c) planar quadrotor). “Building an aerial–ground robotics system for precision farming: an adaptable solution,” IEEE Robotics & Automation Magazine , vol. 28, no. 3, pp. 29–49, 2020. [2] T. H. Chung, V. Orekhov, and A. Maio, “Into the robotic depths: Analysis and insights from the darpa subterranean challenge,” Annual Review of Control, Robotics, and Autonomous Systems , vol. 6, no. 1, pp. 477–502, 2023. [3] M. Dharmadhikari and K. Alexis, “Semantics-aware predictive inspec-tion path planning,” IEEE Transactions on Field Robotics , 2025. [4] E. Kaufmann, L. Bauersfeld, A. Loquercio, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Champion-level drone racing using deep reinforcement learning,” Nature , vol. 620, no. 7976, pp. 982–987, Aug. 2023. [Online]. Available: https://www.nature.com/articles/s41586-023-06419-4 [5] A. Gupta, S. Savarese, S. Ganguli, and L. Fei-Fei, “Embodied Intelligence via Learning and Evolution,” Nature Communications ,vol. 12, no. 1, p. 5721, Oct. 2021. [Online]. Available: http: //arxiv.org/abs/2102.02202 [6] P. Mannam, X. Liu, D. Zhao, J. Oh, and N. Pollard, “Design and Control Co-Optimization for Automated Design Iteration of Dexterous Anthropomorphic Soft Robotic Hands,” in 2024 IEEE 7th International Conference on Soft Robotics (RoboSoft) , Apr. 2024, pp. 332–339, iSSN: 2769-4534. [Online]. Available: https: //ieeexplore.ieee.org/document/10521927/ [7] J. H. Park and K. H. Lee, “Computational design of modular robots based on genetic algorithm and reinforcement learning,” Symmetry ,vol. 13, no. 3, 2021. [Online]. Available: https://www.mdpi.com/ 2073-8994/13/3/471 [8] R. Julian, B. Swanson, G. S. Sukhatme, S. Levine, C. Finn, and K. Hausman, “Never Stop Learning: The Effectiveness of Fine-Tuning in Robotic Reinforcement Learning,” 4th Conference on Robot Learning (CoRL 2020), Cambridge MA, USA .[9] I. Uchendu, T. Xiao, Y. Lu, B. Zhu, M. Yan, J. Simon, M. Bennice, C. Fu, C. Ma, J. Jiao, S. Levine, and K. Hausman, “Jump-Start Rein-forcement Learning,” Proceedings of the 40 th International Conference on Machine Learning, Honolulu, Hawaii, USA. PMLR 202, 2023 , 2023. [10] J. Eschmann, D. Albani, and G. Loianno, “Raptor: A foundation policy for quadrotor control,” 2025. [Online]. Available: https: //arxiv.org/abs/2509.11481 [11] L. Chen, K. Dharmarajan, K. Hari, C. Xu, Q. Vuong, and K. Goldberg, “MIRAGE: Cross-Embodiment Zero-Shot Policy Transfer with Cross-Painting,” in Robotics: Science and Systems XX . Robotics: Science and Systems Foundation, Jul. 2024. [Online]. Available: http://www.roboticsproceedings.org/rss20/p069.pdf [12] T. Wang, D. Bhatt, X. Wang, and N. Atanasov, “Cross-embodiment robot manipulation skill transfer using latent space alignment,” 2024. [Online]. Available: https://arxiv.org/abs/2406.01968 [13] K. S. Luck, H. B. Amor, and R. Calandra, “Data-efficient Co-Adaptation of Morphology and Behaviour with Deep Reinforcement Learning,” 3rd Conference on Robot Learning (CoRL 2019), Osaka, Japan .[14] C. Chen, J. Yu, H. Lu, H. Gao, R. Xiong, and Y. Wang, “Pretraining-finetuning Framework for Efficient Co-design: A Case Study on Quadruped Robot Parkour,” Sep. 2024, arXiv:2407.06770 [cs]. [Online]. Available: http://arxiv.org/abs/2407.06770 [15] X. Liu, D. Pathak, and K. M. Kitani, “REvolveR: Continuous Evolution-ary Models for Robot-to-robot Policy Transfer,” Proceedings of the 39th International Conference on Machine Learning, Baltimore, Maryland, USA, PMLR 162, 2022 .[16] L. K. Le Goff, E. Buchanan, E. Hart, A. E. Eiben, W. Li, M. De Carlo, A. F. Winfield, M. F. Hale, R. Woolley, M. Angus, J. Timmis, and A. M. Tyrrell, “Morpho Evolution With Learning Using a Controller Archive as an Inheritance Mechanism,” IEEE Transactions on Cognitive and Developmental Systems , vol. 15, no. 2, pp. 507–517, Jun. 2023. [Online]. Available: https://ieeexplore.ieee.org/document/9701596/ [17] D. Zhang, A. Loquercio, J. Tang, T.-H. Wang, J. Malik, and M. W. Mueller, “A learning-based quadcopter controller with extreme adaptation,” IEEE Transactions on Robotics , vol. 41, p. 3948–3964, 2025. [Online]. Available: http://dx.doi.org/10.1109/TRO.2025.3577037 [18] J. Eschmann, D. Albani, and G. Loianno, “Learning to Fly in Seconds,” IEEE Robotics and Automation Letters , vol. 9, no. 7, pp. 6336–6343, Jul. 2024. [Online]. Available: https: //ieeexplore.ieee.org/document/10517383/ [19] J. Hwangbo, I. Sa, R. Siegwart, and M. Hutter, “Control of a Quadrotor with Reinforcement Learning,” IEEE Robotics and Automation Letters ,vol. 2, no. 4, pp. 2096–2103, Oct. 2017, arXiv:1707.05110 [cs]. [Online]. Available: http://arxiv.org/abs/1707.05110 [20] R. Penicka, Y. Song, E. Kaufmann, and D. Scaramuzza, “Learning Minimum-Time Flight in Cluttered Environments,” IEEE Robotics and Automation Letters , vol. 7, no. 3, pp. 7209–7216, Jul. 2022. [Online]. Available: https://ieeexplore.ieee.org/document/9794627/ [21] M. Tognon and A. Franchi, “Omnidirectional Aerial Vehicles With Unidirectional Thrusters: Theory, Optimal Design, and Control,” IEEE Robotics and Automation Letters , vol. 3, no. 3, pp. 2277–2282, Jul. 2018. [Online]. Available: http://ieeexplore.ieee.org/document/8281444/ [22] S. P. Boyd and L. Vandenberghe, Convex optimization , version 29 ed. Cambridge New York Melbourne New Delhi Singapore: Cambridge University Press, 2023. [23] T. A. Johansen and T. I. Fossen, “Control allocation—A survey,” Auto-matica , vol. 49, no. 5, pp. 1087–1103, May 2013. [Online]. Available: https://linkinghub.elsevier.com/retrieve/pii/S0005109813000368 [24] B. Amos and J. Z. Kolter, “Optnet: Differentiable optimization as a layer in neural networks,” in International conference on machine learning .PMLR, 2017, pp. 136–145. [25] Y. Zhou, C. Barnes, J. Lu, J. Yang, and H. Li, “On the Continuity of Rotation Representations in Neural Networks,” Jun. 2020, arXiv:1812.07035 [cs, stat]. [Online]. Available: http://arxiv.org/ abs/1812.07035 [26] S. Mysore, B. Mabsout, R. Mancuso, and K. Saenko, “Regularizing Action Policies for Smooth Control with Reinforcement Learning,” in 2021 IEEE International Conference on Robotics and Automation (ICRA) . Xi’an, China: IEEE, May 2021, pp. 1810–1816. [Online]. Available: https://ieeexplore.ieee.org/document/9561138/ [27] V. M. Panaretos and Y. Zemel, “Statistical Aspects of Wasserstein Distances,” Annual Review of Statistics and Its Application , vol. 6, no. 1, pp. 405–431, Mar. 2019, arXiv:1806.05500 [stat]. [Online]. Available: http://arxiv.org/abs/1806.05500 [28] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, “Proximal Policy Optimization Algorithms,” Aug. 2017. [Online]. Available: http://arxiv.org/abs/1707.06347 [29] A. Petrenko, Z. Huang, T. Kumar, G. Sukhatme, and V. Koltun, “Sample Factory: Egocentric 3D Control from Pixels at 100000 FPS with Asynchronous Reinforcement Learning,” Proceedings of the 37 th International Conference on Machine Learning, Online, PMLR 119, 2020 .[30] M. Kulkarni, W. Rehberg, and K. Alexis, “Aerial Gym Simulator: A Framework for Highly Parallelized Simulation of Aerial Robots,” 
+
+IEEE Robotics and Automation Letters , vol. 10, no. 4, pp. 4093–4100, Apr. 2025. [Online]. Available: https://ieeexplore.ieee.org/document/ 10910148/

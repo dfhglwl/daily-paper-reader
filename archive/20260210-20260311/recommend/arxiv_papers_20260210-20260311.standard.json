@@ -1,0 +1,645 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-03-11T01:46:07.237029+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 14,
+    "deep_cap": 6,
+    "deep_selected": 6,
+    "quick_candidates": 70,
+    "quick_skim_target": 11,
+    "quick_selected": 11
+  },
+  "deep_dive": [
+    {
+      "id": "2603.00974v1",
+      "title": "Intent-Context Synergy Reinforcement Learning for Autonomous UAV Decision-Making in Air Combat",
+      "abstract": "Autonomous UAV infiltration in dynamic contested environments remains a significant challenge due to the partially observable nature of threats and the conflicting objectives of mission efficiency versus survivability. Traditional Reinforcement Learning (RL) approaches often suffer from myopic decision-making and struggle to balance these trade-offs in real-time. To address these limitations, this paper proposes an Intent-Context Synergy Reinforcement Learning (ICS-RL) framework. The framework introduces two core innovations: (1) An LSTM-based Intent Prediction Module that forecasts the future trajectories of hostile units, transforming the decision paradigm from reactive avoidance to proactive planning via state augmentation; (2) A Context-Analysis Synergy Mechanism that decomposes the mission into hierarchical sub-tasks (safe cruise, stealth planning, and hostile breakthrough). We design a heterogeneous ensemble of Dueling DQN agents, each specialized in a specific tactical context. A dynamic switching controller based on Max-Advantage values seamlessly integrates these agents, allowing the UAV to adaptively select the optimal policy without hard-coded rules. Extensive simulations demonstrate that ICS-RL significantly outperforms baselines (Standard DDQN) and traditional methods (PSO, Game Theory). The proposed method achieves a mission success rate of 88\\% and reduces the average exposure frequency to 0.24 per episode, validating its superiority in ensuring robust and stealthy penetration in high-dynamic scenarios.",
+      "authors": [
+        "Jiahao Fu",
+        "Feng Yang"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "eess.SY"
+      ],
+      "published": "2026-03-01T08:05:32+00:00",
+      "link": "https://arxiv.org/pdf/2603.00974v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 10.0,
+      "llm_evidence_en": "Intent prediction and RL for autonomous UAV decision-making in air combat",
+      "llm_evidence_cn": "空战中无人机自主决策的意图预测与强化学习",
+      "llm_evidence": "空战中无人机自主决策的意图预测与强化学习",
+      "canonical_evidence": "空战中无人机自主决策的意图预测与强化学习",
+      "llm_tldr_en": "Proposes ICS-RL framework using LSTM intent prediction for proactive UAV decision-making in air combat.",
+      "llm_tldr_cn": "提出了ICS-RL框架，利用LSTM意图预测实现空战中无人机的积极决策。",
+      "llm_tldr": "提出了ICS-RL框架，利用LSTM意图预测实现空战中无人机的积极决策。",
+      "llm_tags": [
+        "query:uav-air-combat:composite"
+      ],
+      "matched_query_tag": "query:uav-air-combat:composite",
+      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; adversary behavior modeling and intent recognition in dogfights; prediction-based decision making framework for aerial combat; multi-agent reinforcement learning for cooperative and competitive air combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat.",
+      "matched_requirement_id": "req-composite-uav-air-combat",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2602.11373v1",
+      "title": "A Unified Estimation--Guidance Framework Based on Bayesian Decision Theory",
+      "abstract": "Using Bayesian decision theory, we modify the perfect-information, differential game-based guidance law (DGL1) to address the inevitable estimation error occurring when driving this guidance law with a separately-designed state estimator. This yields a stochastic guidance law complying with the generalized separation theorem, as opposed to the common approach, that implicitly, but unjustifiably, assumes the validity of the regular separation theorem. The required posterior probability density function of the game's state is derived from the available noisy measurements using an interacting multiple model particle filter. When the resulting optimal decision turns out to be nonunique, this feature is harnessed to appropriately shape the trajectory of the pursuer so as to enhance its estimator's performance. In addition, certain properties of the particle-based computation of the Bayesian cost are exploited to render the algorithm amenable to real-time implementation. The performance of the entire estimation-decision-guidance scheme is demonstrated using an extensive Monte Carlo simulation study.",
+      "authors": [
+        "Liraz Mudrik",
+        "Yaakov Oshman"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY"
+      ],
+      "published": "2026-02-11T21:04:07+00:00",
+      "link": "https://arxiv.org/pdf/2602.11373v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "unified estimation-guidance framework based on differential games and particle filters",
+      "llm_evidence_cn": "基于微分博弈和粒子滤波的统一估计-引导框架",
+      "llm_evidence": "基于微分博弈和粒子滤波的统一估计-引导框架",
+      "canonical_evidence": "基于微分博弈和粒子滤波的统一估计-引导框架",
+      "llm_tldr_en": "Combines state estimation and differential game guidance for robust trajectory control under uncertainty.",
+      "llm_tldr_cn": "结合状态估计和微分博弈引导，实现在不确定性下的鲁棒轨迹控制。",
+      "llm_tldr": "结合状态估计和微分博弈引导，实现在不确定性下的鲁棒轨迹控制。",
+      "llm_tags": [
+        "query:uav-air-combat:composite"
+      ],
+      "matched_query_tag": "query:uav-air-combat:composite",
+      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; adversary behavior modeling and intent recognition in dogfights; prediction-based decision making framework for aerial combat; multi-agent reinforcement learning for cooperative and competitive air combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat.",
+      "matched_requirement_id": "req-composite-uav-air-combat",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2602.14322v2",
+      "title": "Conformal Signal Temporal Logic for Robust Reinforcement Learning Control: A Case Study",
+      "abstract": "We investigate how formal temporal logic specifications can enhance the safety and robustness of reinforcement learning (RL) control in aerospace applications. Using the open source AeroBench F-16 simulation benchmark, we train a Proximal Policy Optimization (PPO) agent to regulate engine throttle and track commanded airspeed. The control objective is encoded as a Signal Temporal Logic (STL) requirement to maintain airspeed within a prescribed band during the final seconds of each maneuver. To enforce this specification at run time, we introduce a conformal STL shield that filters the RL agent's actions using online conformal prediction. We compare three settings: (i) PPO baseline, (ii) PPO with a classical rule-based STL shield, and (iii) PPO with the proposed conformal shield, under both nominal conditions and a severe stress scenario involving aerodynamic model mismatch, actuator rate limits, measurement noise, and mid-episode setpoint jumps. Experiments show that the conformal shield preserves STL satisfaction while maintaining near baseline performance and providing stronger robustness guarantees than the classical shield. These results demonstrate that combining formal specification monitoring with data driven RL control can substantially improve the reliability of autonomous flight control in challenging environments.",
+      "authors": [
+        "Hani Beirami",
+        "M M Manjurul Islam"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.LO"
+      ],
+      "published": "2026-02-15T22:10:11+00:00",
+      "link": "https://arxiv.org/pdf/2602.14322v2",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "RL control for F-16 maneuvers with safety shielding",
+      "llm_evidence_cn": "带有安全屏蔽的F-16机动强化学习控制",
+      "llm_evidence": "带有安全屏蔽的F-16机动强化学习控制",
+      "canonical_evidence": "带有安全屏蔽的F-16机动强化学习控制",
+      "llm_tldr_en": "Uses conformal STL shields to ensure safety in reinforcement learning for aerospace maneuver tracking.",
+      "llm_tldr_cn": "使用符合性STL屏蔽确保航空航天机动跟踪强化学习中的安全性。",
+      "llm_tldr": "使用符合性STL屏蔽确保航空航天机动跟踪强化学习中的安全性。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2602.23323v1",
+      "title": "Modeling Large-Scale Adversarial Swarm Engagements using Optimal Control",
+      "abstract": "We investigate the optimal control of large-scale autonomous systems under explicitly adversarial conditions, incorporating the probabilistic destruction of agents over time. In many such systems, adversarial interactions arise as different agents or groups compete against one another. A crucial yet often overlooked factor in existing theoretical and modeling frameworks is the random attrition of agents during operation. Effective modeling and control strategies must therefore account for both agent attrition and spatial dynamics.   Given the inherently random nature of agent survival, directly solving this problem is challenging. To address this, we propose and evaluate three approximate numerical modeling approaches in which agent survival probabilities decrease deterministically over time based on their relative positions. We apply these schemes to a scenario where agents defend a high-value unit against an attacking swarm. Our results demonstrate that these models can effectively capture the dynamics of such interactions, provided that attrition and spatial positioning are tightly integrated. These findings are relevant to a broad range of adversarial autonomy scenarios where both agent positioning and survival probabilities play a critical role.",
+      "authors": [
+        "Claire Walton",
+        "Isaac Kaminer",
+        "Qi Gong",
+        "Abram H. Clark",
+        "Theodoros Tsatsanifos"
+      ],
+      "primary_category": "math.OC",
+      "categories": [
+        "math.OC"
+      ],
+      "published": "2026-02-26T18:32:07+00:00",
+      "link": "https://arxiv.org/pdf/2602.23323v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Modeling adversarial swarm engagements and attrition",
+      "llm_evidence_cn": "对抗性集群交战与损耗建模",
+      "llm_evidence": "对抗性集群交战与损耗建模",
+      "canonical_evidence": "对抗性集群交战与损耗建模",
+      "llm_tldr_en": "Investigates optimal control for adversarial swarm engagements, directly relevant to air combat strategy.",
+      "llm_tldr_cn": "研究对抗性集群交战的最优控制，与空战策略直接相关。",
+      "llm_tldr": "研究对抗性集群交战的最优控制，与空战策略直接相关。",
+      "llm_tags": [
+        "query:uav-air-combat:composite"
+      ],
+      "matched_query_tag": "query:uav-air-combat:composite",
+      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; adversary behavior modeling and intent recognition in dogfights; prediction-based decision making framework for aerial combat; multi-agent reinforcement learning for cooperative and competitive air combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat.",
+      "matched_requirement_id": "req-composite-uav-air-combat",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2603.01997v1",
+      "title": "Event-Only Drone Trajectory Forecasting with RPM-Modulated Kalman Filtering",
+      "abstract": "Event cameras provide high-temporal-resolution visual sensing that is well suited for observing fast-moving aerial objects; however, their use for drone trajectory prediction remains limited. This work introduces an event-only drone forecasting method that exploits propeller-induced motion cues. Propeller rotational speed are extracted directly from raw event data and fused within an RPM-aware Kalman filtering framework. Evaluations on the FRED dataset show that the proposed method outperforms learning-based approaches and vanilla kalman filter in terms of average distance error and final distance error at 0.4s and 0.8s forecasting horizons. The results demonstrate robust and accurate short- and medium-horizon trajectory forecasting without reliance on RGB imagery or training data.",
+      "authors": [
+        "Hari Prasanth S. M.",
+        "Pejman Habibiroudkenar",
+        "Eerik Alamikkotervo",
+        "Dimitrios Bouzoulas",
+        "Risto Ojala"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV",
+        "cs.RO",
+        "eess.IV"
+      ],
+      "published": "2026-03-02T15:48:51+00:00",
+      "link": "https://arxiv.org/pdf/2603.01997v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Event-only drone trajectory forecasting for fast-moving aerial objects",
+      "llm_evidence_cn": "针对快速移动空中目标的纯事件无人机轨迹预测",
+      "llm_evidence": "针对快速移动空中目标的纯事件无人机轨迹预测",
+      "canonical_evidence": "针对快速移动空中目标的纯事件无人机轨迹预测",
+      "llm_tldr_en": "Uses event cameras and RPM-aware Kalman filtering for accurate short-term drone trajectory prediction.",
+      "llm_tldr_cn": "利用事件相机和转速感知卡尔曼滤波实现精确的无人机短期轨迹预测。",
+      "llm_tldr": "利用事件相机和转速感知卡尔曼滤波实现精确的无人机短期轨迹预测。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "maneuvering target trajectory prediction algorithms in aerial dogfights",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2603.05363v1",
+      "title": "A Comprehensive Approach to Directly Addressing Estimation Delays in Stochastic Guidance",
+      "abstract": "In realistic pursuit-evasion scenarios, abrupt target maneuvers generate unavoidable periods of elevated uncertainty that result in estimation delays. Such delays can degrade interception performance to the point of causing a miss. Existing delayed-information guidance laws fail to provide a complete remedy, as they typically assume constant and known delays. Moreover, in practice they are fed by filtered estimates, contrary to these laws' foundational assumptions. We present an overarching strategy for tracking and interception that explicitly accounts for time-varying estimation delays. We first devise a guidance law that incorporates two time-varying delays, thereby generalizing prior deterministic formulations. This law is driven by a particle-based fixed-lag smoother that provides it with appropriately delayed state estimates. Furthermore, using semi-Markov modeling of the target's maneuvers, the delays are estimated in real-time, enabling adaptive adjustment of the guidance inputs during engagement. The resulting framework consistently conjoins estimation, delay modeling, and guidance. Its effectiveness and superior robustness over existing delayed-information guidance laws are demonstrated via an extensive Monte Carlo study.",
+      "authors": [
+        "Liraz Mudrik",
+        "Yaakov Oshman"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY"
+      ],
+      "published": "2026-03-05T16:44:09+00:00",
+      "link": "https://arxiv.org/pdf/2603.05363v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Tracking and interception of maneuvering targets with estimation delays",
+      "llm_evidence_cn": "具有估计延迟的机动目标跟踪与拦截",
+      "llm_evidence": "具有估计延迟的机动目标跟踪与拦截",
+      "canonical_evidence": "具有估计延迟的机动目标跟踪与拦截",
+      "llm_tldr_en": "Presents a guidance law for intercepting maneuvering targets while accounting for time-varying estimation delays.",
+      "llm_tldr_cn": "提出了一种在考虑时变估计延迟的情况下拦截机动目标的制导律。",
+      "llm_tldr": "提出了一种在考虑时变估计延迟的情况下拦截机动目标的制导律。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "maneuvering target trajectory prediction algorithms in aerial dogfights",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2602.10997v1",
+      "title": "Multi-Task Reinforcement Learning of Drone Aerobatics by Exploiting Geometric Symmetries",
+      "abstract": "Flight control for autonomous micro aerial vehicles (MAVs) is evolving from steady flight near equilibrium points toward more aggressive aerobatic maneuvers, such as flips, rolls, and Power Loop. Although reinforcement learning (RL) has shown great potential in these tasks, conventional RL methods often suffer from low data efficiency and limited generalization. This challenge becomes more pronounced in multi-task scenarios where a single policy is required to master multiple maneuvers. In this paper, we propose a novel end-to-end multi-task reinforcement learning framework, called GEAR (Geometric Equivariant Aerobatics Reinforcement), which fully exploits the inherent SO(2) rotational symmetry in MAV dynamics and explicitly incorporates this property into the policy network architecture. By integrating an equivariant actor network, FiLM-based task modulation, and a multi-head critic, GEAR achieves both efficiency and flexibility in learning diverse aerobatic maneuvers, enabling a data-efficient, robust, and unified framework for aerobatic control. GEAR attains a 98.85\\% success rate across various aerobatic tasks, significantly outperforming baseline methods. In real-world experiments, GEAR demonstrates stable execution of multiple maneuvers and the capability to combine basic motion primitives to complete complex aerobatics.",
+      "authors": [
+        "Zhanyu Guo",
+        "Zikang Yin",
+        "Guobin Zhu",
+        "Shiliang Guo",
+        "Shiyu Zhao"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-02-11T16:21:48+00:00",
+      "link": "https://arxiv.org/pdf/2602.10997v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "reinforcement learning for aggressive drone aerobatic maneuvers",
+      "llm_evidence_cn": "用于无人机激进特技机动的强化学习",
+      "llm_evidence": "用于无人机激进特技机动的强化学习",
+      "canonical_evidence": "用于无人机激进特技机动的强化学习",
+      "llm_tldr_en": "Introduces GEAR, a multi-task RL framework for mastering aggressive drone aerobatic maneuvers using geometric symmetry.",
+      "llm_tldr_cn": "提出GEAR框架，利用几何对称性通过多任务强化学习实现无人机激进特技机动。",
+      "llm_tldr": "提出GEAR框架，利用几何对称性通过多任务强化学习实现无人机激进特技机动。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2602.10029v1",
+      "title": "Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure",
+      "abstract": "In 3D Aerial-Ground Integrated Networks (AGINs), ensuring continuous service coverage under unexpected hardware failures is critical for mission-critical applications. While Multi-Agent Reinforcement Learning (MARL) has shown promise in autonomous coordination, its resilience under sudden node failures remains a challenge due to dynamic topology deformation. This paper proposes a Topology-Aware Graph MAPPO (TAG-MAPPO) framework designed to enhance system survivability through autonomous 3D spatial reconfiguration. Our framework incorporates graph-based feature aggregation with a residual ego-state fusion mechanism to capture intricate inter-agent dependencies. This architecture enables the surviving swarm to rapidly adapt its topology compared to conventional Multi-Layer Perceptron (MLP) based approaches. Extensive simulations across heterogeneous environments, ranging from interference-limited Crowded Urban to sparse Rural areas, validate the proposed approach. The results demonstrate that TAG-MAPPO consistently outperforms baselines in both stability and efficiency; specifically, it reduces redundant handoffs by up to 50 percent while maintaining a lead in energy efficiency. Most notably, the framework exhibits exceptional self-healing capabilities following a catastrophic node failure. TAG-MAPPO restores over 90 percent of the pre-failure service coverage within 15 time steps, exhibiting a significantly faster V-shaped recovery trajectory than MLP baselines. Furthermore, in dense urban scenarios, the framework achieves a post-failure Jain's Fairness Index that even surpasses its original four-UAV configuration by effectively resolving service overlaps. These findings suggest that topology-aware coordination is essential for the realization of resilient 6G aerial networks and provides a robust foundation for adaptive deployments in volatile environments.",
+      "authors": [
+        "Chuan-Chi Lai"
+      ],
+      "primary_category": "cs.NI",
+      "categories": [
+        "cs.NI",
+        "cs.MA"
+      ],
+      "published": "2026-02-10T17:51:14+00:00",
+      "link": "https://arxiv.org/pdf/2602.10029v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "MARL for autonomous coordination in 3D UAV networks",
+      "llm_evidence_cn": "用于3D无人机网络自主协作的多智能体强化学习",
+      "llm_evidence": "用于3D无人机网络自主协作的多智能体强化学习",
+      "canonical_evidence": "用于3D无人机网络自主协作的多智能体强化学习",
+      "llm_tldr_en": "Develops a graph-based MARL framework for resilient 3D UAV swarm coordination and spatial reconfiguration.",
+      "llm_tldr_cn": "开发了一种基于图的多智能体强化学习框架，用于无人机集群的弹性协作与空间重构。",
+      "llm_tldr": "开发了一种基于图的多智能体强化学习框架，用于无人机集群的弹性协作与空间重构。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2602.09657v1",
+      "title": "AutoFly: Vision-Language-Action Model for UAV Autonomous Navigation in the Wild",
+      "abstract": "Vision-language navigation (VLN) requires intelligent agents to navigate environments by interpreting linguistic instructions alongside visual observations, serving as a cornerstone task in Embodied AI. Current VLN research for unmanned aerial vehicles (UAVs) relies on detailed, pre-specified instructions to guide the UAV along predetermined routes. However, real-world outdoor exploration typically occurs in unknown environments where detailed navigation instructions are unavailable. Instead, only coarse-grained positional or directional guidance can be provided, requiring UAVs to autonomously navigate through continuous planning and obstacle avoidance. To bridge this gap, we propose AutoFly, an end-to-end Vision-Language-Action (VLA) model for autonomous UAV navigation. AutoFly incorporates a pseudo-depth encoder that derives depth-aware features from RGB inputs to enhance spatial reasoning, coupled with a progressive two-stage training strategy that effectively aligns visual, depth, and linguistic representations with action policies. Moreover, existing VLN datasets have fundamental limitations for real-world autonomous navigation, stemming from their heavy reliance on explicit instruction-following over autonomous decision-making and insufficient real-world data. To address these issues, we construct a novel autonomous navigation dataset that shifts the paradigm from instruction-following to autonomous behavior modeling through: (1) trajectory collection emphasizing continuous obstacle avoidance, autonomous planning, and recognition workflows; (2) comprehensive real-world data integration. Experimental results demonstrate that AutoFly achieves a 3.9% higher success rate compared to state-of-the-art VLA baselines, with consistent performance across simulated and real environments.",
+      "authors": [
+        "Xiaolou Sun",
+        "Wufei Si",
+        "Wenhui Ni",
+        "Yuntian Li",
+        "Dongming Wu",
+        "Fei Xie",
+        "Runwei Guan",
+        "He-Yang Xu",
+        "Henghui Ding",
+        "Yuan Wu",
+        "Yutao Yue",
+        "Yongming Huang",
+        "Hui Xiong"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-02-10T11:08:07+00:00",
+      "link": "https://arxiv.org/pdf/2602.09657v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "VLA model for UAV autonomous navigation and planning",
+      "llm_evidence_cn": "用于无人机自主导航与规划的VLA模型",
+      "llm_evidence": "用于无人机自主导航与规划的VLA模型",
+      "canonical_evidence": "用于无人机自主导航与规划的VLA模型",
+      "llm_tldr_en": "Proposes a Vision-Language-Action model for autonomous UAV navigation and obstacle avoidance in the wild.",
+      "llm_tldr_cn": "提出了一种用于野外无人机自主导航和避障的视觉-语言-动作模型。",
+      "llm_tldr": "提出了一种用于野外无人机自主导航和避障的视觉-语言-动作模型。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "autonomous maneuver decision making for UAVs",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2602.11735v1",
+      "title": "AC-MASAC: An Attentive Curriculum Learning Framework for Heterogeneous UAV Swarm Coordination",
+      "abstract": "Cooperative path planning for heterogeneous UAV swarms poses significant challenges for Multi-Agent Reinforcement Learning (MARL), particularly in handling asymmetric inter-agent dependencies and addressing the risks of sparse rewards and catastrophic forgetting during training. To address these issues, this paper proposes an attentive curriculum learning framework (AC-MASAC). The framework introduces a role-aware heterogeneous attention mechanism to explicitly model asymmetric dependencies. Moreover, a structured curriculum strategy is designed, integrating hierarchical knowledge transfer and stage-proportional experience replay to address the issues of sparse rewards and catastrophic forgetting. The proposed framework is validated on a custom multi-agent simulation platform, and the results show that our method has significant advantages over other advanced methods in terms of Success Rate, Formation Keeping Rate, and Success-weighted Mission Time. The code is available at \\textcolor{red}{https://github.com/Wanhao-Liu/AC-MASAC}.",
+      "authors": [
+        "Wanhao Liu",
+        "Junhong Dai",
+        "Yixuan Zhang",
+        "Shengyun Yin",
+        "Panshuo Li"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-02-12T09:03:34+00:00",
+      "link": "https://arxiv.org/pdf/2602.11735v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "attentive curriculum learning for heterogeneous UAV swarm coordination",
+      "llm_evidence_cn": "异构无人机集群协作的注意力课程学习",
+      "llm_evidence": "异构无人机集群协作的注意力课程学习",
+      "canonical_evidence": "异构无人机集群协作的注意力课程学习",
+      "llm_tldr_en": "Develops a curriculum MARL framework for path planning and coordination in heterogeneous UAV swarms.",
+      "llm_tldr_cn": "开发了一个用于异构无人机集群路径规划和协作的课程多智能体强化学习框架。",
+      "llm_tldr": "开发了一个用于异构无人机集群路径规划和协作的课程多智能体强化学习框架。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "intelligent air combat tactics using multi agent reinforcement learning",
+      "matched_requirement_id": "req-12",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2602.12047v1",
+      "title": "Safety Beyond the Training Data: Robust Out-of-Distribution MPC via Conformalized System Level Synthesis",
+      "abstract": "We present a novel framework for robust out-of-distribution planning and control using conformal prediction (CP) and system level synthesis (SLS), addressing the challenge of ensuring safety and robustness when using learned dynamics models beyond the training data distribution. We first derive high-confidence model error bounds using weighted CP with a learned, state-control-dependent covariance model. These bounds are integrated into an SLS-based robust nonlinear model predictive control (MPC) formulation, which performs constraint tightening over the prediction horizon via volume-optimized forward reachable sets. We provide theoretical guarantees on coverage and robustness under distributional drift, and analyze the impact of data density and trajectory tube size on prediction coverage. Empirically, we demonstrate our method on nonlinear systems of increasing complexity, including a 4D car and a {12D} quadcopter, improving safety and robustness compared to fixed-bound and non-robust baselines, especially outside of the data distribution.",
+      "authors": [
+        "Anutam Srinivasan",
+        "Antoine Leeman",
+        "Glen Chou"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.LG",
+        "eess.SY",
+        "math.OC"
+      ],
+      "published": "2026-02-12T15:11:44+00:00",
+      "link": "https://arxiv.org/pdf/2602.12047v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "robust out-of-distribution planning and control using conformal prediction",
+      "llm_evidence_cn": "使用符合预测的鲁棒分布外规划与控制",
+      "llm_evidence": "使用符合预测的鲁棒分布外规划与控制",
+      "canonical_evidence": "使用符合预测的鲁棒分布外规划与控制",
+      "llm_tldr_en": "Integrates conformal prediction with MPC for robust planning under learned dynamics model uncertainty.",
+      "llm_tldr_cn": "将符合预测与MPC集成，在学习动力学模型不确定下实现鲁棒规划。",
+      "llm_tldr": "将符合预测与MPC集成，在学习动力学模型不确定下实现鲁棒规划。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "prediction based autonomous decision making for close in air combat",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2602.10111v1",
+      "title": "Learning Agile Quadrotor Flight in the Real World",
+      "abstract": "Learning-based controllers have achieved impressive performance in agile quadrotor flight but typically rely on massive training in simulation, necessitating accurate system identification for effective Sim2Real transfer. However, even with precise modeling, fixed policies remain susceptible to out-of-distribution scenarios, ranging from external aerodynamic disturbances to internal hardware degradation. To ensure safety under these evolving uncertainties, such controllers are forced to operate with conservative safety margins, inherently constraining their agility outside of controlled settings. While online adaptation offers a potential remedy, safely exploring physical limits remains a critical bottleneck due to data scarcity and safety risks. To bridge this gap, we propose a self-adaptive framework that eliminates the need for precise system identification or offline Sim2Real transfer. We introduce Adaptive Temporal Scaling (ATS) to actively explore platform physical limits, and employ online residual learning to augment a simple nominal model. {Based on the learned hybrid model, we further propose Real-world Anchored Short-horizon Backpropagation Through Time (RASH-BPTT) to achieve efficient and robust in-flight policy updates. Extensive experiments demonstrate that our quadrotor reliably executes agile maneuvers near actuator saturation limits. The system evolves a conservative base policy with a peak speed of 1.9 m/s to 7.3 m/s within approximately 100 seconds of flight time. These findings underscore that real-world adaptation serves not merely to compensate for modeling errors, but as a practical mechanism for sustained performance improvement in aggressive flight regimes.",
+      "authors": [
+        "Yunfan Ren",
+        "Zhiyuan Zhu",
+        "Jiaxu Xing",
+        "Davide Scaramuzza"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-02-10T18:59:28+00:00",
+      "link": "https://arxiv.org/pdf/2602.10111v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "learning-based controllers for agile quadrotor flight",
+      "llm_evidence_cn": "基于学习的四旋翼敏捷飞行控制器",
+      "llm_evidence": "基于学习的四旋翼敏捷飞行控制器",
+      "canonical_evidence": "基于学习的四旋翼敏捷飞行控制器",
+      "llm_tldr_en": "Introduces a method for learning agile quadrotor flight that adapts to real-world uncertainties.",
+      "llm_tldr_cn": "介绍了一种学习四旋翼敏捷飞行的方法，能够适应现实世界的各种不确定性。",
+      "llm_tldr": "介绍了一种学习四旋翼敏捷飞行的方法，能够适应现实世界的各种不确定性。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2602.13457v1",
+      "title": "Inferring Turn-Rate-Limited Engagement Zones with Sacrificial Agents for Safe Trajectory Planning",
+      "abstract": "This paper presents a learning-based framework for estimating pursuer parameters in turn-rate-limited pursuit-evasion scenarios using sacrificial agents. Each sacrificial agent follows a straight-line trajectory toward an adversary and reports whether it was intercepted or survived. These binary outcomes are related to the pursuer's parameters through a geometric reachable-region (RR) model. Two formulations are introduced: a boundary-interception case, where capture occurs at the RR boundary, and an interior-interception case, which allows capture anywhere within it. The pursuer's parameters are inferred using a gradient-based multi-start optimization with custom loss functions tailored to each case.   Two trajectory-selection strategies are proposed for the sacrificial agents: a geometric heuristic that maximizes the spread of expected interception points, and a Bayesian experimental-design method that maximizes the D-score of the expected Gauss-Newton information matrix, thereby selecting trajectories that yield maximal information gain. Monte Carlo experiments demonstrate accurate parameter recovery with five to twelve sacrificial agents. The learned engagement models are then used to generate safe, time-optimal paths for high-value agents that avoid all feasible pursuer engagement regions.",
+      "authors": [
+        "Grant Stagg",
+        "Cameron K. Peterson"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-02-13T21:03:26+00:00",
+      "link": "https://arxiv.org/pdf/2602.13457v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "estimating pursuer parameters and reachable regions in pursuit-evasion scenarios",
+      "llm_evidence_cn": "在追逃场景中估计追击者参数和可达区域",
+      "llm_evidence": "在追逃场景中估计追击者参数和可达区域",
+      "canonical_evidence": "在追逃场景中估计追击者参数和可达区域",
+      "llm_tldr_en": "Estimates adversary parameters in turn-rate-limited pursuit-evasion for safe trajectory planning.",
+      "llm_tldr_cn": "在转弯率受限的追逃中估计对手参数，以进行安全轨迹规划。",
+      "llm_tldr": "在转弯率受限的追逃中估计对手参数，以进行安全轨迹规划。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "adversary behavior modeling and intent recognition in dogfights",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2602.12444v2",
+      "title": "Safe Reinforcement Learning via Recovery-based Shielding with Gaussian Process Dynamics Models",
+      "abstract": "Reinforcement learning (RL) is a powerful framework for optimal decision-making and control but often lacks provable guarantees for safety-critical applications. In this paper, we introduce a novel recovery-based shielding framework that enables safe RL with a provable safety lower bound for unknown and non-linear continuous dynamical systems. The proposed approach integrates a backup policy (shield) with the RL agent, leveraging Gaussian process (GP) based uncertainty quantification to predict potential violations of safety constraints, dynamically recovering to safe trajectories only when necessary. Experience gathered by the 'shielded' agent is used to construct the GP models, with policy optimization via internal model-based sampling - enabling unrestricted exploration and sample efficient learning, without compromising safety. Empirically our approach demonstrates strong performance and strict safety-compliance on a suite of continuous control environments.",
+      "authors": [
+        "Alexander W. Goodall",
+        "Francesco Belardinelli"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-02-12T22:03:35+00:00",
+      "link": "https://arxiv.org/pdf/2602.12444v2",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Safe RL via shielding for non-linear dynamics",
+      "llm_evidence_cn": "通过屏蔽机制实现非线性动力学的安全强化学习",
+      "llm_evidence": "通过屏蔽机制实现非线性动力学的安全强化学习",
+      "canonical_evidence": "通过屏蔽机制实现非线性动力学的安全强化学习",
+      "llm_tldr_en": "Integrates shielding with RL for safe trajectory tracking, supporting safe autonomous decision making.",
+      "llm_tldr_cn": "将屏蔽机制与强化学习结合用于安全轨迹跟踪，支持安全自主决策。",
+      "llm_tldr": "将屏蔽机制与强化学习结合用于安全轨迹跟踪，支持安全自主决策。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "prediction based autonomous decision making for close in air combat",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2602.12386v1",
+      "title": "Provably Convergent Actor-Critic in Risk-averse MARL",
+      "abstract": "Learning stationary policies in infinite-horizon general-sum Markov games (MGs) remains a fundamental open problem in Multi-Agent Reinforcement Learning (MARL). While stationary strategies are preferred for their practicality, computing stationary forms of classic game-theoretic equilibria is computationally intractable -- a stark contrast to the comparative ease of solving single-agent RL or zero-sum games. To bridge this gap, we study Risk-averse Quantal response Equilibria (RQE), a solution concept rooted in behavioral game theory that incorporates risk aversion and bounded rationality. We demonstrate that RQE possesses strong regularity conditions that make it uniquely amenable to learning in MGs. We propose a novel two-timescale Actor-Critic algorithm characterized by a fast-timescale actor and a slow-timescale critic. Leveraging the regularity of RQE, we prove that this approach achieves global convergence with finite-sample guarantees. We empirically validate our algorithm in several environments to demonstrate superior convergence properties compared to risk-neutral baselines.",
+      "authors": [
+        "Yizhou Zhang",
+        "Eric Mazumdar"
+      ],
+      "primary_category": "cs.MA",
+      "categories": [
+        "cs.MA",
+        "cs.GT",
+        "cs.LG"
+      ],
+      "published": "2026-02-12T20:29:41+00:00",
+      "link": "https://arxiv.org/pdf/2602.12386v1",
+      "tags": [
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "actor-critic algorithms for general-sum Markov games in MARL",
+      "llm_evidence_cn": "多智能体强化学习中广义和马尔可夫博弈的演员-评论家算法",
+      "llm_evidence": "多智能体强化学习中广义和马尔可夫博弈的演员-评论家算法",
+      "canonical_evidence": "多智能体强化学习中广义和马尔可夫博弈的演员-评论家算法",
+      "llm_tldr_en": "Proposes a convergent actor-critic algorithm for risk-averse multi-agent reinforcement learning in Markov games.",
+      "llm_tldr_cn": "提出一种用于马尔可夫博弈中风险规避多智能体强化学习的收敛演员-评论家算法。",
+      "llm_tldr": "提出一种用于马尔可夫博弈中风险规避多智能体强化学习的收敛演员-评论家算法。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2602.15533v1",
+      "title": "Efficient Knowledge Transfer for Jump-Starting Control Policy Learning of Multirotors through Physics-Aware Neural Architectures",
+      "abstract": "Efficiently training control policies for robots is a major challenge that can greatly benefit from utilizing knowledge gained from training similar systems through cross-embodiment knowledge transfer. In this work, we focus on accelerating policy training using a library-based initialization scheme that enables effective knowledge transfer across multirotor configurations. By leveraging a physics-aware neural control architecture that combines a reinforcement learning-based controller and a supervised control allocation network, we enable the reuse of previously trained policies. To this end, we utilize a policy evaluation-based similarity measure that identifies suitable policies for initialization from a library. We demonstrate that this measure correlates with the reduction in environment interactions needed to reach target performance and is therefore suited for initialization. Extensive simulation and real-world experiments confirm that our control architecture achieves state-of-the-art control performance, and that our initialization scheme saves on average up to $73.5\\%$ of environment interactions (compared to training a policy from scratch) across diverse quadrotor and hexarotor designs, paving the way for efficient cross-embodiment transfer in reinforcement learning.",
+      "authors": [
+        "Welf Rehberg",
+        "Mihir Kulkarni",
+        "Philipp Weiss",
+        "Kostas Alexis"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-02-17T12:31:53+00:00",
+      "link": "https://arxiv.org/pdf/2602.15533v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "reinforcement learning-based controller for multirotors and policy transfer",
+      "llm_evidence_cn": "针对多旋翼飞行器的强化学习控制器及策略迁移",
+      "llm_evidence": "针对多旋翼飞行器的强化学习控制器及策略迁移",
+      "canonical_evidence": "针对多旋翼飞行器的强化学习控制器及策略迁移",
+      "llm_tldr_en": "Accelerates multirotor control policy training through physics-aware neural architectures and knowledge transfer.",
+      "llm_tldr_cn": "通过物理感知神经架构和知识迁移加速多旋翼飞行器控制策略训练。",
+      "llm_tldr": "通过物理感知神经架构和知识迁移加速多旋翼飞行器控制策略训练。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2602.12520v1",
+      "title": "Multi-Agent Model-Based Reinforcement Learning with Joint State-Action Learned Embeddings",
+      "abstract": "Learning to coordinate many agents in partially observable and highly dynamic environments requires both informative representations and data-efficient training. To address this challenge, we present a novel model-based multi-agent reinforcement learning framework that unifies joint state-action representation learning with imaginative roll-outs. We design a world model trained with variational auto-encoders and augment the model using the state-action learned embedding (SALE). SALE is injected into both the imagination module that forecasts plausible future roll-outs and the joint agent network whose individual action values are combined through a mixing network to estimate the joint action-value function. By coupling imagined trajectories with SALE-based action values, the agents acquire a richer understanding of how their choices influence collective outcomes, leading to improved long-term planning and optimization under limited real-environment interactions. Empirical studies on well-established multi-agent benchmarks, including StarCraft II Micro-Management, Multi-Agent MuJoCo, and Level-Based Foraging challenges, demonstrate consistent gains of our method over baseline algorithms and highlight the effectiveness of joint state-action learned embeddings within a multi-agent model-based paradigm.",
+      "authors": [
+        "Zhizun Wang",
+        "David Meger"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.MA"
+      ],
+      "published": "2026-02-13T01:57:21+00:00",
+      "link": "https://arxiv.org/pdf/2602.12520v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Model-based MARL with state-action embeddings and trajectory forecasting",
+      "llm_evidence_cn": "基于模型的MARL，包含状态动作嵌入和轨迹预测",
+      "llm_evidence": "基于模型的MARL，包含状态动作嵌入和轨迹预测",
+      "canonical_evidence": "基于模型的MARL，包含状态动作嵌入和轨迹预测",
+      "llm_tldr_en": "Develops a model-based MARL framework using world models and imagination for coordination in dynamic settings.",
+      "llm_tldr_cn": "开发了一个基于模型的MARL框架，利用世界模型和想象力在动态环境中进行协调。",
+      "llm_tldr": "开发了一个基于模型的MARL框架，利用世界模型和想象力在动态环境中进行协调。",
+      "llm_tags": [
+        "query:uav-air-combat:composite"
+      ],
+      "matched_query_tag": "query:uav-air-combat:composite",
+      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; adversary behavior modeling and intent recognition in dogfights; prediction-based decision making framework for aerial combat; multi-agent reinforcement learning for cooperative and competitive air combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat.",
+      "matched_requirement_id": "req-composite-uav-air-combat",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

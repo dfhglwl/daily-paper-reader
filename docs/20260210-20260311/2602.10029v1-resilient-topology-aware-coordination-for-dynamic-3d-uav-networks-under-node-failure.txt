@@ -1,0 +1,801 @@
+Title: Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure
+
+URL Source: https://arxiv.org/pdf/2602.10029v1
+
+Published Time: Wed, 11 Feb 2026 02:28:49 GMT
+
+Number of Pages: 25
+
+Markdown Content:
+# Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure 
+
+CHUAN-CHI LAI, National Chung Cheng University, Taiwan In 3D Aerial-Ground Integrated Networks (AGINs), ensuring continuous service coverage under unexpected hardware failures is critical for mission-critical applications. While Multi-Agent Reinforcement Learning (MARL) has shown promise in autonomous coordination, its resilience under sudden node failures remains a challenge due to dynamic topology deformation. This paper proposes a Topology-Aware Graph MAPPO (TAG-MAPPO) framework designed to enhance system survivability through autonomous 3D spatial recon-figuration. Our framework incorporates graph-based feature aggregation with a residual ego-state fusion mechanism to capture intricate inter-agent dependencies. This architecture enables the surviving swarm to rapidly adapt its topology compared to conventional Multi-Layer Perceptron (MLP) based approaches. Exten-sive simulations across heterogeneous environments, ranging from interference-limited Crowded Urban to sparse Rural areas, validate the proposed approach. The results demonstrate that TAG-MAPPO consistently outperforms baselines in both stability and efficiency; specifically, it reduces redundant handoffs by up to 50 percent while maintaining a lead in energy efficiency. Most notably, the framework exhibits exceptional self-healing capabilities following a catastrophic node failure. TAG-MAPPO restores over 90 percent of the pre-failure service coverage within 15 time steps, exhibiting a significantly faster V-shaped recovery trajec-tory than MLP baselines. Furthermore, in dense urban scenarios, the framework achieves a post-failure Jain’s Fairness Index that even surpasses its original four-UAV configuration by effectively resolving service over-laps. These findings suggest that topology-aware coordination is essential for the realization of resilient 6G aerial networks and provides a robust foundation for adaptive deployments in volatile environments. CCS Concepts: • Networks → Mobile networks ; Wireless access points, base stations and infrastructure ;
+
+Network resources allocation ; • Computing methodologies → Multi-agent reinforcement learning .Additional Key Words and Phrases: Aerial-Ground Integrated Networks (AGINs), Graph Attention Network, Network Resilience, Node Failure Recovery, Handoff Optimization 
+
+ACM Reference Format: 
+
+Chuan-Chi Lai. 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure. ACM Trans. Internet Technol. XX, XX, Article XX (February 2026), 25 pages. https://doi.org/XXXXXXX. XXXXXXX 
+
+1 Introduction 
+
+The dawn of 6G networks signals a fundamental paradigm shift from terrestrial-dependent infras-tructure to an integrated, three-dimensional Non-Terrestrial Network (NTN) architecture [8, 23]. Within this aerial frontier, Unmanned Aerial Vehicles (UAVs) serving as Aerial Base Stations (ABSs) have emerged as a cornerstone solution due to their superior maneuverability, rapid on-demand 
+
+Author’s Contact Information: Chuan-Chi Lai, Advanced Institute of Manufacturing with High-tech Innovations (AIM-HI), Department of Communications Engineering, National Chung Cheng University, Chiayi, Taiwan, chuanclai@ccu.edu.tw. Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org. © 2026 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM 1557-6051/2026/2-ARTXX https://doi.org/XXXXXXX.XXXXXXX ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026.  
+
+> arXiv:2602.10029v1 [cs.NI] 10 Feb 2026 XX:2 Lai et al.
+
+deployment, and inherent ability to establish Line-of-Sight (LoS) connectivity [1, 21]. These UAV-assisted networks are particularly indispensable in mission-critical scenarios where terrestrial in-frastructure is compromised, such as disaster relief operations or large-scale urban events [19, 33]. However, beyond the pervasive challenge of non-stationary user distributions, ensuring system resilience in the face of unexpected hardware malfunctions or catastrophic node failures remains a formidable obstacle for next-generation aerial orchestration. To sustain optimal coverage amidst environmental volatility, Multi-Agent Proximal Policy Opti-mization (MAPPO) has been widely adopted as a robust control framework [6, 28]. Nevertheless, a persistent limitation in reinforcement learning (RL) based UAV control is the structural rigidity of standard Multi-Layer Perceptron (MLP) architectures. Building upon our established research in MARL-based UAV control, our prior work [13] addressed the plasticity-stability dilemma by intro-ducing a Group-Decoupled MAPPO (G-MAPPO) algorithm. While G-MAPPO effectively mitigated gradient conflicts across localized geographic regions, its efficacy was constrained by the assump-tion of a quasi-static network topology. Specifically, it assumed a constant number of active UAV nodes, leaving the system vulnerable to the topological disruptions inherent in real-world deploy-ments. This paper extends that trajectory by pivoting from gradient decoupling to topology-aware coordination, specifically targeting the resilience gaps left by static structural assumptions. Practical aerial networks, however, are subject to dual-layer dynamics consisting of the continu-ous micro-temporal displacement of ground users and the discrete, catastrophic disruptions caused by sudden UAV node failures. MLP-based agents struggle with these topological ruptures due to their fixed input dimensions and inherent lack of permutation invariance. When a neighboring node fails, MLP architectures often suffer from coordination collapse because they cannot dynam-ically re-weight remaining spatial features, leading to service outages and a failure to re-establish coverage equilibrium. To overcome these structural limitations and achieve self-healing communication, this paper proposes a novel Topology-Aware Graph Attention (TAG) framework. Recent literature high-lights that graph-based learning is uniquely suited for wireless resource management due to its inherent ability to generalize to varying numbers of nodes [7]. Instead of perceiving the environ-ment as a static feature vector, we model the multi-UAV system as a dynamic graph [24]. By incor-porating a sophisticated graph attention mechanism inspired by advancements in Graph Atten-tion Networks (GAT) [25, 26], our framework empowers agents to dynamically assign importance weights to neighboring entities. This architecture, enhanced by random observation shuffling dur-ing training, enables the system to proactively adapt to both smooth user movements and abrupt topological changes such as the sudden loss of a coordinated agent. The main contributions of this paper are summarized as follows: 
+
+• Topology-Aware Coordination Architecture: We propose a novel MARL framework that utilizes graph-based feature aggregation to capture the underlying relational structures of UAV networks. This architecture enables agents to perform spatial reasoning beyond simple numerical observations, leading to more stable coordination in interference-limited regimes. 
+
+• Signaling Stability and Resource Efficiency: Through the integration of a handoff-penalized reward function and energy-efficient policy learning, our framework achieves a superior bal-ance between coverage expansion and signaling stability. Experimental data show that TAG-MAPPO reduces redundant handoffs by nearly 50% in sparse topologies while maintaining optimized propulsion and communication power consumption. 
+
+• Autonomous Resilience and Self-Healing: We introduce a robust training paradigm in-corporating Random Observation Shuffling (ROS), which empowers the network to adapt to  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:3
+
+dynamic agent populations. Our results demonstrate a unique self-healing capability where the system restores over 90% of service coverage following a random node failure. 
+
+• Fairness Optimization via Structural Reconfiguration: We provide a critical insight into the system’s ability to resolve service overlaps under resource-constrained conditions. Our analysis reveals that in crowded urban environments, the framework can strategically re-optimize its spatial deployment after a node failure to achieve a more balanced resource distribution, effectively surpassing its pre-failure fairness performance. The remaining sections of this paper are organized as follows. Section 2 reviews related work on UAV deployment and MARL for UAV swarms. Sections 3 and 4 respectively present the system model and problem formulation. Section 5 details the proposed TAG-MAPPO framework. Section 6 discusses the simulation setup and performance evaluation. Finally, Section 7 concludes the paper. 
+
+2 Related Work 
+
+This section reviews the existing literature across three critical domains: UAV coverage optimiza-tion, network resilience under node failure, and the integration of graph-based attention mecha-nisms within multi-agent reinforcement learning (MARL). 
+
+2.1 Multi-UAV Control and Coverage Optimization 
+
+The deployment of UAVs for wireless coverage has been extensively studied through heuristic, mathematical, and learning-based approaches. Early research typically formulated the coverage problem as a facility location task. Within this context, optimal 3D locations for static users were derived in [2, 20] by utilizing convex optimization and circle packing theory. To address energy constraints, trajectory optimization frameworks were proposed in [31] to balance throughput against propulsion energy consumption. More recently, meta-heuristic algorithms have been ap-plied to dynamic scenarios. An evolving collaborative differential evolution algorithm was pro-posed in [27] for dynamic path planning, and a minimum-UAV coverage problem was addressed in [9] through energy-efficient graph algorithms. However, these model-based methods typically assume global Channel State Information (CSI) availability and suffer from high computational latency, which makes them less suitable for real-time control in volatile environments. With the advancement of deep reinforcement learning (DRL), decentralized control strategies have emerged as a promising alternative. Since the introduction of Multi-Agent Deep Determin-istic Policy Gradient (MADDPG) [17], various DRL-based controllers have been developed for aerial networks. DRL was utilized in [10] for adaptive 3D placement in 6G airborne small cells, while a joint 3D trajectory design and resource scheduling framework was proposed in [16] for space-air-ground integrated networks. Beyond throughput maximization, ensuring fairness has gained significant attention. An adaptive deployment approach was proposed in [14] to balance of-fload traffic, highlighting the importance of fairness-aware protocols. Furthermore, a utility-driven route adaptation scheme was introduced in [3] for green cooperative networks. Despite these ad-vancements, most existing works rely on coordinate-based Multi-Layer Perceptrons (MLPs). This architecture struggles to capture the permutation-invariant nature of UAV swarms [29], which often leads to coordination collapse when the number of neighbors fluctuates. 
+
+2.2 Network Resilience and Fault Tolerance 
+
+In mission-critical scenarios such as disaster relief, system resilience is paramount. This refers specifically to the ability of a network to recover from sudden disruptions. Robustness in UAV search path planning has been enhanced using DRL for complex disaster environments [15]. Ad-ditionally, a two-stage optimization approach was proposed in [34] for collaborative post-disaster  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:4 Lai et al.
+
+communications. A recent study in [11] addressed resilient topology configuration in 3D UAV net-works by formulating the problem as a mixed-integer non-linear program (MINLP) and employing recursive optimization to maintain connectivity. While such model-based approaches provide the-oretical performance bounds, they often entail significant computational overhead when handling large-scale topological shifts. To adapt to such non-stationary environments, continual learning (CL) and distributed tech-niques have been adopted. More recently, a resilient topology optimization framework was intro-duced in [32], which leverages quantum annealing to generate a diverse set of candidate topologies offline for rapid online switching. While effective in utilizing quantum parallelism for structural diversity, such approaches rely on pre-defined candidate sets and specialized hardware, which may limit their adaptability in unforeseen disaster scenarios where node status changes dynamically. Building on foundational CL algorithms, a spatiotemporal-aware DRL framework was intro-duced in [5] for cooperative coverage. In our prior work [13], a spatiotemporal continual learn-ing framework based on Group-Decoupled MAPPO (G-MAPPO) was developed to enable UAVs to adapt to varying geographic user distributions. However, current research predominantly fo-cuses on macro-spatial variations. Micro-temporal resilience involves the ability of a swarm to self-heal and reconfigure its topology immediately after a sudden node failure without relying on pre-computed candidate sets or recursive re-optimization. This domain remains under-explored, and this paper addresses the gap by proposing a topology-aware controller capable of real-time fault recovery through decentralized coordination. 
+
+2.3 Attention Mechanisms and Reconfigurable MARL 
+
+To overcome the limitations of fixed-input architectures, Graph Neural Networks (GNNs) and at-tention mechanisms have been integrated into MARL. Recent reviews emphasize that graph-based learning is uniquely suited for wireless resource management due to its inherent ability to gener-alize to dynamic network statuses and scale with varying numbers of nodes [7]. The effectiveness of using graph representations for resilient coordination is further supported by the topology sam-pling logic explored in [32]. The Transformer architecture [25] demonstrated the power of atten-tion in sequence modeling, and it has been further shown that graph-based approaches possess strong relational inductive biases suitable for physical systems [4]. In the context of UAV mobility management, a hierarchical multi-agent DRL approach was proposed in [18] to handle dynamic clustering. Although hierarchical structures can be effective, they are often complex to train. Attention mechanisms offer a more scalable solution. Algorithms such as MAAC [12] and MAGIC [22] use attention to learn dynamic communication graphs. Nev-ertheless, few existing works explicitly integrate relative velocity into the attention mechanism for resilient trajectory control. By embedding velocity vectors and spatial relations, the proposed TAG-MAPPO framework enables agents to perceive the evolution of the network topology. This approach enhances stability in high-mobility environments and ensures that the remaining swarm can autonomously re-optimize coverage after a catastrophic node failure. 
+
+3 System Model 3.1 3D Aerial-Ground Network Architecture 
+
+3.1.1 Scenario Description. We consider a dynamic High-Mobility Edge Coverage scenario within 6G Non-Terrestrial Networks (NTN). As illustrated in Figure 1, a fleet of Unmanned Aerial Vehicles (UAVs) operates as a flying small-cell tier to assist a macro Ground Base Station (GBS). This archi-tecture is specifically designed for dynamic clusters such as vehicular platoons or emergency fleets, effectively addressing severe spatiotemporal non-stationarity. The UAV swarm dynamically tracks  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:5 Macro Ground Base Station
+> (GBS)
+> UAV
+
+Fig. 1. Illustration of the dynamic 3D aerial-ground integrated network scenario. A fleet of UAVs functions as flying base stations to assist the Macro GBS in serving high-mobility vehicular platoons at a traffic in-tersection. The red solid arrows represent the high-capacity wireless backhaul links connected to the GBS (Data Plane), forming a star topology. The blue dotted lines denote the inter-UAV coordination links for ex-changing local state information (Control Plane). The dashed ovals indicate the directional service footprints dynamically tracking the moving user clusters. 
+
+user mobility to offload traffic and maintain reliable Line-of-Sight (LoS) connectivity, thereby mit-igating the inherent coverage limitations of terrestrial infrastructure. 
+
+3.1.2 Physical Configuration and Survivability. The system comprises 𝐾 𝑈 rotary-wing UAVs and one stationary Ground Base Station (GBS), totaling 𝐾 = 𝐾 𝑈 + 1 serving nodes. These nodes are deployed to serve 𝑀 ground users distributed over a square target area 𝒟 ⊂ ℝ 2. Let 𝒦 𝑈 ={1, … , 𝐾 𝑈 } denote the set of mobile UAVs and ℳ = {1, … , 𝑀} denote the set of users. The GBS is situated at the center of the target area pGBS = [𝑥 𝑐 , 𝑦 𝑐 , 0] 𝑇 to provide stable backhaul connectivity. To characterize system resilience, we define a node survival indicator 𝜉 𝑘 (𝑡) ∈ {0, 1} for each UAV 𝑘 ∈ 𝒦 𝑈 . If UAV 𝑘 is operational at time 𝑡 , 𝜉 𝑘 (𝑡) = 1 ; otherwise, 𝜉 𝑘 (𝑡) = 0 represents a sudden hardware failure or energy depletion. Since the GBS is stationary and assumed to have a persistent power supply, we define 𝜉 GBS (𝑡) = 1 for all 𝑡 .Based on these indicators, the active subset of serving nodes at time 𝑡 is defined as 𝒱 (𝑡) = {𝑘 ∈ 
+
+𝒦 𝑈 ∣ 𝜉 𝑘 (𝑡) = 1} ∪ { GBS }. An inactive UAV ( 𝜉 𝑘 (𝑡) = 0 ) is characterized by the cessation of all locomotion and transmission functions, effectively being removed from the coordination process and the interference environment. The state of each operational UAV 𝑘 ∈ 𝒱 (𝑡)∖{ GBS } is defined by its 3D coordinates p𝑘 (𝑡) = [𝑥 𝑘 (𝑡), 𝑦 𝑘 (𝑡), 𝑧 𝑘 (𝑡)] 𝑇 and its instantaneous velocity vector v𝑘 (𝑡) , which is subject to a maximum flight speed constraint ‖v𝑘 (𝑡)‖ ≤ 𝑉 UAV max . Furthermore, UAV flight altitudes are constrained within a safe operational corridor [𝐻 min , 𝐻 max ].
+
+3.1.3 Inter-UAV Coordination and Control Plane. To enable cooperative behavior, the UAV swarm and the ground infrastructure are modeled as a dynamic graph 𝒢 (𝑡) = ( 𝒱 (𝑡), ℰ(𝑡)) , where the  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:6 Lai et al.
+
+vertex set 𝒱 (𝑡) incorporates both the surviving UAV nodes and the stationary GBS as defined in Section 3.1. An undirected edge exists between two operational UAVs if their Euclidean distance remains within the maximum communication range 𝑅 comm . Distinctly, the GBS maintains persis-tent, long-range control-plane connectivity with all UAVs within the target area to facilitate global coordination and centralized value estimation. Through these coordination links, agents exchange low-overhead state information—including instantaneous velocities and latent policy embeddings—within their local one-hop neighborhood. This decentralized information exchange facilitates the proposed topology-aware attention mech-anism, empowering the swarm to autonomously re-configure its coordination weights whenever 
+
+𝒢 (𝑡) undergoes topological ruptures due to sudden UAV node failures. 
+
+3.1.4 Wireless Backhaul (Data Plane). We assume a star topology for the data plane, where each surviving UAV 𝑘 ∈ 𝒱 (𝑡) ∖ { GBS } maintains a high-capacity wireless backhaul link with the fixed GBS located at pGBS . The backhaul capacity is assumed to be sufficiently provisioned to support peak aggregate traffic. Consequently, the overall system performance is predominantly limited by the dynamic fronthaul access links between the UAVs and ground users rather than backhaul constraints. 
+
+3.2 User Distribution and Mobility Models 
+
+The spatial dynamics of ground users are characterized through initialization and temporal evolu-tion phases, both of which are contingent on the specific environmental scenario. 
+
+3.2.1 Initial Spatial Distribution. At the beginning of an episode ( 𝑡 = 0 ), user positions are initial-ized based on their logical topology to simulate heterogeneous service requirements. 
+
+• Clustered (Urban/Suburban): To represent high-density hotspots, users are partitioned into 𝐾 𝑈 +1 clusters using the K-Means algorithm, where 𝐾 𝑈 denotes the number of available UAVs. The cluster whose centroid is closest to the GBS coordinates pGBS is assigned to the terrestrial macro-cell for baseline service, while the remaining 𝐾 𝑈 clusters are designated as target zones for the UAV swarm. Within each cluster, users follow a 2D Gaussian distribution 
+
+𝒩 (c𝑗 , 𝜎 2𝑐 ) around the respective centroid c𝑗 .
+
+• Uniform (Rural): In sparse scenarios, the initial positions q𝑚 (0) are uniformly distributed across the target area 𝒟 . In this case, users connect to either the GBS or a UAV based on the Max-RSSI association policy. 
+
+3.2.2 Mobility Dynamics. We employ two distinct mobility models to capture realistic movement patterns. To avoid confusion with reinforcement learning parameters, we utilize specific notation for kinematic updates: 
+
+• Reference Point Group Mobility (RPGM) for Urban/Suburban: In high-density scenar-ios, users exhibit collective behavior. The motion of user 𝑚 belonging to cluster 𝑗 is governed by the reference velocity of the group center. The user position q𝑚 (𝑡) at time 𝑡 is expressed as q𝑚 (𝑡) = c𝑗 (𝑡) + d𝑚,𝑗 (𝑡) , where c𝑗 (𝑡) is the dynamic position of the group center and d𝑚,𝑗 (𝑡) 
+
+represents the relative displacement vector simulating individual deviation within the group. 
+
+• Gauss-Markov (GM) for Rural: For independent users, we minimize abrupt velocity changes through the GM model. Let v𝑚 (𝑡) denote the velocity of user 𝑚 . The update follows the rule: 
+
+v𝑚 (𝑡 + 1) = 𝛼 GM v𝑚 (𝑡) + (1 − 𝛼 GM )̄ v𝑚 + √1 − 𝛼 2
+
+> GM
+
+𝜖 𝑚 (𝑡), (1) where 𝛼 GM ∈ [0, 1] is the memory parameter controlling temporal correlation. The term ̄ v𝑚 
+
+is the asymptotic mean velocity and 𝜖 𝑚 (𝑡) is an independent Gaussian noise process.  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:7
+
+3.3 Channel Propagation and Interference Models 
+
+The communication performance is governed by the propagation characteristics of both terrestrial and air-to-ground links. 
+
+3.3.1 Terrestrial Channel (GBS-User). The path loss 𝐿 GBS ,𝑚 (𝑡) in dB between the macro GBS and user 𝑚 is modeled using a log-normal shadowing approach: 
+
+𝐿 GBS ,𝑚 (𝑡) = PL (𝑑 0) + 10𝜅 log 10 ( 𝑑 GBS ,𝑚 (𝑡) 𝑑 0
+
+) + 𝜒 𝜎 , (2) where PL (𝑑 0) represents the path loss at a reference distance 𝑑 0, 𝜅 is the path loss exponent, and 
+
+𝑑 GBS ,𝑚 (𝑡) denotes the 3D Euclidean distance. The term 𝜒 𝜎 accounts for shadow fading, which fol-lows a zero-mean Gaussian distribution with a standard deviation 𝜎 .
+
+3.3.2 Air-to-Ground Channel (UAV-User). The link between an operational UAV 𝑘 ∈ 𝒱 (𝑡) and user 𝑚 incorporates probabilistic Line-of-Sight (LoS) propagation. The LoS probability 𝑃 LoS ,𝑘,𝑚 (𝑡) 
+
+is calculated as a function of the elevation angle between the UAV and the user. Consequently, the average path loss PL 𝑘,𝑚 (𝑡) is expressed as follows: PL 𝑘,𝑚 (𝑡) = 𝑃 LoS ,𝑘,𝑚 (𝑡)𝜂 LoS + (1 − 𝑃 LoS ,𝑘,𝑚 (𝑡))𝜂 NLoS + 20 log 10 ( 4𝜋𝑓 𝑐 𝑑 𝑘,𝑚 (𝑡) 𝑐 ) , (3) where 𝜂 LoS and 𝜂 NLoS are the excessive path loss coefficients for LoS and NLoS conditions, 𝑓 𝑐 is the carrier frequency, and 𝑐 is the speed of light. 
+
+3.3.3 Directional Antenna Gain. Each UAV is equipped with a directional antenna to suppress co-channel interference. Let 𝜙 𝑘,𝑚 (𝑡) be the off-axis angle of user 𝑚 relative to the vertical boresight of UAV 𝑘 . The antenna gain 𝐺 tx (𝜙 𝑘,𝑚 ) follows a flat-top model: 
+
+𝐺 tx (𝜙 𝑘,𝑚 ) = { 𝐺 main , if |𝜙 𝑘,𝑚 (𝑡)| ≤ Θ 𝐵 
+
+𝐺 side , otherwise , (4) where 𝐺 main and 𝐺 side are the gains for the main-lobe and side-lobe, respectively, and 2Θ 𝐵 rep-resents the half-power beamwidth. The effective channel gain is defined as ℎ𝑘,𝑚 (𝑡) = 𝐺 tx (𝜙 𝑘,𝑚 ) ⋅ 10 −PL 𝑘,𝑚 (𝑡)/10 .
+
+3.4 Interference Model and Data Rate 
+
+We assume a universal frequency reuse strategy where all operational UAVs in the set 𝒱 (𝑡) share the same frequency band 𝐵 .
+
+3.4.1 Signal-to-Interference-plus-Noise Ratio (SINR). Assuming a Max-RSSI association policy where user 𝑚 connects to an active UAV 𝑘 ∈ 𝒱 (𝑡) ∖ { GBS }, the received SINR 𝛾 𝑘,𝑚 (𝑡) is formulated as follows: 
+
+𝛾 𝑘,𝑚 (𝑡) = 𝑃 tx ℎ𝑘,𝑚 (𝑡) 𝑁 0𝐵 + ∑ 𝑗∈ 𝒱 (𝑡)∖𝑘, GBS 𝑃 tx ℎ𝑗,𝑚 (𝑡) + 𝑃 GBS ℎGBS ,𝑚 (𝑡) , (5) where 𝑃 GBS ℎGBS ,𝑚 (𝑡) represents the co-channel interference from the terrestrial GBS. The summa-tion in the denominator is restricted to the active UAV set 𝒱 (𝑡) ∖ {𝑘, GBS }, which indicates that failed nodes do not contribute to co-channel interference. This formulation, combined with the persistent interference from the GBS, ensures that aggregate interference is calculated only over the surviving serving nodes.  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:8 Lai et al.
+
+3.4.2 Achievable Data Rate. Based on the assumption of equal bandwidth sharing among users associated with the same UAV, the downlink data rate 𝑅 𝑚 (𝑡) for user 𝑚 served by UAV 𝑘 is given by 
+
+𝑅 𝑚 (𝑡) = 𝐵 𝑁 𝑘 (𝑡) log 2(1 + 𝛾 𝑘,𝑚 (𝑡)), (6) where 𝑁 𝑘 (𝑡) denotes the total load representing the number of users currently served by UAV 𝑘 .
+
+3.5 UAV Power Consumption Model 
+
+We adopt an analytical power model for rotary-wing UAVs to characterize the energy efficiency of the networks. Let 𝑣 𝑘 (𝑡) = ‖ v𝑘 (𝑡)‖ be the instantaneous scalar speed of UAV 𝑘 . The propulsion power 𝑃 fly  
+
+> 𝑘
+
+(𝑡) required for maintaining flight at speed 𝑣 𝑘 (𝑡) is formulated as follows [30]: 
+
+𝑃 fly  
+
+> 𝑘
+
+(𝑡) = 𝑃 0 (1 + 3𝑣 𝑘 (𝑡) 2
+
+𝑈 2
+
+> tip
+
+) + 𝑃 𝑖 (√1 + 𝑣 𝑘 (𝑡) 4
+
+4𝑣 40
+
+− 𝑣 𝑘 (𝑡) 2
+
+2𝑣 20
+
+)
+
+> 1/2
+
++ 12 𝑑 fuse 𝜌𝑠𝐴𝑣 𝑘 (𝑡) 3, (7) where 𝑃 0 and 𝑃 𝑖 represent the blade profile power and induced power in hovering status, respec-tively. The constant 𝑈 tip denotes the tip speed of the rotor blade, and 𝑣 0 is the mean rotor induced velocity when hovering. The parameters 𝑑 fuse , 𝜌 , 𝑠 , and 𝐴 represent the fuselage drag ratio, air den-sity, rotor solidity, and rotor disc area, respectively. Specifically, the three terms in (7) correspond to the blade profile power, induced power, and parasitic power required to overcome fuselage drag. Beyond the propulsion of aerial nodes, the total network power consumption 𝑃 total (𝑡) incorpo-rates the energy cost of both the dynamic UAV swarm and the fixed ground infrastructure. It is expressed as: 
+
+𝑃 total (𝑡) = 
+
+> 𝐾 𝑈
+
+∑
+
+> 𝑘=1
+
+𝜉 𝑘 (𝑡)(𝑃 fly  
+
+> 𝑘
+
+(𝑡) + 𝑃 comm ) + 𝑃 GBS , (8) where 𝐾 𝑈 = 4 is the number of mobile UAVs, and the total serving nodes are 𝐾 = 𝐾 𝑈 + 1 . 𝑃 GBS 
+
+denotes the constant power consumption of the stationary GBS, which includes its signal process-ing and backhaul transmission circuitry. The inclusion of the survival indicator 𝜉 𝑘 (𝑡) ensures that power is only aggregated over operational UAVs, reflecting the physical reality that a failed node no longer draws propulsion or communication power from the system’s aggregate resources. 
+
+4 Problem Formulation 4.1 Network Utility Maximization 
+
+The primary objective is to maintain service continuity, load balance, and system stability amidst rapid user mobility and potential node failures. We define a composite utility function 𝑈 (𝑡) derived from key performance indicators (KPIs) reflecting both Quality of Service (QoS) and Quality of Experience (QoE). 
+
+4.1.1 System Capacity. To characterize the service capability of the aerial network, let 𝑅 𝑚 (𝑡) de-note the instantaneous data rate of user 𝑚 at time 𝑡 . The total system throughput is defined as the aggregate data rate of all ground users: 
+
+𝑅 sum (𝑡) = 
+
+> 𝑀
+
+∑
+
+> 𝑚=1
+
+𝑅 𝑚 (𝑡). (9) This metric reflects the capability of the swarm to manage co-channel interference and handle high-density traffic clusters. In the event of a node failure, a stable 𝑅 sum (𝑡) indicates that the surviving  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:9
+
+UAVs have successfully re-coordinated their spatial positions to compensate for the lost service capacity. 
+
+4.1.2 Global Energy Efficiency. To address the stringent power constraints of battery-limited UAVs, we maximize the Global Energy Efficiency (EE). This metric represents the bits delivered per Joule of energy consumed by the entire heterogeneous network 𝒱 (𝑡) :
+
+𝐸 eff (𝑡) = 𝑅 sum (𝑡) ∑𝑘∈ 𝒱 (𝑡)∖ GBS (𝑃 fly  
+
+> 𝑘
+
+(𝑡) + 𝑃 comm ) + 𝑃 GBS 
+
+, (10) where 𝑃 fly  
+
+> 𝑘
+
+(𝑡) is the propulsion power required for UAV 𝑘 to maintain flight at its instantaneous speed, while 𝑃 GBS represents the constant power consumption of the stationary ground infras-tructure. By evaluating 𝐸 eff (𝑡) , we can assess whether the observed network resilience is achieved through energy-efficient maneuvers or via aggressive, high-speed propulsion that significantly reduces the endurance of the swarm. 
+
+4.1.3 Coverage and QoS Satisfaction. We define the binary coverage status as 𝑐 𝑚 (𝑡) = 𝕀(𝑅 𝑚 (𝑡) ≥ 𝑅 th ), where 𝑅 th is the minimum rate threshold. The network-wide coverage ratio is 𝐶 cov (𝑡) =  
+
+> 1𝑀
+
+∑𝑀 𝑚=1 𝑐 𝑚 (𝑡) . Furthermore, we track the minimum user rate 𝑅 min (𝑡) = min 𝑚 𝑅 𝑚 (𝑡) to penalize worst-case performance, which is particularly critical during the reconfiguration phase following a node failure. 
+
+4.1.4 Fairness Metrics. We employ Jain’s Fairness Index across two dimensions to ensure equitable service. First, Rate Fairness 𝒥 R(𝑡) ensures comparable data speeds among users: 
+
+𝒥 R(𝑡) = (∑ 𝑀 𝑚=1 𝑅 𝑚 (𝑡)) 2
+
+𝑀 ∑ 𝑀 𝑚=1 (𝑅 𝑚 (𝑡)) 2 + 𝜖 , (11) where 𝜖 is a small constant for numerical stability. Second, Load Fairness 𝒥 L(𝑡) prevents congestion by evaluating the distribution of connected users across the active UAV set 𝒱 (𝑡) ∖ { GBS }.
+
+4.1.5 Service Continuity and Handoff Cost. Frequent handoffs (HO) induce significant signaling overhead and service interruptions. Let 𝑢 𝑚 (𝑡) ∈ 𝒱 (𝑡) denote the association of user 𝑚 at time 𝑡 .A handoff event occurs if 𝑢 𝑚 (𝑡) ≠ 𝑢 𝑚 (𝑡 − 1) . We define the Handoff Cost as the total count of switching events: 
+
+𝐶 HO (𝑡) = 
+
+> 𝑀
+
+∑
+
+> 𝑚=1
+
+𝕀(𝑢 𝑚 (𝑡) ≠ 𝑢 𝑚 (𝑡 − 1)). (12) Minimizing 𝐶 HO (𝑡) is crucial for maintaining robust connection tracking, especially when users must be reassigned to new nodes following the failure of their primary serving UAV. 
+
+4.1.6 Composite Utility Function. The total utility 𝑈 (𝑡) incorporates a stability penalty to discour-age excessive handoffs: 
+
+𝑈 (𝑡) = 𝑈 QoS (𝑡) − 𝜆 HO 𝐶 HO (𝑡), (13) where 𝑈 QoS (𝑡) is the weighted sum of normalized KPIs: 
+
+𝑈 QoS (𝑡) = 𝜆 EE ̃ 𝐸 eff (𝑡) + 𝜆 JR 𝒥 R(𝑡) + 𝜆 JL 𝒥 L(𝑡) + 𝜆 Cov 𝐶 cov (𝑡) + 𝜆 Min ̃ 𝑅 min (𝑡). (14) In this formulation, 𝜆(⋅) represents weighting coefficients that balance aggressive throughput max-imization against conservative stability maintenance. This hierarchical structure allows the pro-posed framework to prioritize mission endurance and service continuity during the rapid recon-figuration phases.  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:10 Lai et al.
+
+4.2 Optimization Problem Statement and Feasibility Analysis 
+
+We aim to optimize the joint 3D trajectories of all operational UAVs within the dynamic set 𝒱 𝑈 (𝑡) = 
+
+𝒱 (𝑡) ∖ { GBS } to maximize the long-term time-averaged utility. The optimization problem is formu-lated as follows: 
+
+(P1 ) ∶ max  
+
+> P
+
+lim 
+
+> 𝑇 →∞
+
+1𝑇 
+
+> 𝑇
+
+∑
+
+> 𝑡=0
+
+𝔼[𝑈 (𝑡)] (15a) s.t. p𝑘 (𝑡 + 1) = p𝑘 (𝑡) + v𝑘 (𝑡)Δ𝑡, ∀𝑘 ∈ 𝒱 𝑈 (𝑡) (15b) 
+
+|v𝑘 (𝑡)| ≤ 𝑉 UAV max , ∀𝑘 ∈ 𝒱 𝑈 (𝑡) (15c) 
+
+𝐻 min ≤ 𝑧 𝑘 (𝑡) ≤ 𝐻 max , ∀𝑘 ∈ 𝒱 𝑈 (𝑡) (15d) 
+
+p𝑘 (𝑡) ∈ 𝒟 , ∀𝑘 ∈ 𝒱 𝑈 (𝑡) (15e) 
+
+|p𝑖 (𝑡) − p𝑗 (𝑡)| ≥ 𝑑 safe , ∀𝑖, 𝑗 ∈ 𝒱 (𝑡), 𝑖 ≠ 𝑗 (15f) The constraints specified in (15) define the physical boundaries of the heterogeneous network un-der potential topological disruptions. Specifically, the kinematic feasibility of the surviving UAV swarm is governed by (15b) and (15c). Flight corridor constraints in (15d) and (15e) restrict the UAV altitudes 𝑧 𝑘 (𝑡) and coordinates p𝑘 (𝑡) within compliant airspace. Finally, the collision avoid-ance requirement in (15f) mandates a minimum safety distance 𝑑 safe between any pair of active nodes, which includes both UAV-to-UAV and UAV-to-GBS separations. This is critical for prevent-ing secondary hardware failures during rapid reconfiguration when the remaining agents move aggressively to fill coverage gaps left by failed nodes. 
+
+Computational Challenges and Feasibility: The optimization problem ( P1 ) presents significant challenges that render classical analytical frameworks impractical for real-time deployment. First, the utility 𝑈 (𝑡) involves intricate dependencies on 3D coordinates, probabilistic channels, and dy-namic interference, creating a highly non-convex landscape where gradient-based methods fre-quently converge to suboptimal local optima. Second, the joint state-action space suffers from the curse of dimensionality because the complexity grows exponentially with the number of users 𝑀 
+
+and operational UAVs in the surviving set 𝒱 𝑈 (𝑡) . Third, the high-mobility environment and sud-den node failures imply that optimal trajectories derived for a specific snapshot quickly become obsolete. Classical iterative methods, such as Successive Convex Approximation (SCA), require significant re-computation time whenever the network topology undergoes a rupture, failing to satisfy the millisecond-level responsiveness required for 6G applications. Consequently, the necessity for a low-latency, inference-based control paradigm is evident. By reformulating ( P1 ) as a Deep Reinforcement Learning (DRL) task, the computational burden is shifted to the offline training phase. During online execution, the proposed TAG-MAPPO frame-work provides near-instantaneous control actions through a single forward pass, ensuring feasible real-time topology reconfiguration and rapid recovery after node failures. 
+
+4.3 Reformulation as a Multi-Agent DEC-POMDP 
+
+To address the intractability of ( P1 ), we reformulate the control problem as a Multi-Agent Decen-tralized Partially Observable Markov Decision Process (DEC-POMDP), characterized by the tuple 
+
+⟨𝒦 , 𝒮 , 𝒜 , 𝒫 , ℛ, Ω, 𝒪 , 𝛾 ⟩ .
+
+4.3.1 Global State Space 𝒮 . The global state 𝑠 𝑡 ∈ 𝒮 characterizes the complete configuration of the heterogeneous network at time 𝑡 . To ensure that the centralized critic evaluates the impact of node failures during the training phase, the global state incorporates the survival status of each  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:11
+
+agent. The state vector is defined as follows: 
+
+𝑠 𝑡 = {{ p𝑘 (𝑡), v𝑘 (𝑡), 𝜉 𝑘 (𝑡)} 𝑘∈ 𝒦 𝑈 , pGBS , { q𝑚 (𝑡), 𝑢 𝑚 (𝑡)} 𝑚∈ ℳ} , (16) where 𝒦 𝑈 denotes the set of 𝐾 𝑈 = 4 mobile UAVs. The inclusion of 𝜉 𝑘 (𝑡) captures the operational status of each UAV node. By incorporating the fixed GBS position pGBS and the dynamic user po-sitions q𝑚 (𝑡) , the critic can estimate the value function based on the complete spatial relationship between infrastructure, aerial nodes, and ground users.This comprehensive representation allows the model to capture the complex dependencies required for effective centralized training and decentralized execution. 
+
+4.3.2 Local Observation Space Ω. In decentralized execution, each operational UAV 𝑘 ∈ 𝒱 𝑈 (𝑡) 
+
+makes control decisions based on its local observation 𝑜 𝑘 (𝑡) . To achieve topology-invariant learn-ing and enhance spatial awareness, absolute coordinates are transformed into a UAV-centric rela-tive frame. The observation vector is defined as follows: 
+
+𝑜 𝑘 (𝑡) = [ xself  
+
+> 𝑘
+
+, xGBS  
+
+> 𝑘
+
+, Xneigh  
+
+> 𝑘
+
+, xuser  
+
+> 𝑘
+
+] , (17) where each component is formulated to capture specific environmental features: 
+
+• Self-State (x self  
+
+> 𝑘
+
+): This component contains the kinematic information of the agent itself, defined as xself  
+
+> 𝑘
+
+= [𝑧 𝑘 (𝑡), v𝑘 (𝑡)] . The altitude 𝑧 𝑘 (𝑡) and velocity vector v𝑘 (𝑡) are normalized based on the safe flight corridor and the maximum speed 𝑉 UAV max respectively. 
+
+• GBS Anchor (x GBS  
+
+> 𝑘
+
+): To provide a stable global reference point, the agent perceives its relative displacement to the fixed ground station. It is expressed as xGBS  
+
+> 𝑘
+
+= pGBS −p𝑘 (𝑡) . This feature allows the swarm to maintain a consistent coordinate origin even after the failure of other aerial nodes. 
+
+• Neighborhood Topology (X neigh  
+
+> 𝑘
+
+): This set consists of relative features from neighboring UAVs within the communication range 𝑅 comm . For each operational neighbor 𝑗 ∈ 𝒱 𝑈 (𝑡)∖{𝑘} ,the feature includes the relative position Δp𝑘𝑗 (𝑡) = p𝑗 (𝑡) − p𝑘 (𝑡) and the velocity v𝑗 (𝑡) . The combined set Xneigh  
+
+> 𝑘
+
+= {[Δ p𝑘𝑗 (𝑡), v𝑗 (𝑡)]} 𝑗∈ 𝒱 𝑈 (𝑡)∖{𝑘} is processed by the attention mechanism to dynamically re-weight coordination following failures. 
+
+• User Distribution Features (x user  
+
+> 𝑘
+
+): These features are perceived as localized user densi-ties or aggregated centroids within the service footprint. They provide the necessary spatial cues for tracking high-mobility vehicular platoons and identifying areas with high service demand. 
+
+4.3.3 Action Space 𝒜 . We define a discrete action space 𝒜 where each action 𝑎 𝑘 (𝑡) ∈ 𝒜 corre-sponds to a specific target velocity vector. To simulate the physical inertia of rotary-wing UAVs and ensure smooth motion, the actual velocity vector v𝑘 (𝑡 + 1) is updated according to the following kinematic rule: 
+
+v𝑘 (𝑡 + 1) = 𝛽 v𝑘 (𝑡) + (1 − 𝛽) vtarget (𝑎 𝑘 (𝑡)) + 𝜖, (18) where 𝛽 ∈ [0, 1) is the inertia coefficient and 𝜖 denotes the small mechanical noise vector. This formulation ensures that the resulting trajectories remain continuous while the norm of the target velocity vector is pre-scaled to satisfy the maximum flight speed constraint ‖v𝑘 (𝑡 + 1)‖ ≤ 𝑉 UAV max for all operational UAVs in 𝒱 𝑈 (𝑡) .
+
+4.3.4 Cooperative Reward Function ℛ. To foster full cooperation among the heterogeneous nodes, all agents share a common reward signal 𝑟(𝑡) based on the composite utility defined in Section 4.1.6. The reward at each time step is set as 𝑟(𝑡) = 𝑈 (𝑡) , which directly incorporates the weighted metrics  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:12 Lai et al.
+
+of global energy efficiency, rate fairness, load distribution, coverage ratio, and the stability penalty for handoffs. The primary objective of the swarm is to find an optimal joint policy 𝜋 that maximizes the expected discounted return: 
+
+𝐽 (𝜋) = 𝔼 [ 
+
+> ∞
+
+∑
+
+> 𝑡=0
+
+𝛾 𝑡 𝑟(𝑡)] , (19) where 𝛾 ∈ [0, 1) is the discount factor. By maximizing this return, the surviving UAVs are in-centivized to autonomously re-configure their spatial topology to compensate for service gaps while maintaining the system stability constraints specified in (13) and (14). This collective reward mechanism ensures that individual agent actions are aligned with the global network performance objectives under dynamic node failure conditions. 
+
+5 Topology-Aware Graph-based Multi-Agent Reinforcement Learning (TAG-MAPPO) 
+
+In this section, we propose the Topology-Aware Graph-based Multi-Agent Reinforcement Learn-ing (TAG-MAPPO) framework. This framework is specifically engineered to surmount the chal-lenges of high-mobility tracking and rapid topology deformation caused by both user movement and sudden node failures. To address the performance degradation typical of existing solutions in volatile environments, TAG-MAPPO adopts a Centralized Training with Decentralized Execution (CTDE) paradigm augmented by a specialized attention mechanism. Recent literature confirms that graph-based learning is uniquely suited for such dynamic wireless resource management tasks be-cause of its inherent scalability and generalization capabilities [7]. The design philosophy reconciles the need for real-time responsiveness on resource-constrained UAVs with the necessity for global coordination during training. Consequently, we introduce a lightweight Multi-Layer Perceptron (MLP) structure for decentralized actors to ensure low-latency execution. Conversely, a novel Topology-Aware Graph Attention (TA-GAT) mechanism is integrated into the centralized critic to tackle environmental non-stationarity. This architecture enables accurate value estimation from dynamic interaction graphs, which guides decentralized agents toward robust cooperative behaviors without imposing computational overhead during de-ployment. 
+
+5.1 Overview of the TAG-MAPPO Architecture 
+
+The overall architectural flow of the proposed TAG-MAPPO framework is illustrated in Figure 2. The processing pipeline is strictly structured to differentiate between the online execution phase and the offline centralized training phase. The workflow consists of three distinct stages. In the first stage, each UAV operates indepen-dently using a shared policy network during deployment. By encoding raw local observations via a compact MLP, the system generates control actions directly. A critical advantage of this design is that the inference complexity remains constant irrespective of the global network size or user density, which ensures high scalability. In the second stage, the critic constructs a dynamic, ego-centric graph for each agent during the centralized training phase. Unlike standard methods that treat inputs as static vectors, the critic employs the TA-GAT module to aggregate features from the active neighbor set 𝒱 (𝑡) ∖ {𝑘} . This generates a permutation-invariant representation that captures high-order cooperative patterns such as load balancing and interference management. In the final stage, the value estimate generated by the TA-GAT critic serves as a baseline to compute the Gen-eralized Advantage Estimation (GAE). This advantage signal acts as a teacher to guide the updates of the simplistic actor networks, which effectively distills the complex topological awareness of the critic into the lightweight actors via policy gradients. 
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026.
+
+Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:13 Multi UAV                             
+
+> Environment
+> Local Obs.
+> ok(t)
+> Local Feature
+> Embedding 𝐡 𝒌
+> TA -GAT Mechanism
+> Context
+> ck
+> Policy Head
+> (MLP )
+> Value Head
+> (MLP)
+> Value
+> V𝜙 (St)
+> Action ak(t)
+> Global State
+> St= { o1, ..., oK}
+> Reward rt
+> State Transition
+> (t→t+ 1)
+> Actor Encoder
+> (MLP)
+> Execute Joint Action and Update the Environment with Kinematics & Channel Model
+> 2. Centralized Training (Critic)
+> 1. Decentralized Execution (Actor)
+> Update 𝜙 CriticEncoder
+> Update θ
+> Critic Encoder
+> (MLP)
+> Features H
+> {𝐡 𝟏 , ..., 𝐡 𝑲 }
+> Neighbors
+> Target 𝐡 𝑘
+> ×
+> 𝐖 𝑸
+> 𝐖 𝑲
+> 𝐖 𝑽
+> Query 𝑞 𝑘
+> Key 𝑘 𝑗
+> Value 𝑣 𝑗
+> 1
+> 𝑑 MASK
+> Topology 𝐺 𝑡
+> (𝐴 𝑘𝑗 =0?)
+> 𝜎
+> Softmax
+> Weights
+> 𝛼 𝑘𝑗
+> ∑Weighted Sum
+> Update 𝜙 ValueHead
+> Update 𝜙 TA −GAT
+> Global Pooling
+> Advantage &
+> Loss Calculation
+> (LCLIP ,LVF )
+> ||
+> Skip Connection (Preserves Self -Info)
+> Concatenate Random
+> Shuffling (ROS)
+
+Fig. 2. The schematic architecture of the proposed TAG-MAPPO framework: (1) Decentralized Execution (Ac-tor): Each UAV agent utilizes a lightweight, shared MLP encoder to map local observations 𝑜 𝑘 (𝑡) to actions, ensuring real-time responsiveness. (2) Centralized Training (Critic): The critic leverages a Topology-Aware Graph Attention (TA-GAT) mechanism to estimate state values 𝑉 𝜙 (𝑠 𝑡 ). This module employs a decoupled dual-path strategy. A Random Observation Shuffling (ROS) operator is applied to the neighbor feature set 
+
+{h𝑗 }𝑗∈ 𝒩 𝑘 (𝑡) to ensure permutation invariance. Simultaneously, a bold red skip connection preserves the ego-state information h𝑘 to maintain operational consistency. This architecture enables the framework to per-form precise relational reasoning and rapid spatial reconfiguration, which ensures robust coordination even under sudden node failures. 
+
+5.2 Dynamic Ego-Centric Graph Representation 
+
+To formalize the time-varying interaction structure, the observation of the 𝑘 -th UAV is modeled as a dynamic ego-centric graph 𝒢 𝑘 (𝑡) = ( 𝒱 𝑘 (𝑡), ℰ𝑘 (𝑡)) . The node set 𝒱 𝑘 (𝑡) incorporates the ego-UAV itself, the fixed Ground Base Station (GBS), and a dynamic set of neighboring UAV agents 
+
+𝒩 𝑘 (𝑡) located within the communication range 𝑅 comm . Crucially, in high-mobility scenarios, the cardinality of the neighbor set |𝒩 𝑘 (𝑡)| is highly volatile. As UAVs and users adjust their positions or when a node failure occurs, topological links are frequently established or broken. Standard MLPs struggle to process such variable-length inputs efficiently because they often require zero-padding that introduces computational waste or numerical noise. In contrast, our graph-based formulation allows the critic to naturally handle these topological fluctuations without structural modification. The attention mechanism can autonomously redistribute priority weights or ignore the absence of failed nodes, ensuring stable value estimation across fragmented network states. 
+
+5.3 Feature Extraction and Embedding with Shuffling 
+
+Before applying the attention mechanism, raw sensory data must be transformed into high-level latent representations. Reflecting the CTDE architecture, distinct encoders are employed for the decentralized actors and the centralized critic to cater to their specific functional roles. 
+
+ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:14 Lai et al. 
+
+For each decentralized actor, the local raw observation is mapped into a compact local embed-ding vector via a lightweight MLP encoder. This encoder is shared across all UAV agents to facil-itate parameter efficiency and cooperative behavior. The resulting local embedding encapsulates the immediate kinematic state required for reactive control and serves as the primary input for the policy head. The centralized critic employs a more sophisticated encoding scheme to handle the global state information. To ensure that the learned policy remains robust against the indexing order of agents, we introduce a Random Observation Shuffling (ROS) mechanism during the training phase. Be-fore entering the TA-GAT layer, the neighbor feature set is processed by a stochastic permutation operator to achieve Permutation Invariance :̃
+
+Xneigh  
+
+> 𝑘
+
+(𝑡) = StochasticPermutation ({ h𝑗 (𝑡)} 𝑗∈ 𝒩 𝑘 (𝑡) ) . (20) This ensures that the critic learns to prioritize neighbors based on their physical attributes rather than their position in the input tensor. By projecting these diverse inputs into a unified feature space, the encoders enable the TA-GAT layer to perform effective relational reasoning under vary-ing topological densities. Crucially, the ROS mechanism is applied only to the neighboring agent set {h𝑗 (𝑡)} 𝑗∈ 𝒩 𝑘 (𝑡) , while the ego-state feature h𝑘 (𝑡) remains fixed as an anchor for the attention query. This decoupled shuffling strategy forces the attention mechanism to learn the relative topological relationships between the target UAV and its surrounding swarm. By treating the neighborhood as an unordered collection of relational entities, the policy becomes resilient to dynamic changes in the agent pop-ulation. This design directly contributes to the system’s self-healing capabilities. When a neighboring node disappears due to hardware failure, the remaining agents can maintain stable coordination because the learned feature aggregation is independent of specific neighbor indices. By projecting these diverse and permuted inputs into a unified feature space, the encoders enable the TA-GAT layer to perform effective relational reasoning under varying topological densities and volatile operational conditions. 
+
+5.4 Topology-Aware Graph Attention Mechanism (TA-GAT) 
+
+A fundamental challenge in applying Graph Neural Networks to UAV control is the potential di-lution of the agent’s own state information when aggregating neighbor features. To address the challenge of topology deformation, we introduce a Dual-Path Aggregation strategy within the TA-GAT layer. 
+
+5.4.1 Attention-based Neighbor Aggregation. The first path focuses on understanding the environ-ment. The relevance of each neighbor 𝑗 to the ego-agent 𝑘 is computed using an attention mech-anism. Features are projected into Query, Key, and Value spaces using learnable weight matrices 
+
+W𝑄 , W𝐾 , and W𝑉 . The attention score 𝑒 𝑘𝑗 (𝑡) , which represents the importance of neighbor 𝑗 , is computed using the Scaled Dot-Product Attention: 
+
+𝑒 𝑘𝑗 (𝑡) = (W𝑄 h𝑘 (𝑡)) 𝑇 (W𝐾 h𝑗 (𝑡)) √𝑑 attn 
+
+. (21) In this expression, 𝑑 attn denotes the dimensionality of the query and key vectors. The scaling factor 
+
+1/ √𝑑 attn is employed to counteract the effect of large dot-product values, which would otherwise push the softmax function into regions with extremely small gradients. To handle the variable number of neighbors, a topology mask is applied to the attention scores. These scores are then normalized via the softmax function to obtain attention weights 𝛼 𝑘𝑗 (𝑡) . 
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:15
+
+These weights are subsequently used to aggregate neighbor features into a Neighbor Context Vector 
+
+cneigh (𝑡) :
+
+cneigh (𝑡) = ∑
+
+> 𝑗∈ 𝒱 (𝑡)∖{𝑘}
+
+𝛼 𝑘𝑗 (𝑡)( W𝑉 h𝑗 (𝑡)). (22) This vector summarizes the collective influence of the neighborhood, which is weighted by kine-matic relevance such as relative velocity and distance to the ego-agent. 
+
+5.4.2 Dual-Path Fusion and Skip Connection. To prevent the dilution of the agent’s own kinematic features, we employ a skip connection architecture. The processed ego-feature is concatenated di-rectly with the aggregated neighbor context. The final topology-aware embedding g𝑘 (𝑡) is defined as: 
+
+g𝑘 (𝑡) = MLP head ([ Wself h𝑘 (𝑡) ‖ cneigh (𝑡)]) , (23) where ‖ denotes the concatenation operation. This structure ensures that the critic maintains a sharp awareness of the agent’s own capabilities while fully accounting for the topological influence of its neighbors. This fused feature is passed to the value head to estimate the state value 𝑉 𝜙 (𝑠 𝑡 ).
+
+5.5 Multi-Agent Actor-Critic Learning 
+
+The proposed TA-GAT mechanisms are integrated into the MAPPO framework to enable stable learning in volatile environments. Each UAV agent 𝑘 optimizes its local policy 𝜋 𝜃 to maximize the clipped PPO objective: 
+
+𝐿(𝜃) = 𝔼 𝑘,𝑡 [min (𝜌 𝑘 (𝑡)𝐴 𝑘 (𝑡), clip (𝜌 𝑘 (𝑡), 1 − 𝜖, 1 + 𝜖)𝐴 𝑘 (𝑡))] , (24) where 𝜌 𝑘 (𝑡) is the probability ratio between the new and old policies, and 𝐴 𝑘 (𝑡) is the advantage calculated via GAE based on the TA-GAT value estimate. To enhance training stability against potential value outliers caused by rapid topology changes or sudden node failures, we employ the Huber Loss for the critic update: 
+
+ℒ(𝜙) = {  
+
+> 12
+
+(𝑦 𝑡 − 𝑉 𝜙 (𝑠 𝑡 )) 2 for |𝑦 𝑡 − 𝑉 𝜙 (𝑠 𝑡 )| ≤ 𝛿, 𝛿(|𝑦 𝑡 − 𝑉 𝜙 (𝑠 𝑡 )| − 12 𝛿) otherwise , (25) where 𝑦 𝑡 denotes the temporal difference target and 𝜙 represents the learnable parameters of the TA-GAT critic. The hyperparameter 𝛿 serves as a threshold that determines the transition point from quadratic to linear loss. This formulation provides enhanced robustness by behaving quadrat-ically for small estimation errors while maintaining a constant gradient for large errors. Such a property ensures that the gradient updates remain stable even during drastic topology shifts or reward spikes triggered by unexpected node failures. 
+
+5.6 TAG-MAPPO Training Algorithm 
+
+The complete training procedure for the TAG-MAPPO framework is formalized in Algorithm 1. The optimization pipeline is structured into two distinct phases, namely decentralized data collection and centralized parameter updates. In the first phase, distributed UAV agents interact with the environment using their lightweight actor networks. At each time step, agents rely solely on local observations to sample actions, which ensures that the inference latency remains constant regardless of the network size. If a node failure occurs during this phase, the surviving swarm 𝒱 (𝑡) must immediately adapt its coordination based on the remaining local observations. The transition data, including the instantaneous topology state 𝒱 (𝑡) , is stored in the replay buffer to provide the critic with the necessary context for post-failure value estimation.  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:16 Lai et al.
+
+Algorithm 1: Training Procedure for TAG-MAPPO with ROS 
+
+Initialize: Actor network 𝜋 𝜃 , Critic network 𝑉 𝜙 , Replay buffer 𝒟 , Optimizers. 
+
+Hyperparameters: Learning rate 𝜂 , Entropy coefficient 𝛽 , Clip ratio 𝜖 , Huber threshold 𝛿 . 
+
+> 1
+
+for episode 𝑚 = 1 to 𝑀 do  
+
+> 2
+
+Reset environment and obtain initial observations o(0) for all active UAVs in 𝒱 (0) ; 
+
+> 3
+
+𝒟 ← ∅ ;
+
+// Phase 1: Decentralized Data Collection  
+
+> 4
+
+for step 𝑡 = 0 to 𝑇 − 1 do  
+
+> 5
+
+for each operational agent 𝑘 ∈ 𝒱 (𝑡) do  
+
+> 6
+
+Extract local features: h𝑘 (𝑡) ← Enc actor (𝑜 𝑘 (𝑡)) ; 
+
+> 7
+
+Sample action from policy: 𝑎 𝑘 (𝑡) ∼ 𝜋 𝜃 (⋅| h𝑘 (𝑡)) ; 
+
+> 8
+
+end  
+
+> 9
+
+Execute joint actions a(𝑡) , observe reward 𝑟(𝑡) and next observations o(𝑡 + 1) ; 
+
+> 10
+
+Identify topological changes : Update surviving set 𝒱 (𝑡 + 1) if node failure occurs;  
+
+> 11
+
+Store transition (𝒱 (𝑡), o(𝑡), a(𝑡), 𝑟(𝑡), o(𝑡 + 1)) in 𝒟 ; 
+
+> 12
+
+end 
+
+// Phase 2: Centralized Parameter Update  
+
+> 13
+
+Compute value estimates 𝑉 𝜙 (𝑠 𝑡 ) and GAE advantages ̂ 𝐴 𝑡 using the TA-GAT critic based on captured 𝒱 (𝑡) ; 
+
+> 14
+
+for epoch 𝑗 = 1 to 𝐾 epochs do  
+
+> 15
+
+Generate random minibatches from 𝒟 ; 
+
+> 16
+
+for each minibatch ℬ ⊂ 𝒟 do  
+
+> 17
+
+for each agent 𝑘 in minibatch ℬ do  
+
+> 18
+
+Apply Random Observation Shuffling (ROS) :̃
+
+𝒩 𝑘 (𝑡) ← permute (𝒩 𝑘 (𝑡)) ; 
+
+> 19
+
+Construct ego-centric graph 𝒢 𝑘 (𝑡) and compute attention weights 𝛼 𝑘𝑗 (𝑡) ; 
+
+> 20
+
+Aggregate context cneigh (𝑡) and perform dual-path fusion via (23);  
+
+> 21
+
+end  
+
+> 22
+
+Update Critic 𝜙 by minimizing Huber loss ℒ(𝜙) based on TD-error;  
+
+> 23
+
+Update Actor 𝜃 by maximizing PPO-Clip objective 𝐿(𝜃) with entropy bonus 𝛽 ; 
+
+> 24
+
+end  
+
+> 25
+
+end  
+
+> 26
+
+Anneal entropy coefficient 𝛽 and learning rates 𝜂 linearly;  
+
+> 27
+
+end 
+
+In the second phase, the system executes centralized updates. Before optimization, the General-ized Advantage Estimation (GAE) is computed to balance the bias-variance trade-off. During this stage, the TA-GAT critic plays a pivotal role by reconstructing the dynamic ego-centric graph for each sample in the minibatch. Specifically, the ROS mechanism is applied to the neighbor feature set before graph aggregation. By stochastically reordering the input neighbors, the critic is forced to learn relational features that are invariant to agent indexing. By executing the dual-path ag-gregation, the critic predicts state values to compute the Huber-based value loss. This mechanism  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:17
+
+ensures that the lightweight actors are trained to be topology-aware by distilling the complex relational knowledge of the critic into the simplistic policy networks. 
+
+5.7 Computational Complexity Analysis 
+
+During the online execution phase, the computational complexity is dominated by matrix-vector multiplications within the MLP-based actors, which scales as 𝒪 (𝐿 ⋅ 𝐷 2) where 𝐿 is the number of layers and 𝐷 is the hidden dimension. This complexity is strictly independent of the number of dynamic neighbors, which satisfies the real-time constraints required for 6G mission-critical tasks. During the offline training phase, the complexity is primarily driven by the attention mechanism within the centralized critic. For each agent, the TA-GAT module involves linear projections and scaled dot-product computations. For an ego-centric graph, this scales as 𝒪 ((| 𝒱 (𝑡)| + | 𝒩 𝑘 (𝑡)|) ⋅ 𝐷) ,where |𝒩 𝑘 (𝑡)| is the number of active neighbors. While the attention operation involves more intensive processing than simple MLPs, its execution is restricted to the centralized training server with substantial computational resources. Consequently, TAG-MAPPO achieves an optimal trade-off by utilizing topology-aware reasoning offline to distill robust policies into efficient, lightweight actors for deployment. 
+
+6 Simulation Results and Analysis 
+
+In this section, we conduct extensive simulations to evaluate the performance and resilience of the proposed TAG-MAPPO framework. We first outline the simulation setup and then analyze the experimental results across various environmental scenarios, with a particular focus on the system recovery capability following node failures. 
+
+6.1 Simulation Setup and Parameters 
+
+The simulation environment is developed using a customized Python-based multi-UAV simulator. The target area is defined as a 1000 × 1000 m2 square region served by a heterogeneous network consisting of 𝐾 𝑈 = 4 mobile UAVs and one stationary ground base station (GBS), totaling 𝐾 = 5 
+
+serving nodes for 𝑀 = 140 ground users. The flight altitude corridor for UAVs is set between 
+
+𝐻 min = 80 m and 𝐻 max = 120 m. To accurately reflect heterogeneous mobility, the maximum UAV flight speed is capped at 𝑉 UAV max = 30 m/s, while the maximum speed for independent ground users is 𝑉 user max = 15 m/s. In clustered scenarios, the group velocity for vehicular platoons is maintained at 10 m/s. To ensure balanced learning across multiple objectives, all individual reward components in (14) are normalized to the range of [0, 1] . The weighting coefficients are empirically set as (𝜆 Cov , 𝜆 EE , 𝜆 JR , 𝜆 JL , 𝜆 Min )(2.0, 0.1, 0.5, 0.8, 0.5) , which prioritizes global coverage while maintaining service quality for the worst-case user. Additionally, the handoff penalty coefficient 𝜆 HO is specifically tuned to 0.1 to suppress redundant signaling and maintain topological stability during reconfiguration phases. To evaluate system resilience, a catastrophic node failure is programmed at 𝑡 = 100 by setting the survival indicator 𝜉 𝑘 (𝑡) = 0 for a randomly selected UAV node (excluding the GBS), forcing the remaining swarm to reconfigure the network topology autonomously. The consolidated parame-ters are detailed in Table 1. 
+
+6.2 Benchmark Scenarios and Channel Characterization 
+
+To evaluate the generalization and robustness of the TAG-MAPPO framework, we define three distinct simulation scenarios based on the physical parameters in the 3GPP propagation models. The specific LoS/NLoS characteristics for each environment are detailed as follows:  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:18 Lai et al.
+> Table 1. Consolidated Simulation Parameters and Hyperparameter Settings
+
+Parameter (Physical) Value Hyperparameter (DRL) Value 
+
+Number of UAVs ( 𝐾 𝑈 ) 4 Actor Learning Rate 1 × 10 −4 
+
+Ground Base Station (GBS) 1 Critic Learning Rate 5 × 10 −4 
+
+UAV Max Speed ( 𝑉 UAV max ) 30 m/s Discount Factor ( 𝛾 ) 0.99 User Max Speed ( 𝑉 user max ) 15 m/s GAE Parameter ( 𝜏 ) 0.95 Carrier Frequency ( 𝑓 𝑐 ) 2.0 GHz PPO Epochs 10 System Bandwidth ( 𝐵 ) 20 MHz Batch Size 256 Transmission Power ( 𝑃 tx ) 23 dBm Huber Loss Delta ( 𝛿 ) 2.0 Noise PSD ( 𝑁 0) −174 dBm/Hz Entropy Coeff. ( 𝛽 ent ) 0.10 → 0.01 
+
+Power & Geometry Value Reward Weights Value 
+
+Altitude Range [𝐻 min , 𝐻 max ] [80, 120] m Coverage ( 𝜆 Cov ) 2.0 GBS Fixed Power ( 𝑃 GBS ) 20 W Energy Efficiency ( 𝜆 EE ) 0.1 UAV Comm. Power ( 𝑃 comm ) 5 W Rate Fairness ( 𝜆 JR ) 0.5 Target Area 𝒟 1 × 1 km 2 Load Fairness ( 𝜆 JL ) 0.8 Safety Distance ( 𝑑 safe ) 10 m Minimum Rate ( 𝜆 Min ) 0.5 Number of Users ( 𝑀 ) 140 Handoff Penalty ( 𝜆 HO ) 0.1 
+
+• Crowded Urban: This scenario represents an interference-limited regime with high user density. We set the channel parameters as (𝑎 = 12.08, 𝑏 = 0.11) with a significant NLoS path loss exponent ( 𝜂 nlos = 23.0 ). The primary challenge is managing complex co-channel interference within user clusters modeled by the RPGM mobility. 
+
+• Suburban: This scenario features moderate user dispersion and a more balanced LoS prob-ability ( 𝑎 = 9.61, 𝑏 = 0.16 ). It serves as the baseline for evaluating the ”optimal resilience” of the UAV swarm, as the topology allows for effective spatial reuse. 
+
+• Rural Area: Characterized by sparse, Gauss-Markov independent mobility, this scenario is a noise-limited environment with a high LoS probability ( 𝑎 = 4.88, 𝑏 = 0.43 ). The lower blockage frequency simplifies individual link optimization but tests the ”over-smoothing” limits of the graph coordination mechanism. 
+
+6.3 Performance Metrics 
+
+To quantify the system’s performance and its adaptive behavior under disruptions, we evaluate the following four key metrics, leveraging the formal definitions provided in Section 4: 
+
+• Network Resilience ( 𝐶 cov & 𝒥 R): We evaluate the post-failure recovery of the Coverage Ratio and Jain’s Fairness Index as defined in Sections 4.1.3 and 4.1.4, respectively. These serve as the primary indicators of the swarm’s “survivability” and its autonomous ability to re-equilibrate service distribution after a loss of hardware resources. 
+
+• Topological Stability ( 𝐶 HO ): This represents the total handoff count per episode. As defined in Section 4.1.5, this metric is critical for assessing whether the controller maintains service through stable spatial positioning or via erratic user-UAV re-associations that would trigger signaling storms in real-world 6G deployments. 
+
+• Operational Efficiency ( 𝐸 eff ): Defined in Section 4.1.2, this global energy efficiency metric reflects the ratio of system throughput to the total power consumption of the active UAV set 𝒱 (𝑡) . It evaluates the sustainability of the swarm’s movement and service strategy.  
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:19
+
+• System Capacity ( 𝑅 sum ): The aggregated system throughput as defined in Section 4.1.1. This metric reflects the swarm’s capability to mitigate co-channel interference and manage the increased load-per-agent following a node failure in dense environments. 
+
+6.4 Training Convergence and QoS Optimization 
+
+The training trajectories reflecting learning efficacy and Quality of Service (QoS) are illustrated in Figure 3. In this context, the Average Episode Reward and Coverage Ratio (𝐶 cov ) serve as primary indicators for evaluating the models’ progress across heterogeneous environments. 
+
+6.4.1 Learning Efficacy and Convergence Rate. As depicted in the top row of Figure 3, TAG-MAPPO exhibits superior convergence speed and asymptotic performance compared to both G-MAPPO (MLP baseline) and QMIX. Specifically, in the Crowded Urban scenario shown in Figure 3(a), TAG-MAPPO achieves a steady-state reward of approximately 2.2. This result surpasses the MLP base-line by 10% and significantly outperforms the geometrical K-Means approach, which reaches only 1.6. This performance gap is most pronounced in interference-limited regimes, as the topology-aware critic successfully deciphers the complex inter-agent coordination requirements needed to minimize overlap while maximizing cluster coverage. In the Suburban and Rural cases, rep-resented by Figure 3(b) and Figure 3(c) respectively, TAG-MAPPO maintains its lead despite the increased environmental dispersion. Notably, the framework demonstrates a significant reduction in the variance of the learning process, indicating higher training stability. 
+
+6.4.2 QoS Performance and Spatial Coverage. The evolution of 𝐶 cov in the bottom row of Figure 3 provides a physical interpretation of these reward gains. For the Suburban deployment illustrated in Figure 3(e), TAG-MAPPO stabilizes at a coverage ratio of 0.55 within the first 1500 episodes while maintaining a tighter confidence interval than its competitors. This suggests that graph-based feature aggregation is inherently less sensitive to the stochasticity of user mobility compared to traditional neural architectures. The robustness of the framework is further evidenced in Rural Areas as shown in Figure 3(f). Although independent Gauss-Markov mobility leads to higher reward fluctuations, our framework effectively prevents coverage collapse. The integration of Residual Ego-State Fusion ensures that each agent maintains sufficient self-awareness to track isolated user clusters even when neighbor information is sparse. These findings confirm that the proposed framework provides robust and scalable intelligence for 3D AGINs across diverse geographical profiles. 
+
+6.5 Stability and Resource Efficiency Analysis 
+
+The operational sustainability and signaling stability of the TAG-MAPPO framework are evaluated through the Total Handoffs (𝐶 HO ) and Energy Efficiency (𝐸 eff ), as illustrated in Figure 4. 
+
+6.5.1 Topological Stability and Handoff Suppression. The top row of Figure 4 demonstrates the models’ ability to maintain service continuity under the handoff penalty 𝜆 HO . As evidenced by the results for the Crowded Urban and Suburban environments in Figure 4(a) and Figure 4(b), TAG-MAPPO consistently maintains the lowest handoff frequency, stabilizing below 50 handoffs per slot. In contrast, the G-MAPPO (MLP baseline) exhibits significant fluctuations and a higher handoff baseline. This performance gap is especially evident in the Suburban scenario, where G-MAPPO frequently exceeds 100 handoffs. A critical insight is observed in the Rural Area shown in Figure 4(c). While QMIX and G-MAPPO suffer from a handoff explosion after episode 1500, TAG-MAPPO remains remarkably suppressed. Notably, G-MAPPO peaks at nearly 400 handoffs due to erratic re-associations in sparse topologies.      
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:20 Lai et al.
+> (a) Reward: Crowded Urban (b) Reward: Suburban (c) Reward: Rural Area
+> (d) Coverage: Crowded Urban (e) Coverage: Suburban (f) Coverage: Rural Area Fig. 3. Training convergence analysis across heterogeneous scenarios. The top row, including Figs. (a)–(c), illustrates the Average Episode Reward, while the bottom row, Figs. (d)–(f), depicts the evolution of the Coverage Ratio (
+
+𝐶 cov ). Results are averaged over 5 independent runs, with shaded areas representing the 95% confidence interval, demonstrating the framework’s stability under stochastic mobility. 
+
+These observations prove that the topology-aware critic effectively discourages ping-pong hand-offs by enabling UAVs to learn long-term spatial coordination. This strategy prioritizes stable link associations over short-sighted coverage gains, which is essential for reducing signaling overhead. 
+
+6.5.2 Resource Utilization and Energy Efficiency. The bottom row of Figure 4 evaluates the sys-tem’s throughput-per-Watt performance. In the Crowded Urban scenario represented by Figure 4(d), TAG-MAPPO stabilizes at approximately 5 Mbps/W, maintaining a clear lead over the K-Means geometrical baseline of 3.4 Mbps/W. The learning efficiency is further highlighted in Fig-ure 4(e), where the energy efficiency of TAG-MAPPO converges much faster than QMIX, which requires over 2000 episodes to approach a similar performance level. The integration of graph-based feature aggregation allows agents to identify energy-optimal hovering positions that minimize propulsion power while maximizing communication utility. As evidenced across all geographical profiles from Figure 4(d) to Figure 4(f), TAG-MAPPO not only achieves superior efficiency but also maintains a much tighter confidence interval than MLP-based approaches. This consistent resource efficiency is vital for the Internet of UAVs. It ensures battery longevity and minimizes control-plane overhead for mission-critical 6G services. 
+
+6.6 System Resilience under Catastrophic Node Failure 
+
+To evaluate the survivability of the proposed framework, we analyze the system performance fol-lowing a random node failure at 𝑡 = 100 . A fundamental advantage of TAG-MAPPO is its inherent capability to handle dynamic changes in the agent population. Unlike conventional MARL archi-tectures such as QMIX, which rely on a centralized mixing network with fixed input dimensions, our framework leverages the permutation-invariant nature of graph-based feature aggregation. In      
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:21
+> (a) Handoffs: Crowded Urban (b) Handoffs: Suburban (c) Handoffs: Rural Area
+> (d) EE: Crowded Urban (e) EE: Suburban (f) EE: Rural Area Fig. 4. Stability and Energy Efficiency Analysis: The top row, including Figs. (a)–(c), illustrates the Total Handoffs (
+
+𝐶 HO ) across different scenarios, while the bottom row, Figs. (d)–(f), depicts the Energy Efficiency (𝐸 eff ). Results are averaged over 5 independent runs, with shaded areas representing the 95% confidence interval, demonstrating the framework’s superior stability and resource efficiency under stochastic mobility. 
+
+a QMIX-based system, the loss of a node at 𝑡 = 100 leads to a structural mismatch in the mixing layer, making it unsuitable for resilience tests without manual reconfiguration. In contrast, TAG-MAPPO processes the network as a graph of relational entities, allowing the surviving UAVs to maintain stable coordination even when a vertex is abruptly removed. This flexibility is visualized in Figure 5, where we focus on the comparative analysis between TAG-MAPPO and the G-MAPPO baseline. 
+
+6.6.1 Dynamic Recovery and Coverage Self-healing. As illustrated in the top row of Figure 5, TAG-MAPPO exhibits a distinct V-shaped recovery trajectory across all scenarios immediately after the node failure. While the Coverage Ratio experiences an abrupt decline at 𝑡 = 100 , the surviving agents autonomously reconfigure their spatial distribution to compensate for the service gap. For the Crowded Urban scenario shown in Figure 5(a), TAG-MAPPO restores its coverage level to near pre-failure states significantly faster than the baseline. The most prominent advantage is observed in the Suburban and Rural Area cases illustrated in Figure 5(b) and Figure 5(c). In these environments, the baseline coverage continues to fluctu-ate or degrade after the initial shock, whereas TAG-MAPPO stabilizes the network rapidly. This resilience is attributed to the Random Observation Shuffling (ROS) mechanism. This training tech-nique ensures the policy remains robust against unexpected changes in agent count by preventing the remaining agents from over-relying on a fixed set of neighbors. 
+
+6.6.2 Structural Reorganization and Fairness Improvement. Beyond mere coverage restoration, the bottom row of Figure 5 highlights the evolution of Jain’s Fairness Index (JFI), providing deeper in-sights into how resource distribution is maintained under stress. A remarkable phenomenon is      
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:22 Lai et al.
+> (a) Coverage: Crowded Urban (b) Coverage: Suburban (c) Coverage: Rural Area
+> (d) JFI: Crowded Urban (e) JFI: Suburban (f) JFI: Rural Area Fig. 5. System Resilience Analysis: The top row, including Figs. (a)–(c), illustrates the Coverage Ratio (
+
+𝐶 cov )following a random node failure at 𝑡 = 100 , while the bottom row, Figs. (d)–(f), depicts the Jain’s Fairness Index (JFI) over the same period. Results are averaged over 5 runs with shaded areas representing the stan-dard deviation. 
+
+observed in the Crowded Urban scenario in Figure 5(d). Following the node failure, the JFI of TAG-MAPPO not only recovers but actually surpasses its pre-failure level. This suggests that the topology-aware policy successfully identifies and resolves the inter-agent service overlaps that existed in the four-UAV configuration. By re-optimizing the spatial deployment of the three re-maining agents, the framework achieves a more balanced resource distribution across the user plane. In the Rural Area shown in Figure 5(f), the baseline JFI collapses towards 0.25 after the node fail-ure, indicating that the MLP-based agents fail to reorganize their coverage in sparse environments. In contrast, TAG-MAPPO maintains a significantly higher JFI with a tighter confidence interval. These results confirm that the graph-based reasoning enables UAVs to maintain service survivabil-ity and fairness even in hostile operational conditions. The integration of Residual Ego-state Fu-sion ensures that each agent retains sufficient self-awareness to track user clusters independently, which is a critical requirement for 6G mission-critical reliability during hardware malfunctions. 
+
+7 Conclusion 
+
+In this paper, we presented TAG-MAPPO, a topology-aware reinforcement learning framework designed to optimize Quality of Service (QoS) and operational stability in 3D Aerial-Ground In-tegrated Networks (AGINs). By integrating graph-based feature aggregation with a residual ego-state fusion mechanism, the proposed framework successfully deciphers complex spatial depen-dencies among UAV agents in highly dynamic environments. Our approach addresses the funda-mental challenges of signaling overhead and resource inefficiency that often hinder the deploy-ment of autonomous aerial base stations. 
+
+> ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026.
+
+Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:23 
+
+Experimental results across three heterogeneous geographical profiles demonstrate that TAG-MAPPO significantly outperforms conventional MLP-based MAPPO and QMIX baselines. Notably, the framework achieves a superior balance between coverage expansion and handoff suppression; it reduces redundant signaling by up to 50% in sparse rural topologies while maintaining high en-ergy efficiency. Furthermore, the system resilience tests highlight the unique self-healing capabil-ity of TAG-MAPPO. Following a catastrophic node failure, the network autonomously reconfigures its topology to restore over 90% of the pre-failure service coverage within 15 time steps. In dense urban scenarios, the framework even achieves a higher Jain’s Fairness Index post-failure compared to its original four-UAV configuration by resolving service overlaps. These findings confirm that incorporating topological intelligence is essential for achieving robust and scalable coordination in 6G mission-critical missions. For future work, we aim to extend this framework to multi-tier AGIN architectures involving satellite-UAV coordination. Additionally, investigating the integration of secure communication protocols within the topology-aware learning process would be a valuable direction to ensure the integrity of the Internet of UAVs against adversarial interference. 
+
+Acknowledgments 
+
+This work was supported by the National Science and Technology Council (NSTC), Taiwan, under Grant No. NSTC 114-2221-E-194-062-, and was also partially supported by the Advanced Insti-tute of Manufacturing with High-tech Innovations (AIM-HI) from the Featured Areas Research Center Program within the framework of the Higher Education Sprout Project by the Ministry of Education (MOE) in Taiwan. 
+
+References 
+
+[1] Akram Al-Hourani, Sithamparanathan Kandeepan, and Simon Lardner. 2014. Optimal LAP Altitude for Maximum Coverage. IEEE Wireless Communications Letters 3, 6 (Dec. 2014), 569–572. doi:10.1109/LWC.2014.2342736 [2] Mohamed Alzenad, Amr El-Keyi, Faraj Lagum, and Halim Yanikomeroglu. 2017. 3-D Placement of an Unmanned Aerial Vehicle Base Station (UAV-BS) for Energy-Efficient Maximal Coverage. IEEE Wireless Communications Letters 
+
+6, 4 (2017), 434–437. doi:10.1109/LWC.2017.2700840 [3] Ishan Aryendu, Sudhanshu Arya, and Ying Wang. 2025. AURA-GreeN: Aerial Utility-driven Route Adaptation for Green cooperative Networks. IEEE Transactions on Vehicular Technology (2025), 1–18. doi:10.1109/TVT.2025.3601556 [4] Peter W. Battaglia, Jessica B. Hamrick, Victor Bapst, Alvaro Sanchez-Gonzalez, Vinicius Zambaldi, Mateusz Mali-nowski, Andrea Tacchetti, David Raposo, Adam Santoro, Ryan Faulkner, Caglar Gulcehre, Francis Song, Andrew Bal-lard, Justin Gilmer, George Dahl, Ashish Vaswani, Kelsey Allen, Charles Nash, Victoria Langston, Chris Dyer, Nicolas Heess, Daan Wierstra, Pushmeet Kohli, Matt Botvinick, Oriol Vinyals, Yujia Li, and Razvan Pascanu. 2018. Relational inductive biases, deep learning, and graph networks. arXiv:1806.01261 [cs.LG] https://arxiv.org/abs/1806.01261 [5] Gang Chen, Guofeng Zhao, Chuan Xu, Zhenzhen Han, and Shui Yu. 2026. Spatiotemporal-Aware Deep Reinforcement Learning for Multi-UAV Cooperative Coverage in Emergency Deterministic Communications. IEEE Transactions on Vehicular Technology 75, 1 (Jan. 2026), 1310–1321. doi:10.1109/TVT.2025.3593478 [6] Jingjing Cui, Yuanwei Liu, and Arumugam Nallanathan. 2020. Multi-Agent Reinforcement Learning-Based Resource Allocation for UAV Networks. IEEE Transactions on Wireless Communications 19, 2 (Feb. 2020), 729–743. doi:10.1109/ TWC.2019.2935201 [7] Yanpeng Dai, Ling Lyu, Nan Cheng, Min Sheng, Junyu Liu, Xiucheng Wang, Shuguang Cui, Lin Cai, and Xuemin Shen. 2025. A Survey of Graph-Based Resource Management in Wireless Networks—Part II: Learning Approaches. 
+
+IEEE Transactions on Cognitive Communications and Networking 11, 4 (Aug. 2025), 2101–2122. doi:10.1109/TCCN.2024. 3508777 [8] Marco Giordani and Michele Zorzi. 2021. Non-Terrestrial Networks in the 6G Era: Challenges and Opportunities. 
+
+IEEE Network 35, 2 (March/April 2021), 244–251. doi:10.1109/MNET.011.2000493 [9] Hao Gong, Baoqi Huang, and Bing Jia. 2024. Energy-Efficient 3-D UAV Ground Node Accessing Using the Minimum Number of UAVs. IEEE Transactions on Mobile Computing 23, 12 (2024), 12046–12060. doi:10.1109/TMC.2024.3405494 ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. XX:24 Lai et al. 
+
+[10] Linh T. Hoang, Chuyen T. Nguyen, Hoang D. Le, and Anh T. Pham. 2025. Adaptive 3D Placement of Multiple UAV-Mounted Base Stations in 6G Airborne Small Cells With Deep Reinforcement Learning. IEEE Transactions on Network-ing 33, 4 (2025), 1989–2004. doi:10.1109/TON.2025.3552097 [11] Jiayuan Huang, Mingzhe Chen, and Yuchen Liu. 2026. Achieving Resilient and Self-Adaptive Topology Configuration in 3D UAV Networks. ACM Trans. Internet Technol. 26, 1, Article 8 (Jan. 2026), 30 pages. doi:10.1145/3747350 [12] Shariq Iqbal and Fei Sha. 2019. Actor-Attention-Critic for Multi-Agent Reinforcement Learning. In The 36th Interna-tional Conference on Machine Learning (ICML) . Long Beach, California, USA, 2961–2970. [13] Chuan-Chi Lai. 2026. Spatiotemporal Continual Learning for Mobile Edge UAV Networks: Mitigating Catastrophic Forgetting. arXiv:2601.21861 [cs.NI] https://arxiv.org/abs/2601.21861 Submitted to IEEE Transactions on Emerging Topics in Computing. [14] Chuan-Chi Lai, Bhola, Ang-Hsun Tsai, and Li-Chun Wang. 2023. Adaptive and Fair Deployment Approach to Balance Offload Traffic in Multi-UAV Cellular Networks. IEEE Transactions on Vehicular Technology 72, 3 (March 2023), 3724– 3738. doi:10.1109/TVT.2022.3221557 [15] Jiakai Liang, Jinduo Zhao, Chao Wang, Xiandeng Yang, Keqiang Yue, and Wenjun Li. 2026. Enhancing the Robust-ness of UAV Search Path Planning Based on Deep Reinforcement Learning for Complex Disaster Scenarios. IEEE Transactions on Vehicular Technology 75, 1 (Jan. 2026), 392–404. doi:10.1109/TVT.2025.3596466 [16] Jiayan Liu, Xiongwen Zhao, Peng Qin, Fei Du, Zhiyu Chen, Hongxi Zhou, and Junqin Li. 2024. Joint UAV 3D Trajectory Design and Resource Scheduling for Space-Air-Ground Integrated Power IoRT: A Deep Reinforcement Learning Ap-proach. IEEE Transactions on Network Science and Engineering 11, 3 (2024), 2632–2646. doi:10.1109/TNSE.2023.3346445 [17] Ryan Lowe, Yi Wu, Aviv Tamar, Jean Harb, Pieter Abbeel, and Igor Mordatch. 2017. Multi-agent actor-critic for mixed cooperative-competitive environments. In The 31st International Conference on Neural Information Processing Systems (NIPS) . Long Beach, California, USA, 6382–6393. [18] Irshad A. Meer, Karl-Ludwig Besser, Mustafa Ozger, Dominic A. Schupke, H. Vincent Poor, and Cicek Cavdar. 2026. Hierarchical Multi-Agent DRL-Based Dynamic Cluster Reconfiguration for UAV Mobility Management. IEEE Trans-actions on Cognitive Communications and Networking 12 (2026), 4957–4971. doi:10.1109/TCCN.2025.3646157 [19] Arvind Merwaday and Ismail Guvenc. 2015. UAV assisted heterogeneous networks for public safety communica-tions. In 2015 IEEE Wireless Communications and Networking Conference Workshops (WCNCW) . New Orleans, LA, USA. doi:10.1109/WCNCW.2015.7122576 [20] Mohammad Mozaffari, Walid Saad, Mehdi Bennis, and Mérouane Debbah. 2016. Efficient Deployment of Multiple Unmanned Aerial Vehicles for Optimal Wireless Coverage. IEEE Communications Letters 20, 8 (2016), 1647–1650. doi:10.1109/LCOMM.2016.2578312 [21] Mohammad Mozaffari, Walid Saad, Mehdi Bennis, Young-Han Nam, and Mérouane Debbah. 2019. A Tutorial on UAVs for Wireless Networks: Applications, Challenges, and Open Problems. IEEE Communications Surveys & Tutorials 21, 3 (thirdquarter 2019), 2334–2360. doi:10.1109/COMST.2019.2902862 [22] Yaru Niu, Rohan Paleja, and Matthew Gombolay. 2021. Multi-Agent Graph-Attention Communication and Teaming. In The 20th International Conference on Autonomous Agents and MultiAgent Systems (AAMAS) . Virtual Event, United Kingdom, 964–973. [23] Walid Saad, Mehdi Bennis, and Mingzhe Chen. 2020. A Vision of 6G Wireless Systems: Applications, Trends, Tech-nologies, and Open Research Problems. IEEE Network 34, 3 (May/June 2020), 134–142. doi:10.1109/MNET.001.1900287 [24] Franco Scarselli, Marco Gori, Ah Chung Tsoi, Markus Hagenbuchner, and Gabriele Monfardini. 2009. The Graph Neural Network Model. IEEE Transactions on Neural Networks 20, 1 (Jan. 2009), 61–80. doi:10.1109/TNN.2008.2005605 [25] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In The 31st International Conference on Neural Information Processing Systems (NIPS) (Long Beach, California, USA). 6000–6010. [26] Petar Veličković, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro Lio, and Yoshua Bengio. 2018. Graph Attention Networks. In International Conference on Learning Representations . Vancouver, BC, Canada. [27] Renjie Xu, Zhaoke Huang, Chenwei Wang, and Hong Yan. 2025. Evolving Collaborative Differential Evolution for Dynamic Multi-objective UAV Path Planning. IEEE Transactions on Vehicular Technology (2025), 1–13. doi:10.1109/ TVT.2025.3632847 [28] Chao Yu, Akash Velu, Eugene Vinitsky, Jiaxuan Gao, Yu Wang, Alexandre Bayen, and Yi Wu. 2022. The surprising effectiveness of PPO in cooperative multi-agent games. In The 36th International Conference on Neural Information Processing Systems (NIPS) . New Orleans, LA, USA. [29] Manzil Zaheer, Satwik Kottur, Siamak Ravanbhakhsh, Barnabás Póczos, Ruslan Salakhutdinov, and Alexander J Smola. 2017. Deep Sets. In The 31st International Conference on Neural Information Processing Systems (NIPS) . Long Beach, California, USA, 3394–3404. [30] Yong Zeng, Jie Xu, and Rui Zhang. 2019. Energy Minimization for Wireless Communication With Rotary-Wing UAV. 
+
+IEEE Transactions on Wireless Communications 18, 4 (April 2019), 2329–2345. doi:10.1109/TWC.2019.2902559 ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026. Resilient Topology-Aware Coordination for Dynamic 3D UAV Networks under Node Failure XX:25 
+
+[31] Yong Zeng and Rui Zhang. 2017. Energy-Efficient UAV Communication With Trajectory Optimization. IEEE Transac-tions on Wireless Communications 16, 6 (2017), 3747–3760. doi:10.1109/TWC.2017.2688328 [32] Huixiang Zhang, Mahzabeen Emu, and Octavia A. Dobre. 2026. Quantum Takes Flight: Two-Stage Resilient Topology Optimization for UAV Networks. arXiv:2601.19724 [cs.NI] https://arxiv.org/abs/2601.19724 [33] Nan Zhao, Weidang Lu, Min Sheng, Yunfei Chen, Jie Tang, F. Richard Yu, and Kai-Kit Wong. 2019. UAV-Assisted Emergency Networks in Disasters. IEEE Wireless Communications 26, 1 (Feb. 2019), 45–51. doi:10.1109/MWC.2018. 1800160 [34] Xiaoya Zheng, Geng Sun, Jiahui Li, Jiacheng Wang, Qingqing Wu, Dusit Niyato, and Abbas Jamalipour. 2025. UAV Swarm-Enabled Collaborative Post-Disaster Communications in Low Altitude Economy via a Two-Stage Optimiza-tion Approach. IEEE Transactions on Mobile Computing 24, 11 (Nov. 2025), 11833–11851. doi:10.1109/TMC.2025. 3583510 
+
+Received 9 February 2026 
+
+ACM Trans. Internet Technol., Vol. XX, No. XX, Article XX. Publication date: February 2026.

@@ -1,0 +1,1475 @@
+Title: A Unified Estimation--Guidance Framework Based on Bayesian Decision Theory
+
+URL Source: https://arxiv.org/pdf/2602.11373v1
+
+Published Time: Fri, 13 Feb 2026 01:13:03 GMT
+
+Number of Pages: 45
+
+Markdown Content:
+# A Unified Estimation–Guidance Framework Based on Bayesian Decision Theory 
+
+Liraz Mudrik ∗
+
+Naval Postgraduate School, Monterey, CA, 93943 
+
+Yaakov Oshman †
+
+Technion-Israel Institute of Technology, Haifa, 3200003, Israel 
+
+Using Bayesian decision theory, we modify the perfect-information, differ-ential game-based guidance law (DGL1) to address the inevitable estimation error occurring when driving this guidance law with a separately-designed state estimator. This yields a stochastic guidance law complying with the generalized separation theorem, as opposed to the common approach, that implicitly, but unjustifiably, assumes the validity of the regular separation theorem. The required posterior probability density function of the game’s state is derived from the available noisy measurements using an interacting multiple model particle filter. When the resulting optimal decision turns out to be nonunique, this feature is harnessed to appropriately shape the trajectory of the pursuer so as to enhance its estimator’s performance. In addition, certain properties of the particle-based computation of the Bayesian cost are exploited to render the algorithm amenable to real-time implementation. The performance of the entire estimation-decision-guidance scheme is demonstrated using an extensive 
+
+> ∗
+
+Postdoctoral Fellow, Dept. of Mechanical and Aerospace Engineering; liraz.mudrik.ctr@nps.edu . Member AIAA (Corresponding Author). This work is part of Dr. Mudrik’s doctoral research, performed at the Technion—Israel Institute of Technology, Haifa, 3200003, Israel. 
+
+> †
+
+Professor Emeritus, Stephen B. Klein Faculty of Aerospace Engineering; yaakov.oshman@technion.ac.il .Fellow AIAA. Partially presented as Paper AIAA 2023-2497 at the AIAA SCITECH 2023 Forum, National Harbor, MD, 23–27 January 2023. Accepted for publication in the Journal of Guidance, Control, and Dynamics . Copyright © 2026 by the authors. 
+
+> arXiv:2602.11373v1 [eess.SY] 11 Feb 2026
+
+Monte Carlo simulation study. 
+
+## I. Introduction 
+
+Using differential game theory to analyze the problem of guiding an interceptor towards an evasively maneuvering target has been intensively explored in recent decades. Gutman [ 1 ] developed a class of differential game-based guidance laws (DGLs) assuming that the acceleration commands of both the interceptor and the target are bounded, the target has known linear time-invariant dynamics, and both players possess perfect information, i.e., full knowledge about the state of the game. Specifically, a DGL law constitutes the saddle-point solution of a linearized zero-sum differential game of degree with the terminal miss distance as the cost function. These DGLs rely solely on computing the time-to-go (the time remaining until the end of the engagement) and the instantaneous zero-effort miss (ZEM), which is the miss distance resulting if both players do not apply any further acceleration commands until the end of the game. Assuming that the dynamics of both players is strictly proper first-order, Shinar then developed the so-called DGL1 law [ 2]. Assuming the perfect-information pattern, a DGL1-guided interceptor that has superior maneuverability and agility capabilities (and, in special cases, even just superior agility) is guaranteed to have hit-to-kill performance (i.e., deterministic capture of the target). In this case, a singular region is formed in the game space, whose boundaries depend on the time-to-go and the (assumed known) maximal acceleration capabilities and time constants of the dynamics of both players. The DGL1 law exhibits a well-defined bang-bang behavior in the regular region (outside the singular region). Inside the singular region, the acceleration commands are arbitrary, and are commonly chosen to be saturated linear so as to prevent control chattering. When the governing information pattern is not perfect, as is the case in all realistic, stochastic scenarios, an estimator has to be relied upon in order to estimate the state of the game. The inevitable estimation error creates a crucial decision problem for an interceptor implementing the DGL1 law (or similar perfect-information laws), as it now has to decide on the state of the game, and, consequently, on its corresponding control action, based on imprecise information. Obviously, bad 2decisions have consequences, and we will use the following two examples to explain what this statement means in the context of a stochastic scenario where a perfect-information guidance law is used. Suppose that, due to the inherent estimation error, the pursuer cannot determine which of the following two hypotheses, concerning the state of the game, is true at a certain point in time: 1) the state of the game is inside the singular region, rendering any control action optimal, or 2) the state of the game is in one of the regular regions, where the optimal control action is unique. In this case, if the pursuer decides that the first hypothesis is true, when, in fact, it is not—it might apply a control action that will lead to an increased miss distance, thus paying a dear price for its bad decision. On the other hand, deciding that the second hypothesis is true will render the pursuer’s control action optimal—or, at least, non-consequential—even if the first hypothesis is true. Thus, in this case, the pursuer’s decision making is easy. Now consider another case, in which the inherent uncertainty leads to a decision between more hypotheses, involving at least two different regular regions of the game space. In this case the pursuer’s decision making becomes hard, as in each regular region the optimal control action is unique, rendering any other control action consequential, and, potentially, disastrous in terms of miss distance. Bad decisions, in this latter case, will have consequences. Recognizing that the main problem of using a perfect-information law, such as DGL1, in a stochastic setting, is its impaired ability of making optimal decisions in the presence of uncertainty, the new concept we propose in this paper (a preliminary version of which has been presented in [ 3]) is to use Bayesian decision theory [ 4 ] as a means of enhancing the capability of the guidance law to reach optimal decisions via statistically ranking the various guidance decisions possible at each point in time. This process is based on the (miss distance-based) costs and the a posteriori probabilities associated with each such decision. The costs are computed using the DGL1 methodology, whereas the a posteriori probabilities are computed based on the posterior probability density function (PDF) of the game’s state, which, in our work, is generated by the interacting multiple model particle filter (IMMPF) [ 5 ]. The choice of the IMMPF is based on its ability to cope with nonlinear and non-Gaussian models, as well as with non-Markovian mode switching problems, which characterize realistic interception scenarios. Indeed, based on the findings of Shaferman and Oshman [ 6], 3according to which a well-timed evasion maneuver can enforce a considerable miss distance, a non-homogeneous Markov model is assumed in this work for the target evasion maneuver mode, to better model sophisticated targets. When implemented naively, the new Bayesian decision-based guidance and estimation scheme can incur a severe computational burden. This burden arises from the need to compute the Bayesian costs associated with the available decisions at each point in time, and from the fact that, to compute these costs, the entire posterior PDF (represented, in our case, via a large particle population) is needed. We significantly reduce the computational effort of the Bayesian decision criterion by observing that throughout major parts of the interception engagement, identified in this work, there is really no need to explicitly compute the costs in order to reach an optimal decision. In some other parts of the engagement, the Bayesian decision criterion may yield ambiguous decisions (recall that the perfect-information DGL1 law also exhibits command ambiguity when the state of the game is inside the singular region). Whereas, in the deterministic scenario, this ambiguity merely allows using a linear command to prevent command chattering, in our case we exploit it to find, in a fashion reminiscent of [ 7], the optimal command that would result in the best information-enhancing trajectory, as this trajectory would yield improved information about the state of the target, resulting in superior guidance performance. The exploitation of decision ambiguity was first considered by the authors in a preliminary conference paper [8]. A noteworthy feature of the new guidance concept presented in this work is that it complies with the guidelines of the generalized separation theorem (GST), which Witsenhausen asserted in [ 9]based on a theorem by Striebel in [ 10 ]. Valid for realistic scenarios involving nonlinearities and non-Gaussian distributions, the GST dictates that the guidance law should take into account the posterior probability distribution of the state of the game, which, in turn, should be generated via a separately-designed estimator. Indeed, in the new guidance and estimation scheme the control commands are generated by making optimal Bayesian decisions that rely on the entire posterior PDF at each point in time. This is contrary to the common approach, that straightforwardly lets a certainty equivalent (perfect-information-based) guidance law operate on the output of a separately designed 4estimator, implying an assumption on the validity of the classical separation theorem [ 11 ], that has never been proven valid for realistic scenarios. Indeed, works such as [ 6 , 12 , 13 ] have shown that that the ideal (perfect-information) performance of the DGL1 law severely degrades under realistic (stochastic) circumstances. Guidance laws that utilize some posterior information provided by a target state estimator have already been proposed, e.g., [ 14 –16 ]. Later, Shaviv and Oshman [ 7]used the notion of reachability sets to develop a GST-compliant methodology for the stochastic interception problem, which is not limited by the standard assumptions of linearity and Gaussian distributions. The main contribution of this paper is the development of a unified, GST-compliant estimation and guidance framework that resolves the theoretical inconsistency inherent in assuming separation for this class of problems. To the best of the authors’ knowledge, this work constitutes the first application of Bayesian decision theory to bridge the gap between differential game-based guidance and stochastic estimation. This innovative approach not only prevents the performance degradation typical of certainty-equivalent implementations but also provides a foundation for estimation-aware guidance in non-Gaussian scenarios. Consolidating the authors’ preliminary results introduced in [ 3 ] and [ 8 ], the present work establishes the complete theoretical framework and derives the sufficiency conditions that reduce the computational burden to a level amenable to real-time implementation. Large-scale Monte Carlo (MC) simulations demonstrate that trajectory shaping can be systematically embedded within the full guidance law to yield consistent performance improvements. The remainder of this paper is organized as follows. The following section presents a mathematical formulation of the engagement problem. The classical DGL1 guidance law is reviewed in Sec. III. A brief description of the IMMPF algorithm is presented in Sec. IV, which also discusses the use of non-homogeneous Markov chains to model the mode switching dynamics. Our main results are presented in Sec. V, which applies Bayesian decision theory to produce an estimation-aware version of the DGL1 law. This section also shows how the computational effort associated with the new guidance law can be significantly reduced, and how the decision ambiguity, when it occurs, can be used to enhance information via trajectory shaping. An extensive comparative MC simulation study 5is then presented in Sec. VI, examining the performance of the estimation-aware and the classical DGL1 guidance laws in stochastic interception scenarios. Concluding remarks are offered in the final section. 
+
+## II. Problem Definition 
+
+A single-pursuer, single-evader interception scenario is considered. Figure 1 shows a schematic view of the geometry of the assumed planar endgame scenario, where 𝑋 𝐼 -𝑂 𝐼 -𝑌 𝐼 is a Cartesian inertial reference frame. The interceptor and the target, as well as variables associated with them, are denoted by 𝑀 and 𝑇 , respectively. The speed, normal acceleration and the path angle are denoted by 𝑉 , 𝑎 and 𝛾 , respectively. The slant range between the interceptor and the target is 𝜌 , and the line of sight (LOS) angle, measured with respect to the 𝑋 𝐼 axis, is 𝜆 .TaTVT      
+
+> aM
+> VM
+> γM
+> λδM
+> γT
+> M(xM; y M)(xT; y T)
+> YI
+> OIXI
+> ρ
+
+Fig. 1 Planar engagement geometry 
+
+We use the following underlying assumptions: 1) Both the interceptor and the target are represented as point masses. 2) The interceptor’s own path angle and lateral acceleration are known (e.g., via the interceptor’s own navigation system). 3) The speeds of the interceptor and target, 𝑉 𝑀 and 𝑉 𝑇 , respectively, are known and time-invariant. 4) The target’s acceleration command, 𝑢 𝑇 , belongs to a known admissible set comprising 𝑀 
+
+possible maneuvers. For simplicity of exposition, we consider only the case of 𝑀 = 2, which 6means that the target performs bang-bang maneuvers (the generalization to 𝑀 > 2 is trivial). Known to be the optimal, perfect-information evasion strategy in bounded acceleration pursuit-evasion games, its associated acceleration command is 
+
+𝑢 𝑇 =
+
+
+
++𝑎 𝑚𝑎𝑥 𝑇 𝑚 = 1
+
+−𝑎 𝑚𝑎𝑥 𝑇 𝑚 = 2
+
+(1) where 𝑚 denotes the target maneuver mode. 5) The interceptor and the target possess first-order dynamics with known time constants, 𝜏 𝑀 
+
+and 𝜏 𝑇 , respectively. 6) The lateral acceleration bounds of the interceptor and target are known constants, 𝑎 max  
+
+> 𝑀
+
+and 
+
+𝑎 max  
+
+> 𝑇
+
+, respectively. Following common practice, we use polar coordinates to present the equations of motion (EOM). Defining the interceptor’s state vector, used by its estimator, as 
+
+x𝑀 =
+
+
+
+𝜌 𝜆 𝛾 𝑇 𝑎 𝑇 
+
+𝑇 
+
+(2) yields the following EOM 
+
+¤𝜌 = 𝑉 𝜌 (3a) 
+
+¤𝜆 = 𝑉 𝜆 
+
+𝜌 (3b) 
+
+¤𝛾 𝑇 = 𝑎 𝑇 
+
+𝑉 𝑇 
+
+(3c) 
+
+¤𝑎 𝑇 = − 𝑎 𝑇 
+
+𝜏 𝑇 
+
++ 𝑢 𝑇 
+
+𝜏 𝑇 
+
+(3d) 7where 𝑢 𝑇 is the target’s acceleration command, and 
+
+𝑉 𝜌 = −( 𝑉 𝑀 cos 𝛿 𝑀 + 𝑉 𝑇 cos 𝛿 𝑇 ) (4a) 
+
+𝑉 𝜆 = −𝑉 𝑀 sin 𝛿 𝑀 + 𝑉 𝑇 sin 𝛿 𝑇 (4b) 
+
+𝛿 𝑀 = 𝛾 𝑀 − 𝜆, 𝛿 𝑇 = 𝛾 𝑇 + 𝜆 (4c) The interceptor’s path angle and lateral acceleration satisfy the following evolution equations 
+
+¤𝛾 𝑀 = 𝑎 𝑀 
+
+𝑉 𝑀 
+
+(5a) 
+
+¤𝑎 𝑀 = − 𝑎 𝑀 
+
+𝜏 𝑀 
+
++ 𝑢 𝑀 
+
+𝜏 𝑀 
+
+(5b) where 𝑢 𝑀 is the interceptor’s acceleration command. We assume that the interceptor can measure the bearing angle 𝛿 𝑀 between its own velocity vector and the LOS to the target, rendering the following measurement equation 
+
+𝑦 = 𝛿 𝑀 + 𝜈 = 𝛾 𝑀 − 𝜆 + 𝜈 (6) where 𝜈 is the (possibly non-Gaussian) measurement noise. 
+
+## III. The Perfect Information DGL1 Guidance Law 
+
+Derived within a differential game setting, the DGL1 guidance law [ 1, 2] is the optimal solution to the linearized case of perfect-information pursuit-evasion games involving players with first-order dynamics and bounded acceleration commands. Because the DGL1 law constitutes the basis for our new GST-compliant guidance law, we briefly review it in this section. The DGL1 guidance law is 
+
+𝑢 𝑀 = 𝑎 max  
+
+> 𝑀
+
+sgn (𝑍 DGL1 ) (7) 8where the ZEM is computed according to [6] 
+
+𝑍 DGL1 (𝑡 ) = 𝜉 + ¤ 𝜉𝑡 𝑔𝑜 − 𝑎 𝑛 𝑀 𝜏 2 
+
+> 𝑀
+
+Ψ(𝜃 ) + 𝑎 𝑛 𝑇 𝜏 2 
+
+> 𝑇
+
+Ψ 𝜃 /𝜖 . (8) In Eq. (8) , 𝜉 and ¤𝜉 are the relative displacement and relative velocity between the LOS and the target, measured along the normal to the instantaneous LOS, respectively. Accordingly, the interceptor’s and target’s normal accelerations, 𝑎 𝑛 𝑀 and 𝑎 𝑛 𝑇 , are defined with respect to the instantaneous LOS angle 𝜆 :
+
+𝑎 𝑛 𝑀 = 𝑎 𝑀 cos (𝛾 𝑀 − 𝜆 ), (9a) 
+
+𝑎 𝑛 𝑇 = 𝑎 𝑇 cos (𝛾 𝑇 + 𝜆 ). (9b) Additionally, 
+
+Ψ(𝜃 ) = 𝑒 −𝜃 + 𝜃 − 1 (10a) 
+
+𝜃 = 𝑡 𝑔𝑜 
+
+𝜏 𝑀 
+
+(10b) 
+
+𝜖 = 𝜏 𝑇 
+
+𝜏 𝑀 
+
+(10c) The ZEM’s evolution equation is 
+
+¤𝑍 DGL1 (𝑡 ) = −𝜏 𝑀 Ψ(𝜃 )𝑢 𝑀 + 𝜏 𝑇 Ψ 𝜃 /𝜖 𝑢 𝑇 . (11) Let 
+
+𝜇 ≜ 𝑎 max 
+
+> 𝑀
+
+𝑎 max 
+
+> 𝑇
+
+(12) be the maneuverability ratio. Fig. 2 presents the game space for the case where the interceptor possesses maneuverability and agility superiority over the target, that is, 𝜇 > 1 and 𝜇𝜖 > 1. The lines shown in this figure are equicost lines, corresponding to cases where both the interceptor and the target apply their respective optimal strategies until the end of the game, thus enforcing a 9tgo, s     
+
+> 0123
+> ZDGL1, m
+> -1000
+> -500
+> 0
+> 500
+> 1000 GameSpace
+
+Fig. 2 DGL1 game space and its singular region (grey). Equicost level lines (dashed) and boundary lines (corresponding to zero miss distance) of the singular region, 𝜕 Z∗ (solid). 
+
+time-invariant ZEM, which, at the end of the game, becomes the final miss distance. Corresponding to zero miss distance, the two solid lines define the boundary of the singular region, denoted as Z∗.When the game’s state is inside Z∗, any pursuer’s acceleration command is optimal, in the sense that it guarantees hit-to-kill performance. Because of this non-uniqueness, a linear command is commonly used to prevent control chattering, rendering the following practical form of the DGL1 law 
+
+𝑢 𝑀 =
+
+
+
+𝑎 max  
+
+> 𝑀
+
+sat   𝑍 DGL1 
+
+> 𝑘𝜕 Z∗
+
+ 𝑍 DGL1 ∈ Z ∗
+
+𝑎 max  
+
+> 𝑀
+
+sgn (𝑍 DGL1 ) 𝑍 DGL1 ∉ Z∗
+
+(13) where sat (·) stands for the saturation function, 0 < 𝑘 ≤ 1 is the portion of the singular region in which the acceleration is (arbitrarily set to be) linear, 𝜕 Z∗ is the boundary of the singular region, computed as 
+
+𝜕 Z∗ = 𝑎 max  
+
+> 𝑀
+
+𝜏 2 
+
+> 𝑀
+
+Υ(𝜃 ) − 𝑎 max  
+
+> 𝑇
+
+𝜏 2 
+
+> 𝑇
+
+Υ(𝜃 /𝜖 ) (14) and 
+
+Υ(𝜃 ) = 12 𝜃 2 − 𝑒 −𝜃 − 𝜃 + 1. (15) 10 The calculation of the ZEM requires the time-to-go, which cannot be computed accurately in real time. Therefore, the following approximation is used 
+
+𝑡 𝑔𝑜 ≈ − 𝜌 𝑉 𝜌 
+
+(16) along with the following relation, used in a nonlinear setting when linearizing about the instantaneous LOS 
+
+𝜉 = 𝜌 sin 𝜆. (17) Thus, in a nonlinear setting, the ZEM of the well-known proportional navigation (PN) guidance law is approximated by 
+
+𝑍 PN = 𝜉 + ¤ 𝜉𝑡 𝑔𝑜 ≈ − 𝑉 𝜌 𝑡 2 
+
+> 𝑔𝑜
+
+¤𝜆 cos 𝜆 = 𝑡 𝑔𝑜 𝑉 𝜆 cos 𝜆 (18) and the ZEM of the DGL1 law is computed via 
+
+𝑍 DGL1 = 𝑍 PN + 𝑍 acc (19) where 
+
+𝑍 acc ≜ −𝑎 𝑛 𝑀 𝜏 2 
+
+> 𝑀
+
+Ψ(𝜃 ) + 𝑎 𝑛 𝑇 𝜏 2 
+
+> 𝑇
+
+Ψ 𝜃 /𝜖 . (20) The DGL1 game space is constructed solely by the ZEM and the time-to-go, as shown in Fig. 2. To directly estimate the ZEM and the time-to-go, we define a new state vector denoted by 𝝌 𝑀 , which differs from the physical state vector 𝒙 𝑀 defined in Eq. (2): 
+
+𝝌 𝑀 =
+
+
+
+𝑡 𝑔𝑜 𝑍 DGL1 𝜆 𝛾 𝑇 
+
+𝑇 
+
+. (21) 11 This yields the EOM as 
+
+¤𝑡 𝑔𝑜 = −1 − (𝑎 𝑀 sin 𝛿 𝑀 + 𝑎 𝑇 sin 𝛿 𝑇 ) 𝑡 𝑔𝑜 
+
+𝑉 𝜌 
+
++
+
+𝑉 𝜆 
+
+𝑉 𝜌 
+
+2
+
+(22a) 
+
+¤𝑍 DGL1 = ¤𝑍 PN + ¤ 𝑍 acc (22b) 
+
+¤𝜆 = 𝑉 𝜆 
+
+𝜌 (22c) 
+
+¤𝛾 𝑇 = 𝑎 𝑇 
+
+𝑉 𝑇 
+
+(22d) where ¤𝑍 PN and ¤𝑍 acc are computed by differentiating Eqs. (18) and (20) with respect to time, respectively. Alternatively, Eq. (11) can be used as the EOM of ¤𝑍 DGL1 in the linearized case. Moreover, using Eq. (16) and Eq. (19), we can compute 𝜌 and 𝑎 𝑇 via 
+
+𝜌 = − 𝑉 𝜌 𝑡 𝑔𝑜 (23a) 
+
+𝑎 𝑇 = 𝑍 DGL1 − 𝑡 𝑔𝑜 𝑉 𝜆 cos 𝜆 + 𝑎 𝑛 𝑀 𝜏 2 
+
+> 𝑀
+
+Ψ (𝜃 )
+
+cos 𝛿 𝑇 𝜏 2 
+
+> 𝑇
+
+Ψ 𝜃 /𝜖  . (23b) 
+
+## IV. Target Tracking IMMPF 
+
+In this section, we present the estimation algorithm we use to drive the new stochastic guidance law to be derived in the sequel. We first present a generic IMMPF algorithm. Then, we adapt this algorithm to suit the problem at hand, by addressing time-varying transition probabilities and a particular initialization of the filter. 
+
+A. The IMMPF Algorithm 
+
+The IMMPF algorithm is a multiple model sequential MC estimator [ 5]. We select the IMMPF for its ability to cope with nonlinear dynamics, non-Gaussian driving noises, and multiple models with non-Markovian switching modes. Crucially, unlike the Kalman filter and its variants, the IMMPF provides a particle-based estimate of the entire posterior PDF at each time step. This 12 feature is essential because we explicitly exploit the full probability distribution in the guidance law design. Generally following the logic of the IMM estimator [ 17 ], in the IMMPF, the resampling and interaction stages are combined before the prediction and filtering stages. The filter runs a bank of particle filters (PFs) matched to all possible modes. At each time 𝑡 𝑘 the PDF is represented by the set of particles and associated scalar weights {x𝑚,𝑠 𝑘 , 𝑤 𝑚,𝑠 𝑘 | 𝑚 ∈ M, 𝑠 ∈ { 1, . . . , 𝑆 }} , where 
+
+x𝑚,𝑠 𝑘 is the state vector of particle 𝑠 and mode 𝑚 , and 𝑤 𝑚,𝑠 𝑘 is its associated weight. M is the set of 
+
+𝑀 discrete modes, and 𝑆 is the number of particles of each mode, rendering the total number of particles 𝑁 𝑝 = 𝑀𝑆 .
+
+B. Target Tracking IMMPF 
+
+To implement the IMMPF in our problem we use the models presented in Sec. II. Two discrete modes are used for the target acceleration command in Eq. (1) . The prediction step uses the nonlinear EOM in Eq. (22), recast in discrete-time as 
+
+x𝑘 = f𝑘 −1 (x𝑘 −1, 𝑚 𝑘 , w𝑘 ) (24) where x𝑘 is the interceptor relative state at time 𝑡 𝑘 and 𝑚 𝑘 is the target mode during the time interval 
+
+(𝑡 𝑘 −1, 𝑡 𝑘 ]. The covariance of the zero-mean process noise w𝑘 is used as a tuning parameter of the filter. The filter step uses the measurement equation (6) to calculate the likelihood density 
+
+𝑝 (z𝑘 | x𝑘 , 𝑚 𝑘 ). Note that the particle propagation step uses the nonlinear dynamics derived in Eq. (22) . Since the interceptor’s own acceleration 𝑢 𝑀 is known, it is treated as a deterministic input in the filter process model, ensuring the state evolution is consistent with the engagement kinematics. 
+
+1. Mode Estimation 
+
+The target acceleration command sequence is commonly assumed to obey a homogeneous Markov switching model. This assumption presupposes that the target’s flight controller is indifferent with regard to the timing of the acceleration switch maneuver, which is equivalent to assuming that the target cannot affect the resulting miss distance by properly timing this maneuver. This 13 assumption, however, has been shown to be wrong in, e.g., [ 6 ], which demonstrates that a ‘smart’ target can enforce a large miss distance by properly timing its acceleration switch maneuver. To address such a target, we use a non-homogeneous Markov chain model for the transition probability matrix (TPM): 
+
+Π(𝑡 𝑘 ) =
+
+
+
+1 − 𝜋 12  
+
+> 𝑘
+
+𝜋 12 
+
+> 𝑘
+
+𝜋 21  
+
+> 𝑘
+
+1 − 𝜋 21 
+
+> 𝑘
+
+
+
+(25) where 
+
+𝜋 𝑖 𝑗 𝑘 ≜ Pr (𝑚 𝑘 = 𝑗 |𝑚 𝑘 −1 = 𝑖 ), ∀𝑖, 𝑗 = 1, 2 (26) are the transition probabilities, at time 𝑡 𝑘 .The time-varying TPM allows us to cope better with sophisticated targets capable of using optimal evasive maneuvers, e.g., targets using the guidance law presented in [ 18 ], which exploits the interceptor’s inherent estimation error. By increasing the transition probabilities over the optimal evasive maneuver’s time window, the effect of this maneuver can be mitigated. 
+
+2. Filter Initialization 
+
+We assume that the interceptor’s estimator is initialized by a radar. Figure 3 presents a schematic view of the assumed planar geometry of the initializing radar, the interceptor and the target. Variables associated with the radar are denoted by additional subscript R. The range between the radar and the target is denoted by 𝜌 𝑅 , and 𝜆 𝑅 is the angle between the radar’s LOS to the target and the 𝑋 𝐼 axis. The radar measures the following vector: 
+
+x𝑅 =
+
+
+
+𝜌 𝑅 𝜆 𝑅 𝛾 𝑇 𝑎 𝑇 
+
+𝑇 
+
+(27) This vector is then passed on to the interceptor’s estimator. We further assume that the radar’s position (𝑥 𝑅 , 𝑦 𝑅 ) and the interceptor position at initialization (𝑥 𝑀 , 𝑦 𝑀 ) are known. The geometric 14 λR    
+
+> λρR
+> ρ
+> TMR
+> (xT; y T)(xR; y R)(xM; y M)
+> XI
+> YI
+> OI
+
+Fig. 3 Initializing radar geometry 
+
+relation between the interceptor’s relative state and radar measurement is 
+
+𝜌 =√︃ 𝜌 2 
+
+> 𝑅
+
++ Δ𝑅 2 
+
+> 𝑅
+
++ 2𝜌 𝑅 [Δ𝑋 𝑅 cos (𝜆 𝑅 ) + Δ𝑌 𝑅 sin (𝜆 𝑅 )] (28a) 
+
+𝜆 = arctan 
+
+ Δ𝑌 𝑅 + 𝜌 sin (𝜆 𝑅 )
+
+Δ𝑋 𝑅 + 𝜌 cos (𝜆 𝑅 )
+
+
+
+(28b) where 
+
+Δ𝑋 𝑅 ≜ 𝑥 𝑅 − 𝑥 𝑀 , Δ𝑌 𝑅 ≜ 𝑦 𝑅 − 𝑦 𝑀 , Δ𝑅 𝑅 ≜√︃ Δ𝑋 2 
+
+> 𝑅
+
++ Δ𝑌 2 
+
+> 𝑅
+
+. (29) Using Eqs. (16) and (19) then enables initialization of the state vector in Eq. (21) . These geometric relations enable the direct initialization of the particle cloud from the radar estimate. Specifically, we draw random samples from the radar estimate’s PDF and map them through Eqs. (28) to generate the initial state particles for the filter. 
+
+## V. Estimation-Aware Guidance 
+
+In this section, we derive this paper’s main result: a GST-compliant, computationally-efficient stochastic guidance law, that is based on the perfect-information DGL1 guidance law. We begin by presenting Bayesian decision theory, inspired by its derivation in [ 4 ], and then frame the stochastic guidance problem as a multi-hypothesis Bayesian decision problem. We then proceed by deriving conditions for making optimal Bayesian decisions at a minimal computational cost, and conclude 15 this section by augmenting the new guidance law with an information-enhancing trajectory shaping algorithm that exploits the decision ambiguity frequently occurring in the early stages of the interception. 
+
+A. Bayesian Decision Theory 
+
+The decision problem seeks to find an optimal rule that chooses the optimal hypothesis by minimizing a risk function over 𝑛 given hypotheses {𝐻 𝑖 }𝑛 𝑖 =1. Following [ 4 ], we define the Bayesian risk R to be the expected value of the cost function. Given the set of available measurements Y, we seek to minimize the conditional risk (or expected posterior loss): 
+
+R ( 𝐻 𝑖 | Y) ≜ E [𝐽 (𝐻 𝑖 ) | Y] =
+
+> 𝑛
+
+∑︁ 
+
+> 𝑗 =1
+
+𝐶 𝑖 𝑗 Pr (𝐻 𝑗 | Y) , (30) where 𝐽 (𝐻 𝑖 ) is the cost resulting from deciding 𝐻 𝑖 , 𝐶 𝑖 𝑗 is the cost incurred when the decision rule decides that hypothesis 𝐻 𝑖 is true when, in fact, hypothesis 𝐻 𝑗 is true, and Pr (𝐻 𝑗 | Y) is the posterior probability that hypothesis 𝐻 𝑗 is true. To facilitate the minimization, we decompose the total risk into a fixed, unavoidable component (the risk incurred even if the true hypothesis were known) and a variable, decision-dependent component. We define the expected additional risk B𝑖 as the difference between the (decision-dependent) conditional risk of deciding 𝐻 𝑖 , and the (unavoidable) optimal conditional risk, obtained as the sum of all possible correct decisions [4]: 
+
+B𝑖 (Y) ≜ R ( 𝐻 𝑖 | Y) − 
+
+> 𝑛
+
+∑︁ 
+
+> 𝑗 =1
+
+𝐶 𝑗 𝑗 Pr (𝐻 𝑗 | Y) . (31) Substituting Eq. (30) into this definition yields: 
+
+B𝑖 (Y) =
+
+> 𝑛
+
+∑︁ 
+
+> 𝑗 =1
+
+Pr (𝐻 𝑗 | Y)( 𝐶 𝑖 𝑗 − 𝐶 𝑗 𝑗 ), (32) where it is noted that the summand corresponding to 𝑗 = 𝑖 vanishes. 16 Now, using Bayes’ rule, the posterior probability can be decomposed to explicitly exhibit the contribution of the prior knowledge and the contribution of the evidence provided by the measurements. Thus 
+
+Pr (𝐻 𝑗 | Y) ∝ 𝑃 (Y | 𝐻 𝑗 )𝑃 𝑗 , (33) where 𝑃 𝑗 denotes the prior probability of hypothesis 𝐻 𝑗 , and 𝑃 (Y | 𝐻 𝑗 ) denotes the likelihood of observing the measurements conditional on hypothesis 𝐻 𝑗 being true. Using the posterior decomposition (33) in Eq. (32) and defining the unnormalized additional risk function 𝐼 𝑖 (Y) to be 
+
+𝐼 𝑖 (Y) ≜
+
+> 𝑛
+
+∑︁ 
+
+> 𝑗 =1
+> 𝑗 ≠𝑖
+
+𝑃 𝑗 𝑃 (Y | 𝐻 𝑗 )( 𝐶 𝑖 𝑗 − 𝐶 𝑗 𝑗 ), 𝑖 = 1, . . . , 𝑛. (34) renders the optimal Bayesian decision rule as: Decide 𝐻 𝑖 ★ , where 𝑖 ★ ≜ arg min 
+
+> 𝑖 ∈{ 1,...,𝑛 }
+
+{𝐼 𝑖 (Y)} . (35) 
+
+B. Stochastic Guidance as a Bayesian Decision Problem 
+
+As Eq. (13) shows, the DGL1 guidance law depends on knowing, at each point in time, where the state of the game is: inside the singular region, above it, or under it (see Fig. 2). The commands computed for these states are vastly different from each other, and, clearly, computing a guidance command appropriate for one state of the game (e.g., inside the singular region) when, in fact, another state (e.g., outside and above the singular region) is valid, might lead to catastrophic results, i.e., a significant increase in the miss distance. Under the perfect information assumption, identifying the true state of the game is not an issue, and the perfect information guidance law can be precisely computed and implemented. However, in the stochastic case, an estimator has to be implemented, and the state of the game is not deterministically known but, instead, has to be estimated. In this case, the determination of the state of the game becomes a hard problem, admitting only a probabilistic 17 answer. To address the problem in a concrete way, consider again Fig. 2, and define the following four hypotheses about the state of the game. 
+
+𝐻 1: the state is above the singular region. 
+
+𝐻 2: the state is inside the singular region, and the target acceleration mode is 𝑚 = 1.
+
+𝐻 3: the state is inside the singular region, and the target acceleration mode is 𝑚 = 2.
+
+𝐻 4: the state is under the singular region. In the regular regions, 𝐻 1 and 𝐻 4, the target’s optimal strategy is uniquely determined by the game solution (13) . In contrast, within the singular region, the target’s optimal control is non-unique; thus, 
+
+𝐻 2 and 𝐻 3 are distinguished explicitly by the target’s maneuver mode. To illustrate these hypotheses, as well as the utility and function of the IMMPF filter, Fig. 4 superimposes the particle cloud, which the IMMPF maintains to represent the posterior PDF at a particular moment in time, on a part of the DGL1’s game space. The particles are color-coded according to the hypotheses they are associated with. tgo , s    
+
+> 0.68 0.7 0.72 0.74
+> ZDGL1 , m
+> -100
+> -50
+> 0
+> 50
+> 100
+> H1
+> H2
+> H3
+> H4
+> @Z$
+
+Fig. 4 IMMPF particle cloud distribution, color-coded by hypothesis, relative to the singular region boundaries at a particular moment during the interception. 
+
+As can be easily seen from Fig. 4, in the stochastic case there is no deterministic answer to the question: where is the state of the game at a particular moment in time? Instead, we can talk about the probability that the state resides in a specified zone in the game space. Thus, straightforwardly 18 implementing a perfect-information guidance law, such as the DGL1 law, is both conceptually and practically wrong. Because the unavoidable uncertainty regarding the state of the game can lead to catastrophic results, we employ Bayesian decision, which explicitly takes into account the uncertainty and the costs of wrong decisions. To frame the problem as a Bayesian decision one, we define the cost function 𝐽 to be the final miss distance of the stochastic interception problem. In the context of a zero-sum differential game with miss distance as the payoff, the cost function represents the guaranteed miss distance. When the state lies in the regular region (outside the singular region), the value of the game is exactly the distance from the current state to the boundary of the singular region. Therefore, we define the cost 
+
+𝐶 𝑖 𝑗 to be the final miss distance obtained when the guidance law assumes, for some finite horizon, that hypothesis 𝐻 𝑖 is true when, in fact, hypothesis 𝐻 𝑗 is true. Based on its definition, the cost is computed based on the location of the state of the game within the game space. Thus, in our specific case, when the state is such that the associated ZEM is inside the singular region, the cost is zero. When the ZEM is outside the singular region, the cost is the distance between the current ZEM and the singular region’s nearest boundary. Applying the Bayesian decision rule (35) to the interception problem involves the computation of the likelihoods, the decision costs, and the prior probabilities of the hypotheses. We do these calculations using the IMMPF’s particle states and weights, as detailed in the ensuing. 
+
+Likelihood Functions. Having the particle-based density approximation generated by the IMMPF on hand, we approximate the likelihoods by summing the IMMPF’s weights of the particles associated with each hypothesis. We denote the weight of the 𝑗 ′-th particle at time 𝑘 by 
+
+𝑤 𝑗 ′ 
+
+> 𝑘
+
+. Consequently: 
+
+𝑃 (Y | 𝐻 𝑗 ) =∑︁   
+
+> 𝑗 ′∈𝐻 𝑗
+
+𝑤 𝑗 ′ 
+
+> 𝑘
+
+, 𝑗 ∈ { 1, . . . , 𝑛 } (36) To gain some insight into the effect of this term, consider the (extreme) case where the particles 19 are entirely concentrated in 𝐻 ℓ for some ℓ ∈ { 1, . . . , 𝑛 }. In this case Eq. (36) implies 
+
+𝑃 (Y | 𝐻 𝑗 ) =
+
+
+
+1 𝑗 = ℓ
+
+0 𝑗 ≠ ℓ
+
+(37) and Eq. (34) yields 
+
+𝐼 𝑖 =
+
+
+
+𝑃 ℓ (𝐶 𝑖ℓ − 𝐶 ℓℓ ) 𝑖 ≠ ℓ
+
+0 𝑖 = ℓ
+
+(38) Noting that 𝐶 𝑖ℓ − 𝐶 ℓℓ ≥ 0, by our earlier assumption, then leads to 𝑖 ★ = ℓ, and the optimal decision is 𝐻 ℓ.
+
+Costs. In calculating the costs, we have to separately address the following four distinct cases: 1) The cost of correctly choosing hypothesis 𝐻 𝑗 when 𝑃 (Y | 𝐻 𝑗 ) > 0 is 
+
+𝐶 𝑗 𝑗 =∑︁   
+
+> 𝑗 ′∈𝐻 𝑗
+
+˜𝑤 𝑗 ′ 
+
+> 𝑘
+
+max (0, 𝑧 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ ) − 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ )) (39) where 𝑧 𝑗 ′ is the ZEM corresponding to particle 𝑗 ′ that belongs to hypothesis 𝐻 𝑗 , 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ )
+
+is the singular region boundary point corresponding to the time-to-go of that particle, and ˜𝑤 𝑗 ′ 
+
+> 𝑘
+
+is the corresponding normalized weight at time 𝑡 𝑘 :
+
+˜𝑤 𝑗 ′ 
+
+> 𝑘
+
+= 𝑤 𝑗 ′
+
+> 𝑘
+
+Í𝑗 ′ ∈𝐻 𝑗 𝑤 𝑗 ′
+
+> 𝑘
+
+. (40) 2) The cost of wrongly choosing hypothesis 𝐻 𝑖 when 𝑃 (Y | 𝐻 𝑖 ) > 0, when hypothesis 𝐻 𝑗 
+
+is true and 𝑃 (Y | 𝐻 𝑗 ) > 0, is 
+
+𝐶 𝑖 𝑗 =∑︁   
+
+> 𝑗 ′∈𝐻 𝑗
+
+˜𝑤 𝑗 ′
+
+> 𝑘
+
+∑︁ 𝑖 ′ ∈𝐻 𝑖 
+
+˜𝑤 𝑖 ′ 
+
+> 𝑘
+
+max (0, 𝑧 𝑖 ′ 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) − 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 )) (41) where 𝑧 𝑖 ′ 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) is the ZEM of particle 𝑗 ′ that belongs to hypothesis 𝐻 𝑗 which 20 is propagated ahead for a predefined horizon, 𝜏 . The parameter 𝜏 is the prediction duration used to evaluate the cost of the decision; in the simulation study, we set 
+
+𝜏 = min (𝜏 max , 𝑡 𝑔𝑜 ; 𝑗 ′ ), where 𝜏 max is the maximal prediction duration. The propagation is performed over the interval [𝑡 𝑔𝑜 ; 𝑗 ′ , 𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ]. During this interval, we apply the acceleration command of particle 𝑖 ′ which belongs to hypothesis 𝐻 𝑖 using the linear acceleration command from Eq. (13) and assuming that the acceleration command is constant during the time interval. 3) The cost of choosing wrongly hypothesis 𝐻 𝑖 when 𝑃 (Y | 𝐻 𝑖 ) = 0, when hypothesis 𝐻 𝑗 
+
+is true and 𝑃 (Y | 𝐻 𝑗 ) > 0, is 
+
+𝐶 𝑖 𝑗 =∑︁   
+
+> 𝑗 ′∈𝐻 𝑗
+
+˜𝑤 𝑗 ′ 
+
+> 𝑘
+
+max (0, 𝑧 𝑖 ′ 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) − 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 )) . (42) 4) If 𝑃 (Y | 𝐻 𝑗 ) = 0, then we can set 𝐶 𝑗 𝑗 and 𝐶 𝑖 𝑗 arbitrarily, according to the optimal Bayesian decision rule of Eq. (34). 
+
+Prior probabilities. The prior probability for each hypothesis 𝑗 , 𝑃 𝑗 , is calculated based on the measurement history available at time 𝑡 𝑘 −1, denoted by Y𝑘 −1, prior to acquiring the new measurement at time 𝑡 𝑘 . Let SW denote the event that the target has switched its acceleration command in the time interval [𝑡 𝑘 −1, 𝑡 𝑘 ], and let NSW denote the complementary event. Thus, using the law of total probability yields 
+
+𝑃 𝑗 = Pr (𝐻 𝑗 | Y 𝑘 −1, SW ) Pr (SW ) + Pr (𝐻 𝑗 | Y 𝑘 −1, NSW ) Pr (NSW ). (43) The conditional hypothesis probabilities are obtained via propagating forward the particle cloud available at time 𝑡 𝑘 −1 according to whether a switch has occurred or not. The probabilities 
+
+Pr (SW ) and Pr (NSW ) are obtained via using again the law of total probability while conditioning 21 on the target’s mode 𝑟 𝑘 −1 at time 𝑡 𝑘 −1
+
+Pr (SW ) = Pr (𝑚 𝑘 = 1 | 𝑚 𝑘 −1 = 2) Pr (𝑚 𝑘 −1 = 2) + Pr (𝑚 𝑘 = 2 | 𝑚 𝑘 −1 = 1) Pr (𝑚 𝑘 −1 = 1) (44) and 
+
+Pr (NSW ) = Pr (𝑚 𝑘 = 1 | 𝑚 𝑘 −1 = 1) Pr (𝑚 𝑘 −1 = 1) + Pr (𝑚 𝑘 = 2 | 𝑚 𝑘 −1 = 2) Pr (𝑚 𝑘 −1 = 2).
+
+(45) The target’s modal probabilities at time 𝑡 𝑘 −1 are obtained from the estimator, and the transition probabilities populate the TPM, which is assumed to be known. Algorithm 1 presents a schematic description of one cycle of the usage of the Bayesian decision criterion for the interception problem. 
+
+Algorithm 1: The usage of the Bayesian decision criterion for the interception problem  
+
+> 1
+
+Obtain the weights and samples of the current and previous steps  
+
+> 2
+
+for 𝑗 = 1, 2, 3, 4 do  
+
+> 3
+
+Calculate the likelihood of hypothesis 𝐻 𝑗 via Eq. (36)  
+
+> 4
+
+if 𝑃 (Y | 𝐻 𝑗 ) > 0 then  
+
+> 5
+
+for 𝑖 = 1, 2, 3, 4 do  
+
+> 6
+
+if 𝑖 ≠ 𝑗 then  
+
+> 7
+
+if 𝑖 ∈ { 2, 3} and 𝑃 (Y | 𝐻 𝑖 ) > 0 then  
+
+> 8
+
+Calculate the cost 𝐶 𝑖 𝑗 via Eq. (41)  
+
+> 9
+
+else  
+
+> 10
+
+Calculate the cost 𝐶 𝑖 𝑗 via Eq. (42)  
+
+> 11
+
+end if  
+
+> 12
+
+else  
+
+> 13
+
+Calculate the cost 𝐶 𝑗 𝑗 via Eq. (39)  
+
+> 14
+
+end if  
+
+> 15
+
+end for  
+
+> 16
+
+Calculate the prior probability 𝑃 𝑗 via Eqs. (43–45)  
+
+> 17
+
+else  
+
+> 18
+
+Set 𝐶 𝑖 𝑗 = 0 for all 𝑖 = 1, 2, 3, 4 
+
+> 19
+
+Set 𝑃 𝑗 = 0 
+
+> 20
+
+end if  
+
+> 21
+
+Calculate the expected additional risk of choosing hypothesis 𝐻 𝑗 via Eq. (34)  
+
+> 22
+
+end for  
+
+> 23
+
+Choose the optimal Bayesian decision via Eq. (35) 22 C. Computational Effort Reduction 
+
+The computational effort for determining all the expected excess risks of choosing a hypothesis can be significant, depending on the number of particles used by the filter. In this subsection, we present conditions for determining whether the entire calculation mechanism of the Bayesian decision criterion is needed, or, instead, only a reduced calculation can be employed without losing optimality. We emphasize that this reduction mechanism does not involve reducing the particle population size. Instead, it avoids the computationally expensive cost integration steps when the particle cloud is entirely contained within specific regions of the game space where the optimal decision is unambiguous. We begin by defining the set of all particles having nonzero weights at time 𝑡 𝑘 as J𝑘 , that is 
+
+J𝑘 ≜  𝑗 ′ | 𝑤 𝑗 ′ 
+
+> 𝑘
+
+≠ 0 . (46) Note that the complement set of J𝑘 has no bearing on computation of the costs or the likelihoods. Next, define the maximal acceleration command applied by the nonzero-weight particles in hypotheses 
+
+𝐻 2 or 𝐻 3 as 
+
+𝑢 𝑖 ≜ arg max   
+
+> 𝑗 ′∈J 𝑘 ∩𝐻 𝑖
+
+ 𝑧 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ )
+
+𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ )
+
+
+
+, 𝑖 = 2, 3 (47) where |𝑢 𝑖 | < 𝑎 max  
+
+> 𝑀
+
+. Analogously, define the minimal acceleration command applied by the nonzero-weight particles in hypotheses 𝐻 2 or 𝐻 3 as 
+
+𝑢 𝑖 ≜ arg min   
+
+> 𝑗 ′∈J 𝑘 ∩𝐻 𝑖
+
+ 𝑧 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ )
+
+𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ )
+
+
+
+, 𝑖 = 2, 3 (48) where |𝑢 𝑖 | < 𝑎 max  
+
+> 𝑀
+
+. If J𝑘 ∩ 𝐻 𝑖 = ∅ then we set 𝑢 𝑖 = 𝑢 𝑖 = 0.We now assume the following assumptions: 1) If 𝑃 (Y | 𝐻 𝑗 ) ≠ 0 then 𝑃 𝑗 ≠ 0.2) If 𝑃 (Y | 𝐻 2) + 𝑃 (Y | 𝐻 3) = 1, then 𝑢 2 ≥ 𝑢 3 and 𝑢 2 ≥ 𝑢 3.3) The acceleration commands of the interceptor and the target, 𝑢 𝑀 and 𝑢 𝑇 , respectively, are 23 constant in the interval [𝑡 𝑔𝑜 , 𝑡 𝑔𝑜 − 𝜏 ].The first assumption states that if the likelihood indicates that a hypothesis is feasible, i.e., its likelihood is nonzero, then the prior probability must indicate that it is feasible too. The second assumption states that when all the particles are inside the singular region, then the particle that is closest to the upper boundary of the singular region is in 𝐻 2. Similarly, the particle which is the closest to the lower boundary of the singular region must be in 𝐻 3. Intuitively, this is because 
+
+𝐻 2 represents states tending upward and 𝐻 3 states tending downward, so the boundary-critical particles must lie in these respective sets. The last assumption states that the acceleration commands are assumed to be constant for the given horizon when using the Bayesian decision criterion, as mentioned in Sec. V.B. The following lemma states a necessary and sufficient condition that the expected additional risk of choosing hypothesis 𝐻 𝑖 is zero. 
+
+Lemma V.1. At time 𝑡 𝑘 
+
+1) 𝐼 1 = 0 if and only if for 𝑢 𝑀 = 𝑎 max 
+
+> 𝑀
+
+𝑧 1 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) ≥ − 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) (49) 
+
+for all 𝑗 ′ ∈ J 𝑘 ,2) 𝐼 2 = 0 if and only if for any 𝑢 𝑀 ∈ [ 𝑢 2, 𝑢 2]
+
+𝑧 2 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) ≤ 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) (50) 
+
+for all 𝑗 ′ ∈ J 𝑘 ,3) 𝐼 3 = 0 if and only if for any 𝑢 𝑀 ∈ [ 𝑢 3, 𝑢 3]
+
+𝑧 3 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) ≤ 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) (51) 
+
+for all 𝑗 ′ ∈ J 𝑘 ,
+
+24 4) 𝐼 4 = 0 if and only if for 𝑢 𝑀 = −𝑎 max 
+
+> 𝑀
+
+𝑧 4 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) ≤ 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) (52) 
+
+for all 𝑗 ′ ∈ J 𝑘 .where 𝑧 𝑖 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) is the ZEM of particle 𝑗 ′, which is propagated ahead over the interval 
+
+[𝑡 𝑔𝑜 ; 𝑗 ′ , 𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ] by applying the acceleration command as hypothesis 𝐻 𝑖 is true. 
+
+The proof is deferred to Appendix A. Lemma V.1 provides necessary and sufficient conditions for 𝐼 𝑖 = 0 based on future states of the particles. To develop similar conditions based on the current time states of the particles, we first denote 
+
+𝜂 ≜ 𝑡 𝑔𝑜 − 𝜏 𝜏 𝑀 
+
+= 𝜃 − 𝜏 𝜏 𝑀 
+
+(53) and then denote the following four regions over the game space. 
+
+A1: all the states satisfying 
+
+−𝑍 DGL1 (𝑡 𝑔𝑜 ) ≤ 𝜕 Z∗ (𝑡 𝑔𝑜 ) + 2𝑎 max  
+
+> 𝑀
+
+𝜏 2 
+
+> 𝑀
+
+[Υ(𝜂 ) − Υ(𝜃 )] (54) 
+
+A2: all the states satisfying 
+
+𝑍 DGL1 (𝑡 𝑔𝑜 ) ≤ 𝜕 Z∗ (𝑡 𝑔𝑜 ) + 𝑎 max  
+
+> 𝑀
+
+𝜏 2
+
+> 𝑀
+
+
+
+1 − 𝑢 2
+
+𝑎 max 
+
+> 𝑀
+
+
+
+[Υ(𝜂 ) − Υ(𝜃 )] (55) and 
+
+−𝑍 DGL1 (𝑡 𝑔𝑜 ) ≤ 𝜕 Z∗ (𝑡 𝑔𝑜 ) + 𝑎 max  
+
+> 𝑀
+
+𝜏 2
+
+> 𝑀
+
+
+
+1 + 𝑢 2
+
+𝑎 max 
+
+> 𝑀
+
+
+
+[Υ(𝜂 ) − Υ(𝜃 )] (56) 
+
+A3: all the states satisfying 
+
+𝑍 DGL1 (𝑡 𝑔𝑜 ) ≤ 𝜕 Z∗ (𝑡 𝑔𝑜 ) + 𝑎 max  
+
+> 𝑀
+
+𝜏 2
+
+> 𝑀
+
+
+
+1 − 𝑢 3
+
+𝑎 max 
+
+> 𝑀
+
+
+
+[Υ(𝜂 ) − Υ(𝜃 )] (57) 25 and 
+
+−𝑍 DGL1 (𝑡 𝑔𝑜 ) ≤ 𝜕 Z∗ (𝑡 𝑔𝑜 ) + 𝑎 max  
+
+> 𝑀
+
+𝜏 2
+
+> 𝑀
+
+
+
+1 + 𝑢 3
+
+𝑎 max 
+
+> 𝑀
+
+
+
+[Υ(𝜂 ) − Υ(𝜃 )] (58) 
+
+A4: all the states satisfying 
+
+𝑍 DGL1 (𝑡 𝑔𝑜 ) ≤ 𝜕 Z∗ (𝑡 𝑔𝑜 ) + 2𝑎 max  
+
+> 𝑀
+
+𝜏 2 
+
+> 𝑀
+
+[Υ(𝜂 ) − Υ(𝜃 )] (59) Equipped with Lemma V.1 and these definitions, we now state the following lemma. 
+
+Lemma V.2. There exists 𝑖 ∈ { 1, 2, 3, 4} such that 𝐼 𝑖 = 0 at time 𝑡 𝑘 if and only if ∑︁  
+
+> 𝑗 ′∈A 𝑖
+
+𝑤 𝑗 𝑘 = 1 (60) The proof is deferred to Appendix B. Based on these results, we now prove the following theorem, which provides a sufficient condition for the optimality of hypothesis 𝐻 𝑖 .
+
+Theorem V.3. If at time 𝑡 𝑘 there exists 𝑖 ∈ { 1, 2, 3, 4} such that ∑︁  
+
+> 𝑗 ′∈A 𝑖
+
+𝑤 𝑗 𝑘 = 1 (61) 
+
+then hypothesis 𝐻 𝑖 is an optimal Bayesian decision. Proof. Lemma V.2 shows the equivalency between 𝐼 𝑖 = 0 and Í𝑗 ′ ∈A 𝑖 𝑤 𝑗 ′ 
+
+> 𝑘
+
+= 1. We know that if there exists 𝑖 = 1, 2, 3, 4 such that 𝐼 𝑖 = 0 then hypothesis 𝐻 𝑖 is optimal based on Equation (35) . ■
+
+When the optimal Bayesian decision is a single, particular hypothesis, there is no need to perform all the calculations as presented in Algorithm 1, which translates to a significant computational effort reduction. However, the optimal solution is not guaranteed to be unique, and, in some cases, all four hypotheses are optimal, which results in a decision ambiguity. We resolve this ambiguity by harnessing it to improve the information acquired by the interceptor, as presented in the sequel. 26 D. Information-Enhancement Trajectory Shaping 
+
+The Bayesian decision criterion facilitates unique optimal decisions under severe uncertainties when the associated hypothesis costs, related to the finite cost calculation horizon, denoted by 
+
+𝜏 max , are non-zero. However, when the expected additional costs vanish, for this horizon, no such unambiguous decision exists, and the acceleration command becomes arbitrary. In [ 3], when facing such situations, the authors arbitrarily used the classical version of the DGL1 law. In the present work we propose exploiting this command ambiguity to improve the information provided to the estimator. To that end, we define the set of admissible control functions as 
+
+U𝑘 𝑀 ≜
+
+
+
+𝑢 𝑘 𝑀 : |𝑢 𝑘 𝑀 | ≤ 𝑎 max  
+
+> 𝑀
+
+,∑︁   
+
+> 𝑗 ′∈{ 𝐻 1,𝐻 4}
+
+𝑤 𝑗 ′ 
+
+> 𝑘 +1
+
+≤ 𝑊 Thres 
+
+
+
+, (62) where each member of the set, 𝑢 𝑘 𝑀 , keeps most of the particles inside the singular region, in the sense that the sum of the weights of all particles outside the singular region at time 𝑡 𝑘 +1 does not exceed a predefined threshold 𝑊 Thres . This constraint ensures that the interceptor’s state remains within the singular region. Preventing the state from exiting this region is crucial, as doing so when the target has not maneuvered can result in poor guidance performance due to the controller’s inability to recover. The performance of the algorithm depends on the selection of the predefined threshold, which serves as a tuning parameter. This selection introduces a trade-off: prioritizing stricter safety guarantees by choosing low values may result in conservative commands, whereas prioritizing performance (by choosing higher values) allows for more aggressive maneuvering but with the risk of crossing the singular region boundaries. As is well known, the Cramér-Rao lower bound (CRLB) theorem [19] states that, at time 𝑡 𝑘 ,
+
+E[( ˆx𝑘 − x𝑘 )( ˆx𝑘 − x𝑘 )𝑇 ] ⪰ 𝐽 −1 
+
+> 𝑘
+
+(63) where 𝐽 𝑘 , the Fisher information matrix (FIM) at time 𝑡 𝑘 , is given by 
+
+𝐽 𝑘 = E[−∇ 2 
+
+> x𝑘
+
+log 𝑝 (z𝑘 | x𝑘 )] . (64) 27 Based on [20], a particle-based approximation of the FIM is 
+
+𝐽 𝑘 ≈ − 
+
+> 𝑁 𝑝
+
+∑︁ 
+
+> 𝑗 =1
+
+𝑤 𝑗 𝑘 ∇2 
+
+> x𝑘
+
+log 𝑝 (z𝑘 | x𝑗 𝑘 ). (65) Using this particle-based approximation, we can predict the resulting FIM for any sequence of acceleration commands. We first discretize the admissible acceleration commands to create a finite number of options. We then apply simultaneously each of these options as a constant acceleration command to each particle until it reaches the boundary of the singular region. Thereafter, each particle uses the regular bang-bang DGL1 acceleration command outside the singular region. When the first particle has reached the end of the engagement, we calculate the approximate FIM resulting from the applied sequence of acceleration commands. Now, to enhance the information provided to the estimator, we seek, in the admissible set, the interceptor acceleration command that maximizes the expected FIM at some predefined horizon. This is equivalent to seeking the command that minimizes the uncertainty in the game space, represented by the CRLB (the inverse of the FIM). Following [ 21 ], this command is found by minimizing, over the admissible set, the determinant of the CRLB. Because the dominant states in this problem are the ZEM and the time-to-go, only these states are considered in the minimization. This is done by, first, computing the entire FIM, for the four dimensional state vector. Next, when computing the inverse of the FIM, only the sub-matrix entries associated with the ZEM and the time-to-go are considered. Formally, let the inverse of the FIM for a predefined horizon ℎ be partitioned as 𝐽 −1 
+
+> 𝑘 +ℎ
+
+=
+
+h 𝚺 11 𝚺 12  
+
+> 𝚺 𝑇
+> 12 𝚺 22
+
+i
+
+∈ R4×4, where 𝚺 11 ∈ R2×2 corresponds to the 𝑡 𝑔𝑜 and 𝑍 DGL1 states. We then define ¯𝐽 −1 
+
+> 𝑘 +ℎ
+
+≜ 𝚺 11 , and the resulting minimization problem is, therefore, 
+
+𝑢 𝑘 𝑀 = arg min  
+
+> 𝑢 𝑘 𝑀 ∈U 𝑘 𝑀
+
+det ¯ 𝐽 −1
+
+> 𝑘 +ℎ
+
+. (66) 28 E. GST-Compliant Guidance Law 
+
+To summarize the results of this section, we present herein two versions of the modified, estimation-aware DGL1. The first version, which includes the information-enhancement feature, is 
+
+𝑢 𝑘 𝑀 =
+
+
+
++𝑎 max  
+
+> 𝑀
+
+𝐻 1 is decided 
+
+Í𝑗 ′ ∈𝐻 2 ˜𝑤 𝑗 ′        
+
+> 𝑘 𝑧 𝑗 ′(𝑡 𝑔𝑜 ;𝑗 ′)
+> 𝑧 ∗(𝑡 𝑔𝑜 ;𝑗 ′)
+
+𝑎 max  
+
+> 𝑀
+
+𝐻 2 is decided 
+
+Í𝑗 ′ ∈𝐻 3 ˜𝑤 𝑗 ′        
+
+> 𝑘 𝑧 𝑗 ′(𝑡 𝑔𝑜 ;𝑗 ′)
+> 𝑧 ∗(𝑡 𝑔𝑜 ;𝑗 ′)
+
+𝑎 max  
+
+> 𝑀
+
+𝐻 3 is decided 
+
+−𝑎 max  
+
+> 𝑀
+
+𝐻 4 is decided 
+
+arg min 𝑢 𝑘 𝑀 ∈U 𝑘 𝑀 | ¯𝐽 −1 
+
+> 𝑘 +ℎ
+
+| No decision 
+
+. (67) This guidance law has five modes, the first four of which correspond to the four hypotheses of the interception problem, where the expected costs are non-zero. The linear acceleration command follows the chattering prevention logic of the DGL1 law, as shown in Eq. (13) . The first and fourth modes correspond to cases where the optimal hypotheses are outside the singular region. The second and third modes correspond to when the chosen hypotheses are inside the singular region. In these cases, the linear acceleration command is the mean of the acceleration commands of the particles belonging to the chosen hypothesis. The last mode addresses the case where the expected additional risks vanish. In this case, the information-enhancement trajectory shaping of Eq. (66) is used. In the sequel, we use the acronym IETS, standing for information-enhancing trajectory shaping, to denote this estimation-aware guidance law. The second version of this guidance law has the same first four modes of Eq. (67) , however as its fifth mode (corresponding to the case where the expected costs vanish for the predefined horizon 
+
+𝜏 max ), it simply implements the regular version of the DGL1 law (13) . In the sequel we use the acronym EADGL1, standing for estimation-aware DGL1, to denote this guidance law, which does not implement trajectory shaping. 29 VI. Numerical Simulation Study 
+
+We evaluate the performance of the EADGL1 and IETS guidance laws via a numerical closed-loop simulation study. To this end we adopt the interception scenario presented in [ 6 ]. The performance of the new laws is compared with that of the unmodified DGL1 guidance law. 
+
+A. Simulation Scenario 
+
+A ballistic missile defense (BMD) scenario is considered, which includes a single intercepting missile and a single highly maneuverable target. For simplicity, we assume that the target performs a maximal acceleration bang-bang evasion maneuver, with a single command switch during the engagement. The target is initialized in the -𝑌 𝐼 direction with a flight-path angle of 𝛾 𝑇 = −𝜋 /2 rad and the interceptor’s flight-path is chosen such that the interceptor velocity vector points toward the initial target location. The interceptor’s and target’s maneuver capabilities are 𝑎 max  
+
+> 𝑀
+
+= 45 g and 𝑎 max  
+
+> 𝑇
+
+= 20 g, respectively. The interceptor’s and target’s first-order time constants are 𝜏 𝑀 = 𝜏 𝑇 = 0.2 s. The interceptor’s and target’s speeds are 𝑉 𝑀 = 𝑉 𝑇 = 2500 m/s, amounting to a nominal engagement time of 3 s. The measurement noise is Gaussian distributed with 𝜈 ∼ N ( 0, 𝜎 2) where 𝜎 = 0.5 mrad, and the IR sensor’s sampling rate is 𝑓 = 100 Hz. 
+
+B. Design Considerations 
+
+The IMMPF uses 1000 weighted particles to approximate the game state posterior PDF, where each mode uses a 500 particle population, and the filter is initialized with equal mode probabilities for both modes. As a baseline for performance comparison, we use the standard DGL1 law. This baseline utilizes the same IMMPF estimator but computes its guidance command based on a simple weighted mean of the target state estimates, ignoring the multi-hypothesis decision structure proposed in the new framework. The initial radar’s estimate of the state vector in Eq. (27) satisfies ˆ𝑥 𝑅 ∼ N ( ¯𝑥 𝑅 , 𝑃 𝑅 ) where ¯𝑥 𝑅 is 30 the true target initial state, and the associated initial covariance matrix is 
+
+𝑃 𝑅 = diag {50 2,  1 𝜋 
+
+180 
+
+2,  3 𝜋 
+
+180 
+
+2, 10 2}. (68) To obtain the initial interceptor’s estimate of the state vector in Eq. (2) we draw weighted samples from the radar’s estimate and use the transformation in Eq. (23) and Eq. (28) . We note that following this initialization, the distribution is no longer necessarily Gaussian due to the nonlinearity of the transformation. The initial estimate of 𝛾 𝑇 is given directly from the radar’s estimate. Assuming that the target performs a single bang-bang maneuver, and following the analysis of [ 6 ], we use a time-varying TPM, with 𝜋 21  
+
+> 𝑘
+
+= 10 −3 and 𝜋 12  
+
+> 𝑘
+
+obeying the functional form of the density of a generalized Gaussian distribution, i.e., 
+
+𝜋 12  
+
+> 𝑘
+
+=
+
+
+
+10 −3 𝑡 𝑘 ≤ 𝑡 𝑠 
+
+𝑐 12 𝛽  
+
+> 2𝛼 Γ(1/𝛽 )
+
+exp 
+
+
+
+− |𝑡 𝑘 −𝜇 |
+
+> 𝛼
+
+ 𝛽 
+
+𝑡 𝑘 > 𝑡 𝑠 
+
+(69) where Γ(·) denotes the gamma function. Figure 5 shows the behavior of the transition probability 
+
+𝜋 12  
+
+> 𝑘
+
+vs time for the parameters 𝑡 𝑠 = 1.9, 𝑐 12 = 0.16 , 𝜇 = 2.5, 𝛽 = 6 and 𝛼 = 0.45 .Time, s       
+
+> 00.5 11.5 22.5 33.5
+> :12
+> 0
+> 0.05
+> 0.1
+> 0.15
+> 0.2
+
+Fig. 5 Time-varying transition probability from mode 1 to mode 2. 
+
+The DGL1 guidance law is used with a linear command in the singular region and 𝑘 = 0.7.The EADGL1 law is used with a maximal horizon of 𝜏 𝑚𝑎𝑥 = 16  
+
+> 𝑓
+
+= 0.16 s, which is the maximal 31 propagation of the game’s state by the Bayesian decision criterion. If a Bayesian decision cannot be reached with this horizon, the regular version of the DGL1 law is used. The trajectory shaping algorithm employed by the IETS guidance law uses 100 particles, which are resampled from the particle population of the IMMPF. We set the predefined horizon to be 
+
+ℎ = 100 , which represents a horizon length of one second, and we do not use the trajectory shaping in the last second of the engagement. We also set 𝑊 Thres = 0.15 .
+
+C. Single-Run Analysis 
+
+Figure 6 presents the trajectory of the target and three different interceptor trajectories, cor-responding to the three guidance laws compared in this study, in a single run. The same initial conditions, measurement noises, and target maneuvers (a single bang-bang maneuver at 2 s) were used in all simulations. The trajectories of the unmodified DGL1 and the EADGL1 laws are similar, since the modified guidance law uses the regular DGL1 whenever the Bayesian decision criterion solution is nonunique. However, when the IETS guidance law is used, the interceptor’s course breaks away from the trajectory generated by the unmodified DGL1 law right from the beginning of the engagement, in order to enhance the information driving the estimator. Of course, the interceptor changes its course back towards the target at a later point in time, so as not to lose the target. Figure 7 presents the trajectories from Fig. 6 in the game space. Figure 7a shows the state’s trajectory of the game through the entire engagement. At the beginning of the engagement, the regular DGL1 and the EADGL1 trajectories are similar, whereas the IETS’s trajectory goes towards the singular region’s boundary. After it reaches the boundary, its trajectory moves along it. Figure 7b shows that the IETS guidance law performs best against this maneuver when the target performs its bang-bang maneuver due to its residence along the trajectory. Moreover, the effect of the evasion maneuver is minimal because the state stays inside the singular region and results in a miss distance of 1.5 m. The miss distance performance of the EADGL1 is similar; however, the evasion maneuver does cause the state to cross the singular region boundary but with minimal effect thanks to the Bayesian decision criterion and results in a miss distance of 3.2 m. The regular DGL1 performance 32 x, m   
+
+> 0200 400 600
+> y, m
+> 0
+> 5000
+> 10000
+> 15000
+
+Fig. 6 Single-run 2D trajectories: Target (solid black), unmodified DGL1 (dashed blue), EADGL1 (dotted green), and IETS (dash-dotted magenta). 
+
+is the worst compared to the modified versions of DGL1. The evasion maneuver’s effect is significant and results in a miss distance of 7.5 m, the largest of all three laws. Figure 8 compares the chosen hypothesis throughout the engagement with the true hypothesis for the stochastic versions of DGL1. Figure 8a presents the chosen hypothesis for the EADGL1; at the beginning of the engagement, the Bayesian criterion struggles to choose the optimal hypothesis due to severe uncertainties stemming from the initial conditions in Eq. (68) . However, in most of the next 1.6 seconds, there exist more than one optimal Bayesian decision. Throughout the last 1.2 seconds of the engagement, the Bayesian decision criterion yields a unique solution. For approximately 0.2 seconds, hypothesis 𝐻 4 is chosen, while hypothesis 𝐻 3 is true. This decision represents the conservative approach of this method, as it results in an acceleration command ensuring that the state would remain inside the singular region. Furthermore, 𝐻 4 is the optimal Bayesian decision because, when the target executes its bang-bang evasion maneuver, and there is a delay in the reaction due to the severe uncertainties, both stochastic versions of the DGL1 law outperform the regular law, which disregards the Bayesian risk, as shown in Fig. 7b. Figure 8b presents the chosen hypothesis throughout the engagement, along with the correct hypothesis, for the IETS guidance law. At the beginning of the engagement, the solution is nonunique, 33 tgo, s              
+
+> 00.5 11.5 22.5 3
+> ZDGL1, m
+> -1000
+> -500
+> 0
+> 500
+> 1000 (a) The entire engagement. tgo,s
+> 00.2 0.4 0.6 0.8 11.2
+> ZDGL1, m
+> -100
+> -80
+> -60
+> -40
+> -20
+> 0
+> 20
+> 40
+> 60 (b) Zoom-in on the end of the engagement.
+
+Fig. 7 Single-run trajectories over DGL1 game space. Comparison of the regular DGL1 (dashed blue line), EADGL1 (dotted green line), and IETS (dashed-dotted magenta line) laws. 
+
+and the trajectory shaping technique is used. This reduces the duration of the ambiguous phase, as the game’s state reaches the singular region boundary sooner, as shown in Fig. 7. Thereafter, the state moves along the boundary while mostly choosing 𝐻 4 to be the optimal decision, thus exhibiting the aforementioned conservative approach. Following the target maneuver, the Bayesian decision criterion detects this maneuver before the state exits the singular region, as it chooses 𝐻 2 while it is still the true hypothesis. Towards the end of the engagement, when the boundaries of the singular region become severely uncertain, the state exits the singular region. However, as Fig. 7b shows, this still yields the minimal miss distance, as compared to the other guidance laws. Figure 9 shows four snapshots of the particle cloud at different timings during the engagement. The actual Bayesian decisions for these timings are summarized in Table 1. In Fig. 9a all the particles reside deeply inside the singular region. Naturally, all the expected additional risks of all the hypotheses are zero, rendering the decision nonunique. In Fig. 9b, although most of the particles reside inside the singular region, a significant number of them are under the singular region boundary. Thus, even though 𝐻 3 is the true hypothesis, the optimal Bayesian decision is 𝐻 4,because it yields the minimal expected additional risk. This case demonstrates the aforementioned conservative nature of the algorithm. In Fig. 9c the particle cloud stretches across all hypotheses, the 34 tgo, s       
+
+> 00.511.522.53
+> Nodecision
+> H1
+> H2
+> H3
+> H4
+
+(a) EADGL1 guidance law. tgo, s        
+
+> 00.511.522.53
+> Nodecision
+> H1
+> H2
+> H3
+> H4
+
+(b) IETS guidance law. 
+
+Fig. 8 The chosen hypothesis (red asterisks) and the true hypothesis (blue dots) through the engagement, for both stochastic versions of the DGL1 law. Table 1 Bayesian decision process for the cases in Fig. 9 
+
+𝑡 𝑔𝑜 , s 𝐼 1, m 𝐼 2, m 𝐼 3, m 𝐼 4, m Chosen Hypothesis True Hypothesis 
+
+2.5 0 0 0 0 None 𝐻 3
+
+1.2 9.96 6.21 0.12 0 𝐻 4 𝐻 3
+
+0.7 0.07 0.11 0.24 0.66 𝐻 1 𝐻 1
+
+0.07 0 0.02 0.03 0.06 𝐻 1 𝐻 1
+
+estimated state resides inside the singular region, and the true state is above the upper boundary of the singular region. Since the Bayesian decision criterion successfully detects the evasion maneuver before the estimator does, it chooses 𝐻 1. Finally, in Fig. 9d all the particles reside above the upper bound of the singular region, and the Bayesian decision is, correctly, 𝐻 1.
+
+D. Monte Carlo Analysis 
+
+We employ MC simulation study to compare the closed-loop performance of the interceptor when using the regular (deterministic) and both stochastic versions of the DGL1 law. To mitigate potential command chattering in regular DGL1, we employed a standard chattering reduction mechanism (see, e.g., [ 6 ]). While a complete theoretical solution to the chattering phenomenon is outside the scope 35 tgo, s     
+
+> 2.44 2.46 2.48 2.5 2.52 2.54
+> ZDGL1, m
+> -800
+> -600
+> -400
+> -200
+> 0
+> 200
+> 400
+> 600
+> 800
+
+(a) 𝑡 𝑔𝑜 = 2.5 s. tgo, s      
+
+> 1.16 1.18 1.2 1.22 1.24 1.26
+> ZDGL1, m
+> -150
+> -100
+> -50
+> 0
+> 50
+> 100
+> 150
+
+(b) 𝑡 𝑔𝑜 = 1.2 s. tgo, s    
+
+> 0.68 0.7 0.72 0.74 0.76
+> ZDGL1, m
+> -80
+> -60
+> -40
+> -20
+> 0
+> 20
+> 40
+> 60
+> 80
+
+(c) 𝑡 𝑔𝑜 = 0.7 s. tgo, s      
+
+> 0.02 0.04 0.06 0.08 0.1 0.12
+> ZDGL1, m
+> -0.5
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> 3
+> 3.5
+> 4
+
+(d) 𝑡 𝑔𝑜 = 0.07 s. 
+
+Fig. 9 Particle clouds over the game space, throughout the engagement. 
+
+of this work, our extensive MC analysis demonstrated that the guidance law remained stable and effective throughout the engagement, with no observed performance degradation due to chattering. In this study, the target performs a single bang-bang evasion maneuver, timed at 0.1 s intervals from the launch time until the end of the engagement. In the interval [0, 1.5) s we use 200 MC runs for each switching time. In the interval [1.5, 3] s we run 400 MC runs for each switching time. This division is made to gain more accurate statistics on the more challenging time window of the target evasion maneuver, as identified in [ 6]. Thus, a total of 9,400 runs are performed for each guidance law. 36 Figure 10 shows the 95th percentile of the miss distance per each target evasion maneuver’s switching time, which is the warhead lethality radius required to guarantee a kill with a probability of 0.95. Clearly, for all evasion maneuver switching times, both stochastic laws outperform the regular DGL1. Moreover, the IETS law improves the performance as the effect of the evasion maneuver becomes more substantial, i.e., when the target maneuvers after 1.5 s. Thus, when the target maneuvers at 2.1 s, the IETS law reduces the required warhead lethality radius from 14.5 m, as required for the EADGL1 law, to 10.2 m, a 30% improvement. tsw , s      
+
+> 00.5 11.5 22.5 3
+> 95th percentile MD, m
+> 0
+> 5
+> 10
+> 15
+> 20
+
+Fig. 10 The 95th percentile miss distance as a function of evasion switching time for Regular DGL1 (solid blue), EADGL1 (dashed green), and IETS (dotted magenta). 
+
+Another perspective on the above findings is depicted in Figure 11, that presents the miss distance cumulative distribution function (CDF), as computed based on 9,400 MC runs. Both stochastic laws outperform the regular DGL1 over the entire miss distance range, and the IETS law outperforms the EADGL1 law, especially for kill probabilities larger than 0.40 . To guarantee a kill with probability 0.95, the required warhead lethality radius would be 10.1 m for the regular DGL1, 7.09 m for the EADGL1 (a 30% performance improvement), and 5.73 m for the IETS law, which is a 43% 
+
+improvement compared to the regular DGL1. Finally, a brief discussion about the computational burden associated with the new estimation-aware algorithms is in order. Our simulations were done on a 2020-class personal computer, powered by a 6-core Intel CPU running a non-real-time-compliant operating system. The simulation code was 37 MD, m      
+
+> 0246810 12
+> CDF
+> 0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1
+
+Fig. 11 Miss distance CDF in a nonlinear MC simulation. Comparison of the regular DGL1 (solid blue), EADGL1 (dashed green), and IETS (dotted magenta) laws. 
+
+written (by a nonprofessional programmer) in MATLAB 2020 using the built-in MEX mechanism and the parallel computing toolbox. In this simulation setting, all guidance laws achieved real-time speed. A major contributing factor to this operation speed was the computational effort reduction mechanism of Sec. V.C. On average, it was operational in about 82% of the instances where the Bayesian decision criterion was invoked, and, when applied, it worked 11.6 times faster than the full version of the Bayesian decision criterion. Specifically, the average CPU run time for the 3 s scenario was 2.0 s for the IMMPF, 0.002 s for the regular DGL1, 0.65 s for the EADGL1 (utilizing the computational reduction), and 0.81 s for the IETS. This demonstrates that the proposed framework can be implemented in real-time on standard hardware. 
+
+## VII. Conclusions 
+
+We have presented a novel integrated tracking and interception strategy that conforms with the generalized separation theorem. This strategy rests on two pillars. The first is a particle-filtering-based IMM, suitable for nonlinear, non-Gaussian, and non-Markovian hybrid systems. The second is a multi-hypothesis Bayesian decision algorithm that uses the particle cloud representing the posterior PDF to derive an optimal acceleration command that minimizes the Bayesian risk. Using structural properties of the Bayesian decision criterion, the computational cost of the method is reduced 38 dramatically for most of the engagement, rendering the proposed strategy amenable to real-time implementation. Furthermore, when no unique Bayesian decision exists, a trajectory-shaping technique is implemented that enhances the information provided to the estimator. An extensive MC simulation study, involving a stochastic interception scenario, is used to demonstrate the performance advantage of the new, stochastic strategy, over the classical approach. We note that the same approach, consisting of marrying a deterministic guidance law with a Bayesian decision algorithm, can be applied to many guidance laws, other than the DGL1 law used in this work. 
+
+# Appendices 
+
+## A. Proof of Lemma V.1 
+
+We prove the lemma for each hypothesis separately. 1) Recall that the expected additional risk of choosing hypothesis 𝐻 1 is 
+
+𝐼 1 = 𝑃 2 (𝐶 12 − 𝐶 22 )𝑃 (Y | 𝐻 2) + 𝑃 3 (𝐶 13 − 𝐶 33 )𝑃 (Y | 𝐻 3)+ 𝑃 4 (𝐶 14 − 𝐶 44 )𝑃 (Y | 𝐻 4). (70) We first prove sufficiency. The first term vanishes if 𝑃 (Y | 𝐻 2) = 0. Otherwise, the costs 
+
+𝐶 12 and 𝐶 22 should be considered. Clearly, 𝐶 22 = 0 as all the particles are inside the singular region. Moreover, 𝐶 12 = 0, as the only way to cross the boundary of the singular region when 𝑢 𝑀 = 𝑎 max  
+
+> 𝑀
+
+is through its lower boundary; however, this contradicts the condition of the lemma. Similarly, if 𝑃 (Y | 𝐻 3) = 0 then the second term vanishes. Otherwise, the costs 𝐶 13 
+
+and 𝐶 33 should be considered. Clearly, 𝐶 33 = 0 as all the particles are inside the singular region. Moreover, 𝐶 13 = 0, as the only way to cross the boundary of the singular region when 𝑢 𝑀 = 𝑎 max  
+
+> 𝑀
+
+is through its lower boundary; however, this contradicts the condition of the lemma. Considering the last term, if there exists any particle of nonzero weight in 𝐻 4
+
+39 that sets its missile maneuver to be 𝑢 𝑀 = 𝑎 max  
+
+> 𝑀
+
+when 𝑢 𝑇 = −𝑎 max  
+
+> 𝑇
+
+, then the condition of the lemma is clearly violated, as the target uses its optimal maneuver and the interceptor does not. Therefore 𝑃 (Y | 𝐻 4) = 0 which nullifies the last term. To prove necessity, assume that there exists a particle of nonzero weight for which the propagated ZEM violates the sufficiency condition, that is 
+
+𝑧 1 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) < −𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ), (71) By Assumption 2), such a particle must belong to either hypothesis 𝐻 4 or hypothesis 𝐻 3. If it originates from 𝐻 4, then 𝑃 (Y | 𝐻 4) ≠ 0, and, by Assumption 1), 𝑃 4 ≠ 0. In this situation, when the interceptor applies 𝑢 𝑀 = 𝑎 max  
+
+> 𝑀
+
+while the target applies its optimal maneuver 
+
+𝑢 𝑇 = −𝑎 max  
+
+> 𝑇
+
+, the distance from the singular region increases. Hence, the wrong decision incurs strictly larger cost, i.e., 𝐶 14 > 𝐶 44 .If, on the other hand, the particle originates from 𝐻 3, then 𝑃 (Y | 𝐻 3) ≠ 0, and, by Assumption 1), 𝑃 3 ≠ 0. Under the same control actions: 𝑢 𝑀 = 𝑎 max  
+
+> 𝑀
+
+, 𝑢 𝑇 = −𝑎 max  
+
+> 𝑇
+
+, the particle’s state crosses the lower boundary of the singular region, so that 𝐶 13 > 𝐶 33 = 0. In both cases, at least one term in the expected additional risk becomes strictly positive, which yields 𝐼 1 ≠ 0.2) Recall that the expected additional risk of choosing hypothesis 𝐻 2 is 
+
+𝐼 2 = 𝑃 1 (𝐶 21 − 𝐶 11 )𝑃 (Y | 𝐻 1) + 𝑃 3 (𝐶 23 − 𝐶 33 )𝑃 (Y | 𝐻 3)+ 𝑃 4 (𝐶 24 − 𝐶 44 )𝑃 (Y | 𝐻 4). (72) We first prove sufficiency. If there exists a particle of nonzero weight in 𝐻 1 that sets its missile maneuver to be 𝑢 𝑀 < 𝑎 max  
+
+> 𝑀
+
+when 𝑢 𝑇 = 𝑎 max  
+
+> 𝑇
+
+, then this violates the condition of the lemma, as the target uses its optimal maneuver and the interceptor does not. Therefore 𝑃 (Y | 𝐻 1) = 0,nullifying the first term. Similarly, if there exists any particle of nonzero weight in 𝐻 4 that sets its missile maneuver to be 𝑢 𝑀 > −𝑎 max  
+
+> 𝑀
+
+when 𝑢 𝑇 = −𝑎 max  
+
+> 𝑇
+
+, then this violates the condition of 40 the lemma, as the target uses its optimal maneuver and the interceptor does not. Therefore 
+
+𝑃 (Y | 𝐻 4) = 0, which nullifies the last term. For the second term, if 𝑃 (Y | 𝐻 3) = 0, then the second term is nullified. Otherwise, we must consider the costs, 𝐶 23 and 𝐶 33 . Clearly, 
+
+𝐶 33 = 0 as all the particles are inside the singular region. Moreover, 𝐶 23 = 0 as the option of crossing the boundary of the singular region contradicts the condition of the lemma. To prove necessity, we assume that there exists a particle of nonzero weight such that 
+
+𝑧 2 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) > 𝑧 ∗ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ). (73) This particle can originate from either 𝐻 1, 𝐻 3, or 𝐻 4. In the first case, 𝑃 (Y | 𝐻 1) ≠ 0
+
+and by assumption 1) 𝑃 1 ≠ 0. When this particle uses 𝑢 𝑀 < 𝑎 max  
+
+> 𝑀
+
+, while the target uses 
+
+𝑢 𝑇 = 𝑎 max  
+
+> 𝑇
+
+, the distance from the singular region increases, so 𝐶 21 > 𝐶 11 . In the second case, 𝑃 (Y | 𝐻 3) ≠ 0 and by assumption 1) 𝑃 3 ≠ 0. If the state of this particle crosses the boundary of the singular region, then 𝐶 23 > 𝐶 33 = 0. In the last case, 𝑃 (Y | 𝐻 4) ≠ 0
+
+and by assumption 1) 𝑃 4 ≠ 0. When this particle uses 𝑢 𝑀 > −𝑎 max  
+
+> 𝑀
+
+while the target uses 
+
+𝑢 𝑇 = −𝑎 max  
+
+> 𝑇
+
+, the distance from the singular region increases, so that 𝐶 24 > 𝐶 44 .3) The proof of this case closely follows the proof of the previous case, with a few minor adjustments. 4) The proof of this case closely follows the proof of the first case, with a few minor adjustments. 
+
+## B. Proof of Lemma V.2 
+
+Integrating the dynamic equation of the ZEM in Eq. (11) for constant acceleration commands yields 
+
+𝑍 DGL1 (𝑡 𝑔𝑜 − 𝜏 ) = 𝑍 DGL1 (𝑡 𝑔𝑜 ) − 𝑢 𝑀 𝜏 2
+
+> 𝑀
+
+Υ(𝜃 ) − Υ(𝜂 ) + 𝑢 𝑇 𝜏 2
+
+> 𝑇
+
+Υ(𝜃 /𝜖 ) − Υ(𝜂 /𝜖 ), (74) 41 and the corresponding singular–region boundary satisfies 
+
+𝜕 Z∗ (𝑡 𝑔𝑜 − 𝜏 ) = 𝑎 max  
+
+> 𝑀
+
+𝜏 2 
+
+> 𝑀
+
+Υ(𝜂 ) − 𝑎 max  
+
+> 𝑇
+
+𝜏 2 
+
+> 𝑇
+
+Υ(𝜂 /𝜖 ), (75) where 𝜂 = 𝜃 − 𝜏 /𝜏 𝑀 . We verify each case of Lemma V.2 by substituting these relations into the conditions of Lemma V.1. 1) For 𝐼 1 = 0, we substitute Eqs. (74) –(75) into Eq. (49) with 𝑢 𝑀 = 𝑎 max  
+
+> 𝑀
+
+and 𝑢 𝑇 = −𝑎 max  
+
+> 𝑇
+
+. This shows that the propagated ZEM remains inside the updated singular region exactly when the inequality of Eq. (49) holds, thereby establishing the condition. 2) For 𝐼 2 = 0, two subcases arise depending on the sign of the propagated ZEM. If 𝑧 2 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ −
+
+𝜏 ) > 0, the worst–case scenario is when the target pushes the state further upward ( 𝑢 𝑇 = 𝑎 max  
+
+> 𝑇
+
+)and the interceptor applies the least favorable acceleration 𝑢 𝑀 = 𝑢 2. Substituting into Eqs. (74) –(75) yields the inequality of Eq. (55) . Conversely, if 𝑧 2 𝑗 ′ (𝑡 𝑔𝑜 ; 𝑗 ′ − 𝜏 ) < 0, the critical case is when the target accelerates downward ( 𝑢 𝑇 = −𝑎 max  
+
+> 𝑇
+
+) and the interceptor uses 𝑢 𝑀 = 𝑢 2,yielding the inequality of Eq. (56) . Thus both directions are covered, and the condition for 
+
+𝐼 2 = 0 follows. 3) The case 𝐼 3 = 0 is analogous to the previous one but applies to particles associated with hypothesis 𝐻 3. The same reasoning—splitting according to the sign of the propagated ZEM and considering the corresponding worst–case controls—leads to the conditions in Eqs. (57)–(58). 4) Finally, for 𝐼 4 = 0, we substitute Eqs. (74) –(75) into Eq. (52) with 𝑢 𝑀 = −𝑎 max  
+
+> 𝑀
+
+(and the target taking its adversarial control). This yields precisely the inequality required in Eq. (52) ,completing the proof. In all four cases, the integrated ZEM dynamics together with the updated singular–region boundaries confirm that the conditions of Lemma V.2 are satisfied under the respective worst–case control selections. 42 References 
+
+[1] Gutman, S., “On Optimal Guidance for Homing Missiles,” Journal of Guidance, Control, and Dynamics ,Vol. 2, No. 4, 1979, pp. 296–300. https://doi.org/10.2514/3.55878. [2] Shinar, J., “Solution Techniques for Realistic Pursuit-Evasion Games,” Control and Dynamic Systems ,Advances in Theory and Applications, Vol. 17, edited by C. T. Leondes, Academic Press, 1981, pp. 63–124. https://doi.org/10.1016/B978-0-12-012717-7.50009-7. [3] Mudrik, L., and Oshman, Y., “Estimation-Based Guidance Using Optimal Bayesian Decision,” 2019 27th Mediterranean Conference on Control and Automation (MED) , 2019, pp. 136–141. https: //doi.org/10.1109/MED.2019.8798557. [4] Trees, H. L. V., Detection, Estimation, and Modulation Theory, Part I: Detection, Estimation, and Linear Modulation Theory , John Wiley & Sons, 2004, Chap. 2. [5] Blom, H. A. P., and Bloem, E. A., “Exact Bayesian and Particle Filtering of Stochastic Hybrid Systems,” IEEE Transactions on Aerospace and Electronic Systems , Vol. 43, No. 1, 2007, pp. 55–70. https://doi.org/10.1109/TAES.2007.357154. [6] Shaferman, V., and Oshman, Y., “Stochastic Cooperative Interception Using Information Sharing Based on Engagement Staggering,” Journal of Guidance, Control, and Dynamics , Vol. 39, No. 9, 2016, pp. 2127–2141. https://doi.org/10.2514/1.G000437. [7] Shaviv, I. G., and Oshman, Y., “Estimation-Guided Guidance and Its Implementation via Sequential Monte Carlo Computation,” Journal of Guidance, Control, and Dynamics , Vol. 40, No. 2, 2017, pp. 402–417. https://doi.org/10.2514/1.G000360. [8] Mudrik, L., and Oshman, Y., “Information-Enhancement via Trajectory Shaping in Bayesian Decision-Directed Stochastic Guidance,” AIAA SCITECH 2023 Forum , National Harbor, MD, 2023. https: //doi.org/10.2514/6.2023-2497. [9] Witsenhausen, H. S., “Separation of Estimation and Control for Discrete Time Systems,” Proceedings of the IEEE , Vol. 59, No. 11, 1971, pp. 1557–1566. https://doi.org/10.1109/PROC.1971.8488. 
+
+43 [10] Striebel, C., “Sufficient statistics in the optimum control of stochastic systems,” Journal of Mathematical Analysis and Applications , Vol. 12, No. 3, 1965, pp. 576–592. https://doi.org/10.1016/0022-247X(65) 90027-2. [11] Stengel, R. F., Stochastic Optimal Control: Theory and Application , Wiley, 1986, Chap. 5. [12] Shinar, J., and Turetsky, V., “What Happens When Certainty Equivalence is Not Valid?: Is There an Optimal Estimator for Terminal Guidance?” IFAC Proceedings Volumes , Vol. 36, No. 8, 2003, pp. 175–184. https://doi.org/10.1016/S1474-6670(17)35780-4. [13] Shinar, J., Turetsky, V., and Oshman, Y., “Integrated Estimation/Guidance Design Approach for Improved Homing Against Randomly Maneuvering Targets,” Journal of Guidance, Control, and Dynamics , Vol. 30, No. 1, 2007, pp. 154–161. https://doi.org/10.2514/1.22916. [14] Speyer, J., “An Adaptive Terminal Guidance Scheme Based on an Exponential Cost Criterion with Application to Homing Missile Guidance,” IEEE Transactions on Automatic Control , Vol. 21, No. 3, 1976, pp. 371–375. https://doi.org/10.1109/TAC.1976.1101206. [15] Hexner, G., and Shima, T., “Stochastic Optimal Control Guidance Law with Bounded Acceleration,” 
+
+IEEE Transactions on Aerospace and Electronic Systems , Vol. 43, No. 1, 2007, pp. 71–78. https: //doi.org/10.1109/TAES.2007.357155. [16] Hexner, G., Shima, T., and Weiss, H., “LQG Guidance Law with Bounded Acceleration Command,” 
+
+IEEE Transactions on Aerospace and Electronic Systems , Vol. 44, No. 1, 2008, pp. 77–86. https: //doi.org/10.1109/TAES.2008.4516990. [17] Blom, H., and Bar-Shalom, Y., “The Interacting Multiple Model Algorithm for Systems with Markovian Switching Coefficients,” IEEE Transactions on Automatic Control , Vol. 33, No. 8, 1988, pp. 780–783. https://doi.org/10.1109/9.1299. [18] Shaferman, V., “Near-Optimal Evasion from Pursuers Employing Modern Linear Guidance Laws,” 
+
+Journal of Guidance, Control, and Dynamics , 2021, pp. 1–13. https://doi.org/10.2514/1.G005725. 
+
+44 [19] Tichavsky, P., Muravchik, C., and Nehorai, A., “Posterior Cramer-Rao bounds for discrete-time nonlinear filtering,” IEEE Trans. Signal Process. , Vol. 46, No. 5, 1998, pp. 1386–1396. https: //doi.org/10.1109/78.668800. [20] Tulsyan, A., Huang, B., Gopaluni, R. B., and Forbes, J. F., “A Particle Filter Approach to Approximate Posterior Cramer-Rao Lower Bound: The Case of Hidden States,” IEEE Transactions on Aerospace and Electronic Systems , Vol. 49, No. 4, 2013, pp. 2478–2495. https://doi.org/10.1109/TAES.2013.6621830. [21] Oshman, Y., and Davidson, P., “Optimization of observer trajectories for bearings-only target localization,” 
+
+IEEE Transactions on Aerospace and Electronic Systems , Vol. 35, No. 3, 1999, pp. 892–902. https://doi.org/10.1109/7.784059. 
+
+45

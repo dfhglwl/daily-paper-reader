@@ -1,0 +1,642 @@
+Title: Intent-Context Synergy Reinforcement Learning for Autonomous UAV Decision-Making in Air Combat
+
+URL Source: https://arxiv.org/pdf/2603.00974v1
+
+Published Time: Tue, 03 Mar 2026 02:30:13 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# Highlights 
+
+## Intent-Context Synergy Reinforcement Learning for Autonomous UAV Decision-Making in Air Combat 
+
+Jiahao Fu, Feng Yang 
+
+• A novel ICS-RL framework bridges intent prediction and tactical synergy. 
+
+• LSTM-based state augmentation enables proactive collision avoidance. 
+
+• Advantage-switching mechanism coordinates heterogeneous expert agents. 
+
+• ICS-RL outperforms PSO and Game Theory with a 88% success rate. 
+
+> arXiv:2603.00974v1 [cs.LG] 1 Mar 2026
+
+# Intent-Context Synergy Reinforcement Learning for Autonomous UAV Decision-Making in Air Combat 
+
+## Jiahao Fu a,b , Feng Yang b,∗
+
+> a
+
+National Elite Institute of Engineering,Northwestern Polytechnical University, , Xi’an, , Shanxi, China 
+
+> b
+
+School of Automation, Northwestern Polytechnical University, , Xi’an, , Shanxi, China 
+
+A R T I C L E I N F O 
+
+Keywords :Reinforcement Learning Intent Analysis Context Analysis UAV 
+
+A B S T R A C T 
+
+Autonomous UAV infiltration in dynamic contested environments remains a significant challenge due to the partially observable nature of threats and the conflicting objectives of mission efficiency versus survivability. Traditional Reinforcement Learning (RL) approaches often suffer from myopic decision-making and struggle to balance these trade-offs in real-time. To address these limitations, this paper proposes an Intent-Context Synergy Reinforcement Learning (ICS-RL) framework. The framework introduces two core innovations: (1) An LSTM-based Intent Prediction Module that forecasts the future trajectories of hostile units, transforming the decision paradigm from reactive avoidance to proactive planning via state augmentation; (2) A Context-Analysis Synergy Mechanism that decomposes the mission into hierarchical sub-tasks (safe cruise, stealth planning, and hostile breakthrough). We design a heterogeneous ensemble of Dueling DQN agents, each specialized in a specific tactical context. A dynamic switching controller based on Max-Advantage values seamlessly integrates these agents, allowing the UAV to adaptively select the optimal policy without hard-coded rules. Extensive simulations demonstrate that ICS-RL significantly outperforms baselines (Standard DDQN) and traditional methods (PSO, Game Theory). The proposed method achieves a mission success rate of 88% and reduces the average exposure frequency to 0.24 per episode, validating its superiority in ensuring robust and stealthy penetration in high-dynamic scenarios. 
+
+## 1. Introduction 
+
+In recent years, UAV technology has advanced rapidly. With its high maneuverability, wide attack range, and rela-tively low cost, UAV have found extensive applications in various fields. Particularly in modern intelligent air combat, they play a crucial role. When performing aerial combat mis-sions, UAV often face more complex environments, making their autonomous decision-making capabilities a key area of research. Stealth reconnaissance by UAV is a critical task in mil-itary warfare. It requires UAV to reach their destination while avoiding detection by the enemy. During this process, scenarios such as obstacle avoidanceWu, Luo, Luo and Li (2021), evasionJin, Tian, Shi, Zhao, Duan and Wu (2024), and breakthroughLiu, Chen, Zhao, Liu and Ma (2023) may arise, posing significant challenges to the UAV’ maneuver-ing decision-making capabilitiesWang, Wang, Su, Wang, Lu, Peng and Liu (2024); Liu, Sun, Tao, Shou and Xu (2021); Xu, Wang, Guo, Huang and Zhang (2025). To en-hance the autonomous decision-making abilities of UAV, extensive research has been conducted, proposing methods such as game theoryLópez and Żbikowski (2018), opti-mization algorithmsDuan, Li and Yu (2015), and machine learningYang, Zhang, Shi, Hu and Wu (2019). 
+
+> ⋆
+> ∗
+
+Corresponding author  
+
+> fjh@mail.nwpu.edu.cn
+
+(J. Fu); yangfeng@nwpu.edu.cn (F. Yang) 
+
+(J. Fu); (F. Yang) 
+
+> ORCID
+
+(s): 
+
+> 1
+
+In game theory research methods, the primary focus is on mathematically modeling maneuvering decision strate-gies and the movement patterns of UAV. By calculating matrix functions, the optimal strategy is selectedLi, Chen, Wang and Wu (2022). Park et al.Park, Lee, Tahk and Yoo (2016) proposed an automatic maneuver generation algo-rithm based on differential game theory for within-visual-range air-to-air combat. This algorithm uses a hierarchical decision structure and score function matrix calculations to generate optimal maneuvers for dynamic and challenging combat environments. Vidal et al.Vidal, Shakernia, Kim, Shim and Sastry (2002) studied the theory, implementa-tion, and experimental evaluation of pursuit-evasion games within a probabilistic game theory framework. They pro-posed two computationally feasible greedy pursuit strate-gies: local-max and global-max. By implementing these strategies on real UAV and UGVs, they demonstrated their performance under various conditions. However, this ap-proach requires detailed and idealized mathematical expres-sions of the environment and pursuit strategies in advance. The real-world air combat environment is difficult to decon-struct, and while game theory provides optimal solutions in theory, establishing precise models and the complexity of calculations pose significant challenges when dealing with complex UAV decision-making problems. Metaheuristic algorithms are a class of computational methods used to solve optimization problems. In the context of UAV decision-making, key parameters such as position, speed, flight path, task allocation, and energy consumption are transformed into decision variables within the optimiza-tion problem. An objective function is then established to seek the optimal solutionDuan, Lei, Xia, Deng and Shi 
+
+: Preprint submitted to Elsevier Page 1 of 12 (2023); Najm and Ibraheem (2019). Yan et al.Yan, Chu, Hu and Zhu (2024) proposed an improved Genetic Algorithm (GA) that integrates multiple constraints to address the task allocation and path planning problems for UAV attacking multiple targets. Shao et al. Shao, Peng, He and Du (2020)in-troduced an effective path planning method based on a com-prehensively improved Particle Swarm Optimization (PSO) algorithm. This method considers flight constraints in com-plex environments, including terrain avoidance and threat evasion. However, these algorithms typically rely on prior information from a global map for path planning decisions. In real UAV missions, obstacles and enemy information are more random, and these algorithms are prone to getting trapped in local optima. Nowadays, there is a growing demand for UAV to be more autonomous and intelligent. Reinforcement Learning (RL), an effective machine learning method, offers new solutions for autonomous decision-making and behavior op-timization in UAV. RL is a method where an agent contin-uously interacts with the environment to learn the optimal strategyKaelbling, Littman and Moore (1996). In RL, a UAV (agent) uses various onboard sensors to obtain the envi-ronmental stateLiu, Liu and Chen (2019), executes actions based on the state, and receives feedback (reward) from the environment to learn how to maximize cumulative rewards over the long termWatkins and Dayan (1992). This learning approach has inherent advantages in the UAV field, as UAV need to continuously interact with the environment and make adaptive decisions based on environmental changesWang, Wang, Wang and Zhang (2020). Sonny et al.Sonny, Yeduri and Cenkeramaddi (2023) proposed a Q-learning-based algorithm that can handle both static obstacles and adapt to dynamically changing environ-ments, enabling effective avoidance of dynamic obstacles. They introduced a shortest-distance-first strategy to reduce the distance UAV need to travel to reach their targets. Com-parative results showed that this method demonstrated im-proved performance in learning and path length compared to state-of-the-art path planning methods such as A*, Dijkstra, and SARSA algorithms. To further enhance UAV decision-making capabilities, researchers have applied methods combining neural net-works with reinforcement learning, known as Deep Rein-forcement Learning (DRL). In a system proposed by Puente-Castro et al.Puente-Castro, Rivero, Pedrosa, Pereira, Lau and Fernandez-Blanco (2024), artificial neural networks (ANN) were used for self-adjustment, learning from both errors and successes to optimize paths. However, the proposed method was not applied to air combat scenarios, overlooking the complexity of stealth reconnaissance missions in real-world air combat situations. Some researchers (such as Hu et al.Hu, Yang, Zuo, Zhang, Wu and Wang (2021); Yang et al.Yang, Zhang, Shi, Hu and Wu (2020); Wang et al.Wang, Peng, Liu, Dong, Zhao and Lu (2022)) have developed intelligent maneuver decision models based on Deep Reinforcement Learning (DRL) and constructed corresponding maneuver libraries, providing UAV with diverse maneuver options. These mod-els utilize the Deep Q-Network (DQN) algorithm, which discretizes maneuver actions to help UAV obtain effective strategies in both close-range and long-range combat, either to defeat opponents or evade attacks. While these methods provide a foundation for air combat models, they make decisions based solely on the current behavior of the enemy, without being able to infer the enemy’s intentions and make proactive strategies. To address the aforementioned issues, this paper pro-poses the Intent-Context Synergy Reinforcement Learning (ICS-RL) algorithm. To solve the problem of UAV decision-making under different situations within the same task, a Dueling DQN (DDQN) algorithm based on scenario analy-sis is proposed. This method decomposes different scenarios of the task and trains them separately to derive the optimal strategy. On this basis, the intent analysis method predicts the enemy’s possible next actions by analyzing their behav-ior patterns and historical data, and formulates correspond-ing evasion strategies, thereby improving the accuracy and effectiveness of decision-making. The main contributions of this paper are as follows: 
+
+• A Proactive Intent-Analysis Decision Paradigm: To overcome the myopic limitations of traditional reac-tive agents, we propose an LSTM-based Intent Pre-diction Module. By explicitly encoding the enemy’s historical trajectory into a future intent representa-tion and augmenting the state space, we transform the UAV’s evasion strategy from passive response to proactive planning. This allows the agent to anticipate threats and initiate maneuvering before entering the radar detection range. 
+
+• A Context-Analysis Synergy Mechanism via Advan-tage Switching: Addressing the conflicting objectives of mission efficiency and survivability, we establish a hierarchical taxonomy of tactical scenarios (Safe Cruise, Pre-emptive Stealth, Hostile Breakthrough). We design a heterogeneous ensemble of Dueling DRQN agents, each specialized in a specific context. A novel run-time synergy mechanism based on Max-Advantage values is introduced to dynamically dele-gate control authority, ensuring optimal adaptability without hard-coded rules. 
+
+• Superior Performance and Stealth Capability: We validate the proposed ICS-RL framework in a high-fidelity dynamic simulation. Comparative experiments demonstrate that our approach outperforms not only standard DRL baselines but also traditional heuristics (PSO) and game-theoretic methods. Specifically, ICS-RL achieves a 88% mission success rate and reduces the average exposure frequency to 0.24 per episode, proving its robustness in complex contested environ-ments.    
+
+> :Preprint submitted to Elsevier Page 2 of 12 Figure 1: Mission Scenario Diagram.
+
+## 2. Problem Description 
+
+In a battlefield environment, UAV are required to con-duct reconnaissance on an enemy target area, necessitating a stealth mission. As shown in Fig.1, the red UAV represents our unit, with the red shaded area indicating the detection range of the UAV’s sensors, which do not have strike capa-bilities. Our mission is to reach the target area (the irregular area in the figure) as quickly as possible while avoiding the enemy. The blue UAV represents the enemy unit, with the shaded area indicating its detection range. The enemy can strike if the friendly UAV is detected. We define 𝑃 𝑠 and 𝑃 𝑒 as the starting and target positions in the task space, respectively. The flight path of the UAV is composed of N waypoints connecting 𝑃 𝑠 and 𝑃 𝑒 , which can be represented as follows: 
+
+𝑇 𝑟 {𝑃 𝑠 , 𝑃 1, 𝑃 2, … , 𝑃 𝑖 , 𝑃 𝑒 } (1) Each waypoint 𝑃 𝑖 represents a specific position that the UAV must pass through on its way from the starting position 
+
+𝑃 𝑠 to the target position 𝑃 𝑒 . This sequence of waypoints forms the complete flight path for the UAV’s mission. By establishing the following evaluation function, we can measure the "good" or "bad" of UAV actions: 
+
+𝐹 = 𝛼 1𝐶 1 + 𝛼 2𝐶 2 + 𝛼 3𝐶 3 + ⋯ + 𝛼 𝑀 𝐶 𝑀 (2) where 𝐶 𝑀 represents different cost constraints, and 𝛼 𝑀 
+
+represents the correlation coefficients of the cost constraints 
+
+𝐶 𝑀 . Considering the characteristics of UAV and the safety of the flight process, the evaluation function of the trajectory 
+
+𝑇 𝑟 can be defined by costs such as flight path length, flight altitude, threats, and physical limitationsHuang, Zhou, Ran, Wang, Chen and Deng (2023). In this paper, the evaluation function is described by selecting the path length cost and threat cost based on specific application scenarios. 
+
+2.1. Path length cost 
+
+The flight distance of the UAV is expected to be as short as possible to demonstrate the efficiency of its decision-making. This cost can be calculated by summing the dis-tances between multiple path nodes. The length of the path nodes is obtained from the Euclidean distance between adjacent points. Therefore, the path length calculation cost of the trajectory 𝑇 𝑟 is: 
+
+𝐶 1 =
+
+> 𝑁
+
+∑
+
+> 𝑖 =0
+
+‖𝑃 𝑖 − 𝑃 𝑖 +1 ‖ (3) where ‖𝑃 𝑖 − 𝑃 𝑖 +1 ‖ represents the distance the UAV flies from 𝑃 𝑖 to 𝑃 𝑖 +1 .
+
+2.2. Threats cost 
+
+We use the set 𝑇 = {𝑇 1, 𝑇 2, 𝑇 3, … , 𝑇 𝑘 } to define 𝑘 
+
+threats. 
+
+⎧⎪⎪⎪⎨⎪⎪⎪⎩
+
+𝐶 2 = ∑𝑁 𝑖 =0 
+
+∑𝐾 𝑘 =1 𝑇 𝑘 (𝑃 𝑖 𝑃 𝑖 +1 )
+
+𝑇 𝑘 (𝑃 𝑖 𝑃 𝑖 +1 ) = 
+
+⎧⎪⎨⎪⎩
+
+0, ‖𝑃 𝑖 − pos 𝑘 ‖ > 𝑆𝐹 𝑆𝐹 − ‖𝑃 𝑖 − pos 𝑘 ‖, 0 < ‖𝑃 𝑖 − pos 𝑘 ‖ < 𝑆𝐹 𝐿, ‖𝑃 𝑖 − pos 𝑘 ‖ = 0 
+
+(4)   
+
+> :Preprint submitted to Elsevier Page 3 of 12
+
+# x
+
+# y
+
+# vx
+
+# vy
+
+# v
+
+# φ
+
+# ddetect Figure 2: UAV Kinematics model. 
+
+where 𝑘 is the number of threats, 𝑆𝐹 is the safety distance determined by factors such as the flight environment and positioning accuracy. pos 𝑘 is the center of the 𝑘 -th threat source, and ‖𝑃 𝑖 −pos 𝑘 ‖ is the distance from the center of the 
+
+𝑘 -th threat source to the UAV. 𝐿 is a penalty constant used to penalize routes that enter dangerous areas. 
+
+## 3. Theoretical foundation 
+
+3.1. UAV kinematics model 
+
+In the research on maneuver decision-making for UAV infiltration missions, the following scenario is constructed. It is assumed that the UAV flies at a fixed altitude and executes coordinated turns with inertia. Fig.2 illustrates the two-dimensional kinematic model of the UAV, where the light blue circle represents the UAV’s detection range. Consequently, the kinematic equations of the UAV can be expressed as by the following formula: 
+
+⎧⎪⎪⎪⎨⎪⎪⎪⎩
+
+𝑝 𝑡 =
+
+[
+
+𝑥 𝑡 −1 + 𝑣 𝑡 𝑥 ⋅ Δ𝑡 𝑦 𝑡 −1 + 𝑣 𝑡 𝑦 ⋅ Δ𝑡 
+
+]
+
+𝑣 𝑡 =
+
+[
+
+𝑣 𝑡 −1  
+
+> 𝑥
+
++ 𝑎 𝑡 𝑥 ⋅ Δ𝑡 𝑣 𝑡 −1  
+
+> 𝑦
+
++ 𝑎 𝑡 𝑦 ⋅ Δ𝑡 
+
+]
+
+𝜑 𝑡 = atan 
+
+(
+
+𝑣 𝑡 𝑦 ∕𝑣 𝑡 𝑥 
+
+)
+
+(5) where, 𝑝 𝑡 , 𝑣 𝑡 , 𝑎 𝑡 and 𝜑 𝑡 respectively represents the posi-tion, speed, acceleration and yaw angle of UAV at time t, Δ𝑡 
+
+represents the time interval, and 𝑎 represents the acceleration of UAV. 𝑣 𝑡 𝑥 and 𝑣 𝑡 𝑦 respectively represents speed on the X-axis and Y-axis of UAVs at time t. 𝑎 𝑡 𝑥 and 𝑎 𝑡 𝑦 respectively represents acceleration on the X-axis and Y-axis of UAVs at time t. Considering the limitations of UAV power system and hardware performance, the maximum speed and acceler-ation are respectively set as 𝑣 max and 𝑎 max in this paper, that is, UAV should meet the performance constraints as Eq.6: 
+
+{|𝑣 𝑡 | ≤ 𝑣 max 
+
+|𝑎 𝑡 | ≤ 𝑎 max 
+
+(6) 
+
+3.2. RL For UAV 
+
+To address the constrained maneuvering decision-making problem for UAV, we propose a reinforcement learning-based method. First, we briefly outline the fundamental theories of RL employed. Then, in Section 4, we provide a detailed description of the proposed reinforcement learning-based decision-making algorithm framework, including the definitions of states, actions, and rewards. The method for learning the optimal strategy involves Reinforcement Learning (RL)Puterman (1990). In RL, a UAV (agent) uses various onboard sensors to obtain the environmental stateSutton (1988), executes actions based on the state, and receives feedback (reward) from the en-vironment. This process allows the UAV to learn how to maximize cumulative rewards over the long termLiu, Xu and Hu (2015). This learning approach has inherent advantages in the UAV field, as UAV need to continuously interact with the environment and make adaptive decisions based on environmental changes. Regardless of the form of reinforcement learning al-gorithms, their fundamental theoretical framework can be explained using the Markov Decision Process (MDP). The MDP process can be represented as the following quintuple: 
+
+(𝑆, 𝐴, 𝑅, 𝑇 𝐹 , 𝛾 ) (7) where: 𝑆 represents the set of states in which the agent operates; 𝐴 represents the set of actions the agent can exe-cute; 𝑅 represents the reward provided by the environment, i.e., the return or reward signal the agent receives after interacting with the environment; 𝑇 𝐹 is the state transition function, representing the probability distribution of transi-tioning to the next state 𝑠 𝑡 +1 after the agent executes action 
+
+𝑎 𝑡 in state 𝑠 𝑡 ; 𝛾 is the discount factor, typically ranging from 0 to 1, which reduces the impact of future rewards and emphasizes the importance of current rewardsSutton (1988). Through repeated interactions, the agent can continu-ously acquire new states and receive rewards to learn and update its modelLiu et al. (2015), as shown in Fig.3. From the Markov Decision Process, we can deduce that the agent aims to obtain higher rewards through interactions with the environment. Therefore, the goal of reinforcement learning is to construct a policy function that interacts with the environment to maximize the total return within an episode. For the policy function, the value of the state-action pair (s, a) and the state s is defined as follows: 
+
+𝑄 𝜋 (𝑠, 𝑎 ) = 𝔼 [ 𝑅 𝑡 || 𝑠 𝑡 = 𝑠, 𝑎 𝑡 = 𝑎, 𝜋 ] ,𝑉 𝜋 (𝑠 ) = 𝔼 𝑎 ∼𝜋 (𝑠 ) [𝑄 𝜋 (𝑠, 𝑎 )] (8) The state-action value function (commonly referred to as the Q-function) can be recursively computed using dynamic programming. It can be expressed in the following form:   
+
+> :Preprint submitted to Elsevier Page 4 of 12
+
+Environment    
+
+> States si,si+1 ,si+2…
+
+Agent         
+
+> （Policy π）
+> Rewards ri,ri+1 ,ri+2…
+> Actions ai,ai+1 ,ai+2… Figure 3: Fundamental framework of reinforcement learning.
+
+𝑄 𝜋 (𝑠, 𝑎 ) = 𝔼 𝑠 ′
+
+[𝑟 + 𝛾 𝔼 𝑎 ′∼𝜋 (𝑠 ′)
+
+[𝑄 𝜋 (𝑠 ′, 𝑎 ′)] ∣ 𝑠, 𝑎, 𝜋 ] (9) Define the optimal 𝑄 ∗(𝑠, 𝑎 ) = max 𝜋 𝑄 𝜋 (𝑠, 𝑎 ). In a deterministic policy, 𝑎 = arg max 𝑎 ′∈𝐴 𝑄 ∗(𝑠, 𝑎 ′), we can derive 𝑉 ∗(𝑠 ) = max 𝑎 𝑄 ∗(𝑠, 𝑎 ). Consequently, the optimal Q-function satisfies the Bellman equation: 
+
+𝑄 ∗(𝑠, 𝑎 ) = 𝔼 𝑠 ′ [𝑟 + 𝛾 max  
+
+> 𝑎 ′
+
+𝑄 ∗(𝑠 ′, 𝑎 ′)|𝑠, 𝑎 ] (10) In this research, we focus on a specific quantity, the advantage function, which is related to the Q-function as follows: 
+
+𝐴 𝜋 (𝑠, 𝑎 ) = 𝑄 𝜋 (𝑠, 𝑎 ) − 𝑉 𝜋 (𝑠 ) (11) It is important to note that 𝔼 𝑎 ∼𝜋 (𝑠 )[𝐴 𝜋 (𝑠, 𝑎 )] = 0 . This indicates that the value function 𝑉 measures the goodness of a particular state 𝑠 , while the Q-function measures the value of selecting a specific action in that state. The advantage function is obtained by subtracting the value of the state from the Q-function, providing a measure of the importance of each action. 
+
+## 4. Method 
+
+To enhance the combat performance of UAV, a new air combat decision-making model has been designed. It consists of three main components: the Main Environment, the Context Analysis Framework, and the Intent Analysis Framework, as illustrated in the Fig.4. Main Environment: A DRL (Deep Reinforcement Learn-ing) air combat environment is established for simulation and model training. Based on the UAV task planning prob-lem outlined in Section 2, the action space, state space, and reward function are designed to enable the UAV to complete basic tasks. Intent Analysis Framework (IA): The purpose of IA is to utilize a prediction module to identify the intentions of enemy units, allowing the friendly UAV to make targeted decisions. Context Analysis Framework: This mechanism is pro-posed to train different scenarios separately, improving the selectivity of actions and deriving the optimal strategy, thereby enabling the UAV to better accomplish combat missions. By integrating these components, the model aims to improve the UAV’s decision-making capabilities and overall effectiveness in air combat scenarios. 
+
+4.1. MDP Formulation 
+
+4.1.1. State Space and Action Space 
+
+State features are the foundation of training. Correct and reasonable features can improve the convergence speed of training and reduce the dimensionality of parameters. Based on the air combat scenario established in this paper, we analyze and design the following state variable tuple to represent the state space of the UAV: 
+
+𝑆 = [ 𝑃 𝑈 (𝑡 ), 𝑉 𝑈 (𝑡 ), 𝑃 𝐺 , 𝑃 𝐸 (𝑡 ), 𝑉 𝐸 (𝑡 ), Δ𝑑 ] (12) where 𝑃 𝑈 (𝑡 ) represents the position information of the friendly UAV, 𝑉 𝑈 (𝑡 ) represents the velocity information of the friendly UAV, 𝑃 𝐺 represents the destination coordinate position information, 𝑃 𝐸 (𝑡 ) represents the position infor-mation of the enemy UAV, 𝑉 𝐸 (𝑡 ) represents the velocity information of the enemy UAV, Δ𝑑 represents the Euclidean distance between the enemy unit and the friendly UAV. To ensure the realism of the flight trajectory and com-pliance with the UAV’s kinematic constraints, we define the action space based on the vehicle’s dynamic control inputs rather than direct position jumps. The control input vector at time step 𝑡 is defined as 𝑢 𝑡 = [𝑎 𝑡 , 𝜔 𝑡 ]𝑇 , where 
+
+𝑎 𝑡 represents the linear acceleration (controlling velocity changes) and 𝜔 𝑡 represents the angular velocity (controlling heading changes). 
+
+4.1.2. Reward Space 
+
+The reward function is critical for guiding the UAV to learn efficient policies that balance mission completion with survivability. We design a composite reward function 
+
+𝑅 𝑡 composed of four distinct components: navigation re-ward, threat penalty, boundary penalty, and terminal failure penalty. Navigation Reward ( 𝑅 𝑛𝑎𝑣 ) To address the sparsity of re-wards in large-scale environments, we introduce a potential-based shaping reward combined with a sparse goal achieve-ment reward. The navigation reward is defined as: 
+
+𝑅 𝑛𝑎𝑣 = − 𝜆 𝑑𝑖𝑠 (𝑑 𝑡 − 𝑑 𝑡 −1 ) + 𝕀 𝑔𝑜𝑎𝑙 ⋅ 𝐶 𝑑𝑒𝑠𝑡 (13) where 𝑑 𝑡 denotes the Euclidean distance between the UAV and the target at time step 𝑡 . The term −𝜆 𝑑𝑖𝑠 (𝑑 𝑡 −𝑑 𝑡 −1 ) incen-tivizes the agent to reduce the distance to the destination at every step. 𝕀 𝑔𝑜𝑎𝑙 is an indicator function that equals 1 when the UAV enters the target radius ( 𝑑 𝑡 < 𝐷 𝑡ℎ𝑟𝑒𝑠ℎ𝑜𝑙𝑑 ), triggering a large positive reward 𝐶 𝑑𝑒𝑠𝑡 .Threat Penalty ( 𝑅 𝑡ℎ𝑟𝑒𝑎𝑡 )– To ensure flight safety, the agent receives a penalty whenever it enters the detection               
+
+> :Preprint submitted to Elsevier Page 5 of 12 FC Layer
+> Historical
+> Trajectory
+> Sequence
+> Predicted
+> State
+> FC -ReLU FC -ReLU
+> FC -ReLU FC -ReLU  FC FC FC FC
+> FC FC FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> Agent 2
+> FC -ReLU
+> FC -ReLU  FC FC
+> FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> Agent 2
+> FC -ReLU FC -ReLU
+> FC -ReLU FC -ReLU  FC FC FC FC
+> FC FC FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> Agent 3
+> FC -ReLU
+> FC -ReLU  FC FC
+> FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> Agent 3
+> FC -ReLU FC -ReLU
+> FC -ReLU FC -ReLU  FC FC FC FC
+> FC FC FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> A(s,a )
+> Agent 1
+> FC -ReLU
+> FC -ReLU  FC FC
+> FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> A(s,a )
+> Agent 1
+
+Context  Analysis  Module 
+
+> Observation
+> Observation
+> Observation
+
+Intent  Analysis  Module   
+
+> Advantage
+> Switching
+> Mechanism
+> (Max -Advantage)
+> LSTM
+> (Hideden:128)
+> LSTM
+> (Hideden:128)
+> A(s,a )
+> A(s,a )
+> Aagent 1
+> Aagent 2
+> Aagent 3
+> arg max Ak(st,a )
+> Environment Environment
+> Action Execution
+> (at)
+
+Synergy Mechanism       
+
+> FC Layer
+> Historical
+> Trajectory
+> Sequence
+> Predicted
+> State
+> FC -ReLU
+> FC -ReLU  FC FC
+> FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> Agent 2
+> FC -ReLU
+> FC -ReLU  FC FC
+> FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> Agent 3
+> FC -ReLU
+> FC -ReLU  FC FC
+> FC FC
+> Value Stream ( A)
+> Advantagr Stream ( V)
+> V(s)
+> A(s,a )
+> Agent 1
+
+Context  Analysis  Module 
+
+> Observation
+> Observation
+> Observation
+
+Intent  Analysis  Module   
+
+> Advantage
+> Switching
+> Mechanism
+> (Max -Advantage)
+> LSTM
+> (Hideden:128)
+> A(s,a )
+> A(s,a )
+> Aagent 1
+> Aagent 2
+> Aagent 3
+> arg max Ak(st,a )
+> Environment
+> Action Execution
+> (at)
+
+Synergy Mechanism Figure 4: The structure diagram of air combat decision model. 
+
+range of an enemy unit. This encourages the UAV to plan paths that circumvent hostile radar coverage: 
+
+𝑅 𝑡ℎ𝑟𝑒𝑎𝑡 =
+
+{
+
+𝐶 𝑒𝑛𝑒𝑚𝑦 , if 𝑑 𝑒𝑛𝑒𝑚𝑦 < 𝐷 𝑑𝑒𝑡𝑒𝑐𝑡 
+
+0, otherwise (14) where 𝑑 𝑒𝑛𝑒𝑚𝑦 is the distance to the nearest enemy unit, 
+
+𝐷 𝑑𝑒𝑡𝑒𝑐𝑡 is the radar detection range, and 𝐶 𝑒𝑛𝑒𝑚𝑦 is a negative penalty constant. Constraint Penalties ( 𝑅 𝑐𝑜𝑛𝑠𝑡 )– We impose constraints on the flight area and mission durability. A boundary penalty 
+
+𝑅 𝑏𝑜𝑢𝑛𝑑 is applied if the UAV leaves the designated mission airspace Ω, and a failure penalty 𝑅 𝑓 𝑎𝑖𝑙 is triggered if the UAV remains under attack for a duration exceeding a safety threshold 𝑇 𝑠𝑎𝑓 𝑒 :
+
+𝑅 𝑐𝑜𝑛𝑠𝑡 = 𝕀 𝑜𝑢𝑡 ⋅ 𝐶 𝑜𝑢𝑡 + 𝕀 𝑓 𝑎𝑖𝑙 ⋅ 𝐶 𝑓 𝑎𝑖𝑙 (15) where 𝕀 𝑜𝑢𝑡 = 1 if (𝑥 𝑡 , 𝑦 𝑡 ) ∉ Ω, and 𝕀 𝑓 𝑎𝑖𝑙 = 1 if the accumulated time under threat exceeds 𝑇 𝑠𝑎𝑓 𝑒 .Total Reward– The final total reward function for the agent at time step 𝑡 is the summation of the above compo-nents: 
+
+𝑅 𝑡𝑜𝑡𝑎𝑙 = 𝑅 𝑛𝑎𝑣 + 𝑅 𝑡ℎ𝑟𝑒𝑎𝑡 + 𝑅 𝑐𝑜𝑛𝑠𝑡 (16) Specific agents in our ensemble framework may utilize sub-sets of this reward function (e.g. the evasion expert agent may prioritize 𝑅 𝑡ℎ𝑟𝑒𝑎𝑡 over 𝑅 𝑛𝑎𝑣 ) to specialize in distinct tactical behaviors. 
+
+4.2. Intent Analysis 
+
+In high-dynamic aerial confrontations, relying solely on instantaneous observations ( 𝑆 𝑡 ) often leads to myopic decision-making and delayed responses due to the inherent inertia of UAV maneuvers. To overcome this limitation, we introduce an Intent Prediction Module based on Long Short-Term Memory (LSTM) networks. This module serves as a cognitive engine that transforms the problem from a reactive MDP into a proactive predictive framework. 
+
+4.2.1. Historical Trajectory Representation 
+
+The intent of a hostile unit is implicitly encoded in its his-torical movement patterns. We define a sliding observation window of length 𝐿 to capture these temporal dependencies. At time step 𝑡 , the historical trajectory sequence 𝐻 𝑡 is constructed as: 
+
+𝐻 𝑡 = { 𝐨 𝑒 𝑡 −𝐿 +1 , 𝐨 𝑒 𝑡 −𝐿 +2 , … , 𝐨 𝑒 𝑡 } (17) where 𝐨 𝑒 𝑘 represents the observed state vector of the enemy (e.g., relative position, velocity, and heading) at step 𝑘 . This sequence 𝐻 𝑡 serves as the input to the prediction network. 
+
+4.2.2. Temporal Feature Extraction 
+
+We employ an LSTM network to extract deep tem-poral features from 𝐻 𝑡 . Unlike standard Recurrent Neural Networks (RNNs), LSTMs mitigate the vanishing gradient problem through a gating mechanism, allowing the model to learn long-term dependencies in flight trajectories. The hidden state transition is governed by: 
+
+𝐡 𝑡 , 𝐜 𝑡 = LSTM (𝐻 𝑡 ; 𝜃 𝑝𝑟𝑒𝑑 ) (18) where 𝐡 𝑡 is the hidden state vector containing the abstract intent features, 𝐜 𝑡 is the cell state, and 𝜃 𝑝𝑟𝑒𝑑 denotes the trainable parameters of the predictor. The network then decodes 𝐡 𝑡 through a fully connected (FC) layer to forecast the enemy’s state at the next time step: ̂
+
+𝐬 𝑒 𝑡 +1 = 𝜎 (𝑊 𝑜𝑢𝑡 𝐡 𝑡 + 𝑏 𝑜𝑢𝑡 ) (19) where ̂ 𝐬 𝑒 𝑡 +1 is the predicted position and heading of the target. 
+
+: Preprint submitted to Elsevier Page 6 of 12 4.2.3. Supervised Training Objective 
+
+The Intent Prediction Module is trained via supervised learning in parallel with the RL process (or pre-trained). We utilize a Mean Squared Error (MSE) loss function to minimize the discrepancy between the predicted state and the ground truth state recorded in the experience replay buffer: 
+
+𝑝𝑟𝑒𝑑 (𝜃 𝑝𝑟𝑒𝑑 ) = 1
+
+𝑀 
+
+> 𝑀
+
+∑
+
+> 𝑖 =1
+
+‖̂ 𝐬 𝑒 𝑖,𝑡 +1 − 𝐬 𝑒 𝑖,𝑡 +1 ‖22 (20) where 𝑀 is the batch size sampled from the replay memory. 
+
+4.3. Context Analysis 
+
+UAV mission scenarios are not static and unchanging. Traditional reinforcement learning methods typically treat scenarios as uniform knowledge for learning, thereby ob-taining solutions. Complex penetration missions typically involve conflicting subgoals, such as minimizing flight time and maximizing survival rate. A single monolithic strat-egy often struggles to balance these trade-offs, leading to convergence to a suboptimal solution. To address this, the ICS-RL framework adopts a "divide-and-conquer" strategy. In Section 2, we have preliminarily decoupled the UAV infiltration process into different situations. We then propose using different agent proxies to treat various situations as distinct domains of knowledge for learning. To address this, we decompose the infiltration mission into three hierarchical tactical scenarios—safe cruise, pre-emptive stealth, and hostile breakthrough—and design a spe-cialized agent ensemble  = { 𝜋 𝑛𝑎𝑣 , 𝜋 𝑚𝑎𝑖𝑛 , 𝜋 𝑒𝑣𝑎 } to master each specific context. The specialized behaviors of these agents are induced by distinct configurations of the reward weight vector. Initially, in the Safe Cruise Phase (Scenario I) , where the friendly UAV has not detected any enemy units, the primary objective is kinematic efficiency. The Navigation Expert ( 𝜋 𝑛𝑎𝑣 ) takes precedence in this context. Utilizing a navigation-dominant reward structure that ignores potential threat penalties, this agent optimizes the trajectory solely based on the destination reward ( 𝑅 𝑛𝑎𝑣 ), enabling it to compute the shortest, time-optimal path to the target without unnecessary detours. As the mission progresses to the Pre-emptive Stealth Phase (Scenario II) , characterized by the detection of ene-mies prior to entering their radar range, the priority shifts to detection avoidance. This context is handled by the Stealth Planning Agent ( 𝜋 𝑚𝑎𝑖𝑛 ). By forecasting the enemy’s future trajectory ( ̂𝑆 𝑡 +1 ), this agent employs a balanced global re-ward to plan a path that maintains a safe separation distance, effectively "skirting" the edge of the dynamic radar coverage to balance path deviation with safety. Finally, in the Hostile Breakthrough Phase (Scenario III) , where the UAV is locked by multiple enemy units, the situation escalates to a survival crisis. The Breakthrough Expert ( 𝜋 𝑒𝑣𝑎 ) is deployed to break the lock. Trained with a high penalty weight on continuous exposure, 𝜋 𝑒𝑣𝑎 learns to exploit kinematic vulnerabilities of enemy units (e.g., maximum turning radii or sensor delays) to perform high-G maneuvers, thereby confusing enemy prediction and creat-ing a window for breakthrough. To seamlessly transition between these distinct phases without relying on hard-coded rules, we employ an Advantage-based Dynamic Switching mechanism. Unlike traditional ensemble methods that average Q-values, we leverage the decomposed streams of the Dueling architecture. At each time step 𝑡 , the system aggregates the advantage streams from all agents and selects the global optimal action 𝑎 ∗ 
+
+> 𝑡
+
+that maximizes the advantage across the entire ensemble: 
+
+𝑎 ∗ 
+
+> 𝑡
+
+= arg max 
+
+> 𝑎 ∈
+
+(
+
+max  
+
+> 𝑘 ∈{ 𝑛𝑎𝑣,𝑚𝑎𝑖𝑛,𝑒𝑣𝑎 }
+
+𝐴 𝑘 (𝑠 𝑡 , 𝑎 )
+
+)
+
+(21) This mechanism acts as a "contextual switch." For instance, when the UAV is detected (Scenario III), the Breakthrough Expert ( 𝜋 𝑒𝑣𝑎 ) naturally generates a significantly higher ad-vantage value for sharp evasive turns compared to the Navi-gation Agent, thus automatically seizing control authority to execute the most relevant maneuver. By addressing these different scenarios separately, the decision-making model can optimize the UAV’s actions and improve its overall mission success rate. 
+
+4.4. Intent-Context Synergy Framework 
+
+The proposed ICS-RL framework integrates the pre-dictive capability of the intent analysis module with the specialized decision-making of the context-Analysis agents. This synergy transforms the UAV’s control from a passive response to a proactive intervention strategy. 
+
+4.4.1. Synergy via State Augmentation 
+
+The core innovation lies in explicitly incorporating the enemy’s tactical intent into the decision loop. The predicted future state ̂ 𝐬 𝑒 𝑡 +1 is treated as a latent feature of the threat evolution. We augment the Main Agent’s observation space by concatenating the current sensory data 𝑆 𝑡 with this pre-diction: 
+
+𝑆 𝑎𝑢𝑔 𝑡 = [ 𝑆 𝑡 ,̂ 𝐬 𝑒 𝑡 +1 ] (22) This augmented state 𝑆 𝑎𝑢𝑔 𝑡 enables the agent to optimize its policy not just based on where the enemy is , but where the enemy will be , facilitating proactive maneuvers such as interception or pre-emptive evasion. 
+
+4.4.2. Parallel Value Decomposition 
+
+Upon receiving the state inputs (with 𝑆 𝑎𝑢𝑔 𝑡 for the Main Agent and 𝑆 𝑡 for others), the specialized agents in the ensemble  = {𝑛𝑎𝑣, 𝑚𝑎𝑖𝑛, 𝑒𝑣𝑎 } process the context in parallel. Utilizing the Dueling architecture, each agent 𝑘 ∈
+
+ independently estimates the scalar State Value 𝑉 𝑘 (𝑠 ) and the Advantage vector 𝐴 𝑘 (𝑠, ⋅) for all available actions: 
+
+{
+
+𝑉 𝑠𝑒𝑡 = { 𝑉 𝑛𝑎𝑣 (𝑠 ), 𝑉 𝑚𝑎𝑖𝑛 (𝑠 𝑎𝑢𝑔 ), 𝑉 𝑒𝑣𝑎 (𝑠 )} 
+
+𝐴 𝑠𝑒𝑡 = { 𝐴 𝑛𝑎𝑣 (𝑠, ⋅), 𝐴 𝑚𝑎𝑖𝑛 (𝑠 𝑎𝑢𝑔 , ⋅), 𝐴 𝑒𝑣𝑎 (𝑠, ⋅)} (23) where 𝐴 𝑘 (𝑠, ⋅) ∈ ℝ|| represents the relative superiority of each action under the 𝑘 -th agent’s specific reward objective.   
+
+> :Preprint submitted to Elsevier Page 7 of 12
+
+4.4.3. Optimal Action Selection and Update 
+
+To execute the optimal strategy, we employ an evaluation module that aggregates these advantages. The system selects the global optimal action 𝑎 ∗ by maximizing the advantage value across both the agent ensemble and the action space: 
+
+𝑎 ∗ 
+
+> 𝑡
+
+= arg max 
+
+> 𝑎 ∈
+
+(
+
+max  
+
+> 𝑘 ∈
+
+𝐴 𝑘 (𝑠, 𝑎 )
+
+)
+
+(24) This mechanism acts as a dynamic switch, automatically delegating control to the agent with the highest confidence (advantage) in the current situation. During the training phase, the chosen agent 𝑘 ∗ (which provided the max advantage) is updated using the stan-dard Bellman equation. The Q-value is reconstructed as 
+
+𝑄 𝑘 ∗ (𝑠, 𝑎 ∗) = 𝑉 𝑘 ∗ (𝑠 ) + 𝐴 𝑘 ∗ (𝑠, 𝑎 ∗) − ̄ 𝐴 𝑘 ∗ (𝑠, ⋅), and the net-work parameters are optimized by minimizing the TD error against the target Q-value stored in the experience replay pool. 
+
+## 5. Experiments and Analysis 
+
+5.1. Experimental Setup 
+
+To comprehensively evaluate the proposed ICS-RL frame-work, we designed two distinct simulation environments: a Static Target Scenario and a Dynamic Target Scenario 
+
+(where the target location refreshes randomly). We con-ducted comparative experiments against two baselines: the classic DDQN and the Context-Analysis DDQN (CA-DDQN) (an ablation variant without intent prediction). These experi-ments aim to verify the superiority of the proposed algorithm in terms of strategic learning efficiency, trajectory safety, and intent recognition capability. 
+
+5.1.1. Simulation Environment 
+
+The simulation is conducted on a high-fidelity platform configured with an Intel Core i7 CPU and NVIDIA GTX 1660S GPU. The battlefield spans a 10 km × 10 km area, containing one friendly UAV, five hostile UAVs, and a designated target zone. 
+
+• Friendly UAV: Cruises at 25 m/s with a sensor detec-tion range of 2 km. Success is defined as entering the 
+
+1 km effective radius of the target. 
+
+• Enemy UAVs: Patrol outside the target zone at 15 m/s, with a detection range of 1.5 km and an interception (attack) range of 0.8 km. They employ a heuristic strategy to intercept the friendly UAV upon detection. 
+
+5.1.2. Hyperparameters 
+
+To ensure a fair comparison, all algorithms share identi-cal training parameters, as detailed in Table 1. 
+
+5.2. Performance Analysis and Ablation Studies 
+
+To rigorously validate the contribution of each module, we define the CA-DDQN as the ICS-RL framework with the Intent Prediction Module removed. It relies solely on                   
+
+> Table 1
+> Hyperparameter Settings for Comparative Algorithms
+> Parameter DDQN CA-DDQN ICS-RL (Ours)
+> Replay Buffer Size 5 × 10 55 × 10 55 × 10 5
+> Training Episodes 40,000 40,000 40,000 Learning Rate 1 × 10 −5 1 × 10 −5 1 × 10 −5
+> Discount Factor ( 𝛾 )0.99 0.99 0.99 Batch Size 512 512 512
+
+the Context-Analysis Synergy mechanism using the three specialized agents defined in Section 4.3: 𝜋 𝑛𝑎𝑣 (Scenario 1), 
+
+𝜋 𝑚𝑎𝑖𝑛 (Scenario 2), and 𝜋 𝑒𝑣𝑎 (Scenario 3). 
+
+5.2.1. Learning Efficiency and Convergence 
+
+We first compare the learning curves of CA-DDQN and the vanilla DDQN in Fig. 5. While both methods start with low rewards due to initial exploration penalties, CA-DDQN demonstrates a significantly faster convergence rate and achieves a higher asymptotic reward. This improvement is attributed to the Divide-and-Conquer strategy: by decom-posing the complex mission into simpler sub-tasks (naviga-tion, avoidance, breakthrough), the specialized agents can learn efficient policies much faster than a single monolithic DDQN agent. Subsequently, we introduce the full ICS-RL (ICS-DDQN) model and compare it against CA-DDQN in Fig. 6. The results reveal that ICS-RL not only converges faster (red curve) but also exhibits smaller variance (narrower confi-dence interval). This stability stems from the Intent Pre-diction Module , which allows the agent to anticipate enemy movements and take pre-emptive actions, thereby reducing the frequency of "surprise" encounters that typically cause large reward penalties and training instability. 
+
+5.2.2. Analysis of Agent Synergy 
+
+To visualize the internal synergy mechanism, Fig. 7 records the activation frequency of each agent during train-ing. 
+
+• Agent 1 ( 𝜋 𝑛𝑎𝑣 ): Dominates the decision-making pro-cess, as the majority of the mission time involves cruising in safe zones. 
+
+• Agent 2 ( 𝜋 𝑚𝑎𝑖𝑛 ): Is the second most active, handling the critical phase of detection avoidance. 
+
+• Agent 3 ( 𝜋 𝑒𝑣𝑎 ): Is activated least frequently. This is the desired outcome, as it indicates that the system effectively avoids entering the dangerous "locked-on" state (Scenario 3) by successfully handling threats in the earlier "detection" phase (Scenario 2). 
+
+5.2.3. Mission Efficiency Metrics 
+
+We further evaluate mission efficiency using the "Num-ber of Positive Reward Steps" metric (Fig. 8). Since positive rewards are sparse and only awarded near the target, a higher     
+
+> :Preprint submitted to Elsevier Page 8 of 12 Figure 5: Comparison of cumulative reward curves between CA-DDQN and Standard DDQN.
+> Figure 6: Comparison of cumulative reward curves between ICS-DDQN and CA-DDQN.
+
+frequency of positive steps earlier in training indicates that ICS-RL discovers the path to the destination much faster than DDQN. This confirms that the proposed method sig-nificantly reduces the time-to-target. 
+
+5.3. Comparative Testing Results 
+
+To comprehensively evaluate the adaptability of the proposed ICS-RL framework against distinct algorithmic paradigms, we expanded our baseline comparison to include two traditional non-learning methods: 
+
+• Particle Swarm Optimization (PSO): A heuristic optimization algorithm that plans trajectories by iter-atively improving candidate solutions based on a fit-ness function.Khargharia, Ouali, Shakya and Ahmad (2026) 
+
+• Game Theory (GT): A decision-making approach that calculates the Nash Equilibrium strategy assum-ing rational opponents, often used in adversarial dis-crete scenariosZhou, Li, Sheng, Qi and Cong (2024).           
+
+> :Preprint submitted to Elsevier Page 9 of 12 Figure 7: Frequency of decision adoption for each specialized agent during training.
+> Figure 8: Comparison of positive reward steps, indicating mission completion speed.
+
+5.3.1. Comprehensive Performance Assessment 
+
+We conducted 50 independent Monte Carlo simulation runs for each method. The comprehensive performance met-rics, including Success Rate (SR), Average Exposure Count (AEC, indicating stealth capability), and Prediction Accu-racy(PA), are summarized in Table 2.                        
+
+> Table 2
+> Performance Comparison with Traditional and DRL Algorithms
+> Method SR AEC PA
+> PSO 69.0% 1.87 N/A Game Theory 77.0% 1.41 N/A Standard DDQN 64% 1.56 N/A CA-DDQN (Ours) 80% 1.15 N/A
+> ICS-RL (Ours) 88% 0.24 80.2%
+
+The statistical results are presented in Fig. 9. The box plot clearly shows that ICS-RL achieves the highest median reward and the smallest interquartile range (IQR), indicating robust and consistently high performance. In contrast, the standard DDQN exhibits a wide spread with a much lower  
+
+> Figure 9: Statistical distribution of total rewards over 50 test episodes.
+
+median, reflecting its instability in complex dynamic scenar-ios. 
+
+5.3.2. Analysis of Traditional vs. Learning Methods 
+
+As observed in Table 2, while traditional methods out-perform the vanilla DQN, they still fall short of the proposed ICS-RL framework. 
+
+PSO Analysis: The PSO algorithm achieves a success rate of 69.0%. While it performs better than the standard DQN (64.5%) due to its global search capability in static snapshots, it struggles in highly dynamic environments. PSO often converges to local optima when the enemy constel-lation changes rapidly, leading to a relatively high average exposure time of 1.87s. 
+
+Game Theory Analysis: The Game Theory approach demonstrates strong performance with a 77.0% success rate and a lower exposure time of 1.41s. This is because it effectively models the adversarial nature of the problem. However, its reliance on discrete state spaces and the as-sumption of perfect opponent rationality limits its flexibility against stochastic behaviors. Furthermore, both PSO and GT lack a temporal prediction mechanism (Pred. Accuracy = 0.00%), forcing them to react to threats only after they manifest. 
+
+Superiority of ICS-RL: In contrast, the ICS-RL frame-work achieves the highest success rate (88%) and the low-est exposure time ( ∼0.24s). This superiority stems from the Intent Prediction Module , which provides high-fidelity trajectory forecasting (80.2% accuracy). This predictive ca-pability enables the agent to execute proactive maneuvers that traditional "reactive" or "equilibrium-based" methods cannot anticipate. 
+
+5.4. Behavior Analysis 
+
+We present typical maneuver decision scenarios based on the proposed CA and IA methods in Figure 16. Figure 16(a) represents a relatively simple task scenario, where there are no enemy UAV (blue) near either the initial position of the friendly UAV (red) or the target area to be infiltrated.          
+
+> :Preprint submitted to Elsevier Page 10 of 12 (a) (b) (c) (d)
+> (e) (f) (g) (h)
+> Figure 10: Detail of a trajectory performed by ICS-DDQN
+
+As a result, the friendly UAV flies directly to the target area along the shortest path. As shown in Figures 16(b) and (c), enemy drones are present near the target area. In (b), an enemy UAV is located on the path of the friendly UAV to the target area. the friendly UAV determines that it can enter the target area before the enemy intercepts it. In (c), the red UAV enters the target area before being detected by the enemy UAV. In the encounter scenarios shown in (d) to (f), enemy units are already present near the initial position of the red UAV and are approaching it. the friendly UAV analyzes the enemy’s intentions and, consequently, makes an evasive decision to avoid detection by the enemy. It then identifies a safer path to fly toward the target area. In (g), during flight, the red UAV detects that two enemy drones are forming an encirclement. As a result, it promptly makes a detour decision, waiting for the enemy to depart before continuing its journey and ultimately reaching the target area. In the scenario shown in (h), four enemy drones are ap-proaching in a blocking formation. the friendly UAV detects the enemy’s tactical intentions and, before being cornered, identifies a gap in the enemy’s blockade. It promptly escapes and successfully flies toward the target area while avoiding detection by one of the defending UAV. By analyzing the UAV decision-making behavior in various scenarios, it is fully demonstrated that the proposed CA framework, by decoupling different situations, guides the agent to achieve higher rewards and make better deci-sions. The proposed IA framework helps the agent anticipate the enemy’s behavioral intentions and make decisions that avoid penalties. The combination of both methods allows the friendly UAV to complete tasks more efficiently and safely. 
+
+## 6. Conclusion 
+
+This paper investigates the maneuvering decision-making problem for UAV infiltration reconnaissance in air combat. First, a mathematical expression of the UAV task model is established and transformed into a constrained optimization problem. Within the reinforcement learning framework, air combat data is converted into learnable samples. Finally, to address the issue of UAV being unable to effectively judge enemy intentions and adapt to different situations, we propose an ICS-RL air combat decision-making model. This model is based on intent analysis and scenario analysis methods. The scenario analysis mechanism introduced in this pa-per refines the interaction between the agent and the envi-ronment, expanding the action strategy space and effectively reducing the likelihood of suboptimal action strategies. The improved intent analysis reinforcement learning method en-ables the UAV to predict the enemy unit’s next move, helping the UAV to make preemptive decisions and effectively avoid danger. This advancement reduces the combat risk for the UAV and the probability of being detected during infiltration missions, providing significant operational advantages. Simulation results show that agents trained with this algorithm can achieve safer and more effective maneuvering strategies compared to the original algorithm, with a higher success rate in completing missions. 
+
+## CRediT authorship contribution statement 
+
+Jiahao Fu: Conceptualization of this study, Methodol-ogy, Writing - Original draft preparation. Feng Yang: Data curation, Methodology, Software.   
+
+> :Preprint submitted to Elsevier Page 11 of 12
+
+## References 
+
+Duan, H., Lei, Y., Xia, J., Deng, Y., Shi, Y., 2023. Autonomous maneuver decision for unmanned aerial vehicle via improved pigeon-inspired optimization. IEEE Trans. Aerosp. Electron. Syst. 59, 3156–3170. doi: 10.1109/TAES.2022.3221691 .Duan, H., Li, P., Yu, Y., 2015. A predator-prey particle swarm optimization approach to multiple ucav air combat modeled by dynamic game theory. IEEE/CAA J. Automatica Sinica 2, 11–18. Hu, D., Yang, R., Zuo, J., Zhang, Z., Wu, J., Wang, Y., 2021. Application of deep reinforcement learning in maneuver planning of beyond-visual-range air combat. IEEE Access 9, 32282–32297. doi: 10.1109/ACCESS. 2021.3060426 .Huang, C., Zhou, X., Ran, X., Wang, J., Chen, H., Deng, W., 2023. Adaptive cylinder vector particle swarm optimization with differential evolution for uav path planning. Eng. Appl. Artif. Intell. 121, 105942. doi: 10. 1016/j.engappai.2023.105942 .Jin, W., Tian, X., Shi, B., Zhao, B., Duan, H., Wu, H., 2024. Enhanced uav pursuit-evasion using boids modelling: A synergistic integration of bird swarm intelligence and drl. Comput. Mater. Continua 80. Kaelbling, L.P., Littman, M.L., Moore, A.W., 1996. Reinforcement learn-ing: A survey. J. Artif. Intell. Res. 4, 237–285. Khargharia, H.S., Ouali, A., Shakya, S., Ahmad, S., 2026. Collision avoid-ance in uav swarms: A learning-centric perspective on collaborative intelligence. Neurocomputing 663, 132020. doi: https://doi.org/10. 1016/j.neucom.2025.132020 . citation Key: KHARGHARIA2026132020. Li, S.Y., Chen, M., Wang, Y.H., Wu, Q.X., 2022. Air combat decision-making of multiple ucavs based on constraint strategy games. Def. Technol. 18, 368–383. Liu, C., Sun, S., Tao, C., Shou, Y., Xu, B., 2021. Sliding mode control of multi-agent system with application to uav air combat. Comput. Electr. Eng. 96, 107491. Liu, C., Xu, X., Hu, D., 2015. Multiobjective reinforcement learning: A comprehensive overview. IEEE Trans. Syst. Man Cybern. Syst. 45, 385– 398. doi: 10.1109/TSMC.2014.2358639 .Liu, S., Chen, T., Zhao, T., Liu, S., Ma, C., 2023. Research on cooperative uav countermeasure strategy based on interception triangle, in: Proceed-ings of the 2023 4th International Conference on Machine Learning and Computer Application, pp. 1015–1020. Liu, X., Liu, Y., Chen, Y., 2019. Reinforcement learning in multiple-uav networks: Deployment and movement design. IEEE Trans. Veh. Technol. 68, 8036–8049. doi: 10.1109/TVT.2019.2922849 .López, N.R., Żbikowski, R., 2018. Effectiveness of autonomous decision making for unmanned combat aerial vehicles in dogfight engagements. J. Guid. Control Dyn. 41, 1021–1024. Najm, A.A., Ibraheem, I.K., 2019. Nonlinear pid controller design for a 6-dof uav quadrotor system. Eng. Sci. Technol. Int. J. 22, 1087–1097. doi: 10.1016/j.jestch.2019.02.005 .Park, H., Lee, B.Y., Tahk, M.J., Yoo, D.W., 2016. Differential game based air combat maneuver generation using scoring function matrix. Int. J. Aeronaut. Space Sci. 17, 204–213. doi: 10.5139/IJASS.2016.17.2.204 .Puente-Castro, A., Rivero, D., Pedrosa, E., Pereira, A., Lau, N., Fernandez-Blanco, E., 2024. Q-learning based system for path planning with unmanned aerial vehicles swarms in obstacle environments. Expert Syst. Appl. 235, 121240. doi: 10.1016/j.eswa.2023.121240 .Puterman, M.L., 1990. Markov decision processes. Handb. Oper. Res. Manag. Sci. 2, 331–434. Shao, S., Peng, Y., He, C., Du, Y., 2020. Efficient path planning for uav formation via comprehensively improved particle swarm optimization. ISA Trans. 97, 415–430. doi: 10.1016/j.isatra.2019.08.018 .Sonny, A., Yeduri, S.R., Cenkeramaddi, L.R., 2023. Q-learning-based un-manned aerial vehicle path planning with dynamic obstacle avoidance. Appl. Soft Comput. 147, 110773. doi: 10.1016/j.asoc.2023.110773 .Sutton, R.S., 1988. Learning to predict by the methods of temporal differences. Mach. Learn. 3, 9–44. Vidal, R., Shakernia, O., Kim, H.J., Shim, D.H., Sastry, S., 2002. Proba-bilistic pursuit-evasion games: Theory, implementation, and experimen-tal evaluation. IEEE Trans. Robot. Autom. 18, 662–669. doi: 10.1109/ TRA.2002.804040 .Wang, C., Wang, J., Wang, J., Zhang, X., 2020. Deep-reinforcement-learning-based autonomous uav navigation with sparse rewards. IEEE Internet Things J. 7, 6180–6190. doi: 10.1109/JIOT.2020.2973193 .Wang, X., Peng, H., Liu, J., Dong, X., Zhao, X., Lu, C., 2022. Optimal control based coordinated taxiing path planning and tracking for multiple carrier aircraft on flight deck. Def. Technol. 18, 238–248. doi: 10.1016/ j.dt.2020.11.013 .Wang, X., Wang, Y., Su, X., Wang, L., Lu, C., Peng, H., Liu, J., 2024. Deep reinforcement learning-based air combat maneuver decision-making: literature review, implementation tutorial and future direction. Artif. Intell. Rev. 57, 1. Watkins, C.J.C.H., Dayan, P., 1992. Q-learning. Mach. Learn. 8, 279–292. doi: 10.1007/BF00992698 .Wu, J., Luo, C., Luo, Y., Li, K., 2021. Distributed uav swarm formation and collision avoidance strategies over fixed and switching topologies. IEEE Trans. Cybern. 52, 10969–10979. Xu, X., Wang, Y., Guo, X., Huang, K., Zhang, X., 2025. Multi-uav air combat cooperative game based on virtual opponent and value attention decomposition policy gradient. Expert Syst. Appl. 267, 126069. Yan, F., Chu, J., Hu, J., Zhu, X., 2024. Cooperative task allocation with simultaneous arrival and resource constraint for multi-uav using a genetic algorithm. Expert Syst. Appl. 245, 123023. doi: 10.1016/j. eswa.2023.123023 .Yang, Q., Zhang, J., Shi, G., Hu, J., Wu, Y., 2019. Maneuver decision of uav in short-range air combat based on deep reinforcement learning. IEEE Access 8, 363–378. Yang, Q., Zhang, J., Shi, G., Hu, J., Wu, Y., 2020. Maneuver decision of uav in short-range air combat based on deep reinforcement learning. IEEE Access 8, 363–378. doi: 10.1109/ACCESS.2019.2961426 .Zhou, Y., Li, Y., Sheng, A., Qi, G., Cong, J., 2024. Optimal control strategies and target selection in multi-pursuer multi-evader differential games. Neurocomputing 588, 127701. doi: 10.1016/j.neucom.2024. 127701 .
+
+: Preprint submitted to Elsevier Page 12 of 12

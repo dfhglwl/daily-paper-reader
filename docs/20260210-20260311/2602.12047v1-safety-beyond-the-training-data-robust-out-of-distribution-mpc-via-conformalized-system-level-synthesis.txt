@@ -1,0 +1,2300 @@
+Title: Safety Beyond the Training Data: Robust Out-of-Distribution MPC via Conformalized System Level Synthesis
+
+URL Source: https://arxiv.org/pdf/2602.12047v1
+
+Published Time: Fri, 13 Feb 2026 02:25:46 GMT
+
+Number of Pages: 28
+
+Markdown Content:
+> Proceedings of Machine Learning Research vol vvv:1–28, 2026
+
+## Safety Beyond the Training Data: Robust Out-of-Distribution MPC via Conformalized System Level Synthesis 
+
+Anutam Srinivasan 1 ASRINIVASAN 350@ GATECH .EDU 
+
+Antoine Leeman 2 ALEEMAN @ETHZ .CH 
+
+Glen Chou 1 CHOU @GATECH .EDU 
+
+> 1
+
+Georgia Institute of Technology. 2 ETH Zurich. 
+
+Abstract 
+
+We present a novel framework for robust out-of-distribution planning and control using conformal prediction (CP) and system level synthesis (SLS), addressing the challenge of ensuring safety and robustness when using learned dynamics models beyond the training data distribution. We first de-rive high-confidence model error bounds using weighted CP with a learned, state-control-dependent covariance model. These bounds are integrated into an SLS-based robust nonlinear model predic-tive control (MPC) formulation, which performs constraint tightening over the prediction horizon via volume-optimized forward reachable sets. We provide theoretical guarantees on coverage and robustness under distributional drift, and analyze the impact of data density and trajectory tube size on prediction coverage. Empirically, we demonstrate our method on nonlinear systems of in-creasing complexity, including a 4D car and a 12D quadcopter, improving safety and robustness compared to fixed-bound and non-robust baselines, especially outside of the data distribution. 
+
+Keywords: safe learning-based control, conformal prediction, MPC, system level synthesis 
+
+1. Introduction 
+
+Provably-safe planning under unknown dynamics is crucial for real-world robotics. This poses diffi-culties for classical planners, which assume precise models; in practice, model error and uncertainty are unavoidable. Data-driven planners can learn dynamics from data but may exploit model inac-curacies, leading to unsafe behavior. This motivates uncertainty-constrained planners that quantify prediction error between true and learned dynamics to ensure robust, safe execution (Knuth et al., 2021, 2023; Wasiela et al., 2024). These methods estimate spatially-varying model error bounds to compute reachable tubes, which are used to constrain closed-loop behavior within a “trusted do-main” where the model is accurate. This domain is typically selected as a bounded region around the training data, preventing generated plans from straying far from the data. However, in practice, data scarcity often forces robots to operate temporarily out of distribution (OOD), tolerating degraded performance while maintaining safety. Moreover, these planners are slow and do not exploit gradi-ent information to efficiently optimize closed-loop behavior that actively reduces model uncertainty. To address these gaps, we propose CP-SLS-MPC, a fast optimization-based robust feedback motion planner that uses the learned dynamics to jointly plan open-loop nominal trajectories and closed-loop tracking controllers via robust model predictive control (MPC). Our method uses weighted conformal prediction (CP) to bound the model error and system level synthesis (SLS) (Anderson et al., 2019) to compute reachable sets, which are used to constrain the true closed-loop system to be safe with high probability, enabling robust temporary OOD operation. CP-SLS-MPC updates the model error bounds with online data to encourage cautious behavior when OOD, such as staying fur-ther from obstacles. CP-SLS-MPC also uses gradient data from a model error predictor to efficiently guide plans toward low-error regions, enabling near-real-time replanning. Our contributions are: • A fast optimization-based MPC method with learned dynamics ensuring finite-sample, prob-abilistic safety of the true system using state-control-dependent CP error bounds in the MPC.   
+
+> © 2026 A. Srinivasan, A. Leeman & G. Chou.
+> arXiv:2602.12047v1 [cs.RO] 12 Feb 2026 SRINIVASAN LEEMAN CHOU
+
+• Theoretical analysis for high-probability safety and bounding the OOD coverage gap. • Numerical validation on a simulated nonlinear 4D car and 12D quadcopter, improving safety and prediction accuracy even in OOD scenarios over uncertainty-unware MPC baselines. 
+
+2. Related Work 
+
+Predictive Control Learning-based MPC unifies disturbance estimation with planning (Hewing et al., 2020), but typically lacks state-dependent error bounds and cannot steer plans towards low-error regions. Robust (Rawlings et al., 2017) and tube MPC (Mayne et al., 2005) ensure con-straint satisfaction under disturbance, but in typical formulations, directly enforcing constraints on the closed-loop trajectory is nonconvex, leading to conservative overapproximations (Singh et al., 2018). In contrast, SLS (Anderson et al., 2019; Chen et al., 2024), or disturbance-feedback MPC (Goulart et al., 2006), provides a convex parameterization of closed-loop responses for linear time-varying (LTV) systems, enabling constraint satisfaction under disturbance (Bartos et al., 2025). SLS also extends to data-driven settings (Xue and Matni, 2021; Furieri et al., 2022) and nonlinear dy-namics (Leeman et al., 2025b), where the problem is decomposed into an optimization over nominal trajectories and closed-loop LTV error dynamics. In this work, we inform SLS with state-dependent, CP-calibrated error bounds to enable safe planning toward low-error regions. 
+
+Planning with Learned Dynamics Many model-based reinforcement learning methods plan with learned models but lack safety guarantees (Moerland et al., 2023). Some methods estimate reach-able tubes for safe exploration (Berkenkamp et al., 2016), but assume a controller is given. The most closely related method (Chou et al., 2021, 2022) safely plans with learned dynamics by constraining invariant tubes to lie in a “trusted domain” near training data. This demands dense data coverage; in contrast, we enable the robot to move beyond the training data while assuring probabilistic safety. Subsequent model error-aware planners (Suh et al., 2023) improve planning speed but lack formal guarantees. Also closely related is Marques and Berenson (2024), which bounds model error via CP but cannot extrapolate OOD as it uses exchangeable CP. Other methods aim to improve dynamics predictions in OOD scenarios (Lin et al., 2024) but do not focus on planning. 
+
+Conformal Prediction (CP) CP (Vovk et al., 2005) is a distribution-free method for construct-ing prediction regions from data from black-box models, making it well-suited for safe trajectory prediction and planning (Lindemann et al., 2023; Dixit et al., 2023; Sun et al., 2023; Muthali et al., 2023; Muenprasitivej et al., 2025). The most closely related methods are Contreras et al. (2025), which triggers a safe fallback policy in OOD scenarios for MPC, and Chee et al. (2023, 2024), which use WCP to address time-series correlations in MPC for tracking fixed trajectories. However, these methods do not use state-dependent uncertainty, and form prediction sets using a fixed spatially-invariant norm ball. Thus, the MPC cannot distinguish between state-space regions where the model is accurate and those where it is inaccurate, thereby degrading performance. In contrast, our method designs trajectories that are valid OOD and actively encourages uncertainty reduction, steering the MPC toward regions of lower model error, using a learned state-dependent error covariance matrix. 
+
+3. Preliminaries and Problem Statement 
+
+Let f : X × U → X be the true unknown deterministic nonlinear discrete-time dynamics, 
+
+xk+1 = f (xk, u k) = ˆf (xk, u k) + ε(xk, u k), (1) where X ⊆ Rnx is the state space and U ⊆ Rnu is the control space. Let ˆf : X × U → X denote an approximate learned dynamics model, where ε : X × U → X is the dynamics error. We model ˆf
+
+> 2
+
+ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+with a neural network (NN), though our method is agnostic to model class. The goal is to reach a tar-get set Xf ⊆ X while satisfying pointwise-in-time state and control constraints (xk, u k) ∈ F , where 
+
+F := {(x, u ) ∈ Rnx+nu | gi(x, u ) + bi ≤ 0, ∀i ∈ { 1, . . . , n c}, for gi : Rnx+nu → R}. (2) Let Bm ⊆ Rm be the unit 2-norm ball. Let the Minkowski sum be A⊕B := {a+b | a ∈ A, b ∈ B}.
+
+Conformal Prediction (CP) We use weighted CP to convert raw non-conformity scores, quantify-ing a mismatch between between ˆf (x, u ) and f (x, u ), into a calibrated threshold that yields (1 − α)
+
+coverage (Vovk et al., 2005). Let Dcalib := ( xi, u i, f (xi, u i)) ni=1 and choose a nonconformity score function s : X × U × X → R≥0. Set si := s(xi, u i, f (xi, u i)) . Calibration proceeds in three steps. We (i) form the weighted empirical distribution ˆS with weights, { ˜w1, . . . , ˜wn, ˜wtest } ⊆ [0 , 1] n+1 ,
+
+ˆS := Pni=1 ˜wiδsi + ˜ wtest δ+∞, s.t. ˜wtest + Pni=1 ˜wi = 1 , (3) where δsi is the Dirac delta centered at si, (ii) calibrate the threshold q1−α := Q1−α( ˆS) with the 
+
+1 − α quantile Q1−α(·), and (iii) define the conformal prediction set (CP set) at (xtest , u test ) as 
+
+C(xtest , u test ; q1−α) := {x ∈ X | s(xtest , u test , x ) ≤ q1−α}. (4) Traditional (non-exchangeable) CP uses uniform weights, ˜wi = ˜wtest = 1 
+
+> n+1
+
+, and assumes ex-changeability, which may fail under spatio-temporal distribution shifts; WCP does not assume this. We denote (s1, s 2, . . . , s test ) ∼ Stest ; moreover, let Si be the joint distribution obtained by replacing 
+
+si with the unknown test score, i.e., (s1, s 2, . . . , s i−1, s test , s i+1 , . . . , s n) ∼ Si. WCP guarantees 
+
+Pr f (xtest , u test ) ∈ C (xtest , u test ; q1−α) ≥ 1 − α − Pni=1 ˜widTV (Si, S test ), (5) where dTV (·) is the total-variation distance and Pni=1 ˜widTV (Si, S test ) quantifies the coverage gap due to distribution shift (it vanishes under exchangeability). In practice, the weights can be selected to trade off coverage gap size P 
+
+> i
+
+˜widTV (Si, S test ) and CP set size |C (xtest , u test ; q1−α)|, yielding uncertainty sets suitable for robust MPC with learned dynamics. WCP is essential for planning with learned dynamics to account for (1) distribution shifts between training and execution data, (2) state/control correlations during execution, and (3) visits to OOD regions of the state/control space. 
+
+SLS SLS (Anderson et al., 2019) is a robust control framework for uncertain LTV systems 
+
+xk+1 = Akxk + Bkuk + Ekξk (6) where Ak ∈ Rnx×nx , Bk ∈ Rnx×nu , and Ek ∈ Rnx×nx , and ξk ∈ B nx is a disturbance. SLS can be used to jointly optimize a nominal trajectory, a tracking controller, and a closed-loop reachable tube overapproximation computed by propagating worst-case disturbances over time. In particular, we denote a nominal length-T state trajectory z := {z1, . . . , z T } ∈ RnxT and control trajectory 
+
+v := {v1, . . . , v T } ∈ RnuT satisfying the nominal LTV dynamics in (7). To track the nominal (z, v),SLS defines a disturbance-feedback controller (8) and closed-loop state response (9), where Φu 
+
+> k,j
+
+∈
+
+Rnu×nx and Φx 
+
+> k,j
+
+∈ Rnx×nx define the closed-loop response of (6) as an affine function of {ξk},
+
+zk+1 = Akzk + Bkvk, (7) uk = vk + Pk−1 
+
+> j=1
+
+Φu 
+
+> k,j
+
+ξj , (8) xk = zk + Pk−1 
+
+> j=1
+
+Φx 
+
+> k,j
+
+ξj . (9) To ensure that (8)-(9) represent the closed-loop state/control response, Φx 
+
+> k,j
+
+and Φu 
+
+> k,j
+
+must satisfy 
+
+Φx 
+
+> k+1 ,j
+
+= AkΦx 
+
+> k,j
+
++ BkΦu 
+
+> k,j
+
+, Φx 
+
+> k+1 ,k
+
+= Ek. (10) With SLS, we can guarantee that the closed-loop trajectories of (9) and (8) remain in the reachable tubes R := {R k := ( Rxk , Ruk )}Tk=1 , i.e., for all k ∈ { 1, . . . , T }, xk ∈ R xk and uk ∈ R uk , where 
+
+Rxk := ( Lk−1 
+
+> j=0
+
+Φx 
+
+> k,j
+
+Bnx ) ⊕ { zk}, Ruk := ( Lk−1 
+
+> j=0
+
+Φu 
+
+> k,j
+
+Bnx ) ⊕ { vk}. (11) 
+
+3SRINIVASAN LEEMAN CHOU 
+
+SLS has also been extended to control nonlinear dynamics (Leeman et al., 2025b; Zhan et al., 2025) with robust satisfaction of nonlinear constraints, both via optimized linearization error overbounds. For nonlinear dynamics ˆf of the form (1), we can obtain an LTV approximation using the Jacobian linearizations of ˆf around (z, v): Ak := ∇x ˆf (zk, v k) , and Bk := ∇u ˆf (zk, v k). To robustly satisfy nonlinear constraints of the form (2), we can enforce the tightened constraints (12), obtained by linearizing gi, for all i ∈ { 1, . . . , n c}, around the nominal trajectory (7): 
+
+Pk−1
+
+> j=0
+
+∇xgi(zk, v k)Φx 
+
+> k,j
+
+, ∇ugi(zk, v k)Φu
+
+> k,j
+
+ 
+
+> 2
+
++ gi(zk, v k) + bi + glin  
+
+> i
+
+(zk, v k) ≤ 0, (12) where glin  
+
+> i
+
+(zk, v k) is a linearization error bound term (details are omitted for brevity; see (Zhan et al., 2025, Eq. (22))). This ensures that the closed-loop dynamics satisfy (2) for all k ∈ { 1, . . . , T }.
+
+Problem Statement We assume that we are given an offline dataset D := {(xi, u i, f (xi, u i)) }Ni=1 ,where each (xi, u i) is drawn from a joint distribution Y . We partition D into a training dataset 
+
+Dtrain := {(xi, u i, f (xi, u i)) }Ntrain  
+
+> i=1
+
+, to train the learned dynamics ˆf (1) and a model error predictor 
+
+Σ : X ×U → Rnx×nx , described in Sec. 4, and calibration dataset Dcalib := {(xi, u i, f (xi, u i)}Ncalib  
+
+> i=1
+
+.Our goal is to 1) estimate calibrated error bounds on the learned dynamics ˆf that hold with high probability and to 2) use these bounds within a robust MPC framework, with a prediction horizon of T steps, to guarantee robust constraint satisfaction with high probability. Specifically, we solve: 
+
+Problem 1: Learning and Calibration. Using Dtrain , learn an approximate dynamics model ˆf : X × U → X . Using ˆf and Dcalib , provide a calibrated high-confidence bound E : X × U → 2X on the dynamics error ε : X × U → Rnx , such that Pr [TTk=1 
+
+ ε(xk, u k) ∈ E (zk, v k)] ≥ 1 − ˜α, for nominal state (zk, v k) and for all reachable state/controls (xk, u k) ∈ R k := ( Rxk , Ruk ), as defined in (11). Here, α ∈ (0 , 1) is user-specified and ˜α ∈ [α, 1) absorbs the coverage gap in (5). 
+
+Problem 2: Planning. Using the learned model ˆf and error bound E of Prob. 1, solve a robust MPC problem for ˆf ensuring that the constraints (2) are satisfied for the true closed-loop dynamics (i.e., under f in (1)) with probability at least 1− ˜α, jointly over T prediction steps, for a single MPC solve, and with probability at least 1− ˆα for R MPC solves (i.e., R−1 replanning steps), where ˆα ∈ (˜ α, 1) .
+
+4. Method 
+
+We outline our method, CP-SLS-MPC, which uses WCP for high-probability state-control-dependent model error bounding (Sec. 4.1) and integrates it into an uncertainty-constrained SLS-based robust MPC optimization (Sec. 4.2). Finally, we discuss practical implementation (Sec. 4.3). 
+
+4.1. Model Training and Model Error Bounding via Conformal Prediction 
+
+To tackle Prob. 1, we first train the dynamics ˆf (1) on the training dataset Dtrain by minimizing a mean-squared-error loss PNtrain  
+
+> k=1
+
+∥f (xk, u k) − ˆf (xk, u k)∥2. Then, for any nominal state z ∈ X and control input v ∈ U , we seek to bound the error of the learned dynamics model ∥ ˆf (z, v )−f (z, v )∥2.To encode spatially-varying error, we train a heuristic uncertainty model Σ : X × U → Rnx×nx , an NN, with a multivariate Gaussian negative-log-likelihood (MGNLL) loss (Dasgupta and Hsu, 2007):             
+
+> L(Σ;f, ˆf , x, u ) = 12
+> 
+> (f(x, u )−ˆf(x, u )) ⊤Σ(x, u )−1(f(x, u )−ˆf(x, u )) + ln(det( Σ(x, u )))
+> 
+> .(13)
+
+MGNLL is selected to train Σ to output an uncalibrated covariance matrix which locally approxi-mates the shape and magnitude of ˆf ’s error dispersion at a given state-control pair. WCP’s calibra-tion procedure reconciles the inexact gaussian assumption (of MGNLL) made of the error dispersion 
+
+> 4
+
+ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+by scaling the covariance matrix. To capture the model error at timestep k for a nominal ( zk, v k),we adapt the non-conformity score of Messoudi et al. (2022): 
+
+si,k := sk(xi, u i, f (xi, u i)) = 
+
+q f (xi, u i) − ˆf (xi, u i)⊤Σ(zk, v k)−1 f (xi, u i) − ˆf (xi, u i). (14) 
+
+Using (14), we form the (1 − αk)-confidence CP set for some nominal (zk, v k), C(zk, v k; q1−αk ), as 
+
+C(zk, v k; q1−αk ) := {x ∈ X | 
+
+q x − ˆf (zk, v k)⊤Σ(zk, v k)−1 x − ˆf (zk, v k) ≤ q1−αk (zk, v k)}, (15) 
+
+defining q1−αk (zk, v k) := Q1−αk ( ˆSk), where ˆSk := Pni=1 ˜wki δsi,k + ˜ wk
+
+> test
+
+δ+∞ is formed using a set of normalized weights ˜W k := { ˜wk 
+
+> 1
+
+, . . . , ˜wkNcalib , ˜wk
+
+> test
+
+} ⊆ [0 , 1] Ncalib +1 tailored to the nominal state/control pair (zk, v k). Intuitively, C(zk, v k; q1−αk ) is an ellipsoid centered at the predicted next state ˆf (zk, v k), with a radius given by the quantile of the weighted non-conformity scores from (14). To construct the normalized weights ˜W k tailored for a nominal state/control pair (zk, v k), we first define a set of unnormalized weights W k = {wk 
+
+> 1
+
+, . . . , w kNcalib , w k 
+
+> test
+
+= 1 } ⊆ [0 , 1] Ncalib +1 , where 
+
+wki = ρ|| (zk ,v k )−(xi,u i)|| 2 , (16) where ρ ∈ (0 , 1] , for all (xi, u i) ∈ D calib . The form of (16) encodes the assumption that model error is state/control-dependent and changes smoothly, such that nearby pairs have similar errors. We normalize the weights wk as ˜wki = wki 
+
+> 1+ Pnj=1 wkj
+
+to be compatible with the WCP framework (Sec. 3). Denote (s1,k , s 2,k , . . . s i−1,k , s k,k , s i+1 ,k , . . . , s Ncalib ,k , s i,k ) ∼ Si,k and (s1,k , . . . , s Ncalib ,k , s k,k ) ∼
+
+Sk,k (i.e., Si,k exchanges sk,k with si,k ), where sk,k = sk(zk, v k, f (zk, v k)) is generally unknown as f (zk, v k) may not be in Dcalib for some candidate (zk, v k). Via the WCP framework, (5) ensures Pr [f (zk, v k) ∈ C (zk, v k; q1−αk )] ≥ 1 − αk − Pni=1 ˜wki dTV (Si,k , S k,k ). (17) Starting from (17), we see that the dynamics error is in an origin centered ellipsoid, ε(zk, v k) =  f (zk, v k) − ˆf (zk, v k) ∈ C (zk, v k; q1−αk ) ⊕ {− ˆf (zk, v k)}, implying that it satisfies Pr[ ε(zk, v k) ∈E(zk, v k)] ≥ 1 − αk − Pni=1 ˜wki dTV (Si,k , S k,k ), where we set E(zk, v k) := C(zk, v k; q1−αk ) ⊕{− ˆf (zk, v k)}. In essence, by conformalizing the heuristic uncertainty model Σ, we obtain a cal-ibrated spatially-dependent model error bound E(zk, v k) that holds with high probability. Equiv-alently, using the Cholesky factor L(zk, v k) of Σ(zk, v k), i.e., Σ(zk, v k) = L(zk, v k)L(zk, v k)⊤,(15)-(17), and selecting a miscoverage rate αk ∈ (0 , 1) tailored to timestep k, we can state that Pr [ε(zk, v k) ∈ V (zk, v k)Bnx
+
+| {z }  
+
+> := E(zk,v k)
+
+] ≥ 1 − αk − PNcalib  
+
+> i=1
+
+˜wki dTV (Si,k , S k,k ), (18) where V (zk, v k) := q1−αk (zk, v k)L(zk, v k). (19) While (18)-(19) bounds model error at (zk, v k), the system may be perturbed during execution within the reachable tube Rk. Thus, at every timestep k, we must quantify the coverage of E(zk, v k)
+
+from any (xk, u k) ∈ R k. This can be achieved by inflating the coverage gap with an additional term, yielding Pr[ ε(xk, u k) ∈ E (zk, v k)] ≥ 1 − αk − 2 PNcalib  
+
+> i=1
+
+˜wki dTV (Si,k , S k,k ) − γ(Rk), where γ(Rk)
+
+is defined in Thm. 4. Here, Si,k and Sk,k are distributions such that si,k ∼ Si,k , sk,k ∼ Sk,k .Specifically, Thm. 1 derives the probability that ε(xk, u k) ∈ E (zk, v k) for all (xk, u k) ∈ R k, for all 
+
+k ∈ { 1, . . . , T }, providing our solution for Prob. 1 (proofs in App. A): 
+
+5SRINIVASAN LEEMAN CHOU 
+
+Theorem 1 Given a length-T trajectory of the true dynamics f (1) τf := {(xk, u k)}Tk=1 such that 
+
+(xk, u k) ∈ X × U for all k ∈ { 1, . . . , T }, desired miscoverage {αk}Tk=1 , total miscoverage σk =
+
+αk +2 PNcalib  
+
+> i=1
+
+˜wki dTV (Si,k , S k,k )+ γ(Rk), and independence between Dcalib and (xk, u k), we have: 
+
+Pr[ TTk=1 
+
+ ε(xk, u k) ∈ E (zk, v k)] ≥ 1 − PTk=1 σk := 1 − ˜α. (20) Overall, at every timestep, we predict an ellipsoid E(zk, v k) containing the one-step error ε(xk, u k)
+
+with high probability. Next, we will use this data-driven, spatially-dependent bound E(zk, v k) to inform SLS-based robust MPC, shrinking tubes where data is dense and expanding them if OOD. 
+
+4.2. Informing SLS-based Planning with CP Model Error Bounds 
+
+Using our conformalized model error bounds, we construct an uncertain nonlinear system zk+1 =ˆf (zk, v k) + V (zk, v k)ξk, where ξk ∈ B nx and V (zk, v k)ξk represent the unknown, bounded model error at timestep k. Let Φx and Φu collect all Φx 
+
+> k,j
+
+and Φu 
+
+> k,j
+
+. Then we adapt Leeman et al. (2025b) to write a nonlinear program (NLP) in (21) to optimize for z = {z1, . . . , z T }, v = {v1, . . . , v T −1},
+
+Φx, and Φu, given an initial state ¯x0 ∈ X :
+
+min  
+
+> Φx,Φu,z,v
+
+J(z, v) + ˜H0(Φx, Φu) + JXf (z, v), (21a) s.t. zk+1 = ˆf (zk, v k), z 1 = ¯ x0, ∀k = 1 , . . . , T − 1, (21b) 
+
+Φx 
+
+> k+1 ,j
+
+= AkΦx 
+
+> k,j
+
++ BkΦu 
+
+> k,j
+
+, ∀j = 1 , . . . , T − 1, ∀k = j + 1 , . . . , T − 1, (21c) 
+
+Φx 
+
+> j+1 ,j
+
+= V (zj , v j ), ∀j = 1 , . . . , T − 1, (21d) 
+
+Pkj=1 [∇xgi(zk, v k)Φx 
+
+> k,j
+
+, ∇ugi(zk, v k)Φu 
+
+> k,j
+
+] 2 + gi(zk, v k) + bi + glin  
+
+> i
+
+(zk, v k) ≤ 0, (21e) 
+
+∀i = 1 , . . . , n c, ∀k = 1 , . . . , T. 
+
+Here, (21a) penalizes a cost J(z, v) on the nominal trajectory, JXf (z, v) penalizes reaching the ter-minal set Xf, and ˜H0(Φx, Φu) penalizes the size of the reachable tubes (see (49), (52), (53)). Since ˆf
+
+is more accurate in the training domain, we modify J(z, v) to include an active error reduction cost 
+
+Jactive (z, v) (see App. D.4) minimizing the distance of (z, v) to in-distribution calibration points. Constraint (21b) ensures nominal dynamic feasibility, while (21c) and (21d) enforce SLS conditions (10) for the LTV approximation obtained by linearizing ˆf around (z, v), with model error bound 
+
+V (zj , v j ) from (19). Constraint (21e) enforces robust state-control satisfaction using bounds on the closed-loop response derived by informing SLS with CP. Since SLS guarantees an overapprox-imation of the true reachable tube, (1) the closed-loop trajectory executing (z, v, Φx, Φu) over the 
+
+T -step horizon satisfies (2) with high probability, and (2) safety is maintained with high, though diminishing, probability over iterative replanning steps. The following result addresses Prob. 2: 
+
+Theorem 2 Define the forecasted nominal trajectory τ (q)ˆf := {(z(q) 
+
+> k
+
+, v (q) 
+
+> k
+
+)}Tk=1 as the T -timestep future nominal trajectory predicted by the learned dynamics ˆf at the qth MPC solve (i.e., the (q−1) st replanning step) in (21b) . (a) Then the true closed-loop dynamics (1) under the controller defined by (21) and (8) satisfies Pr[ TTk=1 
+
+ (x(q) 
+
+> k
+
+, u (q) 
+
+> k
+
+) ∈ F ] ≥ 1 − PTk=1 σ(q) 
+
+> k
+
+, where {(x(q) 
+
+> k
+
+, u (q) 
+
+> k
+
+)}Tk=1 is the realized state-control trajectory if executed for the full T timesteps, and (b) defining σ(q)1 as the miscoverage rate for the first timestep at MPC solve iteration q, we have that by executing (21) over 
+
+R MPC solves (i.e., R − 1 re-planning steps), Pr[ TRq=1 
+
+ (x(q)1 , u (q)1 ) ∈ F ] ≥ 1 − PRq=1 σ(q)1 := 1 − ˆα.
+
+Overall, by solving (21), we reduce model error by 1) minimizing reachable tube volume and 2) penalizing distance to data. Coupling planning with CP-informed reachability ensures high-probability safety for the true dynamics. Finally, refining the CP error set C with online data (Alg. 1) reduces the coverage gap, improving empirical model error coverage. 
+
+6ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+4.3. Practical Implementation via SCP 
+
+To efficiently solve the NLP (21), we propose CP-SLS-MPC (Alg. 1). CP-SLS-MPC uses sequential convex programming (SCP) (Malyuta et al., 2022; Messerer et al., 2021). Each SCP iteration solves a second-order cone program (SOCP) (Alg. 1, line 6), obtained by linearizing ˆf around the current nominal trajectory (z, v) and convexifying the constraint tightenings in (21e), yielding an update 
+
+(z∗
+
+> lin
+
+, v∗
+
+> lin
+
+) to the nominal trajectory. To solve this SOCP efficiently, we use the solver in Leeman et al. (2024), which iterates between solving a QP for (z, v) and Riccati recursions for (Φx, Φu)
+
+(line 7). For efficiency, we apply a real-time iteration scheme (Gros et al., 2020), limiting SCP to one iteration per step (Leeman et al., 2025a), and omit linearization error (Zhan et al., 2025), which is small in practice (Sec. 6). At each step, we execute the first control input v1 (line 9), shift the previ-ous solution for initialization (line 5), and re-solve via SCP. Moreover, we improve OOD robustness by updating the error set V with online observations (line 10). Augmenting the error set updates the quantile q1−αk (zk, v k), which in turn alters constraint (21d) via (19), reducing the coverage gap and increasing the likelihood that the closed-loop dynamics remain within the computed reachable tubes. 
+
+Algorithm 1 CP-SLS-MPC  
+
+> 1:
+
+procedure CP-SLS-MPC( Dcalib , horizon T, F, ¯x0, terminal set Xf ) 
+
+> 2:
+
+t ← 1 and (z, v) ← Nominal Solution ▷ Initialize the problem with start state ¯x0 
+
+> 3:
+
+V ← { (xi, u i, f (xi, u i) − ˆf (xi, u i)) }Ncalib  
+
+> i=1
+
+, ∀(xi, u i, f (xi, u i)) ∈ D calib ▷ Initialize error set V 
+
+> 4:
+
+while xt /∈ X f do ▷ Xf is included as a terminal cost (52), App D.3  
+
+> 5:
+
+¯x0 ← xt; initialize (z, v) with shifted previous solution ▷ Initialize with the current state  
+
+> 6:
+
+Linearize (21) around (z, v); compute V (zk, v k) via (19), V; form SOCP  
+
+> 7:
+
+(z∗
+
+> lin
+
+, v∗
+
+> lin
+
+), Φx, Φu ← SOCP solution ▷ Single iteration of Leeman et al. (2024).  
+
+> 8:
+
+Update (z, v) ← (z, v) + ( z∗
+
+> lin
+
+, v∗
+
+> lin
+
+). 
+
+> 9:
+
+ut ← v1; xt+1 ← f (xt, u t) ▷ Closed loop control; state update  
+
+> 10:
+
+V ← V ∪ { (xt, u t, x t+1 − ˆf (xt, u t)) }; t ← t + 1 ▷ Online data update  
+
+> 11:
+
+end procedure 
+
+5. Theoretical Analysis: Bounding the Coverage Gap 
+
+To bound the coverage gap, we assume non-conformity scores from the calibration set Dcalib are independent of the score at the nominal point (zk, v k), though they may come from different distri-butions. We also assume a Lipschitz-type bound on the distribution drift between Si,k and Sk,k , i.e., 
+
+dTV (Si,k , S k,k ) ≤ ϵ|| [z⊤ 
+
+> k
+
+, v ⊤ 
+
+> k
+
+] − [x⊤ 
+
+> i
+
+, u ⊤ 
+
+> i
+
+]|| 2, (22) for ϵ ∈ R, ϵ > 0, where si ∼ Si (14) and ˜S is the non-conformity score distribution of (z, v ).(22) is a practical assumption, stating that the dynamics error distribution shifts gradually over the state-control space. The next theorem shows a overbound on the calibration error dTV (Si,k , S k,k ).
+
+Theorem 3 The Coverage Gap = PNcalib  
+
+> i=1
+
+˜wi dTV (Si,k , S k,k ) of our conformal predictor satisfies Coverage Gap ≤ PNcalib 
+
+> i=1
+
+ ρdi 
+
+> 1+ PNcalib
+> j=1 ρdj
+
+
+
+· 2ϵ · di
+
+| {z }
+
+> Tight Bound
+
+≤ 2ϵ
+
+h d1 
+
+> 1−ρdmin
+
++ dmax ρdmin  
+
+> (1 −ρdmin )2
+
+i| {z }
+
+> Interpretable Bound
+
+, (23) 
+
+where we sort the distance to points in the calibration set such that di = || [z⊤ 
+
+> k
+
+, v ⊤ 
+
+> k
+
+] − [x⊤ 
+
+> i
+
+, u ⊤ 
+
+> i
+
+]|| 2,
+
+d1 ≤ d2 ≤ · · · ≤ dn, dmin = min 1≤i≤n−1{di+1 − di}, and dmax = max 1≤i≤n−1{di+1 − di}.
+
+Thm. 3 (interpretable bound) shows that the gap depends on state-control calibration point density. Greater point density decreases dmin , increasing the gap; reducing ρ mitigates this, but doing so can 
+
+7SRINIVASAN LEEMAN CHOU 
+
+cause the (1 − α)-quantile to diverge. The term d1
+
+1−ρdmin shows that being closer to the training data reduces the gap, as d1 is the minimal distance between Dcalib and (zk, v k). Further discussion of the intuition and validation of the empirical bounds is in App. E. Online augmentation of V may violate independence (due to time-correlation), but for large Ncalib , Thm. 3 suffices. As SLS requires model error to hold for all (x, u ) ∈ R k, we also provide a coverage bound valid over the reachable tube: 
+
+Theorem 4 Under the same assumption of Theorem 3, we have that for all (x, u ) ∈ R k, the tube around the nominal point (zk, v k), Pr[ ε(x, u ) ∈ E (zk, v k)] ≥ 1 − αk − 2 Pni=1 ˜widT V (Si,k , S k,k ) −
+
+γ(Rk), for γ(Rk) := 2ˆ ϵM (Rk), where M (Rk) is the maximum axis length of tube Rk, and ˆϵ ≤ ϵ
+
+is chosen such that (22) holds for all (x, u ) ∈ R k.
+
+Using Thm. 4, we find that the coverage guarantees remain close to the desired coverage level 
+
+α, assuming a gradual spatial-drift of the error distribution. Furthermore, the optimization problem (21) seeks to minimize the tube volume in the cost function, thereby minimizing γ(Rk).
+
+6. Results 
+
+We evaluate our method on robust planning with learned 4D Dubins’ (see App. B.1) and 12D quad-copter dynamics (see App. B.2). Comparisons (see App. C for details) include na¨ ıve, uncalibrated MPC on the learned dynamics ˆf without robust constraint tightenings, denoted as vanilla MPC (V-MPC), and a fixed hyper-ball variant of our method (CP-Ball), where Σ(zk, v k) in (14) is replaced with Inx , highlighting the benefit of state-dependent CP-Ellipsoid (our method) uncertainty sets. CP-Ball is an adaptation of Chee et al. (2024), using the L2-norm of errors as the non-conformity score. Direct use of Chee et al. (2024) was not feasible, as it only collects online data points, re-quiring horizon lengths longer than 150 points for successful deployment. Training details, model architectures, and cost functions are in App. D. Our implementation uses Acados (Verschueren et al., 2020) and L4CasADi (Salzmann et al., 2024) and is run on an M4 Pro MacBook (12 cores, 24 GB RAM). We report average MPC step time, prediction error |f (x, u ) − ˆf (x, u )|, and minimum obstacle distance. All trials use horizon T = 15 with αk = 0 .1/15 .−0.02                                         
+
+> −0.01
+> 0.00
+> 0.01
+> Signed Distance
+> |D calib |= 2250 Inside: 76.6% Avg. Deviation: 0.0048
+> |D calib |= 2750 Inside: 65.9% Avg. Deviation: 0.0042
+> |D calib |= 3250 Inside: 63.9% Avg. Deviation: 0.0046
+> |D calib |= 3750 Inside: 60.3% Avg. Deviation: 0.0045
+> |D calib |= 4250 Inside: 57.9% Avg. Deviation: 0.0047
+> 0123456
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> 2.0
+> Theta  θ (rad)
+> Actual θ
+> Tube, Avg. Width: 0.0740
+> 0123456
+> Actual θ
+> Tube, Avg. Width: 0.0565
+> 0123456
+> Actual θ
+> Tube, Avg. Width: 0.0486
+> 0123456
+> Actual θ
+> Tube, Avg. Width: 0.0486
+> 0123456
+> Actual θ
+> Tube, Avg. Width: 0.0460
+> Time (s)
+
+Figure 1: OOD Car. (Top) Minimum distance between prediction error and the ellipsoid edge is plotted for varying Dcalib with a fixed start and goal; negative values (blue) indicate points inside the ellipsoid, i.e., valid coverage. (Bottom) Corresponding one-step θ tubes are shown. Smaller 
+
+Dcalib keeps prediction errors inside the ellipsoid more often and results in larger tubes. 
+
+Dubins’: In Domain (ID). First, we validate that our approach maintains performance compared to baselines in ID scenarios without a major loss of computational efficiency. We used the car dynamics in (39) and selected start and goal states training distribution (equivalently the feasible set for the ID results). We define F = {(x, u ) | px ∈ [0 , 5] , p y ∈ [−5, 5] , ∥[px, p y]⊤ − [2 .5, 0] ∥2 ≥ 1},
+
+8ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 1 2 3 4         
+
+> px(m)
+> −3
+> −2
+> −1
+> 0
+> 1
+> 2
+> 3
+> py (m)
+> CP-Ellipsoid CP-Ball V-MPC Obstacle Goal
+> t= 10
+> t= 20
+> t= 30
+> t= 40
+> t= 50
+> t= 60
+> t= 70
+> t= 80 In Domain
+
+Figure 2: Friction Car. We plot all approaches and forecasted MPC steps & tubes for CP-Ellipsoid. with bounds on px and py and a 1-m radius obstacle centered at (2 .5, 0) . Across 10 runs, all three approaches (V-MPC, CP-Ball, and CP-Ellipsoid) safely reached the goal while avoid-ing the obstacle; however, V-MPC does not perform constraint tightening and lacks safety guarantees. In Table 1, CP-Ball and CP-Ellipsoid have larger obstacle proximity–a byproduct of the constraint tightening (Table 1). Finally, the one-step prediction error for ˆf remains inside the ball and ellipsoid over 
+
+99 .33% = 100(1 − 0.115 )% during execution–validating the cov-erage guarantees (Fig. 7 in App. F). In the training domain, we expect V-MPC to have similar success rates as our method since ˆf is accurate; this changes in OOD settings. We find that our approach avoids the obstacle ID, without a major slow-down from constraint tightening computations. 
+
+Dubins’: OOD. To evaluate OOD performance, we train a dynamics and uncertainty model where py ∈ [−12 , −6] ∪
+
+[6 , 12] and modify the dynamics to steer the car’s angle toward the obstacle for py ∈ [−6, 6] (see App. B.1), while placing the feasible set of the rollout (same as the ID experiment) OOD. In this setting, we vary the calibration set size from 2,250 to 4,250 points (Fig. 1) for CP-Ellipsoid, ensuring the start and goal are outside the training domain. As shown in Fig. 1, the one-step prediction errors initially lie outside the predicted ellipsoid but gradually return within it as online calibration points are collected. Moreover, with fewer initial calibration points, the online adaptation occurs more rapidly, resulting in a higher coverage of errors in the ellipsoid. The plot also shows that the one-step tubes in θ are wider for smaller Dcalib ,indicating that data scarcity increases conservativeness. The goal is reliably reached, suggesting that the SLS tubes, when informed by CP, enable robust OOD performance. −180 −160 −140 −120 −100 Total Log-Volume       
+
+> 0.000
+> 0.005
+> 0.010
+> 0.015
+> 0.020
+> 0.025
+> 0.030
+> 0.035
+> 0.040 Density CP-Ellipsoid: (μ=−158 .58 , σ = 16 .51) CP-Ellipsoid Active: (μ=−164 .04 , σ = 13 .97)
+
+Figure 3: Active Uncertainty. We plot the histogram of summed log-volumes for each forecasted MPC plan. With active uncertainty reduc-tion, the distribution shifts left, indi-cating less uncertainty at runtime. 
+
+Dubins’: Disjoint Training Domains (Friction Car). 
+
+To evaluate OOD obstacle avoidance under limited online data, we construct disjoint training regions (similar to the OOD setup) where py ∈ [−5, −2] ∪[2 , 5] . The start and goal positions are randomly sampled from different regions, en-suring that all feasible trajectories must traverse OOD areas to reach the goal. In the OOD region, we apply the same steering modification as in the previous experiment, while adding py dependent acceleration dynamics (see App. B.1 for details). Across 10 runs, V-MPC failed twice, the CP-Ball failed once, and CP-Ellipsoid was consistently suc-cessful. These differences arise from reduced obstacle clearance (Table 1) observed in the CP-Ball and V-MPC cases. Fig. 3 shows that both CP-Ball and CP-Ellipsoid reach the goal, but CP-Ellipsoid maintains a greater dis-tance from the obstacle, as evident from its forecasted trajectories and uncertainty tubes. Fig. 3 also illustrates that the state-dependent ellipsoids expand along the direction of motion, as increased forecasted y-motion leads to higher y-direction uncertainty. A result from an extra run is in App. F. 
+
+9SRINIVASAN LEEMAN CHOU 
+
+Figure 4: Quadcopter. A roll-out of the quadcopter with V-MPC and CP-Ellipsoid. CP-Ellipsoid maintains sufficient proximity to avoid crashing into the obstacle, while V-MPC crashes. 012345                                   
+
+> px(m)
+> 1.75 2.50 3.25
+> py (m)
+> 1.75 2.50 3.25
+> pz (m)
+> Obstacle Goal Region CP-Ellipsoid V-MPC Start
+> t= 20
+> t= 40
+> t= 60
+> t= 80
+> 0.60.81.01.2
+> px(m)2.02.22.42.62.8
+> py (m)
+> 2.42.62.83.0
+> pz (m)
+> Zoom at t= 20
+> 1.61.82.02.22.4
+> px(m)2.22.42.62.83.0
+> py (m)
+> 2.83.03.23.4
+> pz (m)
+> Zoom at t= 40
+> 2.62.83.03.23.4
+> px(m)2.22.42.62.83.0
+> py (m)
+> 2.83.03.23.4
+> pz (m)
+> Zoom at t= 60
+> 3.63.84.04.2
+> px(m)2.22.42.62.8
+> py (m)
+> 2.22.42.62.8
+> pz (m)
+> Zoom at t= 80
+
+Dubins’: Active Uncertainty Reduction. Finally, to evaluate active uncertainty reduction, we trained ˆf and Σ without sampling data in a circular region centered at (px, p y) = (2 .5, 0.0) with a radius of 1 meter, and introduced friction and attractive steering dynamics within this unseen region. Thus the feasible set contains an OOD region, where rollouts are permitted to traverse. Despite this, the active uncertainty reduction method achieves lower prediction error by planning a longer path that remains in the training domain (Table 2 App. F). Moreover, Fig. 3 shows the log-volume of the uncertainty tubes, showing that the active uncertainty cost ((54) in App. D.4) yields smaller tubes (Fig. 3, green) compared to the baseline without this cost (Fig. 3, orange). Table 1: Mean and standard deviation of computation times and prediction errors and the mean min-imum obstacle distance for vanilla-MPC (V-MPC), the CP-Ball (Ball), and CP-Ellipsoid (Ellipsoid). 
+
+Computation Time (ms) Prediction Error ( L2) ( ×10 −2) Min. Obstacle Dist. (m) Model V-MPC Ball Ellipsoid V-MPC Ball Ellipsoid V-MPC Ball Ellipsoid 
+
+Car 53.3 ± 2.1 126.6 ± 8.4 126.7 ± 8.3 0.28 ± 0.54 0.26 ± 0.14 0.26 ± 0.14 1.152 1.202 1.207 Friction Car 53.7 ± 2.6 131.1 ± 1.4 129.7 ± 9.0 1.94 ± 2.87 1.92 ± 2.80 1.95 ± 2.69 1.315 1.376 1.464 Quadcopter 63.1 ± 4.6 nan ± nan 222 ± 20.9 3.89 ± 5.49 nan ± nan 3.30 ± 4.17 0.804 nan 0.809 
+
+12D Quadcopter To evaluate the scalability of our method to higher-dimensional systems, we train a 12D quadcopter dynamics model. Using this model, we plan trajectories such that the spatial coordinates (px, p y, p z ) remain outside a sphere centered at (2 .5, 2.5, 2.5) with a radius of 0.8 me-ters – leaving a 0.2-meter-thick shell around the sphere that is out of distribution and characterized by increased downward acceleration. To improve the performance of the uncertainty model, we modify its weighting by blending the covariance matrix with the identity matrix to reduce conser-vativeness, i.e., using ((1 − τ )I + τ Σ(z, v )) instead of Σ(z, v ) in (15). With this approach, the CP-Ellipsoid method successfully planned 8 out of 10 trajectories (one failure was due to numerical instability, which did not result in collision), whereas V-MPC approach succeeded in only 4 out of 10 runs. While this demonstrates improved robustness over V-MPC, the failed case suggests faster tube expansion may be necessary to ensure consistent collision avoidance. Fig. 4 shows an example quadcopter trajectory, demonstrating that our CP-informed tubes maintain safe obstacle proximity. 
+
+7. Conclusion 
+
+In this work, we developed an efficient framework for robust out-of-distribution MPC with learned dynamics, using WCP and SLS. We provided theoretical guarantees ensuring that the rollout satisfy constraints with high probability, and introduced an uncertainty reduction cost function to encourage the system to remain within the training domain when possible. Through experiments on variants of the 4D Dubins car and 12D quadcopter, we demonstrated that the CP-SLS-MPC framework achieves robust performance even when using learned dynamics that generalize poorly OOD. 
+
+10 ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+Acknowledgments 
+
+We thank Devesh Nath for insightful discussions and feedback on this work. 
+
+References 
+
+James Anderson, John C Doyle, Steven H Low, and Nikolai Matni. System level synthesis. Annual Reviews in Control , 47:364–393, 2019. Rina Foygel Barber, Emmanuel J Candes, Aaditya Ramdas, and Ryan J Tibshirani. Conformal prediction beyond exchangeability. The Annals of Statistics , 51(2):816–845, 2023. Marcell Bartos, Alexandre Didier, Jerome Sieber, Johannes K¨ ohler, and Melanie N Zeilinger. Stochastic mpc with online-optimized policies and closed-loop guarantees. arXiv preprint arXiv:2502.06469 , 2025. Felix Berkenkamp, Riccardo Moriconi, Angela P Schoellig, and Andreas Krause. Safe learning of regions of attraction for uncertain, nonlinear systems with gaussian processes. In CDC , pages 4661–4666, 2016. Kong Yao Chee, M. Ani Hsieh, and George J. Pappas. Uncertainty quantification for learning-based MPC using weighted conformal prediction. In 62nd IEEE Conference on Decision and Control, CDC 2023, Singapore, December 13-15, 2023 , pages 342–349. IEEE, 2023. doi: 10.1109/CDC49753.2023.10383587. URL https://doi.org/10.1109/CDC49753. 2023.10383587 .Kong Yao Chee, Thales C. Silva, M. Ani Hsieh, and George J. Pappas. Uncertainty quantification and robustification of model-based controllers using conformal prediction. In Alessandro Abate, Mark Cannon, Kostas Margellos, and Antonis Papachristodoulou, editors, 6th Annual Learning for Dynamics & Control Conference, 15-17 July 2024, University of Oxford, Oxford, UK , volume 242 of Proceedings of Machine Learning Research , pages 528–540. PMLR, 2024. URL https: //proceedings.mlr.press/v242/chee24a.html .Shaoru Chen, Victor M Preciado, Manfred Morari, and Nikolai Matni. Robust model predictive con-trol with polytopic model uncertainty through system level synthesis. Automatica , 162:111431, 2024. Glen Chou, Necmiye Ozay, and Dmitry Berenson. Model error propagation via learned contraction metrics for safe feedback motion planning of unknown systems. In 2021 60th IEEE Conference on Decision and Control (CDC), Austin, TX, USA, December 14-17, 2021 , pages 3576–3583. IEEE, 2021. doi: 10.1109/CDC45484.2021.9683354. URL https://doi.org/10.1109/ CDC45484.2021.9683354 .Glen Chou, Necmiye Ozay, and Dmitry Berenson. Safe output feedback motion planning from images via learned perception modules and contraction theory. In International Workshop on the Algorithmic Foundations of Robotics , pages 349–367. Springer, 2022. Jose Leopoldo Contreras, Ola Shorinwa, and Mac Schwager. Safe, out-of-distribution-adaptive MPC with conformalized neural network ensembles. In Necmiye Ozay, Laura Balzano, Dimitra   
+
+> 11 SRINIVASAN LEEMAN CHOU
+
+Panagou, and Alessandro Abate, editors, 7th Annual Learning for Dynamics & Control Confer-ence, Ann Arbor, MI, USA, 4-6 June 2025 , volume 283 of Proceedings of Machine Learning Re-search , pages 194–207. PMLR, 2025. URL https://proceedings.mlr.press/v283/ contreras25a.html .Sanjoy Dasgupta and Daniel Hsu. On-line estimation with the multivariate gaussian distribution. In 
+
+International Conference on Computational Learning Theory , pages 278–292. Springer, 2007. Anushri Dixit, Lars Lindemann, Skylar X. Wei, Matthew Cleaveland, George J. Pappas, and Joel W. Burdick. Adaptive conformal prediction for motion planning among dynamic agents. In Nikolai Matni, Manfred Morari, and George J. Pappas, editors, Learning for Dynamics and Control Conference, L4DC 2023, 15-16 June 2023, Philadelphia, PA, USA , volume 211 of Proceedings of Machine Learning Research , pages 300–314. PMLR, 2023. URL https: //proceedings.mlr.press/v211/dixit23a.html .Luca Furieri, Clara Luc´ ıa Galimberti, and Giancarlo Ferrari-Trecate. Neural system level synthesis: Learning over all stabilizing policies for nonlinear systems. In 2022 IEEE 61st Conference on Decision and Control (CDC) , pages 2765–2770. IEEE, 2022. Paul J. Goulart, Eric C. Kerrigan, and Jan M. Maciejowski. Optimization over state feedback poli-cies for robust control with constraints. Automatica , 42(4):523–533, 2006. ISSN 0005-1098. doi: https://doi.org/10.1016/j.automatica.2005.08.023. S´ ebastien Gros, Mario Zanon, Rien Quirynen, Alberto Bemporad, and Moritz Diehl. From linear to nonlinear mpc: bridging the gap via the real-time iteration. International Journal of Control ,93(1):62–80, 2020. doi: 10.1080/00207179.2016.1222553. URL https://doi.org/10. 1080/00207179.2016.1222553 .Trevor Hastie, Robert Tibshirani, Jerome Friedman, et al. The elements of statistical learning, 2009. Lukas Hewing, Kim P Wabersich, Marcel Menner, and Melanie N Zeilinger. Learning-based model predictive control: Toward safe learning in control. Annual Review of Control, Robotics, and Autonomous Systems , 3(1):269–296, 2020. Craig Knuth, Glen Chou, Necmiye Ozay, and Dmitry Berenson. Planning with learned dynamics: Probabilistic guarantees on safety and reachability via lipschitz constants. IEEE Robotics Autom. Lett. , 6(3):5129–5136, 2021. doi: 10.1109/LRA.2021.3068889. URL https://doi.org/ 10.1109/LRA.2021.3068889 .Craig Knuth, Glen Chou, Jamie Reese, and Joseph L. Moore. Statistical safety and robustness guarantees for feedback motion planning of unknown underactuated stochastic systems. In IEEE International Conference on Robotics and Automation, ICRA 2023, London, UK, May 29 - June 2, 2023 , pages 12700–12706. IEEE, 2023. doi: 10.1109/ICRA48891.2023.10161001. URL 
+
+https://doi.org/10.1109/ICRA48891.2023.10161001 .Antoine P Leeman, Johannes Kohler, Florian Messerer, Amon Lahr, Moritz Diehl, and Melanie N Zeilinger. Fast system level synthesis: Robust model predictive control using riccati recursions. 
+
+IFAC-PapersOnLine , 58(18):173–180, 2024.        
+
+> 12 ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS
+
+Antoine P Leeman, Johannes K¨ ohler, and Melanie N Zeilinger. Guaranteed robust nonlinear mpc via disturbance feedback. arXiv preprint arXiv:2509.18760 , 2025a. Antoine P. Leeman, Johannes K¨ ohler, Andrea Zanelli, Samir Bennani, and Melanie N. Zeilinger. Robust nonlinear optimal control via system level synthesis. IEEE Trans. on Automatic Control ,70(7):4780–4787, 2025b. doi: 10.1109/TAC.2025.3552482. Yating Lin, Glen Chou, and Dmitry Berenson. Improving out-of-distribution generalization of learned dynamics by learning pseudometrics and constraint manifolds. CoRR , abs/2403.12245, 2024. doi: 10.48550/ARXIV.2403.12245. URL https://doi.org/10.48550/arXiv. 2403.12245 .Lars Lindemann, Matthew Cleaveland, Gihyun Shim, and George J. Pappas. Safe planning in dynamic environments using conformal prediction. IEEE Robotics Autom. Lett. , 8(8):5116–5123, 2023. doi: 10.1109/LRA.2023.3292071. URL https://doi.org/10.1109/LRA.2023. 3292071 .Danylo Malyuta, Taylor P Reynolds, Michael Szmuk, Thomas Lew, Riccardo Bonalli, Marco Pavone, and Behc ¸et Ac ¸ıkmes ¸e. Convex optimization for trajectory generation: A tutorial on generating dynamically feasible trajectories reliably and efficiently. IEEE Control Systems Mag-azine , 42(5):40–113, 2022. Lu´ ıs Marques and Dmitry Berenson. Quantifying aleatoric and epistemic dynamics uncertainty via local conformal calibration, 2024. URL https://arxiv.org/abs/2409.08249 .David Q. Mayne, Maria M. Seron, and Saˇ sa V. Rakovi´ c. Robust output feedback model predictive control of constrained linear systems. Automatica , 41(2):219–224, 2005. Florian Messerer, Katrin Baumg¨ artner, and Moritz Diehl. Survey of sequential convex programming and generalized gauss-newton methods. ESAIM: Proceedings and Surveys , 71:64–88, 2021. Soundouss Messoudi, S´ ebastien Destercke, and Sylvain Rousseau. Ellipsoidal conformal inference for multi-target regression. In Conformal and Probabilistic Prediction with Applications , pages 294–306. PMLR, 2022. Thomas M. Moerland, Joost Broekens, Aske Plaat, and Catholijn M. Jonker. Model-based re-inforcement learning: A survey. Found. Trends Mach. Learn. , 16(1):1–118, 2023. doi: 10.1561/2200000086. URL https://doi.org/10.1561/2200000086 .Kasidit Muenprasitivej, Ye Zhao, and Glen Chou. Probabilistically-safe bipedal navigation over uncertain terrain via conformal prediction and contraction analysis. arXiv preprint arXiv:2510.07725 , 2025. Anish Muthali, Haotian Shen, Sampada Deglurkar, Michael H. Lim, Rebecca Roelofs, Aleksandra Faust, and Claire J. Tomlin. Multi-agent reachability calibration with conformal prediction. In 
+
+62nd IEEE Conference on Decision and Control, CDC 2023, Singapore, December 13-15, 2023 ,pages 6596–6603. IEEE, 2023. doi: 10.1109/CDC49753.2023.10383723. URL https:// doi.org/10.1109/CDC49753.2023.10383723 .  
+
+> 13 SRINIVASAN LEEMAN CHOU
+
+James Blake Rawlings, David Q Mayne, and Moritz Diehl. Model predictive control: theory, com-putation, and design , volume 2. Nob Hill Publishing Madison, WI, 2017. F. Sabatino. Quadrotor control: Modeling, nonlinear control design, and simulation. M.s. thesis, KTH, Stockholm, Sweden, 2015. Tim Salzmann, Jon Arrizabalaga, Joel Andersson, Marco Pavone, and Markus Ryll. Learning for casadi: Data-driven models in numerical optimization. In Learning for Dynamics and Control Conference (L4DC) , 2024. Sumeet Singh, Mo Chen, Sylvia L Herbert, Claire J Tomlin, and Marco Pavone. Robust tracking with model mismatch for fast and safe planning: an sos optimization approach. In International Workshop on the Algorithmic Foundations of Robotics , pages 545–564. Springer, 2018. H. J. Terry Suh, Glen Chou, Hongkai Dai, Lujie Yang, Abhishek Gupta, and Russ Tedrake. Fight-ing uncertainty with gradients: Offline reinforcement learning via diffusion score matching. In Jie Tan, Marc Toussaint, and Kourosh Darvish, editors, Conference on Robot Learning, CoRL 2023, 6-9 November 2023, Atlanta, GA, USA , volume 229 of Proceedings of Machine Learning Research , pages 2878–2904. PMLR, 2023. URL https://proceedings.mlr.press/ v229/suh23a.html .Jiankai Sun, Yiqi Jiang, Jianing Qiu, Parth Nobel, Mykel J. Kochenderfer, and Mac Schwager. Conformal prediction for uncertainty-aware planning with diffusion dynamics model. In Alice Oh, Tristan Naumann, Amir Globerson, Kate Saenko, Moritz Hardt, and Sergey Levine, ed-itors, Advances in Neural Information Processing Systems 36: Annual Conference on Neural Information Processing Systems 2023, NeurIPS 2023, New Orleans, LA, USA, December 10 -16, 2023 , 2023. URL http://papers.nips.cc/paper_files/paper/2023/hash/ fe318a2b6c699808019a456b706cd845-Abstract-Conference.html .Robin Verschueren, Gianluca Frison, Dimitris Kouzoupis, Jonathan Frey, Niels van Duijkeren, Andrea Zanelli, Branimir Novoselnik, Thivaharan Albin, Rien Quirynen, and Moritz Diehl. acados: a modular open-source framework for fast embedded optimal control, 2020. URL 
+
+https://arxiv.org/abs/1910.13753 .Vladimir Vovk, Alexander Gammerman, and Glenn Shafer. Algorithmic learning in a random world . Springer, 2005. Simon Wasiela, Smail Ait Bouhsain, Marco Cognetti, Juan Cort´ es, and Thierry Simeon. Learning uncertainty tubes via recurrent neural networks for planning robust robot motions. In ECAI 2024 ,pages 4385–4392. IOS Press, 2024. Anton Xue and Nikolai Matni. Data-driven system level synthesis. In Learning for dynamics and control , pages 189–200. PMLR, 2021. Shuyu Zhan, Chih-Yuan Chiu, Antoine P Leeman, and Glen Chou. Robustly constrained dynamic games for uncertain nonlinear dynamics. arXiv preprint arXiv:2509.16826 , 2025. 
+
+> 14
+
+ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+Appendix A. Proofs: 
+
+A.1. Proof of Theorem 3 and Corollary 5 Proof (Theorem 3) From Theorem 2 and Lemma 1 in Barber et al. (2023), the coverage gap for independent data is bounded by: Coverage Gap ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi · dT V (Si,k , S k,k ) ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi · 2dT V (Si,k , S k,k ) (24) Given the normalized weights are ˜wi = wi 
+
+> 1+ PNcalib
+> j=1 wj
+
+, and wi = ρdi for di = || [z⊤ 
+
+> k
+
+, v ⊤ 
+
+> k
+
+] − [x⊤ 
+
+> i
+
+, u ⊤ 
+
+> i
+
+]|| 2
+
+We can substitute into Equation 24, and prove the Tight Bound in Theorem 3: Coverage Gap ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+ρdi
+
+1 + PNcalib  
+
+> j=1
+
+ρdj
+
+!
+
+· 2ϵ · di (25) Without loss of generality, we can rearrange the sum to create a decaying series {ρdi }Ncalib  
+
+> i=1
+
+, where 
+
+di is increasing. While this series is not purely geometric, we can bound it by two geometric series. Let dmin = min {1 ≤ i ≤ Ncalib − 1|di+1 − di} and dmax = max {1 ≤ i ≤ Ncalib − 1|di+1 − di}.Then, ρd1 ρdmax (i−1) ≤ ρdi ≤ ρd1 ρdmin (i−1) . Thus, we can bound Equation 25, Coverage Gap ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+ρdi
+
+1 + PNcalib  
+
+> j=1
+
+ρdj
+
+!
+
+·2ϵ·di ≤ 2ϵ
+
+PNcalib  
+
+> i=1
+
+ρd1 pdmin (i−1) · (d1 + dmax (i − 1)) 1 + PNcalib  
+
+> j=1
+
+ρd1 ρdmax (j−1) 
+
+!
+
+Then observe the sum of the numerator, 
+
+Nsum =
+
+> Ncalib
+
+X
+
+> i=1
+
+ρd1 pdmin (i−1) · (d1 + dmax (i − 1)) (26) 
+
+= ρd1
+
+"
+
+d1
+
+ 1 − ρNcalib ·dmin 
+
+1 − ρdmin 
+
+
+
++ dmax 
+
+ρdmin − Ncalib ρn·dmin + ( Ncalib − 1) ρ(Ncalib +1) dmin 
+
+(1 − ρdmin )2
+
+!# 
+
+(27) Similarly, the sum the of the denominator, 
+
+Dsum = 1 + 
+
+> Ncalib
+
+X
+
+> j=1
+
+ρd1 ρdmax (j−1) (28) 
+
+= 1 + ρd1
+
+ 1 − ρNcalib ·dmax 
+
+1 − ρdmax 
+
+
+
+(29) 
+
+15 SRINIVASAN LEEMAN CHOU 
+
+Then, the coverage gap is bounded by, 
+
+Coverage Gap ≤ 2ϵ Nsum 
+
+Dsum 
+
+(30) 
+
+≤ 2ϵ
+
+d1
+
+ 1 − ρNcalib ·dmin 
+
+1 − ρdmin 
+
+
+
++ dmax 
+
+
+
+ρdmin 
+
+> ≤0
+
+z }| {
+
+−Ncalib ρNcalib ·dmin + ( Ncalib − 1) ρ(Ncalib +1) dmin 
+
+(1 − ρdmin )2
+
+
+
+1 − ρdmax 
+
+1 − ρNcalib ·dmax 
+
+| {z }
+
+> ≤1
+
+(31) 
+
+≤ 2ϵ
+
+ d1
+
+1 − ρdmin + dmax ρdmin 
+
+(1 − ρdmin )2
+
+
+
+. (32) Hence, we have proved the Interpretable Bound .
+
+For large Ncalib , (i.e., as Ncalib → ∞ ), we can achieve a tighter upper bound 
+
+Corollary 5 Under the same assumptions of Theorem 3 we have that as Ncalib → ∞ the coverage gap is more tightly bounded by, Coverage Gap ≤ 2ϵ
+
+ d1
+
+1 − ρdmin + dmax ρdmin 
+
+(1 − ρdmin )2
+
+
+
+(1 − ρdmax ) (33) 
+
+Proof (Corollary 5) Taking Equation 31 as n → ∞ we complete the proof. 
+
+A.2. Proof of Theorem 4 Proof (Theorem 4) Using Equation 24, we have that Coverage Gap ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi · dT V ( ˜Si,k , ˜Sk,k ) ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi · 2dT V (Si,k , ˜Sk,k ), (34) where (s1,k , s 2,k , s i−1,k , ˜sk,k , s i+1 ,k , . . . , s Ncalib ,k ) ∼ ˜Si,k , (s1,k , . . . , s Ncalib ,k , ˜sk,k ) ∼ ˜Sk,k , ˜sk,k =
+
+sk(xk, u k, f (xk, u k)) is unknown due to uncertainty in f (xk, u k), and ˜sk,k ∼ ˜Sk,k is the distribution of the non-conformity score corresponding to the observed state and control (xk, u k). Then, using the triangle inequality we have that, Coverage Gap ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi·dT V ( ˜Si,k , ˜Sk,k ) ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi · 2dT V (Si,k , S k,k )
+
+| {z }
+
+> (∗),Bounded in Eq. 32
+
++
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi · 2dT V (Sk,k , ˜Sk,k )
+
+| {z }
+
+> (∗∗ )
+
+.
+
+(35) Observing that the left sum (∗) is already bounded by Theorem 3, we proceed to bound the right sum (∗∗ ). Then, realizing the sum of normalized weights is ≤ 1, we obtain, 
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi · 2dT V (Sk,k , ˜Sk,k ) = 2 dT V (Sk,k , ˜Sk,k )
+
+> Ncalib
+
+X
+
+> i=1
+
+˜wi ≤ 2dT V (Sk,k , ˜Sk,k ) (36) 
+
+16 ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+Then, using the Lipschitz-type bound, 
+
+2dT V (Sk,k , ˜Sk,k ) ≤ 2ˆ ϵ|| [x⊤ 
+
+> k
+
+, u ⊤ 
+
+> k
+
+] − [z⊤ 
+
+> k
+
+, v ⊤ 
+
+> k
+
+]|| 2 ≤ 2ˆ ϵM (Rk) =: γ(Rk), (37) where, (xk, u k) ∈ R k, M (Rk) is the maximum axis length of the tube, and ˆϵ ≤ ϵ is the local Lipschitz constant in the tube. The remaining proof follows substituting the bound, γ(Rk) for (∗∗ )
+
+in (35). 
+
+A.3. Proof Sketch of Theorem 1 and Theorem 2 Proof Sketch (Theorem 1) Using Theorem 4 we get the probability of error coverage for each step in the rollout. Using the approach of Proposition 2 and Theorem 1 from Chee et al. (2024) and Lindemann et al. (2023) respectively we complete the proof. 
+
+Proof Sketch (Theorem 2) (a) Since SLS provides guarantees conditioned on valid disturbance bounds, Theorem 1 directly implies the result in Corollary 2(a). 
+
+(b) Instead of applying the union bound approach across the forecasted MPC plan, we bound the intersection probability of the first-step errors remaining in the predicted ellipsoids for all R
+
+planning steps. Then, using the same approach as Theorem 4 we get: 
+
+Pr[ 
+
+> T
+
+\
+
+> k=1
+
+ε(z(q)1 , v (q)1 ) ∈ E (z(q)1 , v (q)1 )] ≥ 1 −
+
+> R
+
+X
+
+> q=1
+
+σq
+
+> 1
+
+, (38) Notably, we omit the tubes since the tubes at the first step of each replan, Rq 
+
+> 1
+
+= {(z(q)1 , v (q)1 )} since the planner knows the initial state. Then, using the same approach as (a) we get the result in (b) .
+
+Appendix B. Dynamics Models 
+
+Below we discuss the dynamics models used in our experiments. We provide the continuous time dynamics which were used to train our models. We obtained the discrete model by using Euler Discretization. 
+
+B.1. Car Dynamics Models 
+
+
+
+˙px
+
+˙py
+
+˙θ
+
+˙v
+
+ =
+
+
+
+v cos( θ)
+
+v sin( θ)00
+
+ +
+
+
+
+0 00 01 00 1
+
+ωa
+
+
+
+(39) Equation 39 describes the control-affine dynamics models for Dubins’ car, where px and py are the car’s x and y positions. θ and v are the direction and velocity of the car. Lastly, the control inputs directly steer ( ω) and accelerate ( a) the car. The dynamics model in (39) was used strictly for the in-distribution experiments.   
+
+> 17 SRINIVASAN LEEMAN CHOU
+
+OOD Experiment Dynamics For the out of distribution (OOD) Dubins’ car experiment we mod-ified the θ dynamics by adding attractive steering towards the obstacle centered at (2.5, 0) in the region without training data, 
+
+˙θ = ωattr 1[|py| < 6] + ω (40) 
+
+d2 = ( px − 2.5) 2 + p2 
+
+> y
+
+(41a) 
+
+θa = atan2 (py, p x) (41b) 
+
+∆θnorm = atan2 (sin( θa − θ), cos( θa − θ)) (41c) 
+
+ωattr =
+
+ kattr 
+
+d2
+
+
+
+∆θnorm , (41d) where the attractive steering dynamics are defined in Equation 41, and atan2 is the arctangent func-tion accounting for the x-y quadrant, and 1[·] is the indicator function. For the OOD experiment we set kattr , the strength of the attractive force to -0.5 (positive values repel). Notably, the strength of the force increases as the car gets closer to the obstacle. 
+
+Active Uncertainty Experiment Dynamics Similar to the OOD dynamics we include attractive steering (with kattr = −0.5, we modify the the v dynamics of the car such that, 
+
+˙θ = ˜ ωattr 1[d2 < 1] + ω (42a) 
+
+˙v = −(1 + cos( π√d2)) 1[d2 < 1] + a (42b) 
+
+˜ωattr =
+
+ kattr 
+
+d2 + 0 .1
+
+
+
+∆θnorm , (42c) where d2 and ∆θnorm are defined in Equation 41. We modify the denominator of ωattr to prevent a singularity at (2.5, 0.0)–this was not a problem in the OOD case since there was an obstacle present at (2.5, 0.0). The augmented velocity dynamics add a friction term to reduce the speed of the car in this region. 
+
+Friction Car Dynamics Lastly, we modified Dubins’ car such that the velocity dynamics were modified over the whole state-space, while including attractive steering (with kattr = −1.5): 
+
+˙θ = ωattr 1[|py| < 2] + ω (43a) 
+
+˙v = a − sign (v)
+
+
+
+0.1 cos( 2π
+
+5 py)) + 0 .1 − aslip 1[|py| < 2] 
+
+
+
+(43b) 
+
+aslip = 0 .7e−2p2 
+
+> y
+
+(43c) In this model, we include a slippage term to increase the velocity of the car for −2 < p y < 2, while providing a changing friction term over the whole state-space. 
+
+> 18
+
+ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+B.2. 12D Quadcopter Dynamics Model 
+
+
+
+˙px
+
+˙py
+
+˙pz
+
+˙ψ
+
+˙θ
+
+˙ϕ
+
+¨px
+
+¨py
+
+¨pz
+
+˙p
+
+˙q
+
+˙r
+
+
+
+= f (x, u ) := 
+
+
+
+˙px
+
+˙py
+
+˙pz
+
+q sin( ϕ)/ cos( θ) + r cos( ϕ)/ cos( θ)
+
+q cos( ϕ) − r sin( ϕ)
+
+p + q sin( ϕ) tan( θ) + r cos( ϕ) tan( θ) 
+
+> u1
+> m
+
+(sin( ϕ) sin( ψ) + cos( ϕ) cos( ψ) sin( θ))  
+
+> u1
+> m
+
+(cos( ψ) sin( ϕ) − cos( ϕ) sin( ψ) sin( θ)) 
+
+g + u1 
+
+> m
+
+(cos( ϕ) cos( θ)) − afall   
+
+> Iy−Iz
+> Ix
+
+qr + u2  
+
+> Ix
+> Iz−Ix
+> Iy
+
+pr + u3 
+
+> Iy
+> Ix−Iy
+> Iz
+
+pq + u4
+
+> Iz
+
+
+
+(44) 
+
+afall =  0.1 + 0 .1 cos(2 πd 2 − π) 1[d2 < 1] (45) 
+
+d2 = ( px − 2.5) 2 + ( py − 2.5) 2 + ( pz − 2.5) 2 (46) For our experiments, we used the 12D Quadcopter dynamics model described in Equation B.2 (Sabatino, 2015). px, p y, and pz describe the x, y, and z positions of the quadcopter while 
+
+˙px, ˙py, and ˙pz describe the x, y, and z velocities. ψ, θ, and ϕ are the roll, pitch, and yaw. Similarly, 
+
+p, q, and r are the roll rate, pitch rate, and yaw rates, respectively are directly controlled by inputs 
+
+u2, u 3, and u4. The control input, u1, directly impacts the thrust–z-direction acceleration. Lastly, the constants g, m, Ix, Iy, and Iz are the acceleration due to gravity, the mass of the quadcopter, and the principle moments of inertia. For our experiments, we let g = −9.81 m/s 2, m = 1 .0kg ,
+
+Ix = 0 .5kg · m2, Iy = 0 .1kg · m2, and Iz = 0 .3kg · m2. Notably, the expression for ¨pz includes 
+
+afall to introduce a falling term for OOD dynamics. The falling dynamics are not encountered while training the model as described in App. D.1. 
+
+Appendix C. Baseline Problem Definitions 
+
+We define the baselines used in Sec. 6. First, we define Vanilla MPC (V-MPC) (47), which is a nominal na¨ ıve MPC planning under the learned dynamics without any constraint tightenings or model error calibration: 
+
+min  
+
+> z,v
+
+J(z, v) + JXf (z, v) (47a) s.t. zk+1 = ˆf (zk, v k), z 1 = ¯ x0, ∀k = 1 , . . . , T, (47b) 
+
+gi(zk, v k) + bi ≤ 0, (47c) 
+
+∀i = 1 , . . . , n c, ∀k = 1 , . . . , T. 
+
+We also define CP-Ball (48), which is a variant of our method which computes CP-calibrated model error bounds, except using a spherical, constant error bound representation, which is more 
+
+19 SRINIVASAN LEEMAN CHOU 
+
+conservative than our ellipsoidal bound: 
+
+min  
+
+> Φx,Φu,z,v
+
+J(z, v) + JXf (z, v) + ˜H0(Φx, Φu), (48a) s.t. zk+1 = ˆf (zk, v k), z 1 = ¯ x0, ∀k = 1 , . . . , T, (48b) 
+
+Φx 
+
+> k+1 ,j
+
+= ∇x ˆf (zk, v k) Φx 
+
+> k,j
+
++ ∇u ˆf (zk, v k) Φu 
+
+> k,j
+
+, ∀j = 1 , . . . , T, ∀k = j + 1 , . . . , T, (48c) 
+
+Φx 
+
+> j+1 ,j
+
+= V, ∀j = 1 , . . . , T, (48d) 
+
+Pkj=1 [∇xgi(zk, v k)Φx 
+
+> k,j
+
+, ∇ugi(zk, v k)Φu 
+
+> k,j
+
+] 2 + gi(zk, v k) + bi + glin  
+
+> i
+
+(zk, v k) ≤ 0, (48e) 
+
+∀i = 1 , . . . , n c, ∀k = 1 , . . . , T. 
+
+Surrogate Cost: All SLS formulations use (49) to minimize the volume of the tubes–a surrogate for uncertainty, where Φx and Φu collects all Φx 
+
+> k,j
+
+and Φu 
+
+> k,j
+
+respectively, and P 12 , Q 12 ∈ Rnx×nx , R 12 ∈
+
+Rnu×nu are symmetric positive definite matrices. 
+
+˜H0(Φx, Φu) := PT −1
+
+> j=0
+
+
+
+∥P 12 Φx 
+
+> T,j
+
+∥2 
+
+> F
+
++ PT −1
+
+> k=j
+
+
+
+∥Q 12 Φx 
+
+> k,j
+
+∥2 
+
+> F
+
++ ∥R 12 Φu 
+
+> k,j
+
+∥2
+
+> F
+
+ 
+
+, (49) 
+
+Appendix D. Experiment Setup 
+
+D.1. Data Sampling Dubins’ Car & Friction Car: To train the in-distribution Dubins’ car dynamics and uncertainty models, we applied uniform sampling to the following state-control space: 
+
+[px, p y, θ, v ] × [ω, a ] ∈ [0 , 5] × [−5, 5] × [−π, π ] × [−10 , 10] × [−10 , 10] × [−10 , 10] . (50) Similarly, for the out-of-distribution (OOD) car, we instead sampled py ∈ [−12 , −6] ∪ [6 , 12] with the remaining state and controls remaining the same as (50). For the friction car model, we sampled 
+
+py ∈ [−5, −2] ∪ [2 , 5] , while using (50) for the remaining dimensions. Lastly, for our active uncer-tainty experiments, we also sampled from Equation 50, and enforced that (px − 2.5) 2 + ( py)2 > 1
+
+to create an OOD region. For both the OOD car and active uncertainty experiments, we ensured our learned model was restricted to training on areas where modifications did not impact the car dynamics model. Using the sampled points, we computed the ground truth using the expert dynamics model, as formulated in Equation 39, to create our dynamics training dataset (1,000,000 points), uncertainty training dataset (1,000,000 points), and calibration datasets (varying numbers of points). 
+
+12D Quadcopter: To get informative data points to train our neural-network model, we collected expert trajectories such that the states satisfied, 
+
+px, p y, p z ∈ [0 , 5] s.t. (px − 2.5) 2 + ( py − 2.5) + ( pz − 2.5) 2 > 1 (51a) 
+
+ψ, θ, ϕ ∈ [−π/ 4, π/ 4] (51b) 
+
+˙px, ˙py, ˙pz ∈ [−5, 5] (51c) 
+
+p, q, r ∈ [−2, 2] (51d) 
+
+u1 ∈ [0 , −2gm ], g = −9.81 m/s 2, m = 1 .0kg (51e) 
+
+u2, u 3, u 4 ∈ [−0.1, 0.1] (51f) 
+
+20 ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+to create an OOD region centered at (2.5, 2.5, 2.5) with a radius of 1. Additionally, the goal position was [px = 4 .5, p y = 2 .5, p z = 2 .5] , while the start positions was arbitrarily sampled from Equation 51. Our discrete timestep was 0.05 s and our trajectory length was 100 timesteps. We sampled 100,000 trajectories and included state-control pairs from trajectories that the optimizer (IpOpt) was able to solve. This resulted in a dynamic training and uncertainty-trained set with 4, 702 , 400 
+
+points each, leaving up to 100 , 000 points for the calibration dataset. 
+
+D.2. Model Architecture and Training 
+
+For our learned model (dynamics and uncertainty), we use an MLP with one hidden layer and the tanh activation function. Our uncertainty model was trained to output Cholesky factors, ensuring the matrices were positive-definite and facilitating faster performance in our optimization problem. For Dubins’ car and the friction car dynamics models, we used 4, 096 and 2, 048 hidden nodes for the dynamics and uncertainty models, respectively. Similarly, for the 12D quadcopter, we used 
+
+1, 024 hidden nodes for both the dynamics and uncertainty models, and were trained for 200 epochs. Lastly, we used a learning rate of 10 −4 and 10 −5 for the dynamics and uncertainty models, respec-tively. 
+
+D.3. Optimization Parameters and Cost Functions 
+
+For the SLS forward propagation and constraint tightenings, we used ¯P 12 = 10 6Inx , ¯Q 12 = 10 6Inx
+
+and ¯R 12 = 10 6Inu , as found in Equation 49. For trajectory optimization, we considered the follow-ing LQR cost, 
+
+J(z, v) :=  
+
+> T−1
+
+X
+
+> k=1
+
+
+
+z⊤ 
+
+> k
+
+Qz k + ( zk+1 − zk)⊤Qs(zk+1 − zk) + u⊤ 
+
+> k
+
+Ru k
+
+
+
+, (52) 
+
+JXf (z, v) := ( zT − zgoal )⊤Qf (zT − zgoal ) (53) where Qf , Q s, Q ∈ Rnx×nx are positive-semi-definite matrices, R ∈ Rnu×nu is a positive-definite matrix, and zgoal is the goal state. For all dynamics models, we used diagonal matrices, represented as diag (a1, a 2, . . . , a n) and block diag (. . . ) representing block diagonal matrices. For Dubins’ car (excluding the active uncertainty experiment) and the friction car, we let Qf = diag (1 , 1, 0, 1) ,
+
+Q = Qs = 0 4×4 (the 4 × 4 zero matrix), and R = diag (0 .1, 0.1) . For the Quadcopter, Qf =
+
+block diag (I3, 03×3, I 3, 0.2I3), Q = block diag (0 3×3, 03×3, 0.01 I3, 03×3), Qs = 0 12 ×12 , and R =
+
+diag (0 .01 , 0.1, 0.1, 0.1) .Lastly, regarding conformal prediction parameters, we used ρ = 0 .97 for the car model and 
+
+ρ = 0 .8 for the quadcopter model, respectively. Outside of the OOD car experiment, we used 
+
+10 , 000 calibration points for the car models and 30 , 000 calibration points for the quadcopter model. For all the models we set αk = 0.115 s.t. the sum total of α would be 0.1. 
+
+D.4. Active Uncertainty 
+
+To enable active uncertainty reduction, we sought to minimize the distance to the positional-state variables (i.e., px and py) from Dcalib . To achieve efficient performance, we used K-means clus-tering Hastie et al. (2009) to find a representative set of L points, ˜D = {(pxi , p yi)}Li=1 . Then, we 
+
+21 SRINIVASAN LEEMAN CHOU 
+
+minimized the following cost for Dubins’ car, 
+
+Jactive (z, v)= 
+
+> T−1
+
+X
+
+> k=0
+
+exp 
+
+− 1
+
+L + G
+
+Ge −β|| (pxgoal ,p y goal ,v goal )−(pxk ,p y k ,v k )|| 2
+
++
+
+> L
+
+X
+
+> j=1
+
+e−β|| (pxj ,p y j )−(pxk ,p y k )|| 2
+
+ ,
+
+(54) where pxgoal , p ygoal , and vgoal are the goal x-position, y-position, and velocities, pxk , p yk, and vk
+
+are the x-position, y-position, and velocities of the nominal point zk while pxi , and pyi are the x and y positions of points from ˜D, and G is a weight for the goal node (effectively creating G points at the goal). Lastly, β is a sharpness parameter to ensure that we minimize the distance to a particular point in ˜D as opposed to minimizing the distance to all points. The inclusion of the goal point enabled us to provide a high weight to the cost without hinder the MPC optimizer from reaching the goal. Since our goal is to minimize the distance to the representative points by minimizing the cost function we scale the internal sum by −1. For efficient implementation we included this as a part of the quadratic cost, thus requiring the outer-exponential to provide a lower-bound to the cost. In our experiments we choose L = 800 , G = 200 , and β = 3 , and our total cost was Jtotal (z, v) = J(z, v) + JXf (z, v) + 1000 Jactive (z, v). For Qf , Q, and R we used the same parameters as the remaining Dubins’ car experiments and let Qs = 0 .1I4.
+
+Appendix E. Theorem 3 Analysis 
+
+For completeness we restate the Coverage Gap bound in Theorem 3: Coverage Gap ≤
+
+> Ncalib
+
+X
+
+> i=1
+
+ρdi
+
+1 + PNcalib  
+
+> j=1
+
+ρdj
+
+!
+
+· 2ϵ · di
+
+| {z }
+
+> Tight Bound
+
+≤ 2ϵ
+
+ d1
+
+1 − ρdmin + dmax ρdmin 
+
+(1 − ρdmin )2
+
+| {z }
+
+> Interpretable Bound
+
+As discussed in Section 5, an increase in the density of state-control calibration points reduces dmin ,thereby increasing the (interpretable) coverage gap bound in (23). We can reduce the bound by reducing ρ. To build intuition, on the results, we consider the following toy example: we have cal-ibration points uniformly sampled from a unit circle with a test point located at the origin, (0 , 0) ,such that the distribution of the non-conformity score is spatially varying (i.e. dTV ̸ = 0 ). Without defining the distribution, Figure 5 demonstrates that at smaller ρ values, greater emphasis is pro-vided to non-conformity scores located near the test point, with smaller TV distances to the test point. Hence, the coverage gap decreases for a fixed Ncalib as ρ decreases. The interpretable bound also implies that when dmin is reduced, the coverage gap increases, which can be compensated for by requiring ρ to decrease. Figure 5, illustrates that the coverage gap increases at larger dmin stem-ming from increased data density and Ncalib , due to a higher weightage being provided to the test point, represented as a point-mass at ∞ in the empirical weighted non-conformity score distribu-tion, resulting in a larger 1 − α quantile value. The larger quantile value then increases coverage, thereby reducing the coverage gap. To understand the tightness of the derived bound, we use a gamma distribution to randomly sam-ple non-conformity scores such that s(xi, y i) ∼ S(xi, y i) = Γ( α = 5 − 13 (
+
+q
+
+x2 
+
+> i
+
++ y2 
+
+> i
+
+)0.8, θ = 2 .0) ,
+
+22 ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS Ncalib =100 Ncalib =500 Ncalib =1000 Ncalib =5000 Ncalib =10000 
+
+0
+
+10 
+
+20 
+
+> Avg Raw Count (± SE)
+
+0
+
+50 
+
+100 
+
+0
+
+100 
+
+200 
+
+0
+
+250 
+
+500 
+
+750 
+
+0
+
+1000 
+
+2000 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> ρ = 1 .0E − 01 Avg Rel. Weight
+> 0.03 0.08 0.11 0.12 0.12 0.12 0.11 0.10 0.10 0.08
+
+Test Point Weight: 0.04 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.03 0.08 0.11 0.13 0.13 0.12 0.11 0.11 0.09 0.08
+
+Test Point Weight: 0.01 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.03 0.08 0.11 0.12 0.13 0.12 0.12 0.11 0.09 0.08
+
+Test Point Weight: 0.00 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.03 0.08 0.11 0.12 0.13 0.12 0.11 0.11 0.10 0.08
+
+Test Point Weight: 0.00 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.03 0.08 0.11 0.12 0.13 0.12 0.11 0.11 0.10 0.08
+
+Test Point Weight: 0.00 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> ρ = 1 .0E − 03 Avg Rel. Weight
+> 0.11 0.20 0.18 0.12 0.08 0.05 0.03 0.02 0.01
+
+Test Point Weight: 0.20 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.15 0.23 0.20 0.15 0.10 0.06 0.03 0.02 0.01
+
+Test Point Weight: 0.05 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.15 0.25 0.21 0.14 0.10 0.06 0.04 0.02 0.01
+
+Test Point Weight: 0.02 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.15 0.25 0.21 0.15 0.10 0.06 0.04 0.02 0.01
+
+Test Point Weight: 0.00 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.15 0.25 0.21 0.15 0.10 0.06 0.04 0.02 0.01
+
+Test Point Weight: 0.00 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> ρ = 1 .0E − 05 Avg Rel. Weight
+> 0.16 0.21 0.12 0.05 0.02
+
+Test Point Weight: 0.42 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.28 0.30 0.17 0.08 0.03 0.01
+
+Test Point Weight: 0.12 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.29 0.33 0.18 0.08 0.03 0.01
+
+Test Point Weight: 0.06 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.31 0.35 0.19 0.08 0.03 0.01
+
+Test Point Weight: 0.01 
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.32 0.35 0.19 0.08 0.03 0.01
+
+Test Point Weight: 0.01 
+
+0.0 0.2 0.4 0.6 0.8 1.0 
+
+Distance r
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> ρ = 1 .0E − 07 Avg Rel. Weight
+> 0.16 0.16 0.06 0.02
+
+Test Point Weight: 0.60 
+
+0.0 0.2 0.4 0.6 0.8 1.0 
+
+Distance r
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.37 0.28 0.10 0.03
+
+Test Point Weight: 0.21 
+
+0.0 0.2 0.4 0.6 0.8 1.0 
+
+Distance r
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.41 0.32 0.11 0.03
+
+Test Point Weight: 0.12 
+
+0.0 0.2 0.4 0.6 0.8 1.0 
+
+Distance r
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.46 0.35 0.12 0.03
+
+Test Point Weight: 0.03 
+
+0.0 0.2 0.4 0.6 0.8 1.0 
+
+Distance r
+
+0.00 
+
+0.12 
+
+0.24 
+
+0.36 
+
+0.48 
+
+0.60 
+
+> 0.47 0.35 0.12 0.03
+
+Test Point Weight: 0.01 
+
+Figure 5: Toy Example. We plot the effect of the calibration set size, Ncalib , and compare the weightage provided to points using the exponential weight decay function at different ρ values. The results are averaged across 100 trials of randomly sampling Ncalib points in the unit circle, with an example of the calibration data location in the top row. The second row (a histogram) shows that, under uniform sampling on the unit circle, the number of points at each radius (Distance r) increases linearly. The remaining rows provide the weight contribution of each histogram bin by normalizing the weights (as discussed in Section 4.1) and summing the normalized weights for each bin. We observe that smaller ρ values place more emphasis on points closer to the test point, and the weight of the test point, represented by a point mass at ∞ in the empirical score distribution, increases. Lastly, in the plot, red denotes the test point, while orange highlights the bin of points closest to it. 
+
+23 SRINIVASAN LEEMAN CHOU 
+
+where E[s(xi, y i)] = 10 − 23 (
+
+q
+
+x2
+
+i + y2
+
+i )0.8 and Var [s(xi, y i)] = 20 − 43 (
+
+q
+
+x2
+
+i + y2
+
+i )0.8. To estimate 
+
+ϵ, we randomly sampled several pairs of points in the unit circle, then computed dTV (S(x1,y 1),S (x2,y 2)) 
+
+|| (x1,y 1)−(x2,y 2)|| 
+
+and took the maximum value computed to be ϵ. Then, we sampled several Ncalib values and ρ val-ues on a log scale and computed the coverage across 100 trials. In each trial, we randomly sampled 
+
+Ncalib points on the unit circle, then sampled a non-conformity score from the distribution defined by the coordinates of each sampled point. Since we know the distribution, we can directly compute the TV distance (24) from Barber et al. (2023). We also computed the tight bound in (23) using the estimated ϵ value. 10 −7 10 −5 10 −3 10 −1
+
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+All Empirical    
+
+> Ncalib =100
+> Ncalib =500
+> Ncalib =1000
+> Ncalib =5000
+> Ncalib =10000
+> Ncalib =50000
+> Ncalib =100000
+> 10 −710 −510 −310 −1
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Ncalib =100    
+
+> Empirical WCP Bound (Barber et al., 2023) CP-SLS Cov (Tight Bound)
+> 10 −710 −510 −310 −1
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Ncalib =500    
+
+> Empirical WCP Bound (Barber et al., 2023) CP-SLS Cov (Tight Bound)
+> 10 −710 −510 −310 −1
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Ncalib =1000    
+
+> Empirical WCP Bound (Barber et al., 2023) CP-SLS Cov (Tight Bound)
+> 10 −710 −510 −310 −1
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Ncalib =5000    
+
+> Empirical WCP Bound (Barber et al., 2023) CP-SLS Cov (Tight Bound)
+> 10 −710 −510 −310 −1
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Ncalib =10000    
+
+> Empirical WCP Bound (Barber et al., 2023) CP-SLS Cov (Tight Bound)
+> 10 −710 −510 −310 −1
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Ncalib =50000    
+
+> Empirical WCP Bound (Barber et al., 2023) CP-SLS Cov (Tight Bound)
+> 10 −710 −510 −310 −1
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Ncalib =100000 
+
+> Empirical WCP Bound (Barber et al., 2023) CP-SLS Cov (Tight Bound)
+
+ρ value (weight decay base);  = 0 .2470 for CP-SLS (Tight Bound) 
+
+Figure 6: Toy Example. We plot the empirical coverage, along with the theoretical bounds from (24), Barber et al. (2023), and our derived bound (labeled) as CP-SLS cov in (23) for ρ values selected on a log scale and several Ncalib values. We observe that the lower bounds and empirical coverage increase as ρ decreases, and that the bounds increase more rapidly for smaller ρ values. The results in Figure 6 demonstrate that the lower bound on coverage ( = 1 −α−Coverage Gap )increases for large ρ as well as the empirically observed coverage. Additionally, the tightness of our derived bound, relative to Barber et al. (2023), improves for smaller ρ values. Similarly, we find the lower-bound increases for fixed ρ values as Ncalib increases. While these results suggest a smaller ρ
+
+is optimal, for coverage, it is essential to consider the utility sacrifice. Smaller ρ values lead to larger, potentially infinite, values being computed as the 1 − α quantile, thereby making the uncertainty set harder to use and potentially impractical. 
+
+24 ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS 
+
+Appendix F. Additional Results −0.015                                 
+
+> −0.010
+> −0.005
+> 0.000
+> Run 0 Run 1 Run 2 Run 3 Run 4
+> 012345
+> −0.015
+> −0.010
+> −0.005
+> 0.000
+> Run 5
+> 012345
+> Run 6
+> 012345
+> Run 7
+> 012345
+> Run 8
+> 012345
+> Run 9
+> Time (s) Signed Distance
+> CP-Ball (Empircal Coverage: 100.0%) CP-Ellipsoid (Empirical Coverage: 99.6%)
+
+Figure 7: In Domain Car. We plot the minimum distance of the prediction error to the edge of the ellipsoid. Both the fixed ball and adaptive ellipsoid method empirically satisfy the coverage guarantee and remain inside over 99 .33% = (1 − 0.115 ) × 100% of the time. −4 −2 0 2 4
+
+py (m)
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+> px (m)
+
+CP-Ellipsoid CP-Ball V-MPC Obstacle Goal 
+
+t = 10 
+
+t = 20 
+
+t = 30 
+
+t = 40 
+
+t = 50 
+
+t = 60 
+
+t = 70 
+
+t = 80 
+
+t = 90 In Domain 
+
+Figure 8: Friction Car. We provide an example run of the friction area where the adaptive ellipsoid approach is successful in avoiding the obstacle. The remaining approaches fail because they do not maintain sufficient obstacle proximity and thus crash into the obstacle. 
+
+25 SRINIVASAN LEEMAN CHOU 
+
+Table 2: Active Uncertainty. The computation times (ms), and prediction errors when planning with vanilla-MPC, the adaptive ellipsoid with and without active uncertainty. 
+
+Model V-MPC CP-Ellipsoid CP-Ellipsoid + Active Uncertainty Time (ms) 56.1 ± 1.1 132.0 ± 9.9 131.4 ± 8.2 
+
+Pred. Err. ( L2) ( ×10 −2) 2.82 ± 7.85 2.83 ± 7.89 .34 ± .59 26 ROBUST OUT -OF -D ISTRIBUTION MPC VIA CONFORMALIZED SYSTEM LEVEL SYNTHESIS −4 −2 0 2 4          
+
+> py(m)
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> px (m)
+> CP-Ellipsoid-Active CP-Ellipsoid V-MPC Out Of Domain Goal
+> t= 10
+> t= 20
+> t= 30
+> t= 40
+> t= 50
+> t= 60
+> t= 70
+> t= 80
+> t= 90
+
+Figure 9: Active Uncertainty. We provide an example run of the rollouts when using V-MPC and CP-Ellipsoid with active uncertainty. We find that the active uncertainty approach mostly avoids the OOD region, and thus has a smoother, more certain trajectory. −4 −2 0 2 4          
+
+> py(m)
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> px (m)
+> CP-Ellipsoid-Active CP-Ellipsoid V-MPC Out Of Domain Goal
+> t= 10
+> t= 20
+> t= 30
+> t= 40
+> t= 50
+> t= 60
+> t= 70
+> t= 80
+> t= 90
+
+Figure 10: Active Uncertainty. We provide another example run of the rollouts when using V-MPC and CP-Ellipsoid with active uncertainty. Similar to Figure 9, the active uncertainty rollout is smoother by mitigating time in the OOD region. Although the active uncertainty approach has more steps in the OOD region than shown in Figure 9, it is near the in-distribution region and thus encounters limited OOD errors during the rollout. 
+
+27 SRINIVASAN LEEMAN CHOU 012345
+
+px (m)
+
+1.75 2.50 3.25 
+
+> py (m)
+
+1.75 2.50 3.25 
+
+> pz (m)
+
+Obstacle Goal Region CP-Ellipsoid V-MPC Start 
+
+t = 20 
+
+t = 40 
+
+t = 60 
+
+t = 80     
+
+> 0.60.81.01.21.4
+
+px (m)
+
+> 2.22.42.62.8
+> py (m)
+> 2.42.62.83.0
+> pz (m)
+
+Zoom at t = 20     
+
+> 1.61.82.02.22.4
+
+px (m) 2.22.42.62.83.0
+
+> py (m)
+> 2.83.03.23.43.6
+> pz (m)
+
+Zoom at t = 40     
+
+> 2.83.03.23.43.6
+
+px (m) 2.22.42.62.83.0
+
+> py (m)
+> 2.62.83.03.23.4
+> pz (m)
+
+Zoom at t = 60    
+
+> 3.84.04.24.4
+
+px (m) 2.22.42.62.8
+
+> py (m)
+> 2.22.42.62.8
+> pz (m)
+
+Zoom at t = 80 
+
+Figure 11: Quadcopter. We provide another example run of the quadcopter rollout, with a different initial condition than in Figure 4. Again, we observe the quadcopter is successful in avoiding the obstacle when using CP-Ellipsoid (unlike V-MPC) when entering the OOD region. 
+
+28

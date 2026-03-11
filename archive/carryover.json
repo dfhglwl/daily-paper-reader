@@ -1,6 +1,171 @@
 {
-  "generated_at": "2026-03-06T19:11:18.471356+00:00",
-  "updated_date": "20260306",
+  "generated_at": "2026-03-11T01:46:07.238295+00:00",
+  "updated_date": "20260210-20260311",
   "carryover_days": 9,
-  "items": []
+  "items": [
+    {
+      "id": "2603.08019v1",
+      "title": "Vector Field Augmented Differentiable Policy Learning for Vision-Based Drone Racing",
+      "abstract": "Autonomous drone racing in complex environments requires agile, high-speed flight while maintaining reliable obstacle avoidance. Differentiable-physics-based policy learning has recently demonstrated high sample efficiency and remarkable performance across various tasks, including agile drone flight and quadruped locomotion. However, applying such methods to drone racing remains difficult, as key objective like gate traversal are inherently hard to express as smooth, differentiable losses. To address these challenges, we propose DiffRacing, a novel vector field-augmented differentiable policy learning framework. DiffRacing integrates differentiable losses and vector fields into the training process to provide continuous and stable gradient signals, balancing obstacle avoidance and high-speed gate traversal. In addition, a differentiable Delta Action Model compensates for dynamics mismatch, enabling efficient sim-to-real transfer without explicit system identification. Extensive simulation and real-world experiments demonstrate that DiffRacing achieves superior sample efficiency, faster convergence, and robust flight performance, thereby demonstrating that vector fields can augment traditional gradient-based policy learning with a task-specific geometric prior.",
+      "authors": [
+        "Yang Su",
+        "Feng Yu",
+        "Yu Hu",
+        "Xinze Niu",
+        "Linzuo Zhang",
+        "Fangyu Sun",
+        "Danping Zou"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-03-09T06:49:41+00:00",
+      "link": "https://arxiv.org/pdf/2603.08019v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Differentiable policy learning for agile drone flight and racing",
+      "llm_evidence_cn": "用于敏捷无人机飞行和竞速的可微策略学习",
+      "llm_evidence": "用于敏捷无人机飞行和竞速的可微策略学习",
+      "canonical_evidence": "用于敏捷无人机飞行和竞速的可微策略学习",
+      "llm_tldr_en": "A vector field-augmented framework for high-speed autonomous drone racing using differentiable physics.",
+      "llm_tldr_cn": "一种利用可微物理和向量场增强的框架，用于实现高速自主无人机竞速。",
+      "llm_tldr": "一种利用可微物理和向量场增强的框架，用于实现高速自主无人机竞速。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "carryover_cache",
+      "paper_id": "2603.08019v1",
+      "carry_days": 1
+    },
+    {
+      "id": "2603.07199v1",
+      "title": "Vision-Guided MPPI for Agile Drone Racing: Navigating Arbitrary Gate Poses via Neural Signed Distance Fields",
+      "abstract": "Autonomous drone racing requires the tight coupling of perception, planning, and control under extreme agility. However, recent approaches typically rely on precomputed spatial reference trajectories or explicit 6-DoF gate pose estimation, rendering them brittle to spatial perturbations, unmodeled track changes, and sensor noise. Conversely, end-to-end learning policies frequently overfit to specific track layouts and struggle with zero-shot generalization. To address these fundamental limitations, we propose a fully onboard, vision guided optimal control framework that enables reference-free agile flight through arbitrarily placed and oriented gates. Central to our approach is Gate-SDF, a novel, implicitly learned neural signed distance field. Gate-SDF directly processes raw, noisy depth images to predict a continuous spatial field that provides both collision repulsion and active geometric guidance toward the valid traversal area. We seamlessly integrate this representation into a sampling-based Model Predictive Path Integral (MPPI) controller. By fully exploiting GPU parallelism, the framework evaluates these continuous spatial constraints across thousands of simulated trajectory rollouts simultaneously in real time. Furthermore, our formulation inherently maintains spatial consistency, ensuring robust navigation even under severe visual occlusion during aggressive maneuvers. Extensive simulations and real-world experiments demonstrate that the proposed system achieves high-speed agile flight and successfully navigates unseen tracks subject to severe unmodeled gate displacements and orientation perturbations. Videos are available at https://zhaofangguo.github.io/vision_guided_mppi/",
+      "authors": [
+        "Fangguo Zhao",
+        "Hanbing Zhang",
+        "Zhouheng Li",
+        "Xin Guan",
+        "Shuo Li"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-03-07T13:18:07+00:00",
+      "link": "https://arxiv.org/pdf/2603.07199v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Vision-guided optimal control for agile drone racing",
+      "llm_evidence_cn": "敏捷无人机竞速的视觉引导最优控制",
+      "llm_evidence": "敏捷无人机竞速的视觉引导最优控制",
+      "canonical_evidence": "敏捷无人机竞速的视觉引导最优控制",
+      "llm_tldr_en": "A reference-free agile flight framework using neural SDFs for navigating arbitrary gate poses.",
+      "llm_tldr_cn": "一种利用神经SDF在任意门姿态下进行敏捷飞行的无参考轨迹框架。",
+      "llm_tldr": "一种利用神经SDF在任意门姿态下进行敏捷飞行的无参考轨迹框架。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "prediction based autonomous decision making for close in air combat",
+      "matched_requirement_id": "req-10",
+      "selection_source": "carryover_cache",
+      "paper_id": "2603.07199v1",
+      "carry_days": 1
+    },
+    {
+      "id": "2602.18716v1",
+      "title": "Temporal Action Representation Learning for Tactical Resource Control and Subsequent Maneuver Generation",
+      "abstract": "Autonomous robotic systems should reason about resource control and its impact on subsequent maneuvers, especially when operating with limited energy budgets or restricted sensing. Learning-based control is effective in handling complex dynamics and represents the problem as a hybrid action space unifying discrete resource usage and continuous maneuvers. However, prior works on hybrid action space have not sufficiently captured the causal dependencies between resource usage and maneuvers. They have also overlooked the multi-modal nature of tactical decisions, both of which are critical in fast-evolving scenarios. In this paper, we propose TART, a Temporal Action Representation learning framework for Tactical resource control and subsequent maneuver generation. TART leverages contrastive learning based on a mutual information objective, designed to capture inherent temporal dependencies in resource-maneuver interactions. These learned representations are quantized into discrete codebook entries that condition the policy, capturing recurring tactical patterns and enabling multi-modal and temporally coherent behaviors. We evaluate TART in two domains where resource deployment is critical: (i) a maze navigation task where a limited budget of discrete actions provides enhanced mobility, and (ii) a high-fidelity air combat simulator in which an F-16 agent operates weapons and defensive systems in coordination with flight maneuvers. Across both domains, TART consistently outperforms hybrid-action baselines, demonstrating its effectiveness in leveraging limited resources and producing context-aware subsequent maneuvers.",
+      "authors": [
+        "Hoseong Jung",
+        "Sungil Son",
+        "Daesol Cho",
+        "Jonghae Park",
+        "Changhyun Choi",
+        "H. Jin Kim"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI"
+      ],
+      "published": "2026-02-21T04:31:55+00:00",
+      "link": "https://arxiv.org/pdf/2602.18716v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Temporal action representation for tactical maneuver generation",
+      "llm_evidence_cn": "战术机动生成的时序动作表示",
+      "llm_evidence": "战术机动生成的时序动作表示",
+      "canonical_evidence": "战术机动生成的时序动作表示",
+      "llm_tldr_en": "Learns causal dependencies between resource control and maneuvers for tactical decision-making in fast-evolving scenarios.",
+      "llm_tldr_cn": "学习资源控制与机动之间的因果关系，用于快速演化场景下的战术决策。",
+      "llm_tldr": "学习资源控制与机动之间的因果关系，用于快速演化场景下的战术决策。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "carryover_cache",
+      "paper_id": "2602.18716v1",
+      "carry_days": 1
+    },
+    {
+      "id": "2602.19534v1",
+      "title": "Large Language Model-Assisted UAV Operations and Communications: A Multifaceted Survey and Tutorial",
+      "abstract": "Uncrewed Aerial Vehicles (UAVs) are widely deployed across diverse applications due to their mobility and agility. Recent advances in Large Language Models (LLMs) offer a transformative opportunity to enhance UAV intelligence beyond conventional optimization-based and learning-based approaches. By integrating LLMs into UAV systems, advanced environmental understanding, swarm coordination, mobility optimization, and high-level task reasoning can be achieved, thereby allowing more adaptive and context-aware aerial operations. This survey systematically explores the intersection of LLMs and UAV technologies and proposes a unified framework that consolidates existing architectures, methodologies, and applications for UAVs. We first present a structured taxonomy of LLM adaptation techniques for UAVs, including pretraining, fine-tuning, Retrieval-Augmented Generation (RAG), and prompt engineering, along with key reasoning capabilities such as Chain-of-Thought (CoT) and In-Context Learning (ICL). We then examine LLM-assisted UAV communications and operations, covering navigation, mission planning, swarm control, safety, autonomy, and network management. After that, the survey further discusses Multimodal LLMs (MLLMs) for human-swarm interaction, perception-driven navigation, and collaborative control. Finally, we address ethical considerations, including bias, transparency, accountability, and Human-in-the-Loop (HITL) strategies, and outline future research directions. Overall, this work positions LLM-assisted UAVs as a foundation for intelligent and adaptive aerial systems.",
+      "authors": [
+        "Yousef Emami",
+        "Hao Zhou",
+        "Radha Reddy",
+        "Atefeh Hajijamali Arani",
+        "Biliang Wang",
+        "Kai Li",
+        "Luis Almeida",
+        "Zhu Han"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI"
+      ],
+      "published": "2026-02-23T05:56:43+00:00",
+      "link": "https://arxiv.org/pdf/2602.19534v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "survey of LLM-assisted UAV operations including swarm coordination and mobility optimization",
+      "llm_evidence_cn": "LLM辅助无人机操作综述，包括集群协调和机动优化",
+      "llm_evidence": "LLM辅助无人机操作综述，包括集群协调和机动优化",
+      "canonical_evidence": "LLM辅助无人机操作综述，包括集群协调和机动优化",
+      "llm_tldr_en": "Systematically explores LLM integration for advanced UAV environmental understanding and swarm coordination.",
+      "llm_tldr_cn": "系统探讨了LLM集成以增强无人机环境理解和集群协调的方法。",
+      "llm_tldr": "系统探讨了LLM集成以增强无人机环境理解和集群协调的方法。",
+      "llm_tags": [
+        "query:uav-air-combat:composite"
+      ],
+      "matched_query_tag": "query:uav-air-combat:composite",
+      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; adversary behavior modeling and intent recognition in dogfights; prediction-based decision making framework for aerial combat; multi-agent reinforcement learning for cooperative and competitive air combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat.",
+      "matched_requirement_id": "req-composite-uav-air-combat",
+      "selection_source": "carryover_cache",
+      "paper_id": "2602.19534v1",
+      "carry_days": 1
+    }
+  ]
 }

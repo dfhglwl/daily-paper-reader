@@ -25,3 +25,56 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
+  intent_profiles:
+    - tag: UAV-AIR-COMBAT
+      description: 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。
+      enabled: true
+      keywords:
+        - keyword: trajectory prediction
+          keyword_cn: 轨迹预测
+          query: maneuvering target trajectory prediction in aerial combat
+        - keyword: maneuver decision making
+          keyword_cn: 机动决策
+          query: autonomous maneuver decision making for UAVs
+        - keyword: reinforcement learning
+          keyword_cn: 强化学习
+          query: deep reinforcement learning for air combat strategy generation
+        - keyword: opponent modeling
+          keyword_cn: 对手建模
+          query: adversary behavior modeling and intent recognition in dogfights
+        - keyword: prediction-aided decision
+          keyword_cn: 预测辅助决策
+          query: prediction-based decision making framework for aerial combat
+        - keyword: multi-agent RL
+          keyword_cn: 多智能体强化学习
+          query: multi-agent reinforcement learning for cooperative and competitive air combat
+        - keyword: tactical strategy
+          keyword_cn: 战术策略
+          query: autonomous tactical strategy generation for unmanned aircraft
+      intent_queries:
+        - query: deep reinforcement learning for autonomous UAV air combat maneuvers
+          query_cn: 深度强化学习在无人机自主空战机动中的应用
+          enabled: true
+          source: manual
+          note: ''
+        - query: maneuvering target trajectory prediction algorithms in aerial dogfights
+          query_cn: 空中格斗中机动目标轨迹预测算法
+          enabled: true
+          source: manual
+          note: ''
+        - query: prediction based autonomous decision making for close in air combat
+          query_cn: 基于预测的近距空战自主决策
+          enabled: true
+          source: manual
+          note: ''
+        - query: adversarial intent recognition and strategy generation for UAVs
+          query_cn: 无人机对抗意图识别与策略生成
+          enabled: true
+          source: manual
+          note: ''
+        - query: intelligent air combat tactics using multi agent reinforcement learning
+          query_cn: 基于多智能体强化学习的智能空战战术
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-03-11T01:25:36.538Z'

@@ -1,0 +1,447 @@
+Title: Learning Agile Quadrotor Flight in the Real World
+
+URL Source: https://arxiv.org/pdf/2602.10111v1
+
+Published Time: Wed, 11 Feb 2026 02:29:59 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# Learning Agile Quadrotor Flight in the Real World 
+
+Yunfan Ren, Zhiyuan Zhu, Jiaxu Xing, Davide Scaramuzza Robotics and Perception Group, University of Zurich, Switzerland Base Policy 
+
+Updated 
+
+Policy Copy Parameters Gather Experience 
+
+t=0.5s =2m/s Iter. = 0 = 2.2 m/s Iter. = 0 = 2.0 m/s vmax vmax Iter. = 0 = 1.9 m/s vmax vmax   
+
+> Iter. = 12 = 7.2 m/s vmax vmax
+
+Figure 8 Tracking Line Tracking Landmark Inspection Iter. = 12 = 7.3 m/s vmax vmax 
+
+Real World 
+
+Rollout 
+
+Rapid 
+
+Policy Learning 
+
+Continual Learning 
+
+in the Real World Iter. = 12 = 5.4 m/s v max vmax 
+
+Fig. 1: Autonomous online evolution of agile flight. The figure illustrates the continuous loop between Real-World Rollouts and Rapid Policy Learning ,comparing the initial conservative flights (Iter 0, top) with the evolved agile behaviors (Iter 12, bottom). Trajectories are composited with frames sampled at uniform 0.5 s intervals. Consequently, trajectory density reflects flight speed, where sparser segments indicate higher velocity. Driven by this online adaptation, the system pushes its physical limits without human intervention, tripling its speed within 100s of flight time across three tasks. 
+
+Abstract —Learning-based controllers have achieved impressive performance in agile quadrotor flight but typically rely on massive training in simulation, necessitating accurate system identification for effective Sim2Real transfer. However, even with precise modeling, fixed policies remain susceptible to out-of-distribution scenarios, ranging from external aerodynamic distur-bances to internal hardware degradation. To ensure safety under these evolving uncertainties, such controllers are forced to operate with conservative safety margins, inherently constraining their agility outside of controlled settings. While online adaptation offers a potential remedy, safely exploring physical limits remains a critical bottleneck due to data scarcity and safety risks. To bridge this gap, we propose a self-adaptive framework that eliminates the need for precise system identification or offline Sim2Real transfer. We introduce Adaptive Temporal Scaling (ATS) to actively explore platform physical limits, and employ online residual learning to augment a simple nominal model. Based on the learned hybrid model, we further propose Real-world Anchored Short-horizon Backpropagation Through Time (RASH-BPTT) to achieve efficient and robust in-flight policy updates. Extensive experiments demonstrate that our quadrotor reliably executes agile maneuvers near actuator saturation limits. The system evolves a conservative base policy with a peak speed of 1.9 m/s to 7.3 m/s within approximately 100 seconds of flight time. These findings underscore that real-world adaptation serves not merely to compensate for modeling errors, but as a practical mechanism for sustained performance improvement in aggressive flight regimes. 
+
+I. I NTRODUCTION 
+
+The domain of agile control has witnessed a paradigm shift with the advent of data-driven policies, which now rival or exceed the capabilities of classical model-based meth-ods [1, 2, 3, 4, 5, 6]. Inspired by human skill acquisition, most existing methods rely on imitation learning from expert demonstrations [7, 8, 9] or reinforcement learning through large-scale trial-and-error [3, 5, 6]. In practice, these policies are typically trained in simulation with extensive domain randomization [10] to approximate real-world variability and are kept fixed during real-world deployment. As a conse-quence, once deployed, the controller relies entirely on prior training experience rather than learning and adapting in the real world. More broadly, the capability to continue improving performance through learning directly in the real world, which is central to human motor learning, remains largely underex-plored in robot learning. This limitation becomes especially critical in the context of agile quadrotor flight. Achieving high-speed, aggressive maneuvers requires precise control under tightly coupled and highly nonlinear dynamics, leaving little margin for model mismatch or unknown external disturbances [11]. However, real-world flight conditions are inherently non-stationary. Factors such as hardware wear, battery depletion, and complex aerodynamic effects introduce inevitable dis-crepancies between the training model and physical reality that fixed policies cannot mitigate. Consequently, relying on a fixed policy directly degrades performance and reliability, often preventing the system from safely reaching its agility potential. In contrast, enabling controllers to learn directly in the real world fundamentally expands the utility of these 
+
+> arXiv:2602.10111v1 [cs.RO] 10 Feb 2026
+
+systems. This capability empowers the agent to adapt not only to external environmental shifts but also to internal hardware variations, continuously exploiting platform-specific properties to push performance towards current hardware limits without requiring expensive offline system identification [12]. However, learning directly in the real world introduces dual challenges of safety and data scarcity. First, agile quadro-tors operate near the limits of stability, where even minor deviations in state or control can trigger catastrophic failure. Second, learning in the physical world demands high sample efficiency because data collection is costly and constrained by limited battery life, permitting only a few interactions. Con-sequently, a safe, adaptive, and efficient approach is required. Existing work has made significant progress toward learning real-world agile quadrotor control. Sim-to-real approaches [13] based on extensive domain randomization [10] expose poli-cies to diverse dynamics and disturbances during training, enabling them to tolerate moderate modeling errors. While effective in controlled settings, their performance can degrade significantly when real-world conditions deviate from the randomized training distribution. To further reduce the sim-to-real gap, Real2Sim2Real pipelines refine the simulation model using real-world data and retrain the policy offline before deployment [4, 14, 15]. Although effective, these methods require substantial data collection and repeated retraining cycles, which limit their practicality when system dynamics evolve, or rapid adaptation is required. Recent advancements have begun to leverage differentiable simulation for rapid real-world adaptation of quadrotor control policies, notably in [16]. However, while this method facilitates rapid refinement during deployment, it prioritizes disturbance rejection over exploit-ing platform limits. Consequently, the resulting performance remains conservative (i.e., 1-2 m/s), rendering the policy very challenging for agile and high-performance behaviors. 
+
+Contributions 
+
+In this work, we propose a self-adaptive framework that bridges the gap between robustness and performance, enabling continuous, on-policy improvement directly in the real world without the need for precise system identification. Our ap-proach relies on two key mechanisms to address the challenges of safe exploration and efficient learning. First, to tackle the safety-exploration paradox, we introduce Adaptive Temporal Scaling (ATS) . Unlike fixed-task baselines, ATS actively in-centivizes the quadrotor to explore its physical capability boundaries by dynamically adjusting the aggressiveness of the reference trajectory based on the agent’s current competence. Second, to ensure efficient learning, we employ a hybrid dynamics model that augments a simple nominal model with online residual learning. By introducing Real-world Anchored Short-horizon Backpropagation Through Time (RASH-BPTT) 
+
+on these hybrid dynamics, we achieve on-the-fly policy opti-mization, effectively turning limited flight data into sustained performance gains. Through extensive real-world experiments, we demonstrate that our framework allows a quadrotor to reliably learn agile maneuvers near actuator saturation limits. Empirically, the system evolves a conservative base policy from a peak speed of 2.0 m/s to 7.3 m/s within approximately 100 seconds of flight time. Beyond pure agility, we demonstrate the practical utility of our method in a multi-point inspection mission under strong external wind disturbances (Fig. 1). Notably, the quadrotor reduces mission completion time by 42% while maintaining low tracking error against unknown aerodynamic disturbances, achieved after only 2 minutes of real-world training. These results underscore that real-world adaptation serves not merely to compensate for modeling errors, but as a practical mechanism for aggressive performance improvement in dynamic environments. II. R ELATED WORK 
+
+A. Learning-based Agile Flight Control 
+
+In recent years, learning-based approaches have gained significant attention for agile quadrotor flight control, owing to their ability to handle highly nonlinear dynamics and operate under aggressive flight conditions. Early work demon-strated the feasibility of applying reinforcement learning to quadrotor control, enabling waypoint tracking and recovery from challenging initial conditions [17]. Subsequent research showed that reinforcement learning can support highly agile behaviors, with RL-based controllers achieving state-of-the-art performance in autonomous drone racing [3, 18]. In these settings, learning-based controllers have even surpassed expert human performance in competitive racing scenarios [3, 18]. Advances in training efficiency further indicate that, under carefully optimized pipelines, reinforcement learning policies for quadrotor control can be trained within seconds [19]. Be-yond reinforcement learning, imitation learning has played an important role in accelerating training and improving stability for agile flight. By leveraging expert demonstrations, imitation learning has been applied both as a standalone approach and as an initialization or regularization strategy for reinforcement learning, substantially improving sample efficiency and overall control performance [20, 9]. Despite these impressive results, learning-based quadrotor controllers are typically trained of-fline and remain fixed during deployment, limiting their ability to adapt to changing real-world conditions. 
+
+B. Efficient Control Policy Learning 
+
+Traditional reinforcement learning methods often require extensive training time, though significant acceleration is pos-sible through highly optimized physics simulation [21, 19]. Despite these improvements, these methods remain sample-inefficient due to the high variance associated with zeroth-order policy gradient estimation. An alternative paradigm, policy learning via differentiable simulation, exploits smooth and differentiable dynamics and reward formulations to com-pute first-order policy gradients. This enables substantially faster and more sample-efficient learning compared to standard RL methods [22]. Differentiable simulation has been suc-cessfully applied to direct policy parameterizations, including parametric trajectory representations for underwater [23] and A. Continual Policy Learning B. Real-World Policy Rollout 
+
+## System Workflow 
+
+C. Simulation Model Calibration 
+
+ADEB CD. Real-World Anchored Init. Speed [m/s] 
+
+E. Adaptive Temporal Scaling Anchor Selection        
+
+> Anchored Initialization
+> Control Policy Control Policy Control Policy Residual Network Residual Network Parallel Differentiable
+> Simulation Parallel Differentiable
+> Simulation 50 Hz CTBR Ctrl. Dataset C2 . Base Simulation Model Hybrid Dynamics Model C1. Real World Trajectories
+> Force + Torque
+> Residual Learning C1 C2 Hybrid Model
+> Forward Pass Gradient Direction
+> Nominal Model
+
+before scaling after scaling BPTT Policy Reward Reference Real world Sim. Rollout Fig. 2: Overview of the self-adaptive autonomous flight framework. The system operates as a continuous closed-loop cycle (bottom right) bridging physical execution and differentiable simulation: (A) Policy Learning: Leveraging a learned hybrid dynamics model in a differentiable simulator, we perform              
+
+> RASH-BPTT to optimize the control policy via massively parallelized rollouts. (B) Real-World Rollout: The agent executes the current policy on the physical quadrotor to collect state-action-transition data. (C) Model Calibration: Collected data is used to update the Hybrid Dynamics Model online, where a neural residual network learns to compensate for the reality gap (e.g., unmodeled aerodynamics, delays) of the nominal rigid-body model. (D) Anchored Initialization: To mitigate compounding prediction errors, simulation rollouts are initialized ( anchored ) using the most recent real-world state estimates rather than random resets. (E) Adaptive Temporal Scaling (ATS): Tightly coupled with policy optimization, the trajectory time-scale αis jointly optimized based on real-world rollouts. Leveraging analytical gradients derived from closed-loop sensitivity, it maximizes agility (speed) while enforcing safety constraints via a barrier function.
+
+sinusoidal control policies for robotic cutting tasks [24]. How-ever, extending these techniques to neural network policies remains challenging. In practice, unstable gradients often limit applicability to short-horizon tasks with simplified contact dynamics and restricted variation in initial conditions [25]. To address these limitations, prior work has explored a range of stabilizing techniques, including early termination of sim-ulations at contact events, truncated backpropagation through time [26], and reward shaping or augmentation with learned critics [27, 28]. However, these methods have yet to effectively address the challenge of safely exploring platform limits to enable online learning of agile flight. III. M ETHODOLOGY 
+
+In this section, we introduce our self-adaptive framework. As illustrated in Fig. 2, the core workflow operates as a continuous closed-loop cycle bridging physical execution and differentiable simulation. The process begins with an initial-ization phase, where we employ standard BPTT to train a base policy on the nominal quadrotor model. Benefiting from the sample efficiency of differentiable simulation, this pre-training typically converges within seconds. Once deployed, the agent commences the real-world adaptation loop. First, the system collects flight data to update the Hybrid Dynamics Model ,using a neural residual network to capture both internal dy-namic discrepancies and external disturbances. Subsequently, leveraging this calibrated model, we execute RASH-BPTT to optimize the policy via massively parallelized rollouts. To mitigate compounding prediction errors, these rollouts utilize 
+
+Anchored Initialization , resetting the simulation to the most recent real-world state estimates. Tightly coupled with policy optimization, Adaptive Temporal Scaling (ATS) is applied to dynamically adjust the reference trajectory evolution. By optimizing a learnable parameter α through analytical gradient derived from closed-loop sensitivity directly on real-world rollouts, the system maximizes agility while maintaining safety constraints. The framework consists of three hierarchical components: 1) Online Residual Learning : Calibrates the onboard hybrid dynamics model to compensate for the reality gap using real-world data (Section III-A). 2) RASH-BPTT : Performs online policy optimization via differentiable simulation, anchored to the current phys-ical state to ensure robust updates (Section III-B). 3) Adaptive Temporal Scaling (ATS) : Jointly optimizes the reference trajectory’s time evolution to balance flight agility and safety (Section III-C). 
+
+A. Online Residual Dynamics Learning 
+
+To avoid precise offline system identification and to adapt to external disturbances and platform-specific discrepancies, we employ a hybrid dynamics model. Specifically, we learn a neural residual term that augments the nominal rigid-body dy-namics and is trained by minimizing one-step state prediction error, inspired by Neural ODEs [29]. 
+
+1) Hybrid Continuous-Time Dynamics: We define the quadrotor state as x ≜ (p, v, R) ∈ R3 × R3 × SO (3) ,where p and v are position and velocity in the world frame, and R is the rotation matrix mapping body-frame vectors to the world frame. The control input is the CTBR command 
+
+u ≜ [c, ω⊤
+
+> cmd
+
+]⊤ ∈ R4, where c denotes the mass-normalized collective thrust (units: m/s 2) and ωcmd ∈ R3 denotes the com-manded body rate. Let e3 ≜ [0 , 0, 1] ⊤ denote the world z-axis unit vector; throughout this paper, we adopt the convention that gravity acts along −ge3.We model the continuous-time dynamics ˙x =
+
+fhybrid (x, u; θ) by augmenting the nominal model with a neural residual: 
+
+˙p = v, (1a) 
+
+˙v = c Re 3 − ge3 + ares (ζ; θ), (1b) 
+
+˙R = R
+
+
+
+ωcmd + ωres (ζ; θ)
+
+∧
+
+, (1c) where (·)∧ : R3 → so (3) denotes the skew-symmetric mapping to the Lie algebra so (3) , and ares ∈ R3 and 
+
+ωres ∈ R3 capture unmodeled accelerations and angular-rate discrepancies, respectively. This rotational model assumes that the low-level attitude-rate loop tracks body-rate commands sufficiently fast, so that the dominant uncertainty can be modeled as a residual on the commanded rates. The residual network fres (ζ; θ) takes the feature vector 
+
+ζ ≜ [p⊤, v⊤, vec( R)⊤, u⊤]⊤, (2) where vec( ·) denotes column-stacking vectorization, and out-puts fres (ζ; θ) = a⊤
+
+> res
+
+, ω⊤
+
+> res
+
+⊤.
+
+2) Differentiable Integration and Online Training: To ob-tain a discrete-time transition, we employ a differentiable fourth-order Runge–Kutta (RK4) integrator ΦRK4 . Beyond improved numerical accuracy, RK4 is important for our one-step residual learning: its intermediate stages partially ad-vance R within the step, making the translational predic-tion (pk+1 , vk+1 ) sensitive to ωres and thus allowing posi-tion/velocity errors to supervise attitude-related residuals. We define the discrete dynamics map 
+
+xk+1 = F∆t(xk, uk; θ) ≜ ΦRK4 (xk, uk, fhybrid ; ∆ t) . (3) In implementation, ΦRK4 is realized as a Lie-group integrator that updates R on SO (3) using the exponential map, which prevents attitude drift and preserves R ∈ SO (3) while remaining fully differentiable. We optimize parameters θ online using a sliding-window replay buffer B of recent transitions (xk, uk, xk+1 ) collected from the state estimator. Instead of explicitly supervising acceleration targets (which are often noisy), we minimize the 
+
+integrated one-step prediction error between the simulated next state ˆxk+1 = F∆t(xk, uk; θ) and the measured state 
+
+xk+1 :
+
+Lres (θ) = 1
+
+|B| 
+
+X
+
+> k∈B
+
+D(xk+1 , ˆxk+1 ) + λreg 
+
+X
+
+> l
+
+∥Wl∥σ . (4) The discrepancy metric D(·, ·) combines the Euclidean trans-lation error and the geodesic distance on the rotation manifold. The rotational term is formulated as ∥Log( ˆR⊤R)∨∥22, where 
+
+Log : SO (3) → so (3) denotes the logarithmic map to the Lie algebra, and (·)∨ maps the skew-symmetric matrix to its corresponding vector in R3. This ensures the loss strictly respects the geometry of SO (3) . The regularization term penalizes the spectral norm ∥Wl∥σ of each network layer. As motivated by [30], constraining the Lipschitz constant of the residual dynamics is crucial for bounding gradient variance and ensuring numerical stability during long-horizon recursive optimization. 
+
+B. Real-World Anchored Short-Horizon BPTT 
+
+Building on the learned hybrid dynamics, we propose Real-World Anchored Short-Horizon BPTT (RASH-BPTT) . To ad-dress model exploitation caused by compounding errors [31], our method anchors each rollout to the instantaneous real-world state. Furthermore, by restricting optimization to a short horizon (Fig. 2D), we prevent error accumulation, ensuring that policy gradients remain grounded in reality and optimized specifically for the agent’s current dynamic conditions. We parameterize the control policy πϕ as a Multi-Layer Perceptron (MLP) with two hidden layers of 256 units. The policy takes an observation vector ok = [ xk, xref ,k , hk], com-posed of the current state, the reference trajectory state, and a history of past actions hk to encourage control smoothness. The output is a 4-dimensional CTBR command uk ∈ R4.At each real-world time step t, we initialize the differen-tiable rollout with the current state estimate x0 := xreal (t).The policy generates control actions conditioned on the current rollout state uk := πϕ(ok). We then unroll the short-horizon dynamics for H steps using the learned discrete map from Eq. (3): 
+
+xk+1 = F∆t(xk, uk; θ), k = 0 , . . . , H − 1. (5) The optimization objective is to maximize the cumulative discounted reward along this predicted trajectory: 
+
+J (ϕ) = 
+
+> H−1
+
+X
+
+> k=0
+
+γk r(xk, uk, xref ,k ), (6) where γ ∈ (0 , 1] is the discount factor and r(·) is the task reward function. We obtain the gradient ∇ϕJ by perform-ing BPTT through the unrolled computation graph. This is implemented via JAX’s automatic differentiation engine [32], allowing us to differentiate through the RK4 integrator and neural residuals exactly. The policy parameters are updated via stochastic gradient ascent: ϕ ← ϕ + ηπ ∇ϕJ . By combin-ing autodiff with JAX’s Just-In-Time (JIT) compilation and automatic vectorization (vmap), we achieve highly efficient, parallelized updates on the GPU. 
+
+C. Adaptive Temporal Scaling via Differentiable Optimization 
+
+While RASH-BPTT optimizes the control policy parame-ters, achieving time-optimal performance under varying con-ditions requires dynamically adapting the reference trajectory’s evolution. To this end, we introduce Adaptive Temporal Scal-ing (ATS) , a closed-loop mechanism that decouples spatial path planning from the temporal execution profile. This approach enables the system to exhibit distinct “temporal elasticity”: it aggressively compresses the time domain (reducing α)to maximize agility when tracking is precise, yet automat-ically relaxes kinematic demands (increasing α) to restore stability upon encountering significant disturbances or model mismatches. Unlike heuristic speed adjustment rules, ATS is formulated as a holistic online optimization problem. Inspired by [33], we explicitly minimize the future discrepancy between the real and reference trajectories, utilizing the differentiable hybrid model as a proxy to anticipate the closed-loop effects of time-scale adjustments. 
+
+1) Parameterization: We parameterize the reference trajec-tory as a piecewise polynomial sequence. For each segment, the spatial path is defined by a coefficient matrix C ∈ R3×N
+
+(representing a polynomial of degree N −1 in 3D space) and a temporal basis vector β(t) = [1 , t, t 2, · · · , t N −1]⊤. To control the execution rate, we introduce a scalar scaling parameter 
+
+α ∈ R>0. The reference position pref at a specific trajectory time τ is formulated as: 
+
+pref (τ ; α) = Cβ
+
+ τα
+
+
+
+. (7) Here, α serves as a time dilation factor . By exploiting the differential flatness property [34], we map the derivatives to the full reference state xref (τ ; α).
+
+2) Optimization Objective and Update: Direct optimization of α using real-world rollouts is intractable, as the physical system execution is non-differentiable and does not provide analytical gradients. To address this, we employ the differ-entiable hybrid model as a proxy to perform counterfactual inference [35]. At each update step, given a recent real-world rollout {(¯ xk, ¯uk)}H−1 
+
+> k=0
+
+, we analyze the sensitivity of the closed-loop performance to the time-scale α by constructing a counterfactual state sequence ˆxk(α). This allows us to formulate a composite potential function JATS over the horizon 
+
+H that balances execution speed with safety: 
+
+JATS (α) = λspeed α + λsafe 
+
+> H−1
+
+X
+
+> k=0
+
+Ψ( Ek(α) − E th ) , (8) where the error metric is defined as 
+
+Ek(α) ≜ D(ˆ xk(α), xref ,k (α)) . (9) Here, D(·, ·) denotes the geometry-aware discrepancy from Eq. (4), and Eth is a pre-defined safety threshold. Crucially, the counterfactual state ˆxk(α) serves as a dif-ferentiable surrogate for the physical state. It is anchored to Tracking Error (RMSE) 
+
+> Time Scale
+> Optimization Landscape Schematic Optimization Potential Low High
+
+Safe Zone Unsafe Zone       
+
+> Optimal Point Error threshold Physical Limit
+> Fig. 3: The optimization landscape for ATS. The heatmap visualizes the composite potential JATS , balancing agility (low α) against safety. The landscape transitions from the Safe Zone (blue) to the Unsafe Zone (red) determined by the tracking error threshold Eth (dotted line) and a schematic representation of the system’s physical limits (dashed curve). The green dot marks the optimal equilibrium: the most aggressive time scale achievable within safe tracking bounds.
+
+the real observations, satisfying ˆxk(α0) = ¯ xk at the current time-scale α0. However, unlike the fixed real history ¯xk, the evolution of ˆxk(α) is dependent on α. Its local sensitivity is approximated by linearizing the hybrid model dynamics along the real rollout {(¯ xk, ¯uk)}. λspeed , λ safe are weighting factors, and Ψ( z) = 1 
+
+> κ
+
+ln(1 + exp( κz )) is the Softplus barrier with sharpness κ.We then compute the gradient ∇αJATS using closed-loop sensitivity analysis. By applying the chain rule, the gradient combines the analytic gradient of the reference with the recursive sensitivity of the system state, approximated by the hybrid model dynamics F∆t:
+
+dJATS 
+
+dα = λspeed + λsafe 
+
+> H−1
+
+X
+
+> k=0
+
+Ψ′(Ek(α) − E th ) dEk(α)dα , (10) where 
+
+dEk
+
+dα = ∂Ek
+
+∂xref ,k 
+
+∂xref ,k 
+
+∂α + ∂Ek
+
+∂ ˆxk
+
+Sk. (11) Here, Sk ≜ dˆ xk 
+
+> dα
+
+is the closed-loop state sensitivity with S0 =
+
+0, and evolving as: 
+
+Sk+1 = Ak Sk + Bk
+
+duk
+
+dα , (12) with Jacobians evaluated on the real rollout: 
+
+Ak ≜ ∂F∆t
+
+∂x (¯ xk ,¯uk )
+
+, Bk ≜ ∂F∆t
+
+∂u (¯ xk ,¯uk )
+
+. (13) The action sensitivity is obtained by differentiating through the policy: 
+
+duk
+
+dα = ∂π ϕ
+
+∂ok
+
+ ∂ok
+
+∂ ˆxk
+
+Sk + ∂ok
+
+∂xref ,k 
+
+∂xref ,k 
+
+∂α 
+
+
+
+, (14) where the observation ok is a function of the state ˆxk and the reference xref ,k (α). While the functional dependency on ˆxk allows for differentiation, all Jacobian matrices (e.g.,  
+
+> ∂π ϕ
+> ∂ok
+
+, ∂ok  
+
+> ∂ˆxk
+
+) are evaluated at the nominal operating point defined by the real rollout (¯ xk, ¯uk). Additional dependencies in ok
+
+(e.g., action history) can be included analogously and are Broken propellers Additional Weight: 60g   
+
+> Nominal Mass: 192g Fig. 4: Experimental platform with extreme modifications. To validate robustness, the nominal quadrotor (192 g) is subjected to drastic degradations: mechanically clipped propellers (inducing aerodynamic loss) and a 60 g payload. This 31% mass increase significantly alters the inertial properties and reduces the thrust-to-weight ratio.
+
+handled automatically in our autodiff implementation. The parameter is updated via projected gradient descent: 
+
+α ← Π[αmin , α max ](α − ηα∇αJATS ). (15) This update rule naturally maintains an equilibrium near the safety boundary, as visualized in Fig. 3. In the Safe Regime 
+
+(E ≪ E th ), the barrier gradient vanishes, and the linear term 
+
+λspeed drives α down to accelerate execution. Conversely, in the Unsafe Regime , the barrier gradient dominates, using the model-based sensitivity to increase α and restore feasibility. IV. R ESULTS AND EXPERIMENTS 
+
+In this section, we present comprehensive experiments to validate the effectiveness of our self-adaptive framework. We conduct both real-world flight tests and extensive simulation comparisons to answer the following research questions:  
+
+> •
+
+RQ1 (Agility): Can the proposed framework push the quadrotor to its physical limits (e.g., actuator saturation) in real-time, starting from a conservative policy?  
+
+> •
+
+RQ2 (Robustness): Is the framework capable of adapting to internal dynamic changes (e.g., payload, damage) and unknown external disturbances (e.g., wind) while maintaining safety?  
+
+> •
+
+RQ3 (Ablation): How do the individual components: the residual learning and the real-world anchored initializa-tion, contribute to the overall performance? We validate the proposed framework entirely in real-world flight using a quadrotor based on the Agilicious platform [36], as shown in Fig. 4. A motion-capture system provides state estimates at 100 Hz . An off-board workstation runs the online learning loop and sends commands to the onboard controller at 50 Hz .
+
+A. Real-World Agile Flight and Adaptation 1) Pushing the Physical Limits (RQ1): We evaluate whether our framework can evolve from conservative flight to near-limit agility on two canonical trajectories: a linear shuttle and a Figure-8. As shown in Fig. 1, Linear Shuttle: the vehicle starts with a conservative maximum speed of 2.0 m /s
+
+and, after approximately 100 seconds of in-flight adaptation, 0                           
+
+> 2
+> 4
+> 6
+> Body Rates (rad/s)
+> 010 20 30 40 50 60 70 80 90
+> Time (s)
+> 0
+> 2
+> 4
+> 6
+> Body Rates (rad/s)  Line Shuttle
+> XYZFigure 8 Limit
+> Limit
+> Fig. 5: Commanded body-rate ωcmd during real-world Figure-8 and Line-Shuttle flights. Solid curves denote the 2 s sliding-window mean, overlaid on raw measurements (background traces). The orange dashed line marks the actuation limit ( 6rad/s). 0246810 12 Policy Version 2.0 3.4 4.8 6.2 7.6 9.0 Time (s)
+> Lap Time
+> 0246810 12 Policy Version 0.05 0.16 0.27 0.38 0.49 0.60 Error (m)
+> Tracking Error
+> Add Weight Both (Weight+Prop.) Broken Prop. Original
+> Fig. 6: Adaptation to hardware variations. The framework is tested with i) added mass, ii) Propeller Damage, and iii) combined conditions. In all cases, the residual learning module swiftly compensates for the dynamic mismatch within one iteration, enabling the ATS to safely push the compromised hardware to its new physical limits.
+
+reaches 7.3 m /s. Figure-8: starting from 2.2 m /s, it similarly accelerates to 7.2 m /s within roughly 100 seconds. In both scenarios, the system reaches the platform’s angular-rate capability. Fig. 5 shows the commanded body rate ωcmd ,where the 2 s sliding-window mean (solid line) and raw measurements (background) indicate consistent saturation at the actuation limit ( ∥ωcmd ∥∞ = 6 rad /s) in the later stage. This suggests that ATS can safely exploit the improved track-ing accuracy enabled by residual learning and RASH-BPTT, pushing aggressiveness to the boundary of actuator feasibility. 
+
+2) Robustness to Hardware Variations (RQ2): To evaluate the system’s resilience to drastic internal dynamic shifts, we conducted flight tests on the Figure-8 trajectory ( Eth = 0 .3 m) under three distinct hardware degradations: Added Mass (in-creasing 60g payload), Propeller Damage (clipping propeller tips), and Combined (simultaneous mass increase and propeller damage). As illustrated in Fig. 6, compared to the intact baseline, the achievable maximum speeds in all three scenarios naturally decreased, reflecting the reduced physical authority of the 0.0 1.5 3.0 X (m)     
+
+> −1.5 0.0 1.5 0.0 1.5 3.0 Z (m) Z (m) 12345Speed (m/s) 0.0 1.5 3.0 X (m)
+> −1.5 0.0 1.5 Y (m) 0.0 1.5 3.0 Y (m) External Wind Landmarks Ref. Traj. Measured Traj. Policy V0 Policy V10 Fig. 7: Evolution of flight agility during the inspection mission. The drone must traverse three landmarks while battling airflow from a fan (top-right). Starting from a baseline of 12s (Policy V0, Left), the framework adapts to the disturbance and accelerates the execution to 7s (Policy V10, Right).
+
+compromised hardware. In contrast, our framework success-fully identified the new physical limits for each configuration, allowing the drone to operate at the boundary of angular velocity saturation while maintaining stability. A key observation underscores the efficacy of our Residual Dynamics Learning. Immediately following hardware alter-ation, the nominal policy exhibited significant tracking errors due to severe model mismatch. Remarkably, after just a single update iteration of the residual model, the tracking error dropped precipitously. This rapid adaptation enabled the ATS to confidently increase the temporal scaling α. This confirms that the residual network effectively captures platform-specific properties, enabling the ATS+RASH-BPTT loop to safely explore the unknown performance envelope. 
+
+3) Application: Time Optimal Inspection under Unknown Disturbances: To demonstrate practical utility, we evaluated the framework in a realistic multi-stage inspection mission subject to unknown wind fields between landmarks (Fig. 1). Despite turbulent aerodynamic disturbances, the system suc-cessfully maintained stable tracking via online residual adap-tation. This robustness empowered the ATS mechanism to progressively compress the execution duration, ultimately re-ducing the total motion time by 42% (from 12s to 7s) while adhering to safety constraints, as visualized in Fig. 7. 
+
+B. Simulation Evaluation 1) Ablation Study: While our real-world experiments demonstrated the system’s overall efficacy, we use simulation to disentangle the contributions of individual modules. Since no existing method supports online learning and exploiting agile policy, we integrate our ATS framework into all baselines to ensure a fair comparison. Consequently, the comparisons below represent ablated variants of our holistic system, eval-uated on tracking accuracy (RMSE) and the maximum speed optimized by ATS:  
+
+> •
+
+Baseline: Relies solely on the nominal dynamics model optimized via standard BPTT, serving as a lower bound to benchmark the efficacy of residual learning.  
+
+> •
+
+LOFT [16]: Adapts the LOFT architecture to our frame-work. It models residual linear acceleration but omits rotational dynamics. 0.05 0.16 0.27 0.38 0.49 0.60                            
+
+> 2.0 3.4 4.8 6.2 7.6 9.0 lap_time
+> Line: Lap time
+> Tracking Error (m) Line: Error
+> 0246810 12 Policy Version 2.0 3.4 4.8 6.2 7.6 9.0 lap_time
+> Fig8: Lap time
+> 0246810 12 Policy Version 0.05 0.16 0.27 0.38 0.49 0.60 Tracking Error (m) Fig8: Error
+> (ATS + Full Resi.) Res. Only (ATS + Anchor + Full Resi.) Ours
+> (ATS +Anchor) Anchor Only (ATS) Baseline LOFT (ATS + Acc. Resi)
+> Fig. 8: Ablation study of residual dynamics and anchored rollouts. Note:
+> Since no existing methods support online learning at the physical limit in real-world settings, all baselines are augmented with our ATS framework to enable feasible deployment. We compare the Baseline (nominal), LOFT [16] (acceleration residual only), component ablations ( Anchor/Residual Only ), and
+> Ours (full system). Enabled by our ATS framework, all methods successfully maintain a bounded tracking error less than Eth while reducing lap time, demonstrating the framework’s effectiveness. Furthermore, Ours achieves the smallest lap time, validating that combining anchored initialization with full hybrid residuals is essential for pushing the envelope of agility.
+> •
+
+Anchor Only: A variant that applies RASH-BPTT with anchored rollouts while disabling the learned residual component.  
+
+> •
+
+Residual Only: Incorporates the full hybrid residual model (linear acceleration and body rates) but reverts to standard BPTT optimization.  
+
+> •
+
+Ours: The complete approach that integrates the full hy-brid residual dynamics with anchored rollouts for optimal performance. We set the tracking error threshold Eth to 0.35 m. The results, summarized in Fig. 8, yield three key insights: 
+
+Residual learning is the primary enabler for agility. Across all methods, incorporating residual dynamics substantially reduces tracking errors. Since the ATS mechanism allows for time compression (decreasing α) only when the predicted error remains within the safety margin, lower RMSE directly trans-lates into more aggressive time-scaling capabilities. Without residuals, the baseline hits the error threshold early, strictly capping the maximum speed. 
+
+Angular dynamics fidelity is critical in high-speed regimes. 
+
+Compared to LOFT (acceleration residuals only), our full residual model (acceleration + angular velocity) achieves su-perior tracking accuracy as speed increases. This indicates that compensating for rotational dynamics mismatches (e.g., aero-dynamic drag moments) is essential for maintaining prediction fidelity during aggressive maneuvers, which in turn empowers ATS to push performance boundaries further. 
+
+Anchored rollouts enhance optimization stability. Compar-ing Anchor Only against standard initialization reveals that anchoring the simulation rollout to the current real-world RMSE:0.24m MaxV:2.6                  
+
+> Policy V0
+> RMSE:0.23m MaxV:2.6 RMSE:0.23m MaxV:2.9
+> Policy V1
+> RMSE:0.06m MaxV:3.6 RMSE:0.22m MaxV:3.4
+> Policy V4
+> RMSE:0.12m MaxV:4.7 RMSE:0.21m MaxV:4.0
+> Policy V6
+> RMSE:0.15m MaxV:5.7 RMSE:0.22m MaxV:4.5
+> Policy V8
+> RMSE:0.21m MaxV:6.4 RMSE:0.25m MaxV:4.7
+> Policy V10
+> RMSE:0.29m MaxV:6.8 0.0 1.4 2.8 4.2 5.5 6.9 Speed (m/s) Baseline Ours (Full) Fig. 9: Online adaptation under wind disturbance. Comparison between the Baseline and Ours . The Baseline fails to accelerate due to unmodeled wind drag, remaining stuck at lower speeds of 4.7m/s. In contrast, Ours demonstrates a rapid adaptation cycle: the residual network first suppresses the tracking error (V0 →V1, RMSE drops to 0.06 m ), creating a safety margin. Subsequently, ATS exploits this margin to aggressively scale up agility, achieving a top speed of 6.8 m s −1(V10) while maintaining the trajectory tracking error within the threshold.
+
+state mitigates the distribution shift between optimization and deployment. Practically, this keeps the optimization trajectory aligned with the on-policy region, yielding more stable con-vergence than optimizing from a reset reference state. Overall, Ours achieves the optimal speed–accuracy trade-off, demonstrating a synergistic effect between residual dy-namics (ensuring prediction accuracy) and anchored optimiza-tion (ensuring stable adaptation). 
+
+2) Online Adaptation under Wind Disturbance: We fur-ther evaluate robustness by benchmarking Ours against the 
+
+Baseline in a simulated 5 m s −1 wind field (Fig. 9). Within just a single update, the residual-enhanced policy reduces tracking RMSE by approximately 4 times compared to the baseline. This rapid error suppression is critical: it creates the necessary safety margin for ATS to initiate aggressive time-scaling early in the flight, validating that accurate dynamics are a prerequisite for agility. Over ten iterations, our method achieves a 2.6 times speedup (from 2.6 to 6.8 m s −1) while maintaining a bounded tracking error less than Eth = 0 .3 m. In contrast, the baseline fails to accelerate meaningfully due to persistent model mismatch. This confirms that residual learning effectively compensates for external disturbances, empowering the ATS optimizer to safely push the system toward its physical limits. V. D ISCUSSION 
+
+We present a self-adaptive framework that enables au-tonomous quadrotors to evolve from conservative operation to their physical agility limits in real time . Unlike methods requiring offline identification or extensive pre-training, our approach achieves this progression within 100 seconds of flight without any prior system identification. By tightly cou-pling differentiable simulation, online residual learning, and Adaptive Temporal Scaling (ATS), the system autonomously bridges the gap between conservative planning and agile execution, grounding performance dynamically in the robot’s instantaneous capabilities. 
+
+A. Synergy between Residual Learning and ATS 
+
+Ablation studies reveal a critical dependency: accurate short-horizon prediction is the prerequisite for safe agile exploitation . Without residual learning, significant model mis-match (e.g., unmodeled drag or delays) increases real-world tracking error, causing the ATS safety barrier (Eq. (8)) to prevent time compression. By introducing the hybrid residual model to minimize this dynamics mismatch, we expand the feasible safety margin. ATS immediately exploits this margin by decreasing α, pushing the system towards its physical limits (e.g., command body rates saturation) rather than being bounded by modeling artifacts. This mechanism explains why 
+
+Ours attains substantially higher terminal speeds: improved prediction accuracy unlocks agility without sacrificing safety. 
+
+B. Adaptation versus Static Robustness 
+
+Hardware variation experiments (Fig. 6) highlight the dis-tinction between static robustness and adaptive evolution .Classical robust control typically ensures stability under a worst-case uncertainty set, often at the cost of nominal per-formance. In contrast, our framework continuously identifies and optimizes for the current dynamics. This is evident in the propeller damage scenario: rather than maintaining flight in an overly conservative regime, the system rapidly internal-izes the altered dynamic signature and re-optimizes temporal scaling. This online specialization allows the policy to adapt to degradation without overestimating capabilities or imposing unnecessary conservatism. 
+
+C. Limitations and Future Work Joint Spatial-Temporal Optimization: While currently re-stricted to temporal scaling of fixed geometries, our dif-ferentiable pipeline supports simultaneous spatial-temporal optimization [37]. Future work will leverage this to jointly optimize path shape and timing, similar to MPCC [38], and incorporate soft constraints for obstacle avoidance. 
+
+Active Exploration: Currently, our residual model is learned passively during stable task execution, which may leave boundary regions under-modeled. To address this, future work could incorporate safe active exploration by enabling the controller to intentionally probe high-uncertainty regions while maintaining stability guarantees, thereby significantly improv-ing model robustness. Perception-Aware Control: We currently assume precise, low-latency state estimation. However, real-world perception suffers from noise and motion blur during aggressive maneu-vers. Future iterations will integrate perception-aware con-straints directly into the ATS barrier to ensure trajectories remain within the platform’s sensing limits. ACKNOWLEDGMENTS 
+
+This work was supported by the European Union’s Hori-zon Europe Research and Innovation Programme under grant agreement No. 101120732 (AUTOASSESS) and the European Research Council (ERC) under grant agreement No. 864042 (AGILEFLIGHT). REFERENCES 
+
+[1] C. Tang, B. Abbatematteo, J. Hu, R. Chandra, R. Mart´ ın-Mart´ ın, and P. Stone, “Deep reinforcement learning for robotics: A survey of real-world successes,” Annual Review of Control, Robotics, and Autonomous Systems ,vol. 8, no. 1, pp. 153–188, 2025. [2] A. Loquercio, E. Kaufmann, R. Ranftl, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Learning high-speed flight in the wild,” Science Robotics , vol. 6, no. 59, p. eabg5810, 2021. [3] E. Kaufmann, L. Bauersfeld, A. Loquercio, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Champion-level drone racing using deep reinforcement learning,” Nature ,vol. 620, no. 7976, pp. 982–987, 2023. [4] J. Lee, J. Hwangbo, L. Wellhausen, V. Koltun, and M. Hutter, “Learning quadrupedal locomotion over chal-lenging terrain,” Science Robotics , vol. 5, no. 47, p. eabc5986, 2020. [5] T. Miki, J. Lee, J. Hwangbo, L. Wellhausen, V. Koltun, and M. Hutter, “Learning robust perceptive locomotion for quadrupedal robots in the wild,” Science Robotics ,vol. 7, no. 62, p. eabk2822, 2022. [6] T. He, C. Zhang, W. Xiao, G. He, C. Liu, and G. Shi, “Agile but safe: Learning collision-free high-speed legged locomotion,” arXiv preprint arXiv:2401.17583 ,2024. [7] C. Chi, Z. Xu, S. Feng, E. Cousineau, Y. Du, B. Burch-fiel, R. Tedrake, and S. Song, “Diffusion policy: Visuo-motor policy learning via action diffusion,” The Interna-tional Journal of Robotics Research , vol. 44, no. 10-11, pp. 1684–1704, 2025. [8] C. Chi, Z. Xu, C. Pan, E. Cousineau, B. Burchfiel, S. Feng, R. Tedrake, and S. Song, “Universal manipula-tion interface: In-the-wild robot teaching without in-the-wild robots,” arXiv preprint arXiv:2402.10329 , 2024. [9] J. Xing, L. Bauersfeld, Y. Song, C. Xing, and D. Scara-muzza, “Contrastive learning for enhancing robust scene transfer in vision-based agile flight,” in 2024 IEEE International Conference on Robotics and Automation (ICRA) , pp. 5330–5337, IEEE, 2024. [10] J. Tobin, R. Fong, A. Ray, J. Schneider, W. Zaremba, and P. Abbeel, “Domain randomization for transferring deep neural networks from simulation to the real world,” in 2017 IEEE/RSJ international conference on intelligent robots and systems (IROS) , pp. 23–30, IEEE, 2017. [11] D. Hanover, A. Loquercio, L. Bauersfeld, A. Romero, R. Penicka, Y. Song, G. Cioffi, E. Kaufmann, and D. Scaramuzza, “Autonomous drone racing: A survey,” 
+
+IEEE Transactions on Robotics , vol. 40, pp. 3044–3067, 2024. [12] M. O’Connell, G. Shi, X. Shi, K. Azizzadenesheli, A. Anandkumar, Y. Yue, and S.-J. Chung, “Neural-fly enables rapid learning for agile flight in strong winds,” 
+
+Science Robotics , vol. 7, no. 66, p. eabm6597, 2022. [13] E. Aljalbout, J. Xing, A. Romero, I. Akinola, C. R. Garrett, E. Heiden, A. Gupta, T. Hermans, Y. Narang, D. Fox, et al. , “The reality gap in robotics: Challenges, solutions, and best practices,” Annual Review of Control, Robotics, and Autonomous Systems , vol. 9, 2025. [14] L. Bauersfeld, E. Kaufmann, P. Foehn, S. Sun, and D. Scaramuzza, “Neurobem: Hybrid aerodynamic quadrotor model,” in Proceedings of Robotics: Science and Systems , 2021. [15] N. Sobanbabu, G. He, T. He, Y. Yang, and G. Shi, “Sampling-based system identification with active explo-ration for legged sim2real learning,” in Conference on Robot Learning , pp. 578–598, PMLR, 2025. [16] J. Pan, J. Xing, R. Reiter, Y. Zhai, E. Aljalbout, and D. Scaramuzza, “Learning on the fly: Rapid policy adaptation via differentiable simulation,” IEEE Robotics and Automation Letters , 2026. [17] J. Hwangbo, I. Sa, R. Siegwart, and M. Hutter, “Con-trol of a quadrotor with reinforcement learning,” IEEE Robotics and Automation Letters , vol. 2, no. 4, pp. 2096– 2103, 2017. [18] Y. Song, A. Romero, M. M¨ uller, V. Koltun, and D. Scara-muzza, “Reaching the limit in autonomous racing: Op-timal control versus reinforcement learning,” Science Robotics , vol. 8, no. 82, p. eadg1462, 2023. [19] J. Eschmann, D. Albani, and G. Loianno, “Learning to fly in seconds,” IEEE Robotics and Automation Letters ,vol. 9, no. 7, pp. 6336–6343, 2024. [20] J. Xing, A. Romero, L. Bauersfeld, and D. Scaramuzza, “Bootstrapping reinforcement learning with imitation for vision-based agile flight,” in Conference on Robot Learn-ing , pp. 2542–2556, PMLR, 2025. [21] N. Rudin, D. Hoeller, P. Reist, and M. Hutter, “Learning to walk in minutes using massively parallel deep rein-forcement learning,” in Conference on Robot Learning ,pp. 91–100, PMLR, 2022. [22] J. Heeg, Y. Song, and D. Scaramuzza, “Learning quadro-tor control from visual features using differentiable simulation,” in 2025 IEEE International Conference on Robotics and Automation (ICRA) , pp. 4033–4039, IEEE, 2025. [23] E. Nava, J. Z. Zhang, M. Y. Michelis, T. Du, P. Ma, B. F. Grewe, W. Matusik, and R. K. Katzschmann, “Fast aquatic swimmer optimization with differentiable projective dynamics and neural network hydrodynamic models,” in International Conference on Machine Learn-ing , pp. 16413–16427, PMLR, 2022. [24] E. Heiden, M. Macklin, Y. Narang, D. Fox, A. Garg, and F. Ramos, “Disect: A differentiable simulation en-gine for autonomous robotic cutting,” arXiv preprint arXiv:2105.12244 , 2021. [25] J. Xu, S. Kim, T. Chen, A. R. Garcia, P. Agrawal, W. Ma-tusik, and S. Sueda, “Efficient tactile simulation with differentiability for robotic manipulation,” in Conference on Robot Learning , pp. 1488–1498, PMLR, 2023. [26] J. Xu, V. Makoviychuk, Y. Narang, F. Ramos, W. Ma-tusik, A. Garg, and M. Macklin, “Accelerated policy learning with parallel differentiable simulation,” in Inter-national Conference on Learning Representations , 2022. [27] I. Georgiev, K. Srinivasan, J. Xu, E. Heiden, and A. Garg, “Adaptive horizon actor-critic for policy learning in contact-rich differentiable simulation,” in Proceedings of the 41st International Conference on Machine Learning ,pp. 15418–15437, 2024. [28] J. Y. Luo, Y. Song, V. Klemm, F. Shi, D. Scaramuzza, and M. Hutter, “Residual policy learning for perceptive quadruped control using differentiable simulation,” in 
+
+2025 IEEE International Conference on Robotics and Automation (ICRA) , pp. 1–8, IEEE, 2025. [29] R. T. Chen, Y. Rubanova, J. Bettencourt, and D. K. Duve-naud, “Neural ordinary differential equations,” Advances in neural information processing systems , vol. 31, 2018. [30] G. Shi, X. Shi, M. O’Connell, R. Yu, K. Azizzadenesheli, A. Anandkumar, Y. Yue, and S.-J. Chung, “Neural lander: Stable drone landing control using learned dynamics,” in 2019 IEEE International Conference on Robotics and Automation (ICRA) , pp. 9784–9790, IEEE, 2019. [31] M. Janner, J. Fu, M. Zhang, and S. Levine, “When to trust your model: Model-based policy optimization,” Advances in neural information processing systems , vol. 32, 2019. [32] J. Bradbury, R. Frostig, P. Hawkins, M. J. Johnson, C. Leary, D. Maclaurin, G. Necula, A. Paszke, J. Vander-Plas, S. Wanderman-Milne, and Q. Zhang, “JAX: com-posable transformations of Python+NumPy programs,” 2018. [33] F. Nan, H. Ma, Q. Guan, J. Hughes, M. Muehlebach, and M. Hutter, “Efficient model-based reinforcement learning for robot control via online learning,” arXiv preprint arXiv:2510.18518 , 2025. [34] M. Faessler, A. Franchi, and D. Scaramuzza, “Differen-tial flatness of quadrotor dynamics subject to rotor drag for accurate tracking of high-speed trajectories,” IEEE Robotics and Automation Letters , vol. 3, no. 2, pp. 620– 626, 2017. [35] L. Buesing, T. Weber, Y. Zwols, N. Heess, S. Racaniere, A. Guez, and J.-B. Lespiau, “Woulda, coulda, shoulda: Counterfactually-guided policy search,” in International Conference on Learning Representations , 2018. [36] P. Foehn, E. Kaufmann, A. Romero, R. Penicka, S. Sun, L. Bauersfeld, T. Laengle, G. Cioffi, Y. Song, A. Loquer-cio, et al. , “Agilicious: Open-source and open-hardware agile quadrotor for vision-based flight,” Science Robotics ,vol. 7, no. 67, p. eabl6259, 2022. [37] Y. Ren, F. Zhu, G. Lu, Y. Cai, L. Yin, F. Kong, J. Lin, N. Chen, and F. Zhang, “Safety-assured high-speed nav-igation for mavs,” Science Robotics , vol. 10, no. 98, p. eado6187, 2025. [38] A. Romero, S. Sun, P. Foehn, and D. Scaramuzza, “Model predictive contouring control for time-optimal quadrotor flight,” IEEE Transactions on Robotics ,vol. 38, no. 6, pp. 3340–3356, 2022.

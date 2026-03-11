@@ -1,0 +1,1450 @@
+Title: A Comprehensive Approach to Directly Addressing Estimation Delays in Stochastic Guidance
+
+URL Source: https://arxiv.org/pdf/2603.05363v1
+
+Published Time: Fri, 06 Mar 2026 02:17:11 GMT
+
+Number of Pages: 46
+
+Markdown Content:
+# A Comprehensive Approach to Directly Addressing Estimation Delays in Stochastic Guidance 
+
+Liraz Mudrik ∗
+
+Naval Postgraduate School, Monterey, CA, 93943 
+
+Yaakov Oshman †
+
+Technion-Israel Institute of Technology, Haifa, 3200003, Israel 
+
+In realistic pursuit–evasion scenarios, abrupt target maneuvers generate unavoidable periods of elevated uncertainty that result in estimation delays. Such delays can degrade interception performance to the point of causing a miss. Existing delayed-information guidance laws fail to provide a complete remedy, as they typically assume constant and known delays. Moreover, in practice they are fed by filtered estimates, contrary to these laws’ foundational assumptions. We present an overarching strategy for tracking and intercep-tion that explicitly accounts for time-varying estimation delays. We first devise a guidance law that incorporates two time-varying delays, thereby generalizing prior deterministic formulations. This law is driven by a particle-based fixed-lag smoother that provides it with appropriately delayed state estimates. Fur-thermore, using semi-Markov modeling of the target’s maneuvers, the delays are estimated in real-time, enabling adaptive adjustment of the guidance inputs during engagement. The resulting framework consistently conjoins estimation, delay modeling, and guidance. Its effectiveness and superior robustness over existing delayed-information guidance laws are demonstrated via an extensive Monte Carlo study. 
+
+> ∗
+
+Postdoctoral Fellow, Dept. of Mechanical and Aerospace Engineering; liraz.mudrik.ctr@nps.edu . Member AIAA. This work is part of Dr. Mudrik’s doctoral research, performed at the Technion—Israel Institute of Technology, Haifa, 3200003, Israel. 
+
+> †
+
+Professor Emeritus, Stephen B. Klein Faculty of Aerospace Engineering; yaakov.oshman@technion.ac.il .Fellow AIAA. 
+
+> arXiv:2603.05363v1 [eess.SY] 5 Mar 2026
+
+## I. Introduction 
+
+Pursuit–evasion differential games have long served as a cornerstone for developing guidance laws. In linearized deterministic settings with bounded controls, these games yield optimal strate-gies known as the differential game guidance laws (DGLs) [1], e.g., DGL0 and DGL1. In particular, the DGL1 law guarantees hit-to-kill performance when the pursuer enjoys sufficient maneuverabil-ity and agility advantages [2]. However, these results fundamentally rely on the assumption of per-fect and instantaneous state information for both players. Realistic interception scenarios violate this assumption, as sensing is noisy, incomplete, and inherently delayed, rendering the deterministic performance guarantees unattainable in practice. In realistic stochastic settings, noisy and incomplete sensor measurements force the pursuer to infer the evader’s state through an estimator. When a highly maneuverable evader executes an abrupt change in its acceleration command, the estimator exhibits an inevitable detection delay before resolving the new maneuver. This delay creates an uncertainty interval following each abrupt maneuver, during which the estimated state cannot yet reflect the evader’s true behavior. Within this interval, we refer to the estimate as delayed , implying that it is associated with a past state, preceding the target’s evasion maneuver. A well-timed bang-bang evasion maneuver can, therefore, induce substantial miss distance, even against advanced guidance laws such as DGL1 [3], and a sophisticated evader can even deliberately exploit this effect [4]. Counteracting the adverse effects of the estimation delay obviously requires estimating it, in real time. A crude, off-line estimate of the estimation delay was developed, based on first-principles, in [5] for linearized dynamics with additive Gaussian noise; however, to the best of the authors’ knowledge, no method currently exists in the guidance literature for estimating this delay in real time from actual measurement data acquired during the engagement. In the absence of online knowledge of the estimation delay, several delayed-information guid-ance laws have been developed that treat the delay as a known, fixed, tuning parameter. Shinar and Glizer [6] derived an analytical solution for a pursuit–evasion game with delayed information, which was subsequently used in [7] to construct the DGLC law—a compensated variant of DGL1 2that improves worst-case performance relative to both DGL0 and DGL1 in stochastic settings. How-ever, DGLC exhibits significant conceptual shortcomings. First, it assumes that the delay is time-invariant, despite the fact that estimator delays are inherently time-varying [5]. Second, it treats the delay purely as a design parameter, rather than estimating it adaptively from the available data. Third, it models only the evader’s acceleration as delayed, even though, in practice, the delay affects additional states. Moreover, the law is typically driven by the estimator’s current (filtered) output, which is not aligned with the delayed information assumed in its derivation. An extension, incorpo-rating time-varying delays, was proposed in [8], but it addresses only the first of the aforementioned issues and, therefore, it yields only limited improvement. Glizer and Turetsky [9] demonstrated that the estimated relative velocity perpendicular to the line of sight is also subject to delay. This effect is not accounted for in the DGLC law and contributes to its degraded performance in stochastic scenarios. By solving a linear differential game with bounded controls and two information delays, [9] derived the DGLCC guidance law, which achieves superior worst-case performance relative to DGLC. However, although it incorporates the additional velocity delay, the DGLCC law still suf-fers from the remaining limitations of DGLC: it treats the delays as known constants, and it lacks a mechanism to estimate or adapt them based on real-time measurement data. Treating the estimation delays as constants throughout the interception effectively means that the estimate is regarded by the guidance law as uniformly delayed throughout the engagement. In reality, the estimate is delayed only during the uncertainty interval that follows an abrupt evasion maneuver, which ends once the estimator detects the maneuver. Driving the guidance law with the estimator’s current-time (filtered) outputs throughout the engagement, as done in [7, 9], then amounts to introducing incorrectly-timed information into the guidance loop, which may degrade the overall interception performance. Clearly, a new approach is needed, that (from the guidance law’s perspective) treats the estimation delays as time-varying during the engagement, and (from the estimator’s perspective) feeds the guidance law with correctly-timed estimates. We present an integrated solution to the aforementioned problems, that comprises three main elements. First, we derive a new guidance law that can handle time-varying but known estima-3tion delays in both the evader’s acceleration and the relative velocity. Effectively generalizing the DGLCC guidance law, we do this by solving a differential game with bounded controls and two time-varying delays. Second, we introduce a novel method for estimating, in real-time, the time-varying estimation delays, which constitute key inputs required by the aforementioned delayed-information guidance law. Inspired by [10], our delay estimator is based on modeling the maneuver-switching mechanism as a semi-Markov process, and augmenting the estimator with a sojourn-time state. This provides real time, measurement-based estimation of the uncertainty interval following each target maneuver, and, in turn, enables real time estimation of the time-varying information delays. Fi-nally, we employ the computationally efficient fixed-lag particle smoother of [11] to provide delay-consistent state estimates using all measurements within the estimated uncertainty interval. These smoothed estimates are then used to drive the two-delay guidance law, forming a holistic framework that unifies guidance, delay estimation, and appropriate state smoothing, in a structurally consistent manner. The remainder of this paper is organized as follows. The problem is mathematically formu-lated in Section II. Section III then develops the perfect-information guidance law with two time-varying delays. Section IV introduces the particle-based estimation and smoothing framework, including the real-time uncertainty interval estimator and the resulting estimation delay estimator. Section V discusses design considerations and provides an overview of the complete estimation-guidance scheme. Section VI presents a comparative Monte Carlo study evaluating the performance of DGL1, DGLC, and the newly proposed unified guidance scheme. Concluding remarks are given in Sec. VII. For completeness, the DGL1 guidance law, with supporting derivations, is summarized in Appendix A. 
+
+## II. Problem Formulation 
+
+This section mathematically formulates the problem, including the nonlinear kinematical and dynamical model, the measurement model, and the linearized model used, in the sequel, to solve the delayed information differential game. 4A. Nonlinear Kinematics and Dynamics 
+
+A single pursuer-single evader interception scenario is considered. Figure 1 shows a schematic view of the geometry of the assumed planar endgame scenario, where 𝑋 𝐼 -𝑂 𝐼 -𝑌 𝐼 is a Cartesian inertial reference frame. The pursuer and the evader are denoted by 𝑃 and 𝐸 , respectively. Variables associated with the pursuer and the evader are denoted by additional subscripts 𝑃 and 𝐸 , respectively. The speed, lateral acceleration, and path angle are denoted by 𝑉 , 𝑎 , and 𝛾 , respectively. The slant range between the pursuer and the evader is 𝜌 , and the line of sight’s (LOS) angle, measured from the 𝑋 𝐼 axis, is 𝜆 .EaEVE    
+
+> aP
+> VP
+> γP
+> λδP
+> γE
+> P(xP, y P)(xE, y E)
+> YI
+> OIXI
+> ρ
+
+Figure 1 Planar engagement geometry 
+
+We use the following, commonly accepted, underlying assumptions: 1) The pursuer and the evader can be represented as point masses. 2) The pursuer’s own path angle and lateral acceleration are known (e.g., via the pursuer’s own navigation system). 3) The pursuer’s and the evader’s speeds, 𝑉 𝑃 and 𝑉 𝐸 , respectively, are known and time-invariant. 4) The pursuer and the evader possess first-order dynamics with known time constants, 𝜏 𝑃 and 
+
+𝜏 𝐸 , respectively. 5) The lateral acceleration bounds of the pursuer and the evader are known constants, 𝑎 max  
+
+> 𝑃
+
+and 5𝑎 max  
+
+> 𝐸
+
+, respectively, i.e., the acceleration commands satisfy 
+
+𝑎 𝑐 𝑃 (𝑡 ) = 𝑎 max  
+
+> 𝑃
+
+𝑢 (𝑡 ), |𝑢 (𝑡 )| ≤ 1 (1a) 
+
+𝑎 𝑐 𝐸 (𝑡 ) = 𝑎 max  
+
+> 𝐸
+
+𝑣 (𝑡 ), |𝑣 (𝑡 )| ≤ 1 (1b) where 𝑢 and 𝑣 are the controls of the pursuer and the evader, respectively. 6) The evader sets its acceleration command, 𝑎 𝑐 𝐸 , from a known set containing 𝑀 possible maneuvers. Following common practice, we use polar coordinates to define the equations of motion (EOM). The pursuer’s state vector used for the estimation is: 
+
+x𝑃 =
+
+[
+
+𝜌 𝜆 𝛾 𝐸 𝑎 𝐸 
+
+]𝑇 
+
+(2) and the corresponding EOM are: 
+
+§𝜌 = 𝑉 𝜌 (3a) 
+
+§𝜆 = 𝑉 𝜆 
+
+𝜌 (3b) 
+
+§𝛾 𝐸 = 𝑎 𝐸 
+
+𝑉 𝐸 
+
+(3c) 
+
+§𝑎 𝐸 = − 𝑎 𝐸 
+
+𝜏 𝐸 
+
++ 𝑎 𝑐 𝐸 
+
+𝜏 𝐸 
+
+(3d) where 
+
+𝑉 𝜌 = −( 𝑉 𝑃 cos 𝛿 𝑃 + 𝑉 𝐸 cos 𝛿 𝐸 ) (4a) 
+
+𝑉 𝜆 = −𝑉 𝑃 sin 𝛿 𝑃 + 𝑉 𝐸 sin 𝛿 𝐸 (4b) 
+
+𝛿 𝑃 = 𝛾 𝑃 − 𝜆, 𝛿 𝐸 = 𝛾 𝐸 + 𝜆. (4c) Based on the underlying assumptions, the pursuer’s path angle and lateral acceleration satisfy the 6following evolution equations: 
+
+§𝛾 𝑃 = 𝑎 𝑃 
+
+𝑉 𝑃 
+
+(5a) 
+
+§𝑎 𝑃 = − 𝑎 𝑃 
+
+𝜏 𝑃 
+
++ 𝑎 𝑐 𝑃 
+
+𝜏 𝑃 
+
+. (5b) 
+
+B. Measurement Model 
+
+We assume that the pursuer can measure the bearing angle 𝛿 𝑃 between its own velocity vector and the LOS to the evader, rendering the following measurement equation 
+
+𝑧 = 𝛿 𝑃 + 𝜈 = 𝛾 𝑃 − 𝜆 + 𝜈 (6) where 𝜈 is the (possibly non-Gaussian) measurement noise. 
+
+C. Linearized Model Used for Guidance 
+
+Differential game-based guidance laws are commonly derived using linear models, and we use such a model to derive this type of guidance law in Sec. III. Figure 2 presents a schematic view of the linearized planar geometry of the pursuer and the evader. The initial LOS, denoted as 𝐿𝑂𝑆 0, is EaEVE  
+
+> aP
+> VP
+> γPλδP
+> γE
+> PYI
+> OIXI
+> ρ
+> Y0
+> X0
+> ξ
+> λ0
+> an0
+> P
+> an0
+> E
+> LOS 0
+
+Figure 2 Linearized planar engagement geometry 
+
+used for the linearization, where the axis 𝑋 0 is parallel to it and the 𝑌 0 axis is perpendicular to it. We denote the relative separation normal to the LOS by 𝜉 . The accelerations, normal to 𝐿𝑂𝑆 0, of the pursuer and the evader, respectively, are denoted by 𝑎 𝑛 0 
+
+> 𝑃
+
+and 𝑎 𝑛 0 
+
+> 𝐸
+
+. Assuming small angles, the 7linearization about the collision course holds, rendering 
+
+𝑎 𝑛 0 
+
+> 𝑃
+
+= 𝑎 𝑃 cos 𝛿 𝑃 0 ≈ 𝑎 𝑃 (7) 
+
+𝑎 𝑛 0 
+
+> 𝐸
+
+= 𝑎 𝐸 cos 𝛿 𝐸 0 ≈ 𝑎 𝐸 . (8) The state vector of the linearized pursuit-evasion problem is 
+
+x =
+
+[
+
+𝜉 §𝜉 𝑎 𝑃 𝑎 𝐸 
+
+]𝑇 
+
+(9) and the corresponding linearized EOM are 
+
+§𝑥 1 = 𝑥 2, 𝑥 1 (0) = 0 (10a) 
+
+§𝑥 2 = 𝑥 4 − 𝑥 3, 𝑥 2 (0) = 𝑥 20 (10b) 
+
+§𝑥 3 = (𝑎 𝑐 𝑃 − 𝑥 3)/ 𝜏 𝑃 , 𝑥 3 (0) = 0 (10c) 
+
+§𝑥 4 = (𝑎 𝑐 𝐸 − 𝑥 4)/ 𝜏 𝐸 , 𝑥 4 (0) = 0 (10d) where 
+
+𝑥 20 = 𝑉 𝐸 sin 𝛾 𝐸 0 − 𝑉 𝑃 sin 𝛾 𝑃 0 . (11) The time-to-go is approximated by 
+
+𝑡 𝑔𝑜 ≜ 𝑡 𝑓 − 𝑡 ≈ − 𝜌 /𝑉 𝜌 . (12) where 𝑡 𝑓 denotes the final (interception) time. Following common practice, we transform the game into nondimensional form. The normalized time-to-go is 
+
+𝜏 = 𝑡 𝑔𝑜 /𝜏 𝑃 , (13) 8the nondimensional state vector is 
+
+¯x =
+
+[                  
+
+> 𝑥 1(𝑡 𝑓 −𝜏 𝑃 𝜏 )
+> 𝑎 max
+> 𝐸 𝜏 2
+> 𝑃
+> 𝑥 2(𝑡 𝑓 −𝜏 𝑃 𝜏 )
+> 𝑎 max
+> 𝐸 𝜏 𝑃
+> 𝑥 3(𝑡 𝑓 −𝜏 𝑃 𝜏 )
+> 𝑎 max
+> 𝑃
+> 𝑥 4(𝑡 𝑓 −𝜏 𝑃 𝜏 )
+> 𝑎 max
+> 𝐸
+
+]𝑇 
+
+, (14) and the controls become 
+
+¯𝑢 (𝜏 ) = 𝑢 (𝑡 𝑓 − 𝜏 𝑃 𝜏 ), | ¯𝑢 (𝜏 )| ≤ 1 (15a) 
+
+¯𝑣 (𝜏 ) = 𝑣 (𝑡 𝑓 − 𝜏 𝑃 𝜏 ), | ¯𝑣 (𝜏 )| ≤ 1. (15b) These normalized states satisfy the following normalized EOM 
+
+𝑑 ¯𝑥 1/𝑑𝜏 = − ¯𝑥 2, ¯𝑥 1 (𝜏 0) = 0 (16a) 
+
+𝑑 ¯𝑥 2/𝑑𝜏 = − ¯𝑥 4 + 𝜇 ¯𝑥 3, ¯𝑥 2 (𝜏 0) = ¯𝑥 20 (16b) 
+
+𝑑 ¯𝑥 3/𝑑𝜏 = ¯𝑥 3 − ¯𝑢, ¯𝑥 3 (𝜏 0) = 0 (16c) 
+
+𝑑 ¯𝑥 4/𝑑𝜏 = ( ¯𝑥 4 − ¯𝑣 )/ 𝜖, ¯𝑥 4 (𝜏 0) = 0 (16d) where 𝜏 0 = 𝑡 𝑓 /𝜏 𝑃 is the normalized final time, 𝜇 = 𝑎 max  
+
+> 𝑃
+
+/𝑎 max  
+
+> 𝐸
+
+, and 𝜖 = 𝜏 𝐸 /𝜏 𝑃 . The terms 𝜇 and 𝜇𝜖 
+
+are commonly referred to as the maneuverability ratio and the agility ratio, respectively. 
+
+## III. DGLCC with Time-Varying Delays 
+
+In this section we develop a differential game-based guidance law that can handle two time-varying estimation delays: 1) in the evader’s acceleration, 2) in the relative velocity perpendicular to the LOS. Assuming, for now, that the aforementioned delays are known, our development follows the derivation of the DGLCC law for time-invariant delays in [9]. We first present the game for-mulation for the time-varying delayed information case. Then, we derive the necessary conditions for the optimal solution of the game. Finally, we present the game space decomposition yielding the optimal closed-loop controls. For completeness, the solution of the delay-free case, resulting in the DGL1 law, is concisely summarized in Appendix A. We note, in passing, that the guidance 9law developed herein is to be driven by suitably timed estimates, as will be shown in the sequel. 
+
+A. Time-Varying Delayed Information Game 
+
+Incomplete and noisy measurements generate a dynamic estimation error, resulting in uncer-tainty about the target’s evasion maneuver, which renders the perfect information assumption unre-alistic. A standard method of coping with this uncertainty is to assume that the pursuer has access only to a time-delayed estimate, promoting the following definition of the pursuer’s information state vector (in a normalized setting): 
+
+¯w(𝜏 ) =
+
+[
+
+¯𝑥 1 (𝜏 ) ¯𝑥 2 (𝜏 + Δ1 (𝜏 )) ¯𝑥 3 (𝜏 ) ¯𝑥 4 (𝜏 + Δ2 (𝜏 )) 
+
+]𝑇 
+
+(17) where Δ1 (𝜏 ) and Δ2 (𝜏 ) are the information time delays of the relative velocity and the evader ac-celeration, respectively. We also assume that 0 < Δ1 (𝜏 ) ≤ Δ2 (𝜏 ) for any 𝜏 ∈ [ 0, 𝜏 0], and that both functions are known, monotonically increasing, continuous for 𝜏 ≥ 0, and differentiable for 𝜏 > 0.In the perfect information case, the optimal controls depend on the zero-effort miss (ZEM) (A1). When the information is delayed, the ZEM at the current time becomes an uncertainty set, ¯𝑍 (𝜏 ),consisting of all possible values of ¯𝑧 (𝜏 ) given the information vector ¯𝑤 . Define 
+
+¯𝑧 1 (𝜏 ) ≜ ¯𝑥 1 (𝜏 ) − 𝜇 Ψ(𝜏 ) ¯𝑥 3 (𝜏 ) (18) 
+
+¯𝑧 2 (𝜏 ) ≜ 𝜏 ¯𝑥 2 (𝜏 ) + 𝜖 2Ψ(𝜏 /𝜖 ) ¯𝑥 4 (19) where ¯𝑥 1 (𝜏 ) and ¯𝑥 3 (𝜏 ) are assumed to be perfectly known and delay-free, whereas ¯𝑥 2 (𝜏 ) and ¯𝑥 4 (𝜏 )
+
+are assumed to be perfectly known but delayed, and 
+
+Ψ(𝜏 ) = exp (− 𝜏 ) + 𝜏 − 1. (20) 10 With these definitions on hand, the uncertainty set is expressed as 
+
+¯𝑍 (𝜏 ) = [ ¯𝑧 1 (𝜏 ) + 𝑚 (𝜏 ), ¯𝑧 1 (𝜏 ) + 𝑀 (𝜏 )] (21) where 𝑚 (𝜏 ) and 𝑀 (𝜏 ) are the solutions of the following optimization problems 
+
+𝑚 (𝜏 ) = min    
+
+> |¯𝑣 (𝜎 )|≤ 1, 𝜎 ∈[ 𝜏,𝜏 +Δ2(𝜏 )]
+
+¯𝑧 2 (𝜏 ) (22a) 
+
+𝑀 (𝜏 ) = max    
+
+> |¯𝑣 (𝜎 )|≤ 1, 𝜎 ∈[ 𝜏,𝜏 +Δ2(𝜏 )]
+
+¯𝑧 2 (𝜏 ). (22b) The center of the uncertainty set is (see Appendix B for detailed derivation) 
+
+¯𝑧 𝑐𝑐 (𝜏 ) = ¯𝑥 1 (𝜏 ) + 𝜏 ¯𝑥 2 (𝜏 + Δ1 (𝜏 )) − 𝜇 Ψ(𝜏 ) ¯𝑥 3 (𝜏 ) − 𝜇𝜏 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 3 (𝑠 )𝑑𝑠 
+
++ 𝜖 exp (− Δ2 (𝜏 )/ 𝜖 ) [ 𝜏 exp (Δ1 (𝜏 )/ 𝜖 ) + 𝜖 exp (− 𝜏 /𝜖 ) − 𝜖 ] ¯𝑥 4 (𝜏 + Δ2 (𝜏 )) . (23) Next, we seek to find the evolution equation for ¯𝑧 𝑐𝑐 (𝜏 ). Differentiating Eq. (23) yields (see Appendix C for detailed derivation) 
+
+𝑑 ¯𝑧 𝑐𝑐 (𝜏 )
+
+𝑑𝜏 = 𝜇 Ψ(𝜏 ) ¯𝑢 (𝜏 ) − 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑣 (𝑠 )𝑑𝑠 +
+
+π 𝜏 +Δ2 (𝜏 )
+
+> 𝜏
+
+exp (( 𝜏 − 𝑠 )/ 𝜖 ) ¯𝑣 (𝑠 )𝑑𝑠 
+
+− exp (Δ1 (𝜏 )/ 𝜖 ) [ 𝜏 (1 + 𝛾 1 (𝜏 ))/ 𝜖 + 1]
+
+π 𝜏 +Δ2 (𝜏 ) 
+
+> 𝜏 +Δ1(𝜏 )
+
+exp (( 𝜏 − 𝑠 )/ 𝜖 ) ¯𝑣 (𝑠 )𝑑𝑠 
+
+− exp (− Δ2 (𝜏 )/ 𝜖 ) [ 𝜏 exp (Δ1 (𝜏 )/ 𝜖 ) + 𝜖 exp (− 𝜏 /𝜖 ) − 𝜖 ] ¯𝑣 (𝜏 + Δ2 (𝜏 ))( 1 + 𝛾 2 (𝜏 )) (24) where 
+
+𝛾 1 (𝜏 ) ≜ 𝑑 Δ1 (𝜏 )/ 𝑑𝜏, 𝛾 2 (𝜏 ) ≜ 𝑑 Δ2 (𝜏 )/ 𝑑𝜏. (25) 
+
+Remark 1. Explicitly addressing time-dependent time delays, the dynamic equation for ¯𝑧 𝑐𝑐 , Eq. (24) ,differs from the corresponding equation in [9], but reduces to it when the time delays are set to be time-invariant. 
+
+11 This dynamics is independent of ¯𝑧 𝑐𝑐 and the state variables ¯𝑥 𝑖 , 𝑖 = 1, ..., 4. It depends only on the pursuer’s (delay-free) and evader’s (time-delayed) controls. We can formulate a new game by using ¯𝑧 𝑐𝑐 and its dynamics, which we rewrite as 
+
+𝑑 ¯𝑧 𝑐𝑐 /𝑑𝜏 = 𝜇 Ψ(𝜏 ) ¯𝑢 (𝜏 ) + F ( ¯𝑣 𝜏 (·) , 𝜏 ) (26) where 
+
+¯𝑣 𝜏 (𝜎 ) = ¯𝑣 (𝜏 + 𝜎 ) (27) for each 𝜏 ∈ [ 0, 𝜏 0] and 𝜎 ∈ [ 0, Δ2 (𝜏 )] . We define F as 
+
+F ( ¯𝑣 𝜏 (·) , 𝜏 ) = −
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑣 (𝑠 )𝑑𝑠 +
+
+π 𝜏 +Δ2 (𝜏 )
+
+> 𝜏
+
+exp (( 𝜏 − 𝑠 )/ 𝜖 ) ¯𝑣 (𝑠 )𝑑𝑠 
+
+− exp (Δ1 (𝜏 )/ 𝜖 ) [ 𝜏 (1 + 𝛾 1 (𝜏 ))/ 𝜖 + 1]
+
+π 𝜏 +Δ2 (𝜏 ) 
+
+> 𝜏 +Δ1(𝜏 )
+
+exp (( 𝜏 − 𝑠 )/ 𝜖 ) ¯𝑣 (𝑠 )𝑑𝑠 
+
+− exp (− Δ2 (𝜏 )/ 𝜖 ) [ 𝜏 exp (Δ1 (𝜏 )/ 𝜖 ) + 𝜖 exp (− 𝜏 /𝜖 ) − 𝜖 ] ¯𝑣 (𝜏 + Δ2 (𝜏 ))( 1 + 𝛾 2 (𝜏 )) . (28) Since the evader control ¯𝑣 is delayed, we add the initial condition to the game formulation 
+
+¯𝑣 (𝜁 ) = 𝜑 (𝜁 ), 𝜁 ∈ ( 𝜏 0, 𝜏 0 + Δ2 (𝜏 0)] (29) where 𝜑 satisfies 
+
+|𝜑 (𝜁 )| ≤ 1, 𝜁 ∈ ( 𝜏 0, 𝜏 0 + Δ2 (𝜏 0)] (30) which is the same control constraint as in Eq. (15). Minimized by the pursuer and maximized by the evader, the cost function is rewritten as 
+
+𝐽 𝑐𝑐 = | ¯𝑧 𝑐𝑐 (0)| = | ¯𝑧 (0)| = | ¯𝑥 1 (0)| = 𝐽 (31) 12 B. Necessary Conditions for Optimality Theorem III.1. If ¯𝑢 ∗ (𝜏 ) and ¯𝑣 ∗ (𝜏 ) are the optimal controls, and 𝜑 ∗ (𝜁 ) is the optimal initial condi-tion of the delayed information differential game, then 
+
+¯𝑢 ∗ (𝜏 ) = sgn ¯ 𝑧 𝑐𝑐 (0), 𝜏 ∈ [ 0, 𝜏 0] (32a) 
+
+¯𝑣 ∗ (𝜏 ) = sgn ¯ 𝑧 𝑐𝑐 (0), 𝜏 ∈ [ 0, 𝜏 0] (32b) 
+
+𝜑 ∗ (𝜁 ) = sgn ¯ 𝑧 𝑐𝑐 (0), 𝜁 ∈ ( 𝜏 0, 𝜏 0 + Δ2 (𝜏 0)] (32c) 
+
+Proof. The proof is deferred to Appendix D. ■
+
+C. Game Space Decomposition 
+
+Using the optimal controls yields the following dynamics for the optimal trajectories 
+
+𝑑 ¯𝑧 𝑐𝑐 /𝑑𝜏 = 𝑅 (𝜏 ) sgn ¯ 𝑧 𝑐𝑐 (0) (33) where 
+
+𝑅 (𝜏 ) ≜ 𝜇 Ψ(𝜏 ) − 𝐴 (𝜏 ) (34) and 
+
+𝐴 (𝜏 ) ≜ Δ1 (𝜏 ) + 𝜏 (1 + 𝛾 1 (𝜏 )) + 𝜖 exp (−( 𝜏 + Δ2 (𝜏 ))/ 𝜖 )( 1 + 𝛾 2 (𝜏 )) −𝜖 exp (− Δ2 (𝜏 )/ 𝜖 )𝛾 2 (𝜏 ) + exp (( Δ1 (𝜏 ) − Δ2 (𝜏 ))/ 𝜖 ) [ 𝜏 (𝛾 2 (𝜏 ) − 𝛾 1 (𝜏 )) − 𝜖 ] (35) and it is shown that 𝐴 (𝜏 ) > 0 for any 𝜏 ∈ [ 0, 𝜏 0] in Appendix D. The behavior of optimal trajectories of the game is determined by the order and the number of sign changes of the function 𝑅 (𝜏 ). As this function depends on the time delays, we assume the 13 following functional forms for the time-varying delays [8] 
+
+Δ1 (𝜏 ) = 𝑎 + 𝑏 1𝜏 𝜔 (36a) 
+
+Δ2 (𝜏 ) = 𝑎 + 𝑏 2𝜏 𝜔 (36b) where 0 < 𝑎 , 0 ≤ 𝑏 1 ≤ 𝑏 2 and 0 < 𝜔 < 1 are given constants. The motivation for this functional form, and in particular the value of 𝜔 , will be provided in Sec. IV.B.1, based on a first-principles analysis of the detection delay. We next wish to investigate the properties of 𝑅 (𝜏 ). Before doing so, we make the assumption that the pursuer’s maneuver capability is superior to that of the evader, that is, 𝜇 > 1. This assumption is reasonable, as the evader is assumed to maneuver effectively, and it is well known that the pursuer’s options are very limited against an optimal evasion maneuver unless it possesses a maneuverability advantage over the evader [2]. With this assumption on hand, we have the following lemma. 
+
+Lemma III.2. For 𝜇 > 1 the function 𝑅 (𝜏 ) has at least one positive root, 𝜏 𝑠 , for any 0 < 𝑎 ,
+
+0 < 𝑏 1 ≤ 𝑏 2 and 0 < 𝜔 < 1.Proof. We have that 
+
+𝑅 (0) = −𝐴 (0) < 0 (37) and 
+
+lim  
+
+> 𝜏 →∞
+
+𝑅 (𝜏 ) ≈ ( 𝜇 − 1)𝜏 > 0 (38) Hence, there exists 𝜏 ′ such that 𝑅 (𝜏 ) > 0 for all 𝜏 ≥ 𝜏 ′. Noting that 𝑅 (𝜏 ) is a continuous function yields the lemma. ■
+
+Moreover, we conjecture that 𝑅 (𝜏 ) has a single positive root 𝜏 𝑠 . Although not formally proven, this conjecture is supported by the results of a thorough simulation study, comprising the following 14 1,197 ,900 cases (for brevity, we use the MATLAB ® range creation notation): 
+
+𝑎 = 0.01 : 0 .01 : 0 .1, 𝑏 2 = 0.06 : 0 .06 : 0 .6, 𝑏 1 = (0 : 0 .125 : 1 )𝑏 2,𝑤 = (1 : 1 : 11 )/ 12 , 𝜇 = 1.1 : 0 .19 : 3 , 𝜖 = 0.2 : 0 .18 : 2 .
+
+(39) Figure 3 presents a schematic view of the decomposition of the game space when 𝑅 (𝜏 ) has a single positive root. The game space is decomposed into a regular region, denoted by D1, and a singular region, denoted by D0. These regions are determined by 
+
+D1 = {0 ≤ 𝜏 ≤ 𝜏 𝑠 } ∪ 
+
+{
+
+| ¯𝑧 𝑐𝑐 | ≥ 
+
+π 𝜏 𝜏 𝑠 
+
+𝑅 (𝑠 )𝑑𝑠, 𝜏 ≥ 𝜏 𝑠 
+
+}
+
+(40a) 
+
+D0 =
+
+{
+
+| ¯𝑧 𝑐𝑐 | <
+
+π 𝜏 𝜏 𝑠 
+
+𝑅 (𝑠 )𝑑𝑠, 𝜏 ≥ 𝜏 𝑠 
+
+}
+
+. (40b) In the regular region, D1, the optimal feedback strategies of both players are 
+
+¯𝑢 ∗ (𝜏 ) = ¯𝑣 ∗ (𝜏 ) = sgn ¯ 𝑧 𝑐𝑐 (𝜏 ) (41) and the value of the game in this case is 
+
+𝐽 ∗ 
+
+> 𝑐𝑐
+
+= | ¯𝑧 𝑐𝑐 (𝜏 0)| + 
+
+π 0
+
+> 𝜏 0
+
+𝑅 (𝜏 )𝑑𝜏 (42) which never vanishes. In the singular region, D0, the optimal strategies of both players are arbitrary. The correspond-ing value of the game is 
+
+𝐽 ∗ 
+
+> 𝑐𝑐
+
+=
+
+π 0
+
+> 𝜏 𝑠
+
+𝑅 (𝜏 )𝑑𝜏 ≜ 𝑀 𝑠 (43) which never vanishes as well. For practical reasons we use a linear, chatter prevention strategy for 15 the pursuer inside the singular region, yielding 
+
+¯𝑢 ∗ (𝜏 ) =
+
+
+
+sgn ¯ 𝑧 𝑐𝑐 (𝜏 ), ¯𝑧 𝑐𝑐 ∈ D 1
+
+sat ¯𝑧 𝑐𝑐 (𝜏 )   
+
+> 𝑘 ¯𝑧 ∗
+> 𝑐𝑐 (𝜏 )
+
+, ¯𝑧 𝑐𝑐 ∈ D 0
+
+(44) where sat (·) stands for the saturation function, 0 < 𝑘 ≤ 1 is the portion of the singular region in which the control is linear, and ¯𝑧 ∗ 
+
+> 𝑐𝑐
+
+is the boundary of the singular region, computed as 
+
+¯𝑧 ∗ 
+
+> 𝑐𝑐
+
+(𝜏 ) =
+
+∫ 𝜏 𝜏 𝑠 𝑅 (𝑠 )𝑑𝑠, 𝜏 ≥ 𝜏 𝑠 
+
+0, 0 ≤ 𝜏 < 𝜏 𝑠 
+
+. (45) =   
+
+> 0123
+> 7zcc
+> -2
+> -1
+> 0
+> 1
+> 2
+
+D0
+
+D1
+
+D1
+
+=s
+
+Figure 3 Game Space, 𝜇 > 1
+
+Remark 2. The optimal closed-loop controls are calculated based on the center of the uncertainty set, Eq. (23) , which requires time-delayed information about the states ¯𝑥 2 and ¯𝑥 4. The standard approach, employed in the existing literature, is to use the current step estimates (i.e., the filtered estimates), effectively regarding them as uniformly delayed throughout the game [7, 9]. This ap-proach can only be regarded as a rough approximation, at best. In contradistinction, we drive our guidance law by estimates corresponding to precisely-computed delayed time, as required by its derivation. As presented in the next section, such delayed estimates are computed using a state 
+
+16 smoother. 
+
+## IV. Particle Filtering and Smoothing for Delayed Interception 
+
+The guidance law developed in Sec. III requires a properly-timed estimate of the state, along with an estimate of the inherent time-delay associated with this estimate. We do this by using the following tools. The bulk of the estimation workload is performed by an interacting multiple model particle filter (IMMPF) [12]. We conjoin the IMMPF with a semi-Markov transition mechanism, which is used to estimate the uncertainty interval following a target evasive maneuver, and the associated time delays. Finally, we properly feed the guidance law with a delayed state estimate, which is computed (given the estimated time delays) using a fixed-lag particle-based smoother. 
+
+A. The IMMPF Algorithm 
+
+The IMMPF algorithm [12] is a multiple model sequential MC estimator, that can address problems characterized by nonlinear dynamics, non-Gaussian driving noises, and multiple models with non-Markovian switching modes. This algorithm generally follows the logic of the interacting multiple model (IMM) estimator [13]; in the IMMPF, the resampling stage is combined with the interaction stage before the prediction and filtering stages. The filter runs a bank of particle filters (PFs) matched to all possible modes. At each time 𝑡 𝑘 the probability density function (PDF) is rep-resented by the set of particles and associated weights {x𝑟,𝑠 𝑘 , 𝑤 𝑟,𝑠 𝑘 | 𝑟 ∈ M, 𝑠 ∈ { 1, . . . , 𝑆 }} , where 
+
+x𝑟,𝑠 𝑘 is the state vector of particle 𝑠 and mode 𝑟 , and 𝑤 𝑟,𝑠 𝑘 is its associated weight. M is the set of 
+
+𝑀 discrete modes, and 𝑆 is the number of particles of each mode, rendering the total number of particles 𝑁 𝑝 = 𝑀𝑆 .
+
+B. Uncertainty Interval Estimation 
+
+For insight and context, we first review an existing off-line analytical framework commonly used to model the generation of evasion maneuver-caused detection delays. We then present a probabilistic model of the uncertainty interval, and use it to develop a method for estimating this interval using semi-Markov modeling of the target’s evasion maneuvers. 17 1. Simplified Modeling of the Detection Delay 
+
+Depicted in Fig. 4, Hexner, Weiss, and Dror [5] proposed a simplified physical model for the generation of time delay in a linearized system driven by Gaussian measurement noises. The model assumes that the evader has a first-order autopilot dynamics, but it can be easily modified to suit any linear time-invariant system of arbitrary order [4]. In Fig. 4, the change in the evasion maneuver, 
+
+Δ𝑎 𝑐 𝐸 , goes through the evader’s autopilot dynamics and then through a double integrator which translates the estimation error of the evader acceleration normal to the LOS, ˜𝑎 𝑛 0 
+
+> 𝐸
+
+, to the estimation error for the relative separation perpendicular to the LOS, ˜𝜉 .11+ τEs∆acE1   
+
+> s1
+> sν∼ N (0 , σ 2
+> ξ)˜an0
+> E˜˙ξ˜ξ++˜z
+
+Figure 4 Simplified physical model for estimation delay generation. [5] 
+
+The sudden evasion maneuver changes are modeled using a step response, which translates to the following approximation, holding for any brief duration 𝑡 𝑟 = 𝑡 − 𝑡 𝑠𝑤 after the sudden evasion change: 
+
+˜𝑎 𝑛 0 
+
+> 𝐸
+
+(𝑡 𝑟 ) = Δ 𝑎 𝑐 𝐸 [1 − exp (− 𝑡 𝑟 /𝜏 𝐸 )] ≈ Δ𝑎 𝑐 𝐸 𝑡 𝑟 
+
+𝜏 𝐸 
+
+, (46a) 
+
+˜§𝜉 (𝑡 𝑟 ) ≈ Δ𝑎 𝑐 𝐸 𝑡 2
+
+> 𝑟
+
+2𝜏 𝐸 
+
+, (46b) 
+
+˜𝜉 (𝑡 𝑟 ) ≈ Δ𝑎 𝑐 𝐸 𝑡 3
+
+> 𝑟
+
+6𝜏 𝐸 
+
+. (46c) Setting a threshold, 𝑘 , for the number of standard deviations required for the estimator to detect the maneuver change, then yields the estimation error at detection, 
+
+˜𝜉 = 𝑘 𝜉 𝜎 𝜉 , (47) where a common practice is to set 𝑘 𝜉 = 2 [5]. Denoting by Δ𝑡 𝑟 the size of the interval beginning at 18 maneuver change and ending at maneuver detection, we thus have 
+
+Δ𝑡 𝑟 ≈
+
+( 6𝜏 𝐸 𝑘 𝜉 𝜎 𝜉 
+
+Δ𝑎 𝑐 𝐸 
+
+)1/3
+
+. (48) Assuming small deviations from the collision course yields the approximation 𝜉 ≈ ( 𝜆 − 𝜆 0)𝜌 [3]. Furthermore, realistically assuming a relatively small range estimation error yields 
+
+𝜎 𝜉 ≈ 𝜌𝜎 𝜆 (49) where 𝜎 𝜆 is the standard deviation of the bearing measurement noise, Eq. (6). This finally yields the approximation 
+
+Δ𝑡 𝑟 ≈
+
+( 6𝜏 𝐸 𝑘 𝜉 𝜌𝜎 𝜆 
+
+Δ𝑎 𝑐 𝐸 
+
+)1/3
+
+≈
+
+(
+
+−6𝜏 𝐸 𝑘 𝜉 𝑉 𝜌 𝑡 𝑔𝑜 𝜎 𝜆 
+
+Δ𝑎 𝑐 𝐸 
+
+)1/3
+
+(50) where the time-to-go approximation from Eq. (12) is used in the second transition. The approximation (50) provides some essential insights regarding the uncertainty interval: 1) it is time-varying, 2) it can be modeled as 
+
+Δ(𝑡 𝑔𝑜 ) = 𝑎 + 𝑏𝑡 1/3 
+
+> 𝑔𝑜
+
+, (51) implying that 𝜔 = 1/3 for the models in Eq. (36). Furthermore, we set 𝑎 = 1/ 𝑓 because if the evader changes its maneuver at the final time-step of the engagement, the estimator cannot detect that, as the effect of this change is negligible. The approximation of the uncertainty interval, as presented above, suffers from two notable shortcomings. First, it completely disregards the information acquired in real-time throughout the engagement. Second, it is only valid for linear models and Gaussian noise distributions. In what follows we propose a novel approach for estimating the uncertainty interval, that overcomes both shortcomings by using the outputs of the IMMPF algorithm. We commence the exposition by defining the uncertainty interval in mathematical terms. 19 2. Probabilistic Modeling of the Uncertainty Interval 
+
+Consider the interval [𝑡, 𝑡 𝑘 ], where 𝑡 𝑘 is the present time, and 𝑡 < 𝑡 𝑘 . For any 𝑡 𝑘 , the uncertainty interval , denoted by [𝑡 ★, 𝑡 𝑘 ], is determined by its lower bound, 𝑡 ★, which is defined as the time maximizing the size of the interval, 𝑡 𝑘 − 𝑡 ★, subject to the condition that any evasive maneuver executed by the target at a time preceding 𝑡 ★ has already been detected by the pursuer’s estimator w.p. 1. In contradistinction, an evasive maneuver occurring at 𝑡 ∈ [ 𝑡 ★, 𝑡 𝑘 ] (inside the uncertainty interval) can only be detected by the estimator with probability strictly smaller than 1, implying that maneuver detection cannot be guaranteed inside the uncertainty interval. Formally speaking, let 𝑀 (𝑡 ) be any continuous random variable measuring the estimator’s ma-neuver detection vulnerability, such that the probability that the pursuer’s estimator has not detected a target evasive maneuver in the interval [𝑡 1, 𝑡 2] is 
+
+𝑃 𝑀 [𝑡 1, 𝑡 2] =
+
+π 𝑡 2
+
+> 𝑡 1
+
+𝑓 𝑀 (𝜉 )d𝜉, (52) where 𝑓 𝑀 is the PDF of 𝑀 . We notice that 
+
+𝑃 𝑀 [𝑡 1, 𝑡 2] = 0 ⇐⇒ [𝑡 1, 𝑡 2] ∩ supp 𝑓 𝑀 (𝑡 ) = ú (53) where supp 𝑓 denotes the support of 𝑓 .Now, according to our model, the time 𝑡 ★ is the minimal time for which, for any 𝑡 < 𝑡 ★, we have 𝑃 𝑀 [𝑡, 𝑡 ★] = 0 (that is, maneuver detection w.p. 1 for any interval preceding the uncertainty interval). In contradistinction, for any 𝑡 ∈ [ 𝑡 ★, 𝑡 𝑘 ], we have 𝑃 𝑀 [𝑡 ★, 𝑡 ] > 0. Along with Eq. (53), this then motivates the following definition of the uncertainty interval: 
+
+[𝑡 ★, 𝑡 𝑘 ] ≜ supp 𝑓 𝑀 (𝑡 ), (54) which also serves as an implied definition of 𝑡 ★.20 3. Semi-Markovian Switching Model 
+
+To estimate the size of the uncertainty interval we model the target’s maneuver switching mech-anism as a semi-Markov chain process. We note that this modeling is admissible, as the IMMPF algorithm is not limited to strictly Markovian mode switching mechanisms, thus permitting its use when the transition probability matrix (TPM) is state-dependent. Accordingly, the transition prob-ability from mode 𝑖 at time 𝑡 𝑘 −1 to mode 𝑗 at time 𝑡 𝑘 , 𝑝 𝑘 𝑖 𝑗 , is expressed as 
+
+𝑝 𝑘 𝑖 𝑗 (𝜃 ) = Pr (𝑟 𝑘 = 𝑗 |𝑟 𝑘 −1 = 𝑖, 𝜃 𝑘 −1 = 𝜃 ) (55) where 𝑟 𝑘 denotes the evader’s maneuver mode at time 𝑡 𝑘 and 𝜃 is the sojourn time. The sojourn time at time 𝑡 𝑘 , 𝜃 𝑘 , represents the elapsed time from the most recent modal switching by the evader. We note that the notion of the sojourn time resembles the notion of the elapsed time from the abrupt evasion change, 𝑡 𝑟 , which we have used earlier in Eq. (46). This allows us to use the sojourn time to estimate the uncertainty interval in the sequel. Adding the sojourn time as an auxiliary variable to the pursuer’s state vector, Eq. (2), results in the following augmented state vector 
+
+x𝑃 =
+
+[
+
+𝜌 𝜆 𝛾 𝐸 𝑎 𝐸 𝜃 
+
+]𝑇 
+
+. (56) Following [10], the discrete-time dynamic equation associated with the sojourn time is 
+
+𝜃 𝑘 = 1(𝑟 𝑘 , 𝑟 𝑘 −1)𝜃 𝑘 −1 + 1/ 𝑓 (57) where 𝑓 is the measurement rate in Hertz, and 1 is the indicator random variable, 
+
+1(𝑟 𝑘 , 𝑟 𝑘 −1) =
+
+
+
+1, 𝑟 𝑘 = 𝑟 𝑘 −1
+
+0, 𝑟 𝑘 ≠ 𝑟 𝑘 −1
+
+. (58) 21 4. Estimation of the Uncertainty Interval 
+
+Prior to addressing the problem of uncertainty interval estimation using the semi-Markov model, we define the notion of mode domination, as follows. 
+
+Definition 1. Mode 𝑟 is said to dominate all other modes at time 𝑡 𝑘 if its modal probability exceeds a predetermined threshold, 𝑊 Thres .
+
+Within the IMMPF framework, the modal probability of a particular mode is approximated via the sum of the weights of the particles associated with that mode. Thus, if mode 𝑟 is dominant, then 
+
+> 𝑆
+
+’
+
+> 𝑠 =1
+
+𝑤 𝑟,𝑠 𝑘 > 𝑊 Thres (59) With this definition on hand, we address the problem of uncertainty interval estimation in two separate cases. 
+
+A dominant mode exists. Let mode 𝑟 ∈ M be the dominant mode at time 𝑡 𝑘 , and denote the set of all other modes by M𝑐 𝑟 = M \ { 𝑟 }. In addition, let the PDF of the sojourn time, 𝜃 𝑘 ,assuming that the true mode is a member of M𝑐 𝑟 , be denoted by 𝑓 𝜃 𝑘 |M𝑐 𝑟 (𝜃 ). Because a sojourn time 𝜃 (assuming that the true mode is a member of M𝑐 𝑟 ) means that the target has performed, at time 𝑡 𝑘 − 𝜃 , an evasive maneuver that has not yet been detected by the estimator (as mode 𝑟 
+
+is dominant), the event 𝜃 𝑘 ∈ [ 𝛼, 𝛽 ] is equivalent to the event “an undetected evasive maneuver has occurred in the time interval [𝑡 𝑘 − 𝛼, 𝑡 𝑘 − 𝛽 ]”, and, consequently, its probability can be computed as 
+
+𝑃 𝑀 [𝑡 𝑘 − 𝛼, 𝑡 𝑘 − 𝛽 ] =
+
+π 𝛽 𝛼 
+
+𝑓 𝜃 𝑘 |M𝑐 𝑟 (𝜉 )d𝜉 (60) Comparing Eq. (60) and Eq. (52), we conclude that the PDF 𝑓 𝜃 𝑘 |M𝑐 𝑟 fulfills the same roll as 
+
+𝑓 𝑀 in defining the probabilistic characteristics of the estimator’s detection process. Thus, per Eq. (54), the uncertainty interval in this case is [𝑡 𝑘 − 𝜃 ★𝑘 , 𝑡 𝑘 ], where 𝜃 ★𝑘 satisfies 
+
+[0, 𝜃 ★𝑘 ] = supp 𝑓 𝜃 𝑘 |M𝑐 𝑟 (𝜃 ) (61) 22 Now, within the IMMPF framework, the PDF 𝑓 𝜃 𝑘 |M𝑐 𝑟 is approximated (via samples and their associated weights), by all particles not associated with mode 𝑟 at time 𝑡 𝑘 . Thus, observing the sojourn times of all such particles at time 𝑡 𝑘 , an estimate of 𝜃 ★ is 
+
+ˆ𝜃 ★𝑘 = max {𝜃 𝑟 ′,𝑠 𝑘 | 𝑟 ′ ∈ M𝑐 𝑟 , 𝑠 = 1, . . . , 𝑆 } (62) To illustrate the idea underlying this approach, consider a two-mode case, where, at a particular time 𝑡 𝑘 , the modal probability of mode 1 is 0.985, rendering it the dominant mode. Figure 5 presents a histogram approximation of the posterior density of 𝜃 𝑘 conditioned on assuming that mode 2 is true, 𝑓 𝜃 𝑘 |𝑟 𝑘 =2,Z. Clearly, in this case 
+
+supp 𝑓 𝜃 𝑘 |𝑟 𝑘 =2,Z = [0, 0.28 ] (63) yielding ˆ𝜃 ★ = 0.28 , as marked by the red dashed line in the figure. In practice, greedily shooting for the maximal value of the sojourn time, as per Eq. (62), renders 
+
+𝜃 ★ highly volatile, as the maximal sojourn time might be determined by a particle of a nearly zero weight. An alternative approach, circumventing this volatility, is to soften the approach of Eq. (62) by estimating 𝜃 ★ as the solution of a constrained optimization problem, as follows: 
+
+𝜃 ★ = min 𝜃 
+
+s.t. Pr (𝜃 𝑟 ′,𝑠 𝑘 ≤ 𝜃 | 𝑟 ′ ∈ M𝑐 𝑟 , 𝑠 = 1, . . . , 𝑆 ) ≥ 𝑝 Thres (64) where 𝑝 Thres is a predetermined threshold. Considering again the example from Fig. 5 and setting 𝑝 Thres = 0.99 , the solution of (64) results in ˆ𝜃 ★𝑘 = 0.26 , as marked by the black dotted line in Fig. 5. 
+
+No dominant mode exists. In this case, the method developed above cannot be used, but Eq. (50) can still provide a sufficiently good approximation (albeit having its cons, as elaborated earlier). The approximation (50) can also be useful in the initialization stage of the engagement, when 23 3k
+
+> 0
+> 0.02
+> 0.04
+> 0.06
+> 0.08
+> 0.1
+> 0.12
+> 0.14
+> 0.16
+> 0.18
+> 0.2
+> 0.22
+> 0.24
+> 0.26
+> 0.28
+> 0.3
+> f3k jrk =2;Zk
+> 0
+> 0.02
+> 0.04
+> 0.06
+> 0.08
+> 0.1
+> 0.12
+
+Figure 5 Histogram approximation of the posterior density of 𝜃 𝑘 conditioned on assuming that mode 2 is true, when mode 1 is dominant. Red dashed line: greedy estimate of 𝜃 ★ per Eq. (62) . Black dotted line: soft estimate of 𝜃 ★ per Eq. (64) , with 𝑝 Thres = 0.99 .
+
+no real-time data can be used to infer on the uncertainty interval. Yet another option is to use the latest available estimate of the uncertainty interval, if available, and propagate it in time using Eq. (51). Algorithm 1 presents a schematic description of one cycle of the algorithm for uncertainty interval estimation. The algorithm is initialized by setting the initialization indicator to 1. 
+
+Algorithm 1: Uncertainty interval estimation.  
+
+> 1
+
+Obtain the particles and associated weights of the current time-step  
+
+> 2
+
+if ∃𝑟 s.t. Õ𝑆 𝑠 =1 𝑤 𝑟,𝑠 𝑘 > 𝑊 Thres then  
+
+> 3
+
+Solve Eq. (64) if initialization = 1 then  
+
+> 4
+
+initialization ← 0 
+
+> 5
+
+end if  
+
+> 6
+
+else  
+
+> 7
+
+if initialization = 1 then  
+
+> 8
+
+Use Eq. (50)  
+
+> 9
+
+else  
+
+> 10
+
+Propagate the model using Eq. (51)  
+
+> 11
+
+end if  
+
+> 12
+
+end if 
+
+24 C. Target Tracking IMMPF 
+
+The implementation of the IMMPF in our problem makes use of the models presented in Sec. II and IV.B.3. 𝑀 discrete modes are used for the evader acceleration command as presented in As-sumption 6). We recast the nonlinear EOM in Eq. (3) in discrete-time as 
+
+x𝑘 = f𝑘 −1 (x𝑘 −1, 𝑟 𝑘 , w𝑘 ) (65) where x𝑘 is the pursuer relative state at time 𝑡 𝑘 and 𝑟 𝑘 is the evader mode during the time interval 
+
+(𝑡 𝑘 −1, 𝑡 𝑘 ]. Equation (57) constitutes the dynamic equation of the sojourn time. The process noise 
+
+w𝑘 is treated as a tuning parameter of the filter. The filtering step uses the measurement equation (6) to calculate the likelihood density 𝑝 (z𝑘 |x𝑘 , 𝑟 𝑘 ).
+
+D. Particle Smoothing Algorithm 
+
+As one of its constitutive assumptions, the DGLCC law requires, at each time 𝑡 , information about §𝜉 and 𝑎 𝐸 , delayed by the (known) delays Δ1 (𝑡 ) and Δ2 (𝑡 ), respectively. This requirement notwithstanding, common practice, as in [7, 9], is to use the current-time estimates, ˆ§𝜉 (𝑡 ) and ˆ𝑎 𝐸 . To examine the validity of this particular implementation, consider Fig. 6, that presents the estimated and true values of §𝜉 with respect to 𝑡 𝑔𝑜 when the evader changes its maneuver at 0.6 seconds before the end of the engagement. Evidently, apart from a particular interval after the evader changes its maneuver, the estimate of §𝜉 is, essentially, not delayed, demonstrating that considering it delayed throughout the entirety of the engagement would be erroneous. Thus, common practice notwithstanding, we conclude that current-time (filtered) estimates should not be used to drive the DGLCC law. Instead, we propose using a fixed-lag smoother, which facilitates driving the guidance law with optimal delayed information, as it requires. Because the uncertainty interval is usually relatively small, we select the fixed-lag approximation smoother [11], which is computationally efficient, and is known to perform well for short lags. This smoother only requires storing the previous state estimates, and the posterior smoothed states are approximated using the current time weights, i.e., at time 𝑡 𝑝 , the posterior PDF of the states at time 𝑡 𝑘 , where 25 tgo , s 0 0.5 1 1.5 2
+
+> _9, m/s
+> -100
+> -50
+> 0
+> 50
+> 100
+> 150
+> 200
+
+Figure 6 Estimated (red) and true (blue) §𝜉 vs 𝑡 𝑔𝑜 . The evader changes its maneuver at 𝑡 𝑔𝑜 =
+
+0.6 s. 
+
+𝑝 ≥ 𝑘 , is 
+
+𝑝 (𝑥 𝑘 | Z 𝑝 
+
+) ∼
+
+> 𝑀
+
+’
+
+> 𝑟 =1
+> 𝑆
+
+’
+
+> 𝑠 =1
+
+𝑤 𝑟,𝑠 𝑝 𝛿 
+
+(
+
+𝑥 − 𝑥 𝑟,𝑠 𝑘 
+
+)
+
+(66) where Z𝑝 is the set of available measurements at 𝑡 𝑝 .
+
+## V. Design Considerations and Schematic Overview 
+
+In the previous sections we have presented the main components of our comprehensive ap-proach: the extended DGLCC law (handling time-varying delays); the specially designed estimator for this case; and the fixed-lag smoother. However, there are still two design aspects that deserve consideration. The first issue is that the guidance law and, consequently, the smoother require two time delays, Δ1 (𝑡 𝑘 ) and Δ2 (𝑡 𝑘 ), whereas the estimator intrinsically provides only the estimated lower bound of the uncertainty interval, ˆ𝜃 ★𝑘 . Thus, a mapping from ˆ𝜃 ★𝑘 to the two guidance-law time delays is needed; this mapping is presented in this section. The section also addresses the implementation of the linearized guidance law in a nonlinear setting. 
+
+A. Determination of the DGLCC Time Delays 
+
+In Sec. III, we have presented a modified version of the DGLCC law with two time-varying time delays. From Eqs. (42)–(43), the guaranteed miss distance in the singular region is 𝐽 ★𝑐𝑐 =
+
+26 ∫ 𝜏 𝑠  
+
+> 0
+
+𝑅 (𝜏 ) 𝑑𝜏 , where 𝑅 (𝜏 ) = 𝜇 Ψ(𝜏 ) − 𝐴 (𝜏 ). Since 𝐴 (𝜏 ) in Eq. (35) increases monotonically with both Δ1 and Δ2, larger delays decrease 𝑅 (𝜏 ), shrink the singular-region boundary 𝜏 𝑠 , and thus in-crease the guaranteed miss distance. This monotonic dependence of the game value on the delay magnitude was established analytically for the constant-delay case in [6], and extends qualitatively to the time-varying case. In summary, smaller delays are associated with better interception per-formance. However, setting the time delays too small may degrade the smoother’s performance. The fixed-lag smoother retrieves state estimates from the interval [𝑡 𝑘 − Δ1 (𝑡 𝑘 ), 𝑡 𝑘 ]. If Δ1 (𝑡 𝑘 ) is set smaller than the true uncertainty interval, i.e., smaller than the elapsed time since the last un-detected maneuver switch, the smoother’s look-back window falls inside the post-switch transient, where the filtered estimate carries the largest errors due to the as-yet-undetected maneuver. In that regime, the smoothed estimate of §𝜉 offers marginal or no improvement over the filtered estimate, and the resulting estimation errors increase the actual miss distance. Thus, a tension arises: reduc-ing Δ1 improves the game-theoretic guaranteed miss distance; however, if it is set below the true uncertainty interval, it causes the smoother to inject erroneous information, resulting in an increased realized miss. Figure 7 shows the behavior over time of the estimated and true §𝜉 , and 𝑎 𝑛 0 
+
+> 𝐸
+
+, during an engagement when the evader changes its maneuver 2 seconds after the engagement has begun. Whereas the estimation error of the evader acceleration increases immediately after the maneuver change, it takes approximately 0.1 seconds for the estimation error of §𝜉 to become significant. This behavior can be explained using the simplified model from Sec. IV.B.1: 
+
+˜𝑎 𝑛 0 
+
+> 𝐸
+
+(𝑡 𝑟 ) ≈ Δ𝑎 𝑐 𝐸 𝑡 𝑟 
+
+𝜏 𝐸 
+
+, ˜§𝜉 (𝑡 𝑟 ) ≈ Δ𝑎 𝑐 𝐸 𝑡 2
+
+> 𝑟
+
+2𝜏 𝐸 
+
+. (67) For 𝑡 𝑟  1 we have 𝑡 𝑟  𝑡 2 
+
+> 𝑟
+
+/2 and the estimation error of 𝑎 𝑛 0 
+
+> 𝐸
+
+is the dominant error in the first time steps. Because the estimation error of 𝑎 𝑛 0 
+
+> 𝐸
+
+is significant even after a few time steps, we set 
+
+Δ2 (𝑡 𝑘 ) = ˆ𝜃 ★𝑘 , (68) 27 Time, s            
+
+> 1.9 22.1 2.2 2.3 2.4
+> an0
+> E , g
+> -20
+> 0
+> 20 Time,s
+> 1.9 22.1 2.2 2.3 2.4
+> _9, m/s
+> 0
+> 50
+> 100
+> 150
+
+Figure 7 Estimated (red) and true (blue) §𝜉 and 𝑎 𝑛 0 
+
+> 𝐸
+
+vs time. The evader changes its maneuver at 𝑡 = 2 s. 
+
+thus ensuring that the smoother covers the entire uncertainty interval. As for Δ1 (𝑡 𝑘 ), the upper panel of Fig. 7 shows that it can be set to be smaller than ˆ𝜃 ★𝑘 . Thus, we propose the following model 
+
+Δ1 (𝑡 𝑘 ) = 𝐶 ˆ𝜃 ★𝑘 , 𝐶 ∈ [ 0, 1] (69) where 𝐶 is a proportionality constant that has to be determined. To avoid the enormous compu-tational burden associated with an extensive Monte Carlo (MC) simulation study, we use, instead, a much more computationally efficient nonlinear deterministic simulation, based on the nonlinear dynamics of Sec. II.A and the guidance law of Eq. (44). Moreover, we assume, for simplicity, that the target performs only a single bang-bang maneuver, i.e., 𝑀 = 2 during the engagement. The pursuer is assumed to possess perfect information, except for the information about §𝜉 and 𝑎 𝐸 ,which is delayed according to the simplified model of Eq. (50). To model the effect of 𝐶 < 1, the information about §𝜉 is contaminated with a bias according to the simplified model of Eq. (67) when 
+
+𝑡 𝑠𝑤 + Δ1 (𝑡 ) < 𝑡 < 𝑡 𝑠𝑤 + Δ2 (𝑡 ), i.e., when the smoother goes back to a time after the maneuver change but before the estimator has detected this change. For this simulation environment, we divide the interval [0, 1] into 𝑠 𝐶 different cases, and divide the interval [0, 𝑡 𝑓 ] into 𝑠 𝑠𝑤 different cases, and then examine all possible 𝑠 𝐶 × 𝑠 𝑠𝑤 combinations. Accordingly, we set 𝐶 to yield the best worst-case 28 performance: 
+
+𝐶 = arg min  
+
+> 𝐶 ∈[ 0,1]
+
+max     
+
+> 𝑡 𝑠𝑤 ∈[ 0,𝑡 𝑓 ]
+
+¯𝑧 𝑐𝑐 (0) (70) 
+
+B. Nonlinear Implementation of DGLCC 
+
+The DGLCC guidance law has been developed in a linearized environment, but the problem addressed in this paper has nonlinear dynamics, as presented in Sec. II. The implementation of the guidance relies on the ZEM, which is expressed in dimensional form as 
+
+𝑧 𝑐𝑐 (𝑡 ) = ˆ𝑥 1 (𝑡 ) + 𝑡 𝑔𝑜 ˆ𝑥 2 (𝑡 − Δ1 (𝑡 )) − 𝜏 2 
+
+> 𝑃
+
+Ψ(𝑡 𝑔𝑜 /𝜏 𝑃 )𝑥 3 (𝑡 ) − 𝑡 𝑔𝑜 
+
+π 𝑡 𝑡 −Δ1 (𝑡 )
+
+𝑥 3 (𝑠 )𝑑𝑠 
+
++ 𝜏 2 
+
+> 𝐸
+
+exp (− Δ2 (𝑡 )/ 𝜏 𝐸 ) [ 𝑡 𝑔𝑜 exp (Δ1 (𝑡 )/ 𝜏 𝐸 )/ 𝜏 𝐸 + exp (− 𝑡 𝑔𝑜 /𝜏 𝐸 ) − 1] ˆ𝑥 4 (𝑡 − Δ2 (𝑡 )) (71) and the time-to-go is approximated using Eq. (12). All the required variables are obtained using the following relations 
+
+𝑥 1 ≜ 𝜉 = 𝜌 sin 𝜆 (72a) 
+
+𝑥 2 ≜ §𝜉 = 𝑉 𝜌 sin 𝜆 − 𝑉 𝜆 cos 𝜆 (72b) 
+
+𝑥 3 ≜ 𝑎 𝑛 𝑃 = 𝑎 𝑃 cos 𝛿 𝑃 (72c) 
+
+𝑥 4 ≜ 𝑎 𝑛 𝐸 = 𝑎 𝐸 cos 𝛿 𝐸 (72d) where we use the instantaneous LOS for the linearization instead of the initial LOS. The states 
+
+𝑥 1, 𝑥 2, and 𝑥 4 are obtained from the estimator and the smoother using the appropriate time indices, and, according to assumption 2), 𝑥 3 is perfectly known. 
+
+C. Schematic Overview 
+
+Figure 8 presents the novel tracking and interception strategy developed in this work. This scheme uses the IMMPF estimator, which provides an approximation of the entire posterior PDF of the state, to estimate the uncertainty interval in real-time. This provides real-time estimates of the 29 two time-varying time delays that are required by the extended DGLCC law. The time delays and the outputs of the IMMPF are used by the fixed-lag smoother to provide correctly-timed information about delayed states. Finally, the DGLCC guidance law uses the information from the IMMPF, the estimated time delays, and the smoothed states to produce the pursuer’s acceleration command. Delay Est. Smoother DGLCC IMMPF ¯x2(τ + ∆ 1)¯x1(τ )z¯u∗∆1, ∆2∆1, ∆2¯x4(τ + ∆ 2)¯x3(τ )
+
+Figure 8 Schematic overview of the novel implementation of the DGLCC guidance law in a stochastic setting. 
+
+## VI. Simulation Study 
+
+To evaluate the performance of the tracking and guidance scheme developed in this paper we conduct a numerical simulation study, where we adopt the interception scenario of [3]. Three guidance laws are compared via extensive MC simulations, namely: DGL1, DGLC, and DGLCC with time-varying delays (TV-DGLCC). 
+
+A. Simulation Scenario 
+
+A ballistic missile defense scenario is considered, which includes a single pursuing missile and a single, highly maneuverable, evading target. For simplicity, we assume that the target performs a maximum acceleration bang-bang evasion maneuver with a single command switch during the engagement, i.e., 𝑀 = 2 in this case. The evader is initialized in the -𝑌 𝐼 direction with a flight-path angle of 𝛾 𝐸 (0) = −𝜋 /2 rad, and the pursuer’s flight-path is chosen such that the interceptor velocity vector points toward the initial target location. The pursuer’s and evader’s maneuver capabilities are 𝑎 max  
+
+> 𝑃
+
+= 45 g and 𝑎 max  
+
+> 𝐸
+
+=
+
+20 g, respectively; their first-order time constants are 𝜏 𝑃 = 𝜏 𝐸 = 0.2 s, and their speeds are 𝑉 𝑃 =
+
+𝑉 𝐸 = 2500 m/s, rendering a nominal engagement time of 3 s. The measurement noise is Gaussian 30 distributed with 𝜈 ∼ N ( 0, 𝜎 2) with 𝜎 = 0.5 mrad; the sensor’s sampling rate is 𝑓 = 100 Hz. 
+
+B. Filter Initialization 
+
+The pursuer’s filter is assumed to be initialized by a radar. Figure 9 presents a schematic view of the assumed planar geometry of the initializing radar, the pursuer, and the evader. An additional subscript R denotes variables associated with the radar. The slant range between the radar and the evader is denoted by 𝜌 𝑅 , and 𝜆 𝑅 is the angle between the radar’s LOS to the evader and the 𝑋 𝐼 axis. The radar is assumed to estimate the initial vector λR  
+
+> λρR
+> ρ
+> EPR
+> (xE, y E)(xR, y R)(xP, y P)
+> XI
+> YI
+> OI
+
+Figure 9 Initializing radar geometry 
+
+ˆx𝑅 =
+
+[
+
+𝜌 𝑅 𝜆 𝑅 𝛾 𝐸 𝑎 𝐸 𝜃 
+
+]𝑇 
+
+. (73) The radar’s posterior estimate is then passed on to the pursuer at initialization. We further assume that the radar’s position (𝑥 𝑅 , 𝑦 𝑅 ) and the pursuer’s position at the initialization, (𝑥 𝑃 , 𝑦 𝑃 ), are known. We do not assume that posterior estimate ˆ𝑥 𝑅 is Gaussian distributed. The geometric relation between the pursuer’s relative state and initial radar estimate is 
+
+𝜌 = {𝜌 2 
+
+> 𝑅
+
++ Δ𝑅 2 
+
+> 𝑅
+
++ 2𝜌 𝑅 [Δ𝑋 𝑅 cos (𝜆 𝑅 ) + Δ𝑌 𝑅 sin (𝜆 𝑅 )] }1/2 (74a) 
+
+𝜆 = arctan 
+
+[ Δ𝑌 𝑅 + 𝜌 sin (𝜆 𝑅 )
+
+Δ𝑋 𝑅 + 𝜌 cos (𝜆 𝑅 )
+
+]
+
+(74b) 31 where 
+
+Δ𝑋 𝑅 ≜ 𝑥 𝑅 − 𝑥 𝑃 ; Δ𝑌 𝑅 ≜ 𝑦 𝑅 − 𝑦 𝑃 ; Δ𝑅 𝑅 ≜ (Δ𝑋 2 
+
+> 𝑅
+
++ Δ𝑌 2
+
+> 𝑅
+
+)1/2 (75) The radar’s estimate and the relations (74) are used to initialize the state vector of Eq. (56). 
+
+C. Design Considerations 
+
+The IMMPF uses 4000 weighted particles to approximate the posterior state vector PDF, 2000 
+
+particles per mode. The modes are initialized to be equally probable. The initial estimates of the first four states in the state vector (56) are chosen to satisfy 
+
+ˆ𝑥 𝑅 ∼ N ( ¯𝑥 𝑅 , 𝑃 𝑅 ) (76) where ¯𝑥 𝑅 is the true initial state, and the associated initial covariance matrix is 
+
+𝑃 𝑅 = diag {50 2, (1𝜋 /180 )2, (3𝜋 /180 )2, 10 2} (77) The last state, 𝜃 , is initialized based on the initial evader acceleration, 𝑎 𝐸 (0) = −20 g. Thus, we set the particles of the first mode, corresponding to 𝑎 𝑐 𝐸 = −20 g, to be uniformly distributed over the interval [2.9, 3.1] s, as they represent the event that a relatively long time has passed since the latest modal switch. Following the same reasoning, the particles of the second mode, corresponding to 
+
+𝑎 𝑐 𝐸 = 20 g, are set to be uniformly distributed over the interval [0, 0.2] s, as they represent a recent modal switch that has not been detected yet. The TPM is chosen to be 
+
+Π = 
+
+
+
+0.999 0.001 0.001 0.999 
+
+
+
+. (78) The transition probabilities are chosen to be small, thus reducing the estimation bias when there are no acceleration switches. This, however, comes at the price of slower detection of sudden evasion maneuvers, and the eventual generation of considerable estimation time delays. 32 For the estimation of the uncertainty interval, we set 𝑊 Thres = 0.9 and 𝑝 Thres = 0.99 . We then use the following model for the time-varying delay 
+
+Δ2 (𝑡 𝑔𝑜 ) = 0.01 + 𝑏 𝑡 1/3 
+
+> 𝑔𝑜
+
+. (79) We use the tuning algorithm presented in Sec. V.A to determine the proportionality constant 
+
+𝐶 of Eq. (69). Figure 10 presents the maximum value of the normalized miss distance vs 𝐶 . The plot is obtained via a numerical simulation involving 651 cases for all possible combinations of 21 values of 𝐶 over [0, 1], and 31 values of the timing of the evasion maneuver over [0, 3] s. As Fig. 10 shows, the solution of the minimax problem (70) is 𝐶 = 0.75 .C    
+
+> 00.25 0.5 0.75 1
+> max 7zcc(0)
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1
+
+Figure 10 The maximal value of the normalized miss distance over all possible 31 evasion maneuvers against all possible 21 values for 𝐶 .
+
+All guidance laws use a linear command inside their singular region to prevent chattering, with 
+
+𝑘 = 0.7. The DGLC guidance law uses a constant time delay Δ𝑡 = 0.3 s, tuned for improved performance of the required warhead that guarantees a kill with probability 0.95. 
+
+D. Monte Carlo Analysis 
+
+An MC simulation study is used to compare the closed-loop performance of the interceptor using the following three guidance laws: DGL1, DGLC, and DGLCC with time-varying delays 33 (denoted TV-DGLCC). The evader performs a single bang-bang evasion maneuver. To examine the effects of the timing of this maneuver, we analyze maneuver times that cover the entire duration of the engagement, set at 0.1 s intervals. 200 MC runs are used for each switching time. This yields a total of 6,000 runs, which are performed for all the guidance laws. Figure 11 shows the mean and standard deviation of the pursuer’s miss distance vs target maneu-ver time, using each of the guidance laws. The DGL1 law suffers the most from bang-bang evasion maneuvers that are timed at the most challenging time window. This stems from the fact that DGL1 does not account for the time delays caused by the bang-bang maneuver. The DGLC guidance law also suffers from this type of challenging maneuver. Although its performance is better than that of DGL1, its mean miss distance is approximately five times worse for 𝑡 𝑠𝑤 = 2.3 s than for 𝑡 𝑠𝑤 ≤ 1.5
+
+s, and the standard deviation of the miss distance increases dramatically between these cases. In the case of DGLC, this effect of the target’s maneuver timing is due to the neglect of the effect of the time delay on §𝜉 . Moreover, in implementing the DGLC law, we have followed the common practice, according to which the time delay is considered constant and used as a tuning parameter. The estimate that drives the law is obtained directly from the estimator, disregarding the design requirement that it be delayed. The TV-DGLCC guidance law is the least affected by the challenging evasion maneuvers. Al-though its performance for 𝑡 𝑠𝑤 ≤ 1.5 is worse than that of DGL1 and DGLC, it outperforms these two guidance laws when challenged with better-timed evasion maneuvers. Its mean miss distance is approximately 1.75 times higher for 𝑡 𝑠𝑤 = 2.3 s than for 𝑡 𝑠𝑤 ≤ 1.5 s, which shows that it, too, is sensitive to the timing of the evasion maneuver. Nevertheless, it is significantly less sensitive than both DGL1 and DGLC laws, with mean miss distances that are 56 and 5 times greater, respectively, for 𝑡 𝑠𝑤 = 2.3 s. The TV-DGLCC law does show somewhat increased miss distances when the target misjudges the timing of its evasive maneuvers, but this minor drawback is a worthwhile trade-off for the enhanced resilience against strategically timed maneuvers. Furthermore, the variability of the miss distances under the TV-DGLCC law, as indicated by their standard deviations (refer to the lower panel of Fig. 11), is the lowest among the laws tested. This highlights the law’s exceptional 34 robustness concerning the target’s timing of its evasive maneuvers. tsw, s             
+
+> 00.5 11.5 22.5 3
+> Mean MD, m
+> 0
+> 5
+> 10
+> 15
+> tsw,s
+> 00.5 11.5 22.5 3
+> STD MD, m
+> 0
+> 2
+> 4
+> 6
+
+Figure 11 Miss distance mean (upper panel) and standard deviation (lower panel) vs evasion maneuver switching time in a nonlinear MC simulation. Guidance laws: DGL1 (solid blue), DGLC (dashed red), and TV-DGLCC (dotted magenta). 
+
+Figure 12 presents the miss distance cumulative distribution function (CDF), computed based on all 6,000 MC runs. The figure shows that the TV-DGLCC guidance law is superior to DGL1 and DGLC for high values of miss distances, which correspond to the most difficult (from the standpoint of the pursuer) interception scenarios. To guarantee a kill with a probability of 0.95, DGL1 requires a warhead with a lethality radius of 15.7 m, and DGLC requires a warhead with a lethality radius of 10.4 m, which is a 33 .8% performance improvement. In comparison, the TV-DGLCC law requires a warhead with a lethality radius of 8.5 m, corresponding to 45 .9% and 18 .3% 
+
+performance improvement relative to the DGL1 and DGLC laws, respectively. 
+
+## VII. Conclusions 
+
+This paper introduces a unified framework for tracking and intercepting highly maneuverable evasive targets in a stochastic setting. The main pillar of the new framework is an extended ver-sion of the DGLCC law, which accounts for two time-varying estimation delays, thus providing a principled way to incorporate realistic estimator lags into the guidance framework. Two additional contributions of the paper ensure that the guidance law is driven by information consistent with its derivation. First, the estimation delays, which are not constant throughout the engagement (contrary 35 MD, m       
+
+> 0510 15
+> Probability
+> 0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1
+> 8910 11
+> 0.9
+> 0.95
+> 1
+
+Figure 12 Miss distance CDF in a nonlinear MC simulation. Guidance laws: DGL1 (solid blue), DGLC (dashed red), and TV-DGLCC (dotted magenta). 
+
+to assumptions made in the relevant literature), are estimated online based on a newly introduced method for estimating the uncertainty interval following an abrupt target maneuver. Second, a particle-based fixed-lag smoother is employed, that provides the guidance law with appropriately delayed state estimates, using the estimated delays and all available measurements. Together, these elements form a coherent methodology that links estimation, delay modeling, and guidance in a self-consistent way. By emphasizing the structural compatibility between the law and its supporting estimation processes, the approach lays the foundation for more robust guid-ance strategies in interception problems where stochastic effects and maneuver uncertainty cannot be ignored. Monte Carlo simulations demonstrate that this approach improves worst-case intercep-tion performance compared to existing laws. In particular, the time-varying DGLCC consistently reduces the lethality radius requirements relative to both existing DGL1 and DGLC guidance laws. 
+
+## A. Perfect Information DGL1 
+
+The underlying assumptions of this game are: 1) perfect information: both players have com-plete information about the current state of the game, and 2) there are no time delays. In this case, 36 the game is transformed into a one-dimensional state variable, the ZEM, which is given by 
+
+¯𝑧 (𝜏 ) = ¯𝑥 1 (𝜏 ) + 𝜏 ¯𝑥 2 (𝜏 ) − 𝜇 Ψ(𝜏 ) ¯𝑥 3 (𝜏 ) + 𝜖 2Ψ(𝜏 /𝜖 ) ¯𝑥 4 (𝜏 ) (A1) where Ψ is defined in (20). The cost function is set to be the miss distance 
+
+𝐽 = | ¯𝑥 1 (0)| = | ¯𝑧 (0)| (A2) and the optimal solution of this game is the well-known DGL1 law [1, 2]. The optimal controls are 
+
+¯𝑢 ∗ (𝜏 ) = ¯𝑣 ∗ (𝜏 ) = sgn ¯ 𝑧 (𝜏 ). (A3) If the pursuer possesses maneuverability and agility advantages, i.e., 𝜇 > 1 and 𝜇𝜖 > 1, it can enforce a direct hit by following its optimal strategy. In this case we say that the pursuer possesses a hit-to-kill capability. 
+
+## B. Derivation of Eq. (23) 
+
+The uncertainty set is given by 
+
+¯𝑍 (𝜏 ) = [ ¯𝑧 1 (𝜏 ) + 𝑚 (𝜏 ), ¯𝑧 1 (𝜏 ) + 𝑀 (𝜏 )] (B1) where 𝑚 (𝜏 ) and 𝑀 (𝜏 ) are the solutions of the optimization problems (22). These optimization problems are subject to the dynamic equations 
+
+𝑑 ¯𝑥 2/𝑑𝜎 = − ¯𝑥 4 + 𝜇 ¯𝑥 3 (B2a) 
+
+𝑑 ¯𝑥 4/𝑑𝜎 = ( ¯𝑥 4 − ¯𝑣 )/ 𝜖 (B2b) 37 with the delayed-state boundary conditions 
+
+¯𝑥 2 (𝜎 ) 𝜎 =𝜏 +Δ1 (𝜏 ) = ¯𝑤 2 (𝜏 ) (B3a) 
+
+¯𝑥 4 (𝜎 ) 𝜎 =𝜏 +Δ2 (𝜏 ) = ¯𝑤 4 (𝜏 ). (B3b) The derivation proceeds in three steps. First, the range of admissible values for ¯𝑥 4 at the inter-mediate time 𝜏 + Δ1 (𝜏 ) is determined. Then, ¯𝑧 2 (𝜏 ) is expressed as a function of these admissible values and the evader’s control on [𝜏, 𝜏 + Δ1 (𝜏 )] . Finally, the resulting expressions for 𝑚 (𝜏 ) and 
+
+𝑀 (𝜏 ) are combined to obtain the center of the uncertainty set. 
+
+Step 1: Admissible range of ¯𝑥 4 (𝜏 + Δ1 (𝜏 )) . Consider the evader’s acceleration dynamics (B2b) on the interval [𝜏 + Δ1 (𝜏 ), 𝜏 + Δ2 (𝜏 )] , with the boundary condition (B3b). The extremal values of ¯𝑥 4
+
+at 𝜎 = 𝜏 + Δ1 (𝜏 ) over all admissible controls | ¯𝑣 (𝜎 )| ≤ 1 are 
+
+¯𝑥 min 4 (𝜏 ) = min     
+
+> |¯𝑣 (𝜎 )|≤ 1, 𝜎 ∈[ 𝜏 +Δ1(𝜏 ), 𝜏 +Δ2(𝜏 )]
+
+¯𝑥 4 (𝜏 + Δ1 (𝜏 )) (B4a) 
+
+¯𝑥 max 4 (𝜏 ) = max     
+
+> |¯𝑣 (𝜎 )|≤ 1, 𝜎 ∈[ 𝜏 +Δ1(𝜏 ), 𝜏 +Δ2(𝜏 )]
+
+¯𝑥 4 (𝜏 + Δ1 (𝜏 )) . (B4b) Integrating (B2b) with boundary condition (B3b) from 𝜏 + Δ2 (𝜏 ) to 𝜏 + Δ1 (𝜏 ) yields 
+
+¯𝑥 4 (𝜏 + Δ1 (𝜏 )) = ¯𝑤 4 (𝜏 ) exp ((Δ1 (𝜏 ) − Δ2 (𝜏 ))/ 𝜖 )
+
++ 1
+
+𝜖 
+
+π 𝜏 +Δ2 (𝜏 ) 
+
+> 𝜏 +Δ1(𝜏 )
+
+exp ((𝜏 + Δ1 (𝜏 ) − 𝑠 )/ 𝜖 ) ¯𝑣 (𝑠 ) 𝑑𝑠. (B5) Because exp ((𝜏 + Δ1 (𝜏 ) − 𝑠 )/ 𝜖 )/𝜖 is positive for all 𝑠 ∈ [ 𝜏 + Δ1 (𝜏 ), 𝜏 + Δ2 (𝜏 )] , the left-hand side of (B5) is minimized by ¯𝑣 (𝜎 ) ≡ − 1 and maximized by ¯𝑣 (𝜎 ) ≡ 1. Substitution into (B5) gives 
+
+¯𝑥 min 4 (𝜏 ) = exp ((Δ1 (𝜏 ) − Δ2 (𝜏 ))/ 𝜖 ) ( ¯𝑤 4 (𝜏 ) + 1) − 1 (B6a) 
+
+¯𝑥 max 4 (𝜏 ) = exp ((Δ1 (𝜏 ) − Δ2 (𝜏 ))/ 𝜖 ) ( ¯𝑤 4 (𝜏 ) − 1) + 1. (B6b) 38 Step 2: Expression for ¯𝑧 2 (𝜏 ). Let 𝜅 denote the value of ¯𝑥 4 at the intermediate boundary, 
+
+𝜅 ≜ ¯𝑥 4 (𝜎 ) 𝜎 =𝜏 +Δ1 (𝜏 ) , 𝜅 ∈ [ ¯𝑥 min 4 (𝜏 ), ¯𝑥 max 4 (𝜏 )] . (B7) With this notation, the minimization problem for 𝑚 (𝜏 ) in (22) reduces to 
+
+𝑚 (𝜏 ) = min     
+
+> 𝜅 ∈[ ¯𝑥 min 4(𝜏 ),¯𝑥 max 4(𝜏 )]
+
+min    
+
+> |¯𝑣 (𝜎 )|≤ 1, 𝜎 ∈[ 𝜏, 𝜏 +Δ1(𝜏 )]
+
+¯𝑧 2 (𝜏 ). (B8) Integrating (B2b) with initial condition (B7) from 𝜏 + Δ1 (𝜏 ) backward to an arbitrary 𝜎 ∈[𝜏, 𝜏 + Δ1 (𝜏 )) gives 
+
+¯𝑥 4 (𝜎 ) = 𝜅 exp ((𝜎 − 𝜏 − Δ1 (𝜏 ))/ 𝜖 ) + 1
+
+𝜖 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜎
+
+exp ((𝜎 − 𝑠 )/ 𝜖 ) ¯𝑣 (𝑠 ) 𝑑𝑠. (B9) Next, substituting (B9) into the velocity dynamics (B2a) and integrating from 𝜏 + Δ1 (𝜏 ) to 𝜎 ∈[𝜏, 𝜏 + Δ1 (𝜏 )) , with boundary condition (B3a), yields 
+
+¯𝑥 2 (𝜎 ) = ¯𝑤 2 (𝜏 ) − 𝜇 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 3 (𝑠 ) 𝑑𝑠 + 𝜅𝜖 (1 − exp ((𝜎 − 𝜏 − Δ1 (𝜏 ))/ 𝜖 )) 
+
++
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜎
+
+(1 − exp ((− 𝑠 + 𝜎 )/ 𝜖 )) ¯𝑣 (𝑠 ) 𝑑𝑠. (B10) Substituting (B10) and (B9) into the definition of ¯𝑧 2 (𝜏 ), Eq. (19), and evaluating at 𝜎 = 𝜏 ,produces 
+
+¯𝑧 2 (𝜏 ) = 𝑎 1 (𝜏 ) + 𝜅 𝑎 2 (𝜏 ) − 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+𝑎 3 (𝜏, 𝑠 ) ¯𝑣 (𝑠 ) 𝑑𝑠 (B11) with the coefficient functions 
+
+𝑎 1 (𝜏 ) = 𝜏 
+
+(
+
+¯𝑤 2 (𝜏 ) − 𝜇 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 3 (𝑠 ) 𝑑𝑠 
+
+)
+
+(B12a) 
+
+𝑎 2 (𝜏 ) = 𝜖 𝜏 (1 − exp (− Δ1 (𝜏 )/ 𝜖 )) + 𝜖 2Ψ(𝜏 /𝜖 ) exp (− Δ1 (𝜏 )/ 𝜖 ) (B12b) 
+
+𝑎 3 (𝜏, 𝑠 ) = 𝜏 (1 − exp (( 𝜏 − 𝑠 )/ 𝜖 )) + 𝜖 Ψ(𝜏 /𝜖 ) exp (( 𝜏 − 𝑠 )/ 𝜖 ). (B12c) 39 It can be verified that 𝑎 2 (𝜏 ) > 0 for all 𝜏 > 0, and 𝑎 3 (𝜏, 𝑠 ) > 0 for all 𝜏 > 0 and 𝑠 ∈ [ 𝜏, 𝜏 + Δ1 (𝜏 )] .
+
+Step 3: Center of the uncertainty set. Equation (B11) is linear in both 𝜅 and ¯𝑣 (·) . Because 𝑎 2 (𝜏 ) > 0
+
+and 𝑎 3 (𝜏, 𝑠 ) > 0, the minimum of ¯𝑧 2 (𝜏 ) is attained at 𝜅 = ¯𝑥 min 4 (𝜏 ) with ¯𝑣 (𝜎 ) ≡ − 1 for 𝜎 ∈[𝜏, 𝜏 + Δ1 (𝜏 )] , and the maximum is attained at 𝜅 = ¯𝑥 max 4 (𝜏 ) with ¯𝑣 (𝜎 ) ≡ 1. Accordingly, 
+
+𝑚 (𝜏 ) = 𝑎 1 (𝜏 ) + ¯𝑥 min 4 (𝜏 ) 𝑎 2 (𝜏 ) − 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+𝑎 3 (𝜏, 𝑠 ) 𝑑𝑠 (B13) 
+
+𝑀 (𝜏 ) = 𝑎 1 (𝜏 ) + ¯𝑥 max 4 (𝜏 ) 𝑎 2 (𝜏 ) + 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+𝑎 3 (𝜏, 𝑠 ) 𝑑𝑠. (B14) The center of the uncertainty set (B1) is, therefore, 
+
+¯𝑧 𝑐𝑐 (𝜏 ) = ¯𝑧 1 (𝜏 ) + 𝑚 (𝜏 ) + 𝑀 (𝜏 )
+
+2 = ¯𝑧 1 (𝜏 ) + 𝑎 1 (𝜏 ) + 12 𝑎 2 (𝜏 ) ( ¯𝑥 min 4 (𝜏 ) + ¯𝑥 max 4 (𝜏 )). (B15) Substituting the explicit expressions for ¯𝑥 min 4 (𝜏 ) and ¯𝑥 max 4 (𝜏 ) from (B6), together with the definitions of 𝑎 1 (𝜏 ) and 𝑎 2 (𝜏 ) from (B12a)–(B12b), into (B15) yields Eq. (23) after straightforward algebraic simplification. 
+
+## C. Derivation of Eq. (24) 
+
+The evolution equation for ¯𝑧 𝑐𝑐 (𝜏 ) is obtained by differentiating Eq. (23) with respect to 𝜏 , yield-ing 
+
+𝑑 ¯𝑧 𝑐𝑐 (𝜏 )
+
+𝑑𝜏 = 𝜇 Ψ(𝜏 ) ¯𝑢 (𝜏 ) − ¯𝑥 2 (𝜏 ) + 𝑥 2 (𝜏 + Δ1 (𝜏 )) −𝜇 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 3 (𝑠 ) 𝑑𝑠 − 𝜏 ¯𝑥 4 (𝜏 + Δ1 (𝜏 ))( 1 + 𝛾 1 (𝜏 )) − exp (− Δ2 (𝜏 )/ 𝜖 ) [ 𝜏 exp (Δ1 (𝜏 )/ 𝜖 ) + 𝜖 exp (− 𝜏 /𝜖 ) − 𝜖 ] ¯𝑣 (𝜏 + Δ2 (𝜏 )) ( 1 + 𝛾 2 (𝜏 )) + exp (− Δ2 (𝜏 )/ 𝜖 ) [exp (Δ1 (𝜏 )/ 𝜖 )( 𝛾 1 (𝜏 )𝜏 + 𝜖 + 𝜏 ) − 𝜖 ] ¯𝑥 4 (𝜏 + Δ2 (𝜏 )) . (C1) 40 Integrating the normalized dynamics (B2a) from 𝜏 to 𝜏 + Δ1 (𝜏 ) shows that 
+
+𝑥 2 (𝜏 + Δ1 (𝜏 )) − ¯𝑥 2 (𝜏 ) − 𝜇 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 3 (𝑠 ) 𝑑𝑠 = −
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 4 (𝑠 ) 𝑑𝑠. (C2) Substituting (C2) into (C1) simplifies the first three terms, giving 
+
+𝑑 ¯𝑧 𝑐𝑐 (𝜏 )
+
+𝑑𝜏 = 𝜇 Ψ(𝜏 ) ¯𝑢 (𝜏 ) − 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 4 (𝑠 ) 𝑑𝑠 − 𝜏 ¯𝑥 4 (𝜏 + Δ1 (𝜏 ))( 1 + 𝛾 1 (𝜏 )) − exp (− Δ2 (𝜏 )/ 𝜖 ) [ 𝜏 exp (Δ1 (𝜏 )/ 𝜖 ) + 𝜖 exp (− 𝜏 /𝜖 ) − 𝜖 ] ¯𝑣 (𝜏 + Δ2 (𝜏 )) ( 1 + 𝛾 2 (𝜏 )) + exp (− Δ2 (𝜏 )/ 𝜖 ) [exp (Δ1 (𝜏 )/ 𝜖 )( 𝛾 1 (𝜏 )𝜏 + 𝜖 + 𝜏 ) − 𝜖 ] ¯𝑥 4 (𝜏 + Δ2 (𝜏 )) . (C3) Next, the integral of ¯𝑥 4 in (C3) is expanded using the identity [9] 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+¯𝑥 4 (𝑠 ) 𝑑𝑠 = 𝜖 ¯𝑥 4 (𝜏 + Δ1 (𝜏 )) (1 − exp (− Δ1 (𝜏 )/ 𝜖 ))
+
++
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+(1 − exp (( 𝜏 − 𝑠 )/ 𝜖 )) ¯𝑣 (𝑠 ) 𝑑𝑠 (C4) which, upon substitution into (C3), yields 
+
+𝑑 ¯𝑧 𝑐𝑐 (𝜏 )
+
+𝑑𝜏 = 𝜇 Ψ(𝜏 ) ¯𝑢 (𝜏 ) − 
+
+π 𝜏 +Δ1 (𝜏 )
+
+> 𝜏
+
+(1 − exp (( 𝜏 − 𝑠 )/ 𝜖 )) ¯𝑣 (𝑠 ) 𝑑𝑠 
+
+− ¯𝑥 4 (𝜏 + Δ1 (𝜏 )) [𝜖 (1 − exp (− Δ1 (𝜏 )/ 𝜖 )) + 𝜏 (1 + 𝛾 1 (𝜏 )) ]
+
++ exp (− Δ2 (𝜏 )/ 𝜖 ) [exp (Δ1 (𝜏 )/ 𝜖 )( 𝛾 1 (𝜏 )𝜏 + 𝜖 + 𝜏 ) − 𝜖 ] ¯𝑥 4 (𝜏 + Δ2 (𝜏 )) − exp (− Δ2 (𝜏 )/ 𝜖 ) [ 𝜏 exp (Δ1 (𝜏 )/ 𝜖 ) + 𝜖 exp (− 𝜏 /𝜖 ) − 𝜖 ] ¯𝑣 (𝜏 + Δ2 (𝜏 )) ( 1 + 𝛾 2 (𝜏 )) . (C5) Finally, the term ¯𝑥 4 (𝜏 + Δ1 (𝜏 )) in (C5) is eliminated by applying the identity 
+
+¯𝑥 4 (𝜏 + Δ1 (𝜏 )) = ¯𝑥 4 (𝜏 + Δ2 (𝜏 )) exp 
+
+( Δ1 (𝜏 ) − Δ2 (𝜏 )
+
+𝜖 
+
+)
+
++ 1
+
+𝜖 
+
+π 𝜏 +Δ2 (𝜏 ) 
+
+> 𝜏 +Δ1(𝜏 )
+
+exp 
+
+( 𝜏 + Δ1 (𝜏 ) − 𝑠 𝜖 
+
+)
+
+¯𝑣 (𝑠 ) 𝑑𝑠 (C6) 41 which is obtained by integrating (B2b) from 𝜏 + Δ2 (𝜏 ) to 𝜏 + Δ1 (𝜏 ). Substituting (C6) into (C5) and collecting terms produces Eq. (24). 
+
+## D. Proof of Theorem III.1 
+
+The proof, which follows the approach of [9], proceeds in three stages. First, the delayed-control functional F ( ¯𝑣 𝜏 (·) , 𝜏 ) is bounded, establishing the admissible range of an equivalent instantaneous controller. Second, a normalized auxiliary game with instantaneous bounded controls is formulated. Third, standard necessary conditions for optimality are applied to the auxiliary game, and the re-sulting optimal controls are mapped back to the original delayed-control setting. 
+
+Stage 1: Bounding the functional F . Introducing a new (instantaneous) evader controller 𝑉 (𝜏 ) ≜
+
+F ( ¯𝑣 𝜏 (·) , 𝜏 ), the dynamics of the center of the uncertainty set, Eq. (26), become 
+
+𝑑 ¯𝑧 𝑐𝑐 /𝑑𝜏 = 𝜇 Ψ(𝜏 ) ¯𝑢 (𝜏 ) + 𝑉 (𝜏 ). (D1) The admissible range of 𝑉 (𝜏 ) is determined next. Applying the change of variable 𝜎 = 𝑠 − 𝜏 to the functional (28) yields 
+
+F ( ¯𝑣 𝜏 (·) , 𝜏 ) =
+
+π Δ1 (𝜏 )
+
+> 0
+
+[exp (− 𝜎 /𝜖 ) − 1] ¯𝑣 𝜏 (𝜎 ) 𝑑𝜎 
+
++
+
+π Δ2 (𝜏 ) 
+
+> Δ1(𝜏 )
+
+[
+
+1 − exp (Δ1 (𝜏 )/ 𝜖 ) [ 𝜏 (1 + 𝛾 1 (𝜏 ))/ 𝜖 + 1] ]
+
+exp (− 𝜎 /𝜖 ) ¯𝑣 𝜏 (𝜎 ) 𝑑𝜎 
+
+− exp (− Δ2 (𝜏 )/ 𝜖 ) [𝜏 (exp (Δ1 (𝜏 )/ 𝜖 ) − 1) + 𝜖 Ψ(𝜏 /𝜖 )] ¯𝑣 𝜏 (Δ2 (𝜏 )) ( 1 + 𝛾 2 (𝜏 )) , (D2) where the integrands and the coefficient multiplying ¯𝑣 𝜏 (Δ2 (𝜏 )) are all negative. Consequently, for any 𝜏 ∈ [ 0, 𝜏 0],
+
+max     
+
+> |¯𝑣 𝜏 (𝜎 )|≤ 1, 𝜎 ∈[ 0,Δ2(𝜏 )]
+
+F ( ¯𝑣 𝜏 (·) , 𝜏 ) = F ( ¯𝑣 𝜏 (·) , 𝜏 ) ¯𝑣 𝜏 (𝜎 )≡− 1 = 𝐴 (𝜏 ) (D3a) 
+
+min     
+
+> |¯𝑣 𝜏 (𝜎 )|≤ 1, 𝜎 ∈[ 0,Δ2(𝜏 )]
+
+F ( ¯𝑣 𝜏 (·) , 𝜏 ) = F ( ¯𝑣 𝜏 (·) , 𝜏 ) ¯𝑣 𝜏 (𝜎 )≡ 1 = −𝐴 (𝜏 ) (D3b) 42 with 
+
+𝐴 (𝜏 ) ≜ Δ1 (𝜏 ) + 𝜏 (1 + 𝛾 1 (𝜏 )) + 𝜖 exp (−( 𝜏 + Δ2 (𝜏 ))/ 𝜖 ) (1 + 𝛾 2 (𝜏 )) − 𝜖 exp (− Δ2 (𝜏 )/ 𝜖 ) 𝛾 2 (𝜏 ) + exp ((Δ1 (𝜏 ) − Δ2 (𝜏 ))/ 𝜖 ) [ 𝜏 (𝛾 2 (𝜏 ) − 𝛾 1 (𝜏 )) − 𝜖 ] > 0 (D4) for all 𝜏 ∈ [ 0, 𝜏 0]. It follows from (D3) that the instantaneous controller satisfies 
+
+|𝑉 (𝜏 )| ≤ 𝐴 (𝜏 ), 𝜏 ∈ [ 0, 𝜏 0]. (D5) 
+
+Stage 2: Auxiliary game. Defining the normalized controller ¯𝑉 (𝜏 ) ≜ 𝑉 (𝜏 )/ 𝐴 (𝜏 ), the bound (D5) becomes | ¯𝑉 (𝜏 )| ≤ 1. An auxiliary game is then formulated with the same cost function (31) and the dynamics 
+
+𝑑 ¯𝑧 𝑐𝑐 /𝑑𝜏 = 𝜇 Ψ(𝜏 ) ¯𝑢 (𝜏 ) + 𝐴 (𝜏 ) ¯𝑉 (𝜏 ) (D6) subject to the control constraints 
+
+| ¯𝑢 (𝜏 )| ≤ 1, ¯𝑉 (𝜏 ) ≤ 1, 𝜏 ∈ [ 0, 𝜏 0]. (D7) 
+
+Stage 3: Optimal controls. The auxiliary game (D6)–(D7) is a one-dimensional pursuit–evasion game with instantaneous bounded controls. Applying the necessary conditions for optimality from [9, 14] yields 
+
+¯𝑢 ∗ (𝜏 ) = sgn ¯ 𝑧 𝑐𝑐 (0) (D8a) 
+
+¯𝑉 ∗ (𝜏 ) = − sgn ¯ 𝑧 𝑐𝑐 (0). (D8b) The mapping from ¯𝑉 ∗ back to the original delayed control ¯𝑣 ∗ 
+
+> 𝜏
+
+follows from the sign structure of (D2). Because all integrands and coefficients in (D2) are negative, the functional F reverses the sign of its input: ¯𝑣 𝜏 ≡ 𝑐 produces F = −𝑐 𝐴 (𝜏 ). Hence, the condition ¯𝑉 ∗ (𝜏 ) = − sgn ¯ 𝑧 𝑐𝑐 (0) in (D8b) is 43 realized by 
+
+¯𝑣 ∗ 
+
+> 𝜏
+
+(𝜎 ) = sgn ¯ 𝑧 𝑐𝑐 (0), 𝜏 ∈ [ 0, 𝜏 0], 𝜎 ∈ ( 0, Δ2 (𝜏 )] . (D9) The optimal controls of the original game are, therefore, 
+
+¯𝑢 ∗ (𝜏 ) = ¯𝑣 ∗ (𝜏 ) = sgn ¯ 𝑧 𝑐𝑐 (0), 𝜏 ∈ [ 0, 𝜏 0] (D10) and the optimal initial condition is 
+
+𝜑 ∗ (𝜁 ) = ¯𝑣 ∗ 
+
+> 𝜏 0
+
+(𝜁 ) = sgn ¯ 𝑧 𝑐𝑐 (0), 𝜁 ∈ ( 0, Δ2 (𝜏 0)] . (D11) 
+
+■
+
+## Acknowledgments 
+
+The authors would like to thank Prof. Valery Glizer and Prof. Vladimir Turetsky, who authored the original version of the DGLCC guidance law, for their valuable insights during the discussion of this paper. 
+
+## References 
+
+[1] Gutman, S., “On Optimal Guidance for Homing Missiles,” Journal of Guidance, Control, and Dynam-ics , Vol. 2, No. 4, 1979, pp. 296–300. https://doi.org/10.2514/3.55878. [2] Shinar, J., “Solution Techniques for Realistic Pursuit-Evasion Games,” Control and Dynamic Systems ,Advances in Theory and Applications, Vol. 17, edited by C. T. Leondes, Academic Press, 1981, pp. 63–124. https://doi.org/10.1016/B978-0-12-012717-7.50009-7. [3] Shaferman, V., and Oshman, Y., “Stochastic Cooperative Interception Using Information Sharing Based on Engagement Staggering,” Journal of Guidance, Control, and Dynamics , Vol. 39, No. 9, 2016, pp. 2127–2141. https://doi.org/10.2514/1.G000437. [4] Shaferman, V., “Near-Optimal Evasion from Pursuers Employing Modern Linear Guidance Laws,” 
+
+44 Journal of Guidance, Control, and Dynamics , Vol. 44, No. 10, 2021, pp. 1823–1835. https://doi.org/ 10.2514/1.G005725. [5] Hexner, G., Weiss, H., and Dror, S., “Temporal Multiple Model Estimator for a Maneuvering Target,” 
+
+AIAA Guidance, Navigation and Control Conference and Exhibit , 2008, p. 7456. https://doi.org/10. 2514/6.2008-7456. [6] Shinar, J., and Glizer, V. Y., “Solution of a Delayed Information Linear Pursuit-Evasion Game with Bounded Controls,” International Game Theory Review , Vol. 1, No. 3-4, 1999, pp. 197–217. https: //doi.org/10.1142/S0219198999000153. [7] Shinar, J., and Shima, T., “Nonorthodox Guidance Law Development Approach for Intercepting Ma-neuvering Targets,” Journal of Guidance, Control, and Dynamics , Vol. 25, No. 4, 2002, pp. 658–666. https://doi.org/10.2514/2.4960. [8] Shinar, J., and Glizer, V. Y., “A Linear Pursuit-Evasion Game with Time Varying Information Delay,” TAE 889, Technion, May 2002. [9] Glizer, V. Y., and Turetsky, V., “A linear differential game with bounded controls and two information delays,” Optimal Control Applications and Methods , Vol. 30, No. 2, 2009, pp. 135–161. https://doi. org/10.1002/oca.850. [10] Blom, H. A. P., “Hybrid state estimation for systems with semi-Markov switching coefficients,” 1st European Control Conference , Grenoble, 1991, pp. 1132–1137. [11] Kitagawa, G., “Monte Carlo Filter and Smoother for Non-Gaussian Nonlinear State Space Models,” 
+
+Journal of Computational and Graphical Statistics , Vol. 5, No. 1, 1996, pp. 1–25. https://doi.org/10. 2307/1390750. [12] Blom, H. A. P., and Bloem, E. A., “Exact Bayesian and Particle Filtering of Stochastic Hybrid Systems,” 
+
+IEEE Transactions on Aerospace and Electronic Systems , Vol. 43, No. 1, 2007, pp. 55–70. https: //doi.org/10.1109/TAES.2007.357154. 
+
+45 [13] Blom, H., and Bar-Shalom, Y., “The Interacting Multiple Model Algorithm for Systems with Markovian Switching Coefficients,” IEEE Transactions on Automatic Control , Vol. 33, No. 8, 1988, pp. 780–783. https://doi.org/10.1109/9.1299. [14] Shima, T., and Shinar, J., “Time-Varying Linear Pursuit-Evasion Game Models with Bounded Con-trols,” Journal of Guidance, Control, and Dynamics , Vol. 25, No. 3, 2002, pp. 425–432. https: //doi.org/10.2514/2.4927. 
+
+46

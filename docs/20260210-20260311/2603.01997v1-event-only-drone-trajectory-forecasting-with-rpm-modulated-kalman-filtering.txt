@@ -1,0 +1,153 @@
+Title: Event-Only Drone Trajectory Forecasting with RPM-Modulated Kalman Filtering
+
+URL Source: https://arxiv.org/pdf/2603.01997v1
+
+Published Time: Tue, 03 Mar 2026 03:49:03 GMT
+
+Number of Pages: 7
+
+Markdown Content:
+# Event-Only Drone Trajectory Forecasting with RPM-Modulated Kalman Filtering 
+
+Hari Prasanth S.M. 1∗, Pejman Habibiroudkenar 1∗, Eerik Alamikkotervo 1 , Dimitrios Bouzoulas 1 and Risto Ojala 1
+
+Abstract — Event cameras provide high-temporal-resolution visual sensing that is well suited for observing fast-moving aerial objects; however, their use for drone trajectory prediction remains limited. This work introduces an event-only drone forecasting method that exploits propeller-induced motion cues. Propeller rotational speed are extracted directly from raw event data and fused within an RPM-aware Kalman filtering framework. Evaluations on the FRED dataset show that the proposed method outperforms learning-based approaches and vanilla kalman filter in terms of average distance error and final distance error at 0.4s and 0.8s forecasting horizons. The results demonstrate robust and accurate short- and medium-horizon trajectory forecasting without reliance on RGB imagery or training data. 
+
+I. INTRODUCTION Trajectory forecasting of Unmanned Aerial Vehicles (UAVs) is an essential requirement for several use cases such as airspace monitoring, collision avoidance, autonomous aviation, and anti-drone technologies. While detection and tracking are useful, predicting the future trajectory of an aerial object enables early decision-making and threat anal-ysis. This is particularly challenging in real-world scenarios, where drones can accelerate rapidly and drastically change direction. Another layer of difficulty is added if the drone is non-cooperative, and there is no access to its control signals, or on-board measurements and forecasting can only rely on remote detections. While non-cooperative drone detection and forecasting have been researched extensively, most of the current meth-ods focus on RGB cameras [6], [9], [1]. Unfortunately, all these methods can experience motion blur, limited frame rates, and latency in sensor measurements, which can com-promise the accuracy of state observations, especially in aggressive maneuvers or high-speed flights. As trajectory forecasting requires accurate and reliable past state obser-vations, these sensing limitations affect the performance of any approach that uses RGB camera. Event cameras have been proposed as an alternative sensor solution to address this high-speed vision challenge. Unlike conventional cameras, event cameras operate asynchronously at the per-pixel level. Each pixel reacts to a relative change in the intensity level of the observed scene at the order of microseconds [4]. These capabilities are useful to avoid  
+
+> *Equal contribution This work was supported by Aalto University
+> 1Department of Energy and Mechanical Engineering, Aalto University, 02150 Espoo, Finland
+
+firstname.lastname@aalto.fi 
+
+Fig. 1: Overview of the proposed trajectory forecasting up to 0.4 s into the future. Blue denotes the current drone position and past trajectory. Future ground-truth positions are shown in green, and predictions in orange. motion blur when observing fast motions, and in recent years, there has been growing interest in event cameras for event-based perception in robotics and drone applications [15], [4]. Event cameras have employed for drone presence detec-tion [3], [19], localization [10] and tracking [5], [13] but their potential for trajectory prediction remains mostly unexplored. Remote trajectory forecasting typically relies on kinematic modelling [16] or machine learning based solutions [20], [1], [12]. While machine learning methods can learn complex prediction mechanisms from data, they need large amounts of training data and the learned prediction mechnanism transfer poorly to drone types and flight patterns that are not included in the training data. Deep Learning (DL) based event camera trajectory fore-casting has been presented in [12], but the performance gains over non event-camera based configurations where quite low. This paper presents a method to extract critical drone properties from event camera data, such as propeller speed with classic algorithms to improve the state estimation of the drone. The future states can then be predicted from 
+
+> arXiv:2603.01997v1 [cs.CV] 2 Mar 2026
+
+the current state using kinematic motion modelling. Here Kalman Filtering is employed for state estimation and the detected propeller rotation speed is used for dynamic real-time estimation of the process noise. The proposed method is evaluated with the currently most extensive event camera based drone dataset, FRED [12], where we show improved forecasting accuracy for both 0.4s and 0.8s prediction hori-zons over the DL based baseline and vanilla Kalman Filter based approach. Examples of forecasted trajectories are presented in Figure 1. The contributions can be summerized as:  
+
+> •
+
+We introduce a real-time Kalman Filter based trajectory forecasting method with propeller rotation speed mod-ulated process noise matrix for improved performance.  
+
+> •
+
+We present state of the art results for event only trajectory forecasting on the FRED dataset [12] outper-forming DL based baseline and vanilla Kalman Filter. II. RELATED WORK Trajectory Forecasting is the task of predicting the future poses using only information available up to the current moment. Drones are typically highly agile with erractic movements, making the forecasting task extremely challeng-ing. A short overview of the most common drone trajectory prediction techniques is provided in sections II-A and II-B. For a more detailed review, we recommend [18]. In section II-C, event cameras and their applications to drone detection and forecasting are introduced. A more detailed review can be found in [11]. 
+
+A. Drone Trajectory Forecasting with On-board Sensors 
+
+If the drone’s onboard sensor information is available and drone properties are known, the future trajectory can be estimated with dynamic modelling. It estimates the forces and torques acting on the drone to derive its future state. The most important forces for a drone are the aerodynamic drag, gravity, and propeller thrust. Dynamic modelling of drones has been explored in [7], [2]. In this paper, we focus on non-cooperative drone trajectory forecasting where dynamic modelling is typically not feasible. 
+
+B. Remote Drone Trajectory Forecasting 
+
+For a remote observer of a non-cooperative drone kine-matic modelling can be used instead of dynamic mod-elling. Kinematic modelling assumes constant velocity or acceleration over the forecasting interval to integrate the future state. For drones, the constant velocity or acceleration assumptions typically only hold for short time intervals. Kinematic modelling as a remote observer is used in [16]. Alternatively, the trajectory prediction task can be learned from data using classical machine learning or DL methods. An example of a classical Gaussian Process-based trajectory forecasting method is presented in [21]. Most DL methods use sequential data from the past trajectory to predict the future trajectory, and a variety of architectures like trans-formers [20], Recurrent Neural Networks (RNN) [1], and Long-Short Term Memory (LSTM) [12] have been proposed. While DL models can learn advanced prediction patterns from data, they require high computation and large amounts of high-quality training data, and generalisation outside the training domain is typically poor. 
+
+C. Event Cameras and Drone Trajectory Forecasting 
+
+Traditional cameras capture absolute intensity at every single pixel at each frame, which makes them vulnerable to challenging lighting conditions and fast-moving objects. On the other hand, event cameras capture changes in brightness for each pixel individually with microsecond-level accuracy and only generate a sample for pixels where the change in intensity is over a given threshold. A continuous stream of data is produced where each sample, referenced as an event, includes the spatial pixel coordinate, microsecond resolution timestamp, and polarity of the intensity change: if the intensity decreased or increased. This working prin-ciple enables significantly higher dynamic range and allows capturing high-speed motion without suffering from motion blur. A more detailed survey on event cameras is provided in [4]. The properties of event cameras are highly suitable for detecting drones, and event camera-based drone perception has become an increasingly popular topic of research [11]. Promising results have been presented for drone presence detection [3], [19], drone localization [10], drone tracking [5], and drone propeller blade analysis [22], [17]. However, event-camera-based drone trajectory prediction has been little researched. To our knowledge, event-camera-based trajectory prediction with real event camera data has been presented only in [12], where a Convolutional Neural Network (CNN) - Transformer hybrid approach was used. Past event camera frames were cropped to the drone and encoded with a CNN, and these encodings were then fed to the transformer together with the past trajectory states to predict the future states. However, this approach provided quite modest improvements over models that didn’t have access to the event camera data. We believe that the prediction accuracy could be significantly improved by extracting information like propeller rotation speed from the event camera data and utilizing it for im-proved state estimation and motion forecasting. III. METHODOLOGY The proposed framework uses event camera data and drone bounding box as inputs. Although the bounding box can be obtained from any detector models, we use ground-truth annotations to evaluate trajectory forecasting independently of detection performance. Ground-truth annotations from past trajectory are also used in [12]. Our approach leverages the high temporal resolution of event camera to extract the propeller rotation speed, which is then used to modulate the Kalman Filter process noise. An overview of the complete framework is shown in Figure 2. 
+
+A. RPM Estimation 
+
+Propeller rotation frequency encodes critical information about thrust and maneuverability. We estimate revolutions Event Camera Data + Drone Bounding Box Drone Event Extraction RPM Estimation 
+
+> (Frequency-based Segmentation)
+> Kalman Filter
+> (RPM-Modulated Process Noise)
+> Trajectory Forecasting Model
+> (Future Extrapolation & Multi-step Propagation)
+
+Fig. 2: Overview of the proposed event-based trajectory forecasting framework. 
+
+per minute (RPM) from the temporal periodicity of propeller events using a period histogram approach. To construct a spa-tial frequency map F (x, y ), we count the number of events for each pixel events within the drone bounding box. For accurate RPM estimation the airframe pixels must then be separated from the propeller pixels. By selecting a percentile-based threshold τp, we differentiate high-frequency propeller pixels from the low-frequency airframe pixels. In experi-ments, 70th percentile yields best results. This percentile-based threshold enables our system to adapt to changes in the event rate caused by different lighting conditions and flight speeds. Examples of the frequency map and final segmented propellers are provided in Figure 3. Each filtered propeller pixel (x, y ) maintains timestamps of its last ON and OFF events: tON (x, y ) and tOF F (x, y ). If a pixel is turned ON and it was previously turned OFF, the time between the two events ∆t is recorded. The periods of all pixels inside the bounding box are binned into a histogram H(b) with bin width of ∆b = 0 .1ms and a range of [0 , 25 .6ms ] resulting in total of 256 bins. To account the RPM changes over time, histogram entries older than 100 ms 
+
+are removed via First In First Out queue. The most prominent period ˆT is identified as: 
+
+ˆT = ( b∗ + 0 .5) · ∆b, b∗ = arg max  
+
+> b
+
+H(b)
+
+The dominant frequency f = 1 / ˆT is converted to RPM as: RPM = f · 60 
+
+Nb
+
+where Nb is the number of blades per propeller. The values for bin width and number of bins are experimentally chosen and with the chosen values RPM can be estimated in the range 2300 to 300,000 RPM. 
+
+B. Trajectory Forecasting Model 
+
+We formulate trajectory prediction as a real-time Kalman Filtering problem that estimates the current state from noisy measurements and predicts future positions using kinematic motion model. The process noise matrix is modulated based on the detected propeller rotation speed as high propeller rotation speeds correlate with eratic movements. 
+
+1) Motion model: The drone state is estimated in the im-age space and it includes four state variables: center position 
+
+(cx, c y ) and velocity (vx, v y ). We follow the discrete-time constant velocity for the state transition model [14], [8]. The motion model assumes that vx and vy remain constant over prediction interval and cx and cy are updated as follows: 
+
+cx,k = cx,k −1 + vx,k −1∆tcy,k = cy,k −1 + vy,k −1∆t
+
+The process noise covariance matrix is initialized as a diagonal matrix and scaled by a coefficient that depends on the detected propeller rotation speed. Higher propeller RPM is associated with more aggressive maneuvers and rapid accelerations, so the filter increases motion uncertainty and gives more weight to the measurement update. Conversely, at low RPM the drone motion is assumed to be smoother and closer to hovering and more weight can be given to the motion model. The process noise covariance matrix is initialized as a diagonal matrix and scaled by a coefficient that depends on the detected propeller rotation speed. Higher propeller RPM is associated with more aggressive maneuvers and rapid accelerations, so the filter increases motion uncertainty and gives more weight to the measurement update. Conversely, at low RPM the drone motion is assumed to be smoother and closer to hovering, allowing greater reliance on the motion model. The velocity-related scaling factor is defined as 
+
+αv = max(0 .5, 1 + 2 r + max(0 , ˙r)) ,
+
+where r ∈ [0 , 1] denotes the normalized RPM level and reflects the available thrust and overall maneuvering capability of the drone. The term ˙r ∈ [−1, 1] captures the rate of change of RPM, where positive values indicate increasing thrust and a higher likelihood of rapid motion changes. Consequently, the process noise increases both with higher steady thrust and during rapid throttle increases, allowing the estimator to better handle dynamic motion while remaining conservative during stable flight. 
+
+2) Measurement model: All state variables ( cx, c y , v x, v y )are measured directly. Center position (cx, c y ) is recovered from the ground truth bounding box center and velocity com-ponents (vx, v y ) are calculated from the difference between Fig. 3: Multi-scene visualization of rotor localization from event data. Each column corresponds to a different scene. From top to bottom: RGB detection, corresponding event frame, frequency heatmap of drone events, and filtered propeller-only events, where red markers indicate the estimated rotor centers. ground truth bounding box position at current and previous timestep. 
+
+3) Forecasting: The state at current time t is recovered from the Kalman Filter with RPM modulated process noise. The forecasted state at t + τ is predicted using the Kalman Filter motion model with timestep τ . Naturally the mea-surement update is not performed for the forecasted state. Predictions are made for 0.4s and 0.8s horizons to follow the benchmark format of the FRED dataset [12]. In addition to the final position at the end of the interval, all intermediate poses are forecasted with 33ms timesteps for evaluation of the full forecasted trajectory. 
+
+C. FRED Dataset 
+
+To evaluate the proposed method, we use the FRED Dataset [12]. FRED is a benchmark designed for drone detection, tracking, and trajectory forecasting, combining synchronized RGB video and event camera data at HD resolution (1280 ×720). The dataset contains over 7 hours of annotated recordings per modality (more than 14 hours in total), making it the largest RGB-event dataset specifically focused on aerial drone scenarios. The data are split into two sections: one for training and one for testing. Since our method is not learning-based, we utilize only the test split. FRED includes five different drone models, ranging from ultra-light FPV mini-drones to commercial drones, thereby covering a wide spectrum of object sizes, flight speeds, ma-neuverability, and hovering behaviors. It provides dense per-frame annotations with bounding boxes and consistent track identities, enabling not only object detection but also multi-object tracking and trajectory forecasting. The recordings span a diverse set of challenging real-world scenarios, in-cluding rain, low-light and nighttime conditions, indoor envi-ronments, long-range flights, multiple simultaneously visible drones, and visual distractors such as insects. Furthermore, FRED offers both canonical and domain-shifted challenging splits, which are specifically designed to evaluate model robustness and generalization under adverse conditions. 
+
+D. Evaluation 
+
+The propose method is evaluated against classic and deep learning based forecasting methods. All models are evaluated with the FRED test set and deep learning based models are trained only with the train set that is separate from test samples. LSTM, Transformer, and the CNN + Trans-former models are deep learning based models presented in [12]. LSTM and Transformer use only the past ground-truth bounding box information as input, while CNN + Transformer models additionally use past RGB and/or event frames encoded with CNN. As the classical baselines we implemented Linear extrapolation and vanilla Kalman Filter. Linear extrapolation estimates the (vx, v y ) velocities directly as the average of four previous poses without any filtering and then forecasts the future poses with the same constant velocity motion model that is used in our method. Vanilla Kalman Filter is implemented identically to our method, except the process noise matrix is fixed and not modulated based on the rotor rotation speed. Following the FRED benchmark protocol, forecasting per-formance is evaluated using two standard trajectory pre-diction metrics: Average Displacement Error (ADE) and Final Displacement Error (FDE). ADE measures the mean RGB 0.8s 0.4s Indoor Rain Night Highly Dynamic Fig. 4: Qualitative trajectory forecasting results under challenging conditions. The current ground-truth position and past trajectory are shown in blue; future ground-truth positions are shown in green; predicted future positions are shown in orange. Results are illustrated across highly dynamic motion, night-time, indoor, and rain scenarios. Euclidean distance between the predicted trajectory and the ground-truth trajectory over all predicted time steps, while FDE computes the Euclidean distance between the predicted final position and the corresponding ground-truth final posi-tion. Both metrics are reported in pixel space, where lower values indicate better forecasting accuracy. Since our method is primarily focused on trajectory forecasting rather than bounding box regression, predictions are evaluated using the center point of the object rather than full bounding box coor-dinates. This choice allows for a fair and direct comparison of trajectory prediction accuracy across different methods, independent of object scale or aspect ratio variations. IV. R ESULTS 
+
+ADE and FDE for the 0.4s and 0.8s forecasting intervals for the evaluated methods are presented in Table I. Our proposed method achieves the highest performance in all metrics. All classical methods overperform the deep learning based methods and the performance gap is larger for the 0.4s horizon. The highest-performing deep learning based model is the CNN + Transformer utilizing both RGB and event camera data. Kalman Filter achieves 0.1px improvement for 0.4s hori-zon and 2.2px for the 0.8s horizon over the linear ex-trapolation baseline. Modulating the Kalman Filter process noise based on the propeller rotation speed yields additional improvements of 1.6px for 0.4s horizon and 4.2px for 0.8s horizon. To further evaluate the error distribution of our method the distribution of ADE and FDE across all test sequences for both prediction horizons are presented in Figure 5. The boxplots illustrate not only the mean forecasting performance but also the variability. TABLE I: Trajectory forecasting results on the FRED dataset. ADE and FDE are reported in pixels.                                                           
+
+> Method Input ADE (px) ↓FDE (px) ↓
+> RGB Event 0.4s 0.8s 0.4s 0.8s LSTM ✗✗171.9 353.3 53.04 96.44 Transformer ✗✗124.8 292.2 46.74 87.68 CNN + Transformer ✓✗124.0 280.9 45.92 83.86 CNN + Transformer ✗✓151.7 337.0 58.06 100.6 CNN + Transformer ✓✓121.3 281.5 45.23 85.78 Linear Extrapolation ✗✗16.45 37.93 32.90 83.32 Kalman Filter ✗✗16.40 37.08 32.80 81.54
+> Kalman + RPM ✗✓15.35 34.85 31.16 77.76
+
+V. D ISCUSSION 
+
+Our proposed method achieved the highest forecasting peformance at both 0.4s and 0.8s horizon on the exten-sive FRED drone dataset. Our approach utilizes only event camera data as input and does not rely on learning-based models, requiring little to no parameter tuning. In our exper-iments (Table I) even a simple linear extrapolation yields better forecasting performance than the best performing deep learning model. This suggests that the deep learning models may suffer from overfitting to the training data, limiting its generalization ability. Furthermore, the results demonstrate that incorporating a Kalman Filter for state estimation while keeping the same motion model leads to consistent improvements in both ADE and FDE compared to linear extrapolation. These gains are further enhanced when 0.4 s 0.8 s 
+
+0
+
+20 
+
+40 
+
+60 
+
+80 
+
+100 
+
+> Error (pixels)
+
+0.4 s 0.8 s 
+
+0
+
+25 
+
+50 
+
+75 
+
+100 
+
+125 
+
+150 
+
+175 
+
+200 
+
+> Error (pixels)
+
+Fig. 5: Distribution of forecasting errors at 0.4 s and 0.8 s horizons over 54 test cases. Top: ADE, Bottom: FDE. The box represents the interquartile range (25th–75th percentile), whiskers denote the 5th–95th percentile, and the orange colored line indicates the median. the Kalman Filter is combined with RPM modulated process noise. These results underline the significance of accurate state estimation in forecasting. The accuracy of the current state strongly affects the accuracy of the forecasted state. The trajectory forecasting performance in different sce-narios, namely highly dynamic, night, indoor and rain is illustrated in Figure 4. The proposed method achieves good forecasting performance in all of these scenarios. Addition-ally the figure highlights the advantage of using event camera based perception. The drone is clearly visible in the event camera frames while very difficult to detect in most RGB frames. VI. C ONCLUSION 
+
+This study presented a real-time event-only approach for drone trajectory prediction that detects the propeller rota-tion speed from the event camera data and leverages that to dynamically modulate the Kalman Filter process noise matrix. The proposed method operates without reliance on RGB imagery and is well suited for high-speed and visually challenging conditions. Experimental results on the FRED dataset demonstrate that our approach significantly outper-forms learning-based methods in both short- and medium-horizon. These findings highlight the potential of classic event camera based methods for accurate UAV motion fore-casting in real-world scenarios. Future work will focus on integrating individual propeller RPM estimation, instead of single RPM estimate for whole drone to enable more precise trajectory forecasting, par-ticularly during rapid and erratic movements. In addition, the orientation of the drone could be estimated based on the detected propeller for improved state estimation and forecasting. These values can also be utilized for various drone applications other than forecasting, such as behavioral analysis. Additionally, we plan to evaluate the performance of our method in real-world flight experiments with drones operating in unconstrained environments. ACKNOWLEDGMENT The authors would like to thank Junction for organising the hackathon and Sensofusion for introducing the usecase challenge that motivated the development of this article. REFERENCES [1] Stefan Becker, Ronny Hug, Wolfgang Huebner, Michael Arens, and Brendan T Morris. Generating synthetic training data for deep learning-based uav trajectory prediction. arXiv preprint arXiv:2107.00422 , 2021. [2] Aneˇ zka Chovancov´ a, Tom´ aˇ s Fico, L’uboˇ s Chovanec, and Peter Hu-binsk. Mathematical modelling and parameter identification of quadro-tor (a survey). Procedia Engineering , 96:172–181, 2014. [3] Anton Eldeborg Lundin, Rasmus Winzell, Hanna Hamrell, David Gustafsson, and Hannes Ovr´ en. Drone detection using a low-power neuromorphic virtual tripwire. In European Conference on Computer Vision , pages 105–120. Springer, 2024. [4] Guillermo Gallego, Tobi Delbr¨ uck, Garrick Orchard, Chiara Bar-tolozzi, Brian Taba, Andrea Censi, Stefan Leutenegger, Andrew J. Davison, J¨ org Conradt, Kostas Daniilidis, and Davide Scaramuzza. Event-Based Vision: A Survey. IEEE Transactions on Pattern Analysis and Machine Intelligence , 44(1):154–180, January 2022. [5] Craig Iaboni, Deepan Lobo, Ji-Won Choi, and Pramod Abichandani. Event-based motion capture system for online multi-quadrotor local-ization and tracking. Sensors , 22(9):3240, 2022. [6] Brian KS Isaac-Medina, Matt Poyser, Daniel Organisciak, Chris G Willcocks, Toby P Breckon, and Hubert PH Shum. Unmanned aerial vehicle visual detection and tracking using deep neural networks: A performance benchmark. In Proceedings of the IEEE/CVF Interna-tional Conference on Computer Vision , pages 1223–1232, 2021. [7] Bouzgou Kamel, Bestaoui Yasmina, Benchikh Laredj, Ibari Be-naoumeur, and Ahmed-Foitih Zoubir. Dynamic modeling, simulation and pid controller of unmanned aerial vehicle uav. In 2017 Seventh International Conference on Innovative Computing Technology (IN-TECH) , pages 64–69. IEEE, 2017. [8] Fausto Francesco Lizzio, Martin Bugaj, J´ an Rost´ aˇ s, and Stefano Primatesta. Comparison of multiple models in decentralized target estimation by a uav swarm. Drones , 8(1):5, 2023. [9] Jinyu Ma, Puhui Chen, Xinhan Xiong, Liangcheng Zhang, Shengdong Yu, and Dongyuan Zhang. Research on vision-based servoing and trajectory prediction strategy for capturing illegal drones. Drones ,8(4):127, 2024. [10] Gabriele Magrini, Federico Becattini, Pietro Pala, Alberto Del Bimbo, and Antonio Porta. Neuromorphic drone detection: an event-rgb multimodal approach. In European Conference on Computer Vision ,pages 259–275. Springer, 2024. [11] Gabriele Magrini, Lorenzo Berlincioni, Luca Cultrera, Federico Be-cattini, and Pietro Pala. Drone Detection with Event Cameras, 2025. [12] Gabriele Magrini, Niccol` o Marini, Federico Becattini, Lorenzo Berlin-cioni, Niccol` o Biondi, Pietro Pala, and Alberto Del Bimbo. FRED: The Florence RGB-Event Drone Dataset. In Proceedings of the 33rd ACM International Conference on Multimedia , MM ’25, pages 13170–13176, New York, NY, USA, October 2025. Association for Computing Machinery. [13] Anton Mitrokhin, Cornelia Ferm¨ uller, Chethan Parameshwara, and Yiannis Aloimonos. Event-based moving object detection and track-ing. In 2018 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pages 1–9. IEEE, 2018. [14] Oscar Javier Monta˜ nez, Marco Javier Suarez, and Eduardo Avendano Fernandez. Application of data sensor fusion using extended kalman filter algorithm for identification and tracking of moving targets from lidar–radar data. Remote Sensing , 15(13):3396, 2023. [15] Elias Mueggler, Henri Rebecq, Guillermo Gallego, Tobi Delbruck, and Davide Scaramuzza. The event-camera dataset and simulator: Event-based data for pose estimation, visual odometry, and slam. The International journal of robotics research , 36(2):142–149, 2017. [16] Han Peng, Abolfazl Razi, Fatemeh Afghah, and Jonathan Ashdown. A unified framework for joint mobility prediction and object profiling of drones in uav networks. Journal of Communications and Networks ,20(5):434–442, 2018. [17] Nitin J Sanket, Chahat Deep Singh, Chethan M Parameshwara, Cornelia Ferm¨ uller, Guido CHE De Croon, and Yiannis Aloimonos. Evpropnet: Detecting drones by finding propellers for mid-air landing and following. arXiv preprint arXiv:2106.15045 , 2021. [18] Pushpak Shukla, Shailendra Shukla, and Amit Kumar Singh. Trajectory-prediction techniques for unmanned aerial vehicles (uavs): A comprehensive survey. IEEE Communications Surveys & Tutorials ,27(3):1867–1910, 2024. [19] Terrence Stewart, Marc-Antoine Drouin, Michel Picard, Frank Billy Djupkep Dizeu, Anthony Orth, and Guillaume Gagn´ e. A virtual fence for drones: Efficiently detecting propeller blades with a dvxplorer event camera. In Proceedings of the International Conference on Neuromorphic Systems 2022 , pages 1–7, 2022. [20] Wuwei Wang, Ruiye Gao, Chi Du, and Yuanqing Li. Enhanced transformer-based uav-to-uav tracking using distractor elimination and trajectory prediction. In 2024 IEEE 17th International Conference on Signal Processing (ICSP) , pages 352–357. IEEE, 2024. [21] Guangrui Xie and Xi Chen. Efficient and robust online trajectory prediction for non-cooperative unmanned aerial vehicles. Journal of Aerospace Information Systems , 19(2):143–153, 2022. [22] Guangrong Zhao, Yiran Shen, Ning Chen, Pengfei Hu, Lei Liu, and Hongkai Wen. High speed rotation estimation with dynamic vision sensors. arXiv preprint arXiv:2209.02205 , 2022.
