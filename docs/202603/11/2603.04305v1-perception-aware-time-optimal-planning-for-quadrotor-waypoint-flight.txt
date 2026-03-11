@@ -1,0 +1,1550 @@
+Title: Perception-Aware Time-Optimal Planning for Quadrotor Waypoint Flight
+
+URL Source: https://arxiv.org/pdf/2603.04305v1
+
+Published Time: Thu, 05 Mar 2026 02:31:11 GMT
+
+Number of Pages: 21
+
+Markdown Content:
+> IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 1
+
+# Perception-Aware Time-Optimal Planning for Quadrotor Waypoint Flight 
+
+Chao Qin 1, Jiaxu Xing 2, Rudolf Reiter 2, Angel Romero 2, Yifan Lin 1, Hugh H.-T. Liu 1 and Davide Scaramuzza 2
+
+(a) Figure-8 Track [1] (b) TII Track [2] (c) Dive Track 
+
+Fig. 1: Our framework addresses the perception-aware, time-optimal planning problem for agile quadrotors. It supports both time-optimal waypoint-passing (TOWP) (blue) and time-optimal gate-traversing (TOGT) (yellow) modes on a wide range of race tracks, and three perception objectives are proposed to ensure quality visual inputs. Tracks (a) and (b) demonstrate that our method can handle tracks defined in previous literature, while track (c) illustrates its superior flexibility in handling more complex scenarios where gates are in diverse shapes, sizes, and orientations. 
+
+Abstract —Agile quadrotor flight pushes the limits of control, actuation, and onboard perception. While time-optimal trajec-tory planning has been extensively studied, existing approaches typically neglect the tight coupling between vehicle dynamics, environmental geometry, and the visual requirements of onboard state estimation. As a result, trajectories that are dynamically feasible may fail in closed-loop execution due to degraded visual quality. This paper introduces a unified time-optimal trajectory optimization framework for vision-based quadrotors that explicitly incorporates perception constraints alongside full nonlinear dynamics, rotor actuation limits, aerodynamic effects, camera field-of-view constraints, and convex geometric gate representations. The proposed formulation solves minimum-time lap trajectories for arbitrary racetracks with diverse gate shapes and orientations, while remaining numerically robust and computationally efficient. We derive an information-theoretic position uncertainty metric to quantify visual state-estimation quality and integrate it into the planner through three perception objectives: position uncertainty minimization, sequential field-of-view constraints, and look-ahead alignment. This enables systematic exploration of the trade-offs between speed and per-ceptual reliability. To accurately track the resulting perception-aware trajectories, we develop a model predictive contouring tracking controller that separates lateral and progress errors. Experiments demonstrate real-world flight speeds up to 9.8 m/s with 0.07 m average tracking error, and closed-loop success rates improved from 55% to 100% on a challenging Split-S course. The proposed system provides a scalable benchmark for studying the fundamental limits of perception-aware, time-optimal autonomous flight. 
+
+Index Terms —Time-optimal control, autonomous aerial vehi-cles, motion planning, quadrotor control.  
+
+> 1
+
+Authors are with the University of Toronto Institute for Aerospace Studies (UTIAS), Canada  
+
+> 2
+
+The Robotics and Perception Group, University of Zurich, Switzerland (https://rpg.ifi.uzh.ch). 
+
+I. I NTRODUCTION 
+
+Quadrotors are among the most agile uncrewed aerial vehi-cles (UAV)s and have been widely deployed in inspection, de-livery, and scene reconstruction and mapping tasks [3]. These applications benefit from the platform’s high maneuverability, precise control authority, and rich onboard sensing capabilities. first-person-view (FPV) Drone racing represents an extreme operating regime of these same capabilities, pushing both ac-tuation and perception systems to their limits under aggressive maneuvers and strict real-time constraints [4]. Beyond compe-tition, racing provides a principled benchmark for quantifying the maximum achievable performance of autonomous aerial systems within known environments. Understanding these performance limits requires solving the time-optimal trajectory planning problem. Establishing theo-retical minimum lap times enables objective comparison across control strategies, whether model-based, learning-based, or optimization-based. In real-world vision-based systems, maxi-mum achievable performance is not determined solely by time-optimal control. It is also influenced by perceptual constraints such as the minimum visual quality required for reliable localization and by geometric constraints imposed by gates and tunnels [5], [6]. These coupled effects motivate the concept of perception-aware flight [7]–[9]. Additionally, environmental constraints such as narrow passages and complex gate geome-tries must be explicitly considered to guarantee collision-free and effort-efficient flight [10]. Characterizing and optimizing these tightly coupled dynamics–perception–geometry interac-tions remains challenging due to their high dimensionality and nonlinear structure.     
+
+> arXiv:2603.04305v1 [cs.RO] 4 Mar 2026 IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 2
+> (a) None (b) LA (c) FOV (b) PUM
+
+Fig. 2: Illustrations of three perceptual objectives verified in the proposed framework. The arrows represent the camera optical directions, and the triangles with filled colors indicate the camera’s FOV. (a) In the absence of specific perception objectives, the camera’s orientation is purely governed by time-optimal control, which could be detrimental to visual perception; (b) LA encourages the UAV to look at a future waypoint; (c) FOV keeps one or multiple target landmarks (e.g., the next racing gate) visible; (d) PUM trades off time optimality and information-theoretic position uncertainty for robust closed-loop execution. To bridge this gap, we present a unified time-optimal trajectory planning framework that explicitly incorporates the critical factors of vision-based autonomous flight. Our formu-lation jointly accounts for full quadrotor dynamics, rotor actu-ation limits, aerodynamic effects, camera field-of-view (FOV) constraints, geometric constraints, and perception objectives. As illustrated in Fig. 1, the proposed framework computes theoretical minimum lap trajectories across diverse racetracks, including those used in prior literature [1], [2], as well as tracks with significantly more flexible gate configurations. Importantly, gates can be modeled as convex polygons or polytopes (Fig. 3), enabling broad applicability. The resulting optimization is numerically stable and computationally effi-cient. To the best of our knowledge, this is the first framework capable of jointly handling all the aforementioned factors within a scalable formulation. A second major contribution of this work is the formal verification and integration of three core perception objectives for vision-based autonomous aerial vehicles (Fig. 2). We derive an information-theoretic metric for vision-based posi-tion uncertainty and incorporate it into trajectory optimization through:  
+
+> •
+
+position uncertainty minimization (PUM): minimizing the theoretical lower bound on positioning uncertainty,  
+
+> •
+
+sequential FOV constraints (FOV): enforcing visibility of sequential targets via tunable soft penalties,  
+
+> •
+
+look-ahead (LA): aligning camera orientation with future trajectory segments, inspired by human piloting behavior [11]. These objectives can be applied individually or in combination to systematically balance speed and perceptual robustness. Closed-loop experiments demonstrate that incorporating per-ception objectives increases the success rate from 55% to 
+
+100% on the Split-S track. To accurately execute the resulting perception-aware tra-jectories, we further propose a model predictive contour-tracking control (MPCTC) that decomposes tracking error into longitudinal and lateral components, allowing indepen-dent weighting of path adherence and forward progression and thereby overcoming the corner-cutting problem [12] of a standard model predictive control (MPC). In real-world experiments at speeds up to 9.8 m/s, the controller achieves an average tracking error of 0.07 m and a peak error of 0.23 m, ensuring reliable satisfaction of perception constraints. The main contributions of this paper are summarized as follows:  
+
+> •
+
+A robust and efficient time-optimal quadrotor trajectory planner that jointly integrates nonlinear dynamics, actu-ation limits, aerodynamic effects, geometric constraints, and perception objectives.  
+
+> •
+
+An information-theoretic derivation of vision-based po-sition uncertainty and three perception-aware objectives that directly enhance visual robustness.  
+
+> •
+
+A complete planning and control pipeline enabling ac-curate, perception-aware, time-optimal flight validated in extensive simulation and real-world experiments. The remainder of this paper is structured as follows. Section II reviews related work. Section III formulates the problem. Section IV derives the position uncertainty metric. Section V presents the trajectory optimization framework. Section VI introduces the tracking controller. Section VII reports experimental results. Finally, Section VIII discusses limitations and connections to reinforcement learning (RL). 
+
+Fig. 3: The framework accommodates gates representable by convex shapes, which constitute the majority of gates used in drone racing [10]. IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 3
+
+II. R ELATED WORKS 
+
+A. Time-Optimal Trajectory Planning 
+
+There are two mainstream methods to plan time-optimal quadrotor trajectories: direct methods, i.e., discretization com-bined with nonlinear program (NLP) [13], and polynomial ap-proaches [14], which utilize the differentiable flatness property of quadrotors to formulate a polynomial trajectory. 
+
+Direct methods. The most common formulation of direct methods is via multiple shooting [15], which employs discrete-time trajectories to represent the quadrotor’s controls and states as decision variables. Foehn et al. [16] present the first time-optimal planner based on a multiple-shooting framework that addresses the quadrotor waypoint-flight problem in drone rac-ing. However, this method is time-consuming, often requiring minutes or even hours to compute results. Zhou et al. [17] optimize the problem structure by explicitly assigning fixed waypoint constraints to specific shooting nodes, thereby reduc-ing computation time. Shen et al. [18] and the authors in [19] reformulate the original problem into convex relaxations for computational efficiency. An alternative approach to enhance numerical tractability involves projecting the system dynamics onto a reference path and maximizing the path progress as a surrogate for time-optimality, as discussed in [20]–[22]. In addition, by slightly compromising model fidelity, Romero et al. [23] and Teissing et al. [24] achieved real-time per-formance. The online replanned trajectory can seemingly be incorporated into certain time-optimal controllers [25]–[27], formulated as model predictive contouring control (MPCC) problems, thereby enabling dynamic obstacle avoidance. 
+
+Polynomial approach. The polynomial approach typically offers superior computational efficiency, taking merely sec-onds or milliseconds of runtime. Mellinger et al. [14] in-troduced the well-known minimum-snap trajectory planner. Richter et al. [28] further eliminated waypoint constraints, significantly reducing computation time. Meanwhile, Mueller et al. [29] derived an analytical solution for the coefficients of a polynomial that connects two states. Wang et al. [30] extended this concept to waypoint flight, enabling lightweight computation of dynamically feasible waypoint trajectories for quadrotors. Subsequently, Han et al. [31], Qin et al. [10], and Wang et al. [32] extended this framework to tackle various challenges in drone racing, including collision avoidance and the traversal of both static and dynamic gates. However, polynomial approaches often suffer from inherent smooth-ness, resulting in significantly longer flight times compared to discretization-based methods. To address this issue, Qin et al. [33] proposed a solution that achieves 1–3% relative suboptimality to the global optimal time by appropriately increasing the number of polynomial segments. They also provide an analytical study to justify the choice of the segment number. 
+
+Other methods. While direct multiple shooting algorithms use gradient-based optimization techniques, Penicka et al. [34] introduced a sampling-based framework that accounts for the full quadrotor dynamics. Song et al. [35] presented a deep RL based approach to compute near-time-optimal trajectories for a fixed track layout. The authors in [36] propose a multi-phase MPC with a polynomial model over a second long-term horizon, but consider only tracking problems. 
+
+B. Percepion-Aware Flights 
+
+Perception-awareness is crucial for mission success, as per-ception quality often determines the positioning robustness and precision. Previous literature handles two primary perception objectives. 
+
+Target visibility. The first objective emphasizes maintaining visibility of specific objects of interest, ensuring that the target remains within the line of sight (LOS) [8]. This is particularly crucial for applications such as target following [37]–[39] and inspection tasks [40]–[42]. For safe navigation in unknown and obstacle-rich environments, the interest is extended to unknown regions that might potentially put the vehicle in danger [43], [44]. Additionally, the target to keep in sight can be as simple as the next waypoint just to counteract unexpected scenarios [45]. 
+
+Uncertainty reduction. The other type of perception ob-jective aims to enrich landmark observation from the imaging sensor and thereby reduce localization uncertainty [5], [46]– [48]. It was verified that this strategy can effectively mitigate position estimate drift in texture-less areas where effective feature matching is scarce [49]. 
+
+Perception-aware time-optimal flights. When time is of the essence, it is desirable to optimize both trajectory duration and perception quality simultaneously. Murali et al. [50] proposed an aggressive trajectory planner that optimizes the total trajectory duration while maximizing the co-visibility of multiple known 3D landmarks across consecutive frames. However, their objective is not to operate the vehicle at its actuation limit, which results in suboptimal durations. Spasojevic et al. [51] introduced an efficient time-optimal path parameterization algorithm for quadrotors under limited FOV constraints. Their planning is divided into two stages: a path-planning phase in a lower-dimensional space that ensures collision avoidance, followed by time-parameterization that respects the quadrotor’s kinodynamic constraints. However, this method cannot guarantee that the resulting path is time-optimal in both temporal and spatial profiles, as the latter phase has no access to modify the given path. Additionally, it simplifies the camera’s FOV constraint as a symmetric conical region, which does not accurately represent real image boundaries. III. P ROBLEM FORMULATION 
+
+This section formulates the time-optimal trajectory opti-mization problem. We first define the quadrotor’s equation of motion and system constraints involving single-rotor thrust limits, geometrical constraints, and FOV constraints of the imaging sensor, followed by introducing three perception objectives. 
+
+A. Quadrotor Dynamics 
+
+The quadrotor’s state space is described as: 
+
+x⊤ =
+
+h
+
+pw⊤, qwb ⊤, vw⊤, ωb⊤, f b⊤i
+
+(1) IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 4
+
+4
+
+2
+
+1
+
+3
+
+xw
+
+yw zw
+
+xw
+
+yw
+
+zw
+
+Fig. 4: Diagram of quadrotor model with the world and body frames convention. where pw ∈ R3 is the position in the world frame, qwb ∈
+
+SO (3) is the unit quaternion that describes the orientation of the platform from the body frame to the world frame, vw ∈ R3
+
+is the linear velocity vector, ωb ∈ R3 are the body rates, and 
+
+f b = [ f1, f 2, f 3, f 4]T ∈ R4 are the thrusts produced by each rotor. The quadrotor frame configuration is illustrated in Fig. 4. We denote the collective thrust as fT and the associated body torques as τ b, which can be obtained by: 
+
+fT =
+
+ 00P fi
+
+ and τ b =
+
+ l/ √2( f1 +f2 −f3 −f4)
+
+l/ √2( −f1 +f2 +f3 −f4)
+
+cτ (f1 − f2 + f3 − f4)
+
+ (2) with the quadrotor’s arm length l and the rotor’s torque constant cτ . For readability, we drop the frame indices (e.g., the superscript w and b) as they are consistent throughout the description. In addition, we adopt a linear drag model [52] to emulate the aerodynamic drags. Let D be the diagonal drag coefficients matrix. The equation of motion can be written as: 
+
+˙p = v ˙q = 12 Λ(q)
+
+ω
+
+0
+
+
+
+˙v = 1 
+
+> m
+
+Rf T +g−RDR ⊤v ˙ω = J−1 (τ − ω × Jω)
+
+(3) where Λ(q) returns the quaternion’s multiplication matrix, and 
+
+R is the corresponding rotation matrix of q. In addition, g
+
+represents the gravity vector, m the quadrotor’s mass, and J
+
+its inertia matrix. The input of the system is given as the rates of change of the thrusts produced by each rotor, rT = ˙f b ∈ R4.
+
+B. Constraints 1) Body-Rate Constraints: The body rates are bounded by the maximum angular velocities of the operational limits of the low-level flight control unit (FCU) via |ω| ≤ ωmax .
+
+2) Rotor Constraints: The thrust produced by each rotor is constrained by the maximum and minimum thrust limits, which are determined by the motor’s specifications with fmin ≤
+
+f ≤ fmax . In addition, the rate of thrust change rT is bounded to account for the low-pass characteristic of the motors: rTmin ≤
+
+rT ≤ rTmax .
+
+3) Waypoint Constraints: Some tasks explicitly specify waypoints to pass in a certain order, which can be modeled as a spherical region with a user-specified radius, δi, that indicates the tolerance for waypoint constraint violation. For the i-th waypoint, the constraint can be expressed as: 
+
+Wi(δi) = {p ∈ R3 | ∥ p − pwi ∥2 ≤ δi}, (4) Consider a problem with Nwi waypoints in total. The waypoint constraint hG (p) ≤ 0 suggests that the quadrotoy trajectory should fall into a functional space that satisfies: 
+
+p(ti) ∈ W i(δi), i = 1 , 2, . . . , N wi , (5) at some time instances 0 < t 1 < t 2 < · · · < t Nwi . Note that this formulation can also apply to circular gate modeling in drone racing, simply by setting the tolerance to the radius of the gate. 
+
+4) Gate Constraints: In many scenarios, the quadrotor is tasked with traversing a specific object or area, instead of a single point. Since the traversable region is significantly larger, this formulation provides greater flexibility for trajectory op-timization. We collectively refer to these traversable areas of certain objects as gate constraints. Two general classes of gates are considered: polyhedral and spherical. Polyhedral gates are defined as 
+
+Pi = {p ∈ R3| Aip ≤ bi}, (6) where Ai and bi represent the parameters of the polyhedron. We denote the full gate constraint as hG (p) ≤ 0, which defines a feasible function space that meets: 
+
+p(ti) ∈ P i, i = 1 , 2, . . . , N wi (7) for some time instances 0 < t 1 < t 2 < · · · < t Nwi .This formulation is also applicable to non-convex objects and environments that a sequence of convex polytopes can represent. A typical example is a winding tunnel, which can be modeled using a chain of rectangular prisms. 
+
+5) Target Visibility Constraints: In missions with inspection needs, keeping the targets within the camera’s FOV constantly is critical. The target here is treated as a 3D point, which typically represents the center of the object of interest. A straightforward implementation involves imposing FOV con-straints on the camera, thereby restricting the vehicle’s pose. Assume that the target landmark’s position in the world frame, 
+
+pwℓi , is given. The landmark’s position in the camera frame can be computed as: 
+
+pcℓi = R⊤
+
+> bc
+
+(R⊤(q)( pwℓi − p) − tcb ), (8) where {Rbc , tcb } represent the relative pose between the body frame and the camera frame. We parameterize the FOV using the azimuth ( α) and elevation ( β) angles. Let pcℓi =[Xi, Y i, Z i]⊤ denote the coordinates of the i-th landmark expressed in the camera frame. The angular coordinates of the landmark are given by: 
+
+αi = arctan 2( Xi, Z i), (9) 
+
+βi = arctan 2( Yi,
+
+q
+
+X2 
+
+> i
+
++ Z2 
+
+> i
+
+). (10) Consequently, the visibility constraint hV for the i-th landmark is formulated as: 
+
+hV (p, q, pwli ) ≤ 0 ⇔
+
+
+
+|αi| ≤ αmax 
+
+|βi| ≤ βmax 
+
+Zi > Z min 
+
+(11) IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 5
+
+where αmax and βmax represent the camera’s horizontal and vertical half-angles, respectively, and Zi > Z min ensures the landmark is in front of the camera with a minimum distance. 
+
+C. Perception Objectives 
+
+We introduce three types of perception objectives used in this paper, PUM, FOV, and LA. Fig. 2 provides a visual demonstration of their motivations. 
+
+1) Position Uncertainty Minimization: Position uncertainty can be modeled in a variety of ways depending on the appli-cation. In GPS navigation, the standard metric is the position dilution of precision (PDOP) [53], which characterizes how the relative geometry of satellites propagates measurement errors into position uncertainty. For general estimation tasks, the Cramer-Rao lower bound (CRLB) [54] is a useful tool that provides a theoretical lower bound on the covariance of any unbiased estimator and is defined as the inverse of the fisher information matrix (FIM). Thus, maximizing the FIM is equivalent to minimizing the theoretical lower bound of the estimation error. When analytical expressions are intractable, uncertainty can also be computed numerically by perturbing the measurements with noise and analyzing the variance of the resulting estimates [55]. However, these metrics cannot be directly utilized as per-ception objectives in gradient-based trajectory optimization. The camera’s limited field of view introduces discontinuities as features abruptly enter or exit the image boundaries, rendering the objective function non-differentiable. Furthermore, the numerical complexity involved in evaluating these metrics at every optimization step is often prohibitive. We will discuss our solution in detail in Section IV. 
+
+2) FOV Limit Violation Penality (FOV): When tracking multiple or switching landmarks across mission phases, im-posing hard FOV constraints is often detrimental. Such strict constraints can render the optimization problem infeasible or force the vehicle into conservative behaviors. Therefore, we relax the constraint hV (p, q, pwli ) into a soft constraint by introducing a set of slack variables S = [ S0, S 1, S 2]⊤ for each state. At each discrete time instance tk within the specified interval or regions, the constraints of the target landmark i are relaxed to: 
+
+|αi(tk)| ≤ αmax + Sk,i, 0
+
+|βi(tk)| ≤ βmax + Sk,i, 1
+
+Zmin − Zi(tk) < S k,i, 2
+
+, (12) We also define a penalty function on the magnitude of the slack variables multiplied by an adjustable weight ws:
+
+LFOV = wFOV · (1⊤S + 12 ∥S∥22). (13) When the weight wFOV is sufficiently large, the formulation asymptotically approximates a hard constraint, and thus the drone is forced to sacrifice agility for visibility. Conversely, a lower weight tolerates minor violations, providing the neces-sary flexibility to maintain smooth flight, particularly during landmark transitions. 
+
+3) Look-Ahead Gaze: This is an empirical heuristic that constrains the camera’s optical axis to align with a future trajectory waypoint at a constant time horizon tLA . It mimics the intuitive gaze adjustments of human pilots during freestyle flight and proves highly effective in enabling challenging maneuvers [56]. Let’s consider a state at time tk. The camera’s optical direction expressed in the world frame is given by: 
+
+zwck = RkRbc ez . (14) The future point that we want the camera to looks towards is p(tk + tLA ). Subsequently, the desired camera’s optical direction can be calculated by btk = N (p(tk + tLA ) − p(tk)) ,where N (·) returns the normalized vector. Now we construct a cost function to align zwck and btk :
+
+LLA = −wLA · exp  −λLA ·  arccos 4 b, zwck
+
+ , (15) where wLA is the weight and λLA is the decay parameter. 
+
+D. Motion Regulation 
+
+True time-optimal solutions typically produce approximate bang-bang control trajectories. However, the associated abrupt acceleration changes cause severe camera shake and image blur, which are detrimental to visual perception. Consequently, we augment the optimization problem with a motion regulation term. This term essentially functions as a jerk-minimization penalty to reduce high-frequency acceleration changes. The jerk can be calculated from the existing state and input variables: 
+
+j = ( 1
+
+m
+
+X f ) · R[ez ]⊤×ω · +( 1
+
+m
+
+X rT ) · zb. (16) It follows the jerk minimization term: 
+
+LMR := wMR · ∥ j∥22, (17) where wMR is typically chosen as a very small value. It is worth noting that this term is only used in perception-aware flights. 
+
+E. TOGT Problem Formulation 
+
+Let us denote the state trajectory as x(·) and the corre-sponding control input trajectory as u(·), both of which are functions defined over the time interval [0 , T ] where T is the total duration of the trajectory. The objective is to find a dynamically feasible trajectory that minimizes the total flight time to pass through all waypoints/gates at the specified order. The optimization problem can be formulated as follows: 
+
+TOGT Trajectory Generation Problem 
+
+min  
+
+> x(·),u(·),T
+
+T (18a) 
+
+s.t. ˙x(t) = f (x(t), u(t)) , 0 ≤ t ≤ T, (18b) 
+
+x(0) = xinit , (18c) 
+
+x(T ) = xterm , (18d) 
+
+xlb ≤x(t) ≤ xub , (18e) 
+
+ulb ≤u(t) ≤ uub , (18f) 
+
+hG (p(t)) ≤ 0, (18g) IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 6 
+
+> (a) Multi-landmark geometry (b) Single-landmark geometry
+
+Fig. 5: Two types of geometry information for localization: (a) the relative geometry of multiple landmarks, where each landmark is treated as a single 3D point; or (b) features observable from a single landmark. where xinit and xterm denote the initial and terminal states, respectively, xlb and xub represent the lower and upper bounds on the quadrotor’s state, and ulb and uub represent the lower and upper bounds on the control inputs, as defined in previous sections. The last constraint (18g) enforces the trajectory to pass through all gates at the specified order. 
+
+Perception-aware TOGT problem. We augment Prob-lem (18) with the perception objectives defined in the previous sections, yielding the final optimization problem shown below: 
+
+Perception-Aware TOGT Problem 
+
+min  
+
+> x(·),u(·),T
+
+T +
+
+Z T
+
+> 0
+
+LPA dt (19a) 
+
+s.t. time-opt. constraints (18b-g) , (19b) visibility constraints (12) (19c) where 
+
+LPA = LLA + LFOV + LPUM + LMR , (20) expresses the overall perceptual requirement of the problem. The remaining question is how to solve these two problems stably and efficiently, which we will answer in Section V. IV. M ODELING OF POSITION UNCERTAINTY 
+
+This section analyzes the theoretical formulation of posi-tion uncertainty derived from visual measurements of known landmarks. First, we outline the fisheye camera model and its feature representation. Next, we derive a differentiable approximation of the FIM. We conclude by proposing an un-certainty metric that achieves a balance between computational tractability and estimation accuracy We assume that the 3D geometries and global positions of a set of landmarks are known a priori, and that their feature coordinates (e.g., corners) are observable in the image plane. Given the camera intrinsics and extrinsics, we can estimate the UAV’s 6-DoF pose in the world frame via the perspective-n-point (PnP) method using at least four pairs of matched features, provided these features are non-collinear. Note that a pose estimate can also be derived from a single landmark if it provides at least four non-collinear feature measurements. To facilitate analysis, we treat these as two distinct sources of visual measurements contributing to the position estimate: the relative geometry among landmarks and the 3D geometry of 
+
+Fig. 6: Equidist projection model of fisheye cameras. each individual landmark. Their distinction is illustrated in Fig. 5. This separation is reasonable. When landmarks are remote, the features on any single landmark provide highly correlated information; consequently, positioning accuracy is primarily dictated by the relative geometry among the landmarks. Con-versely, when a landmark is proximal, its features are well-distributed across the image plane. This provides sufficient geometric constraints to yield accurate localization results, even without assistance from other visible landmarks. 
+
+A. Fisheye Camera Model 
+
+We employ an equidistant projection model [57], whose basic principle is illustrated in Fig. 6. Its imaging process can be decomposed into two steps: first, linearly projecting the 3D points in space onto a virtual unit sphere; and then projecting the points on the unit sphere onto the image plane. To map a 3D point in the camera frame pc to its 2D image coordinate 
+
+s = [ u, v ]T , we first compute the so-called angle of incidence, 
+
+θ, as follows: 
+
+θ = arctan 2( pX2 + Y 2, Z ). (21) Then, the image coordinates can be obtained by using: 
+
+u = fxθx n + cx, (22) 
+
+v = fy θy n + cy , (23) with 
+
+xn = X
+
+√X2 + Y 2 and yn = Y
+
+√X2 + Y 2 , (24) where fx and fy denote the focal lengths in the x and y
+
+directions, respectively, and cx and cy represent the principal point of the camera. 
+
+B. Bearing Vector Representation 
+
+Using bearing vectors to represent image features can greatly simplify derivation [46]. To obtain this representation, we calculate (xn, y n) from their 2D image coordinates: 
+
+xn = ( u − cx)/f x, (25) 
+
+yn = ( v − cy )/f y . (26) IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 7
+
+It follows the computation of θ = px2 
+
+> n
+
++ y2
+
+> n
+
+. Finally, we obtain the bearing vector representation: 
+
+ρc =
+
+
+
+sin( θ)/θ · xn
+
+sin( θ)/θ · yn
+
+cos( θ)
+
+ . (27) Now, let’s study the noises of the bearing vector, ρc, which can be propagated from the image noise, σu and σv . The result is given below: 
+
+Σρ ≈ diag σ2
+
+> u
+
+f 2
+
+> x
+
+, σ2
+
+> v
+
+f 2
+
+> y
+
+,
+
+ σucx
+
+f 2
+
+> x
+
++ σv cy
+
+f 2
+
+> y
+
+2!
+
+. (28) The derivation is detailed in Appendix A. To further simplify its expression, we utilize the fact that cx, cy , fx, and fy are of the same magnitude: we assume cx = cy , fx = fy , and 
+
+σu = σv , leading to an isotropic covariance matrix of ρc that takes the form of Σρ ≈ diag 
+
+ σ2 
+
+> u
+> f2
+> x
+
+, σ2 
+
+> u
+> f2
+> x
+
+, σ2 
+
+> u
+> f2
+> x
+
+
+
+. This simplification is vital for efficient FIM computation. 
+
+C. Fisher Information Matrix Derivation 
+
+A primary obstacle in computing the FIM for camera-based observations is the FOV constraints. We address this issue by introducing a continuous and differentiable approximation of the visibility function. Consider N landmarks in the environment, each producing 
+
+M feature points. Let vi,j denote the visibility indicator of the j-th feature of the i-th landmark, which returns 1 if the landmark is within the camera’s FOV and 0 otherwise. The FIM at state x can be expressed as: 
+
+IFIM (x) = 
+
+> N
+
+X
+
+> i=1
+> M
+
+X
+
+> j=1
+
+vi,j · J⊤ 
+
+> i,j
+
+ΣρJi,j . (29) To obtain a continuous and differentiable expression, we approximate the indicator function using the product of three separate smooth functions: 
+
+ˆv(x) = vα(x) · vβ (x) · vZ (x), (30) where vα represents the azimuth visibility, vβ the elevation visibility, and vZ the depth posibility, which are defined as: 
+
+vα = 12 + 12 tanh ( λv · (αmax − | α|)) , (31) 
+
+vβ = 12 + 12 tanh( λv · (βmax − | β|)) , (32) 
+
+vZ = 12 + 12 tanh( λv · (Zmin − Z)) , (33) where λv is the sharpness parameter. The Jacobian of the bearing vector pci,j with respect to the current camera position 
+
+pwc can be derived by using the chain rule: 
+
+Ji,j = ∂ρci,j 
+
+∂pci,j 
+
+∂pci,j 
+
+∂pwc
+
+, (34) where pci,j is the corresponding feature position in the camera frame, and 
+
+∂ρci,j 
+
+∂pci,j 
+
+= 1
+
+di,j 
+
+(I3 − ρci,j (ρci,j )⊤), (35) 
+
+∂pci,j 
+
+∂pwc
+
+= −Rcw , (36) with di,j = ∥pci,j ∥2. Since Σρ is already given in (28), the FIM can be computed by iterating through all visible landmarks. From an optimization perspective, the expression of FIM is still too complicated as it involves too many state variables, such as the rotation matrix. The following derivation shows that FIM can take a much simpler form that only depends on the vehicle’s position. 
+
+Proposition 1. If the measurement noise of the bearing vector is isotropic, then the FIM in (29) can be reduced exactly to: 
+
+IFIM (p) = 
+
+> N
+
+X
+
+> i=1
+> M
+
+X
+
+> j=1
+
+vi,j · A⊤ 
+
+> i,j
+
+ΣρAi,j , (37) 
+
+where 
+
+Ai,j = 1
+
+di,j 
+
+(I3 − ρwi,j (ρwi,j )⊤), (38) 
+
+ρwi,j = pwℓi,j − pwc
+
+∥pwℓi,j − pwc ∥2
+
+. (39) 
+
+Proof. See Appendix B. Proposition 1 eliminates the dependency on the rotation ma-trix Rcw in Ji,j , decoupling Rcw from the position uncertainty computation. This greatly mitigates the computation burden. Let’s recall the relationship between the FIM and CRLB. The minimum achievable covariance for any unbiased estima-tor can be expressed as Σlb = I−1
+
+> FIM
+
+. Therefore, it is valid to obtain the following scalar measure of the uncertainty: 
+
+LPUM = log det( Σlb ) = − log det( IFIM ). (40) A key advantage of this approach is that it avoids the explicit inversion of IFIM . However, computing IFIM itself remains computationally demanding, as it requires iterating through all features in each landmark, which adds up to N M features in total. For instance, if we have 100 landmarks with 10 features each, we must perform 1,000 individual Jacobian updates to assemble the FIM at just one sampled camera location, which is unacceptable. In the following section, we present a more efficient way to evaluate the position uncertainty. 
+
+D. Fast Position Uncertainty Evaluation 
+
+As previously noted, features belonging to the same land-mark often yield highly correlated information. To reduce computational overhead, we can simplify the FIM by rep-resenting each landmark as a single point, typically its geo-metric centroid, thereby avoiding the processing of redundant features. However, it is essential to explicitly model the posi-tion uncertainty of single-landmark observations that contain multiple features. For instance, a proximal gate situated near the optical axis with all corners visible can provide more informative positioning data than the collective contribution of all other visible gates. As a result, we need to model two types of uncertainties that arise from two sources of observation (See Fig. 5), and then combine them properly to yield a comprehensive uncertainty metric. One feasible IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 8
+
+approach is using the covariance update principle [58] for multiple observations of the same state: 
+
+ˆΣ−1 =
+
+> K
+
+X
+
+> k=1
+
+Σ−1 
+
+> k
+
+, (41) where K is the total number of observations, Σk is the covariance associated with each observation, and ˆΣ is the resulting covariance of the fused state estimate. 
+
+Fig. 7: The distance to a planar landmark can be approximately estimated by computing the ratio between the actual landmark size L and its observed size l in pixels. Consequently, we can derive the uncertainty of the distance measurement and use it as an estimate of the corresponding position uncertainty. 
+
+Single-landmark geometry: We approximate each 3D landmark as a simple 2D line segment. Let L denote its physical characteristic length (actual size) and l denote the length of its projection onto the image plane. Fig. 7 illustrates this modeling process applied to a rectangular gate. Based on these parameters, the distance to the landmark can be estimated as 
+
+d = fx/y (L/l ) cos ϕ, (42) where ϕ denotes the angle between the object’s facing direc-tion zℓ and the camera’s optical axis zc. It is easy to calculate 
+
+ϕ in the world frame: 
+
+cos ϕ = zwℓ · zwc
+
+∥zwℓ ∥ · ∥ zwc ∥ . (43) There is an analytical expression of the uncertainty of the distance estimate obtained from (42). 
+
+Proposition 2. Given an observable object with a known size 
+
+L, the standard deviation of the noise of the distance estimate can be approximated as: 
+
+σd =
+
+√2d2
+
+L cos( ϕ) · fx
+
+· σu. (44) 
+
+Proof. See Appendix C. Proposition 2 tells how accurate the distance measurement can be given a single landmark with a nontrivial dimension. However, it may fail to reflect the true uncertainty when a landmark is sufficiently close to the camera that it is only partially visible. To address this, we introduce a correction term that grows exponentially as the distance decreases to obtain a reasonable uncertainty measure σd′ :
+
+σ2 
+
+> d′
+
+= σ2 
+
+> d
+
++ σu/(d4 + ϵ), (45) 
+
+Algorithm 1 Fast Position Uncertainty Evaluation  
+
+> 1:
+
+Inputs: Quadrotor’s state x, landmark centroid positions 
+
+{pwℓ1 , pwℓ2 , ..., pwℓN }, forward directions {cwℓ1 , cwℓ2 , ..., cwℓN },and size L, camera intrinsics {fx, f y , c x, c y } and ex-trinsics {Rbc , tcb }, camera’s FOV {αmax , β max , Z min },image noise {σu, σ v } 
+
+> 2:
+
+Propagate the measurement noise to the bearing vector covariance Σρ by (28)  
+
+> 3:
+
+Get the camera’s position pwc from x and {Rbc , tcb } 
+
+> 4:
+
+Repeat at each landmark ℓi: 
+
+> 5:
+
+1. Visibility evaluation:  
+
+> 6:
+
+Compute ρwℓi , ρcℓi , and Zi via (39)  
+
+> 7:
+
+Extract αi and βi from ρcℓi using (9)  
+
+> 8:
+
+Get visibility indicators ˆvi by (30)  
+
+> 9:
+
+2. Uncertainty of single-landmark observation:  
+
+> 10:
+
+Evaluate augmented depth uncertainty σd′ with (45)  
+
+> 11:
+
+Construct inversed covariance Σ−1 
+
+> ℓi
+
+as per (46)  
+
+> 12:
+
+3. Construct Information Matrix:  
+
+> 13:
+
+Derive ¯Ai by using ρwℓi according to (38)  
+
+> 14:
+
+4. Approximate FIM Calculation:  
+
+> 15:
+
+Sum individual information matrices weighted by visibil-ity ˆvi as in (47)  
+
+> 16:
+
+5. Uncertainty Metric Computation:  
+
+> 17:
+
+Acquire the final metric L′ 
+
+> PMU
+
+by following (48) where ϵ is a small value to avoid a singularity. We extend this distance uncertainty metric to model the full positional uncertainty. While this approach is an approx-imation, it yields a conservative upper bound on the error that is easy to compute. The covariance for a single-landmark observation is thus defined as: 
+
+Σℓ = diag (σ2 
+
+> d′
+
+, σ 2 
+
+> d′
+
+, σ 2 
+
+> d′
+
+). (46) Due to its isotropic structure, Σℓ is invariant under reference frame transformations. Consequently, it serves as a valid uncertainty measure for both pw and pc, which significantly simplifies the derivation. 
+
+Multi-landmark spatial geometry: Bahnam et al. [59] confirmed in their experiments that the variation in spatial configuration of gates greatly improves solution accuracy of PnP. To model this phenomenon mathematically, we represent visible landmarks by their 3D centroid points and compute the corresponding FIM via (37). This yields: 
+
+I′ 
+
+> FIM
+
+=
+
+> N
+
+X
+
+> i=1
+
+vi · ¯A⊤ 
+
+> i
+
+Σρ ¯Ai, (47) where ¯Ai is constructed from the bearing vector of the centroid of the i-th landmark, pwℓi = PMj=1 pwℓi,j .Combine (47) with (46) of each visible landmark, we get the final uncertainty metric: 
+
+L′ 
+
+> PMU
+
+= − log det I′ 
+
+> FIM
+
++
+
+> N
+
+X
+
+> i=1
+
+vi · Σ−1
+
+> ℓi
+
+!
+
+. (48) The rationale behind (48) is intuitive: when only a single landmark is visible, or when one is exceptionally proximal and IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 9  
+
+> (a) Results from the method in [55] (b) Results from (40) (c) Results from (48)
+
+Fig. 8: Comparison of position uncertainty measures in an environment containing three square gates (black), each featuring four corner points. For each cell in the xy -plane, the camera’s optical axis is assumed to be aligned with the world x-axis. Position uncertainty is calculated using three methods: (a) the sampling-based approach introduced in [55], (b) the original FIM-based method (40), and (c) our proposed approximation (48). The results demonstrate that our derived measure closely approximates the true uncertainty. informative, L′ 
+
+> PMU
+
+is dominated by that individual observation and its associated covariance (46). Conversely, when multiple landmarks are visible across a wide geometric distribution, the FIM term (47) becomes the primary determinant of L′
+
+> PMU
+
+.Readers can refer to Algorithm 1 for the detailed compu-tation pipeline. Additionally, Fig. 8 validates this metric by comparing our derived estimates against the actual position uncertainty. V. O PTIMIZATION FRAMEWORK 
+
+This section details the numerical solver and optimization strategy. Given the highly non-convex problem structure of (19) and the potentially large number of variables and con-straints caused by long flight distances, naively solving (18) and (19) in a one-stop manner is computationally intractable. The primary challenge stems from the lack of good initial guesses for time allocation and trajectory. The former makes it difficult to determine the optimal discretization resolution: ex-cessive sampling points introduce unnecessary computational overhead and impede convergence, whereas an insufficient number degrades numerical integration accuracy. Meanwhile, poor initial trajectories often lead to entrapment in local minima. To address these challenges, we propose a three-step optimization framework designed to ensure consistent and efficient convergence. 
+
+A. Three-Step Optimization Framework 
+
+Fig. 9 illustrates the proposed three-step framework. Specifi-cally, step one utilizes a polynomial-based TOGT planner [10]. Step two enhances time-optimality by assigning a sufficient number of polynomial segments capable of representing the true time-optimal trajectory. Finally, the third step employs a direct multiple-shooting method similar to [17] to refine the trajectory, incorporating the optimal gate-traversal points obtained from the second step and all necessary perception objectives. 
+
+Step 1: polynomial-based TOGT planner. Polynomial parameterization, combined with differential flatness, has proven extremely efficient for formulating dynamically fea-sible quadrotor trajectories [14]. Furthermore, recent research demonstrates that convex geometrical constraints can be ex-plicitly eliminated [30], paving the way for the solution to the TOGT problem presented in [10]. Let’s introduce a differential-flatness transformation that maps flat outputs y and its higher-order derivatives, denoted as y[s] = [ yT , ˙yT , . . . , y(s)T
+
+]T , to actual quadrotor states and inputs: 
+
+x = Ψ x
+
+
+
+y, ..., y(s−1) 
+
+,
+
+u = Ψ u
+
+
+
+y, ..., y(s)
+
+.
+
+(49) This allows optimization of x and u to be performed through the optimization of the polynomial-parameterized y. The state and input constraints can also be equivalently expressed as: 
+
+hΨ(y) := h(Ψ x(y[s−1] ), Ψu(y[s])) ≤ 0. (50) However, since y is a piecewise polynomial, a significant number of continuity constraints must be formulated between segments to ensure a feasible trajectory. Wang et al. [30] present an analytical method to calculate the coefficients of the piecewise polynomial y using a sequence of waypoints, pwi ,and the time allocation for each segment, Ti. They prove that this solution is unique, given an effort-minimization cost and a specific polynomial order. Consequently, the optimization can be performed over pwi and Ti instead of the polynomial coefficients, which greatly reduces the dimensionality of the variables. In the context of TOGT trajectory planning, it leads IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 10 
+
+Fig. 9: The optimization strategy proceeds through three stages. Step 1: A polynomial-based approach rapidly gener-ates a sub-time-optimal trajectory. Step 2: increasing segment density approximates the time-optimal solution to establish initial guesses and optimal traversal points. Step 3: A multi-stage multiple-shooting framework refines the trajectory by constraining these points as waypoints and integrating percep-tion objectives. the following approximation of (18): 
+
+min   
+
+> pwi,T i
+> Nw+1
+
+X
+
+> i=1
+
+Ti, (51a) s.t. y[s−1] 1 (0) = yinit , y[s−1] 
+
+> Nw+1
+
+(TNw+1 ) = yterm , (51b) 
+
+y[s−1]  
+
+> i
+
+(0) = y[s−1]  
+
+> i−1
+
+(Ti), (51c) constraint in (50) , (51d) 
+
+hGi (pwi ) ≤ 0, (51e) 
+
+− Ti < 0, (51f) where yinit and yterm are the flat output states corresponding to the given initial and terminal quadrotor states, respectively. Finally, solving (51) following the procedure in [10] yields a good initial guess of the TOGT trajectory. 
+
+Step 2: Pushing time optimality. We further enhance time optimality by subdividing each trajectory segment into 
+
+Mp polynomial pieces and solving the problem once again based on the previous solution. The rationale for this strategy, discussed in [33], is that there exists a minimum viable number of polynomial pieces capable of representing time-optimal trajectories with sufficiently high resolution, and therefore integrating more polynomials can effectively shrink the gap to the optimal trajectory. The enhanced problem formulation is given as 
+
+min  
+
+> P,T
+> Nw+1
+
+X
+
+> i=1
+> Mp
+
+X
+
+> j=1
+
+Ti,j , (52a) s.t. y[s−1] 1,1 (0) = yinit , y[s−1]  
+
+> Nw+1 ,M p
+
+(TNw+1 ,M p ) = yterm , (52b) 
+
+y[s−1]  
+
+> i,j
+
+(0) = y[s−1] 
+
+> i,j −1
+
+(Ti,j ), (52c) constraint in (51d-e) , (52d) 
+
+Ti,j > 0. (52e) where the vector P ∈ R3×(( Nw +1) M −1) contains all intermedi-ate waypoints (both free and gate-related), and T ∈ R(Nw +1) M
+
+denotes the time allocation. The optimized trajectory typically deviates by less than 5% from the theoretical time-optimal duration. Post-optimization, we recover the polynomial coeffi-cients from P and T, sample the trajectory, and compute the quadrotor states and inputs via (49) 
+
+Step 3: Multi-stage multiple-shooting. Based on the discreteized near-time-optimal trajectory, this step formulates a multiple-shooting problem with waypoint constraints. We denote ˆTi as the optimized time duration of the i-th segment from the second step. The node number of this segment is selected as Ni = ˆTi/∆¯ t, where ∆¯ t is the desired sampling time. Then, the total node number becomes N = PNw +1  
+
+> i=1
+
+Ni.The control input here is defined as u := rT . As a result, we obtain the following multi-stage multiple-shooting problem 
+
+min    
+
+> xk,uk,∆ti
+> Nw+1
+
+X
+
+> i=1
+
+Ti +
+
+> N
+
+X
+
+> k=1
+
+L(xk, uk), (53a) s.t. xki+1 = F(xki , uki , ∆ti), (53b) 
+
+x0 = xinit , xN = xterm , (53c) 
+
+xmin ≤ xk ≤ xmax , (53d) 
+
+umin ≤ uk ≤ umax , (53e) 
+
+∥pi − pwi ∥22 ≤ 0, (53f) 
+
+∆ti > 0. (53g) constraints in (12) , (53h) where Ti = Ni∆ti and xki+1 = F(xki , uki ) is the discrete-time dynamics of the quadrotor derived from Section III-A. The position pi is extracted from the state of the vehicle passing through the i-th gate, while pwi is obtained from the optimal gate-traversal points obtained in the last stage. At each stage, the Runge-Kutta 4 (RK4) integrator uses a dynamically adjusted sampling time, ∆ti, based on the decision variable. With a proper initialization, we utilize IPOPT [60] to solve the optimization problem, employing CasADi [61] as the automatic differentiation toolbox. In most cases, the optimized ∆ti values merely fluctuate around the initial ∆¯ t, as the initial time allocation is already near-optimal thanks to the first two steps; this is the key reason for our remarkable convergence performance in handling free-end-time problems. 
+
+B. Summary 
+
+In essense, this pipeline adopts a divide-and-conquer methodology and effectively leverages the strengths of both polynomial and direct methods. Specifically, the polynomial approach in the first two steps quickly generates a near-time-optimal trajectory with an optimality gap of less than 5%. Subsequently, the direct method utilizes its superior formula-tion flexibility to incorporate complex objectives and enhance trajectory representability, producing a near bang-bang control policy that is featured in time-optimal flights. IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 11 
+
+VI. M ODEL PREDICTIVE CONTOURING TRACKING 
+
+CONTROLLER 
+
+In this section, we introduce a MPCTC method for accurate trajectory following, applicable to any dynamically feasible trajectory, including those generated by the aforementioned methods. 
+
+Fig. 10: Contouring error ec and progress error el.
+
+A. Overview 
+
+Consider a task of tracking a desired time-parameterized trajectory xd as shown in Fig. 10, and the current quadrotor state is x0, which is slightly off the reference path. Let’s denote their corresponding positions as pd and p0, respectively. If we continue to adhere to the reference time sequence of xd,the vehicle will inevitably cut corners due to both the initial position error and model mismatch. This occurs because the reference state, which is temporally ahead of the current and predicted states, continuously pulls the system forward, even when the vehicle has already deviated significantly from the desired path; in some senses, this could be a primary factor contributing to the significantly higher failure rate of the MPC in racing scenarios [12]. To address this issue, we propose two key enhancements. First, prior to reference state selection, the closest point on the reference path to the current position p0, denoted as pd
+
+> 0
+
+, is identified. Second, the position error is decomposed into con-touring and progress components, as in the MPCC approach [25], with higher weighting assigned to the contouring error to enhance path-following accuracy. 
+
+B. Determination of the Reference States 
+
+We first search for pd 
+
+> 0
+
+on the reference trajectory. The underlying optimization problem is described as: 
+
+min  
+
+> t
+
+∥p − pd(t)∥22,
+
+s.t. t ∈ [0 , T d], (54) where T d is the end time of the pd. We adopt a sampling-based method for simplicity and efficiency. Specifically, a fixed number of points are incrementally sampled along the reference path, beginning from the closest point identified in the previous iteration, and the process terminates when the distance between the sampled point and the current position exceeds that of the preceding point. Given the initial reference point pd 
+
+> 0
+
+and the corresponding reference time td
+
+> 0
+
+, the first reference state can be defined as xd 
+
+> 0
+
+= xd(td
+
+> 0
+
+). The subsequent reference states are then obtained as 
+
+xd 
+
+> 1
+
+= xd(td 
+
+> 0
+
++ ∆ tmpc ),
+
+xd 
+
+> 2
+
+= xd(td 
+
+> 0
+
++ 2 · ∆tmpc ),. . . 
+
+xdNmpc = xd(td 
+
+> 0
+
++ Nmpc · ∆tmpc ),
+
+(55) where ∆tmpc denotes the MPC sampling interval and Nmpc 
+
+represents the number of prediction nodes. 
+
+C. Contouring and Progress Errors 
+
+Since the reference velocity is available, the tangential direction at each sampled point along the reference path can be directly obtained and is denoted by tdk:
+
+tdk = vdk/∥vdk∥2. (56) This makes the computation of the contouring and progress errors very convenient. For an arbitrary node k, we can readily obtain the position tracking vector as: 
+
+ek = pk − pdk, (57) Provided the tangential vector, the above error can be decom-posed into two components: contouring error, eck, and progress error, elk:
+
+elk = ( eTk tdk) · tdk, (58) 
+
+eck = ek − elk = ( I3 − tdk(tdk)T )ek. (59) Note that when the magnitude of the reference velocity falls below a certain threshold, the last valid tangential vector is retained, or alternatively, a constant vector is used. The key distinction between MPCTC and MPCC lies in how the progress term is treated: in MPCTC, it is predetermined by the input trajectory rather than treated as an optimization variable. 
+
+D. Optimal Control Problem Formulation 
+
+The goal is to, given the current state x0, find the optimal control strategy π(x) that best tracks the target trajectory. The optimal control problem is constructed as follows: 
+
+Model Predictive Contour-Tracking Control 
+
+π(x0) = arg min 
+
+ukNmpc 
+
+X
+
+> k=0
+
+∥elk∥2 
+
+> Ql
+
++ ∥eck∥2 
+
+> Qc
+
++ ∥qk ⊖ qdk∥2
+
+> Qq
+
++ ∥vk − vdk∥2 
+
+> Qv
+
++ ∥ωk − ωdk ∥2
+
+> Qω
+
++ ∥fk − f dk ∥2 
+
+> Qf
+
++ ∥uk∥2
+
+> Qu
+
+(60a) 
+
+s.t. xk+1 = F (xk, uk, ¯dt ), (60b) constraints in (53d-e) (60c) where Ql, Qc, Qq , Qv , Qω , Qf , and Qu are weights for tracking errors in progress, contouring, orientation, velocity, angular velocity, thrust, and thrust rates, in the respective dimmensions. The controller operates in a receding horizon manner. We implement it using acados [62] with the quadratic program-ming solver HPIPM [63] to solve the optimal control problem with the real-time iteration scheme described in [64]. IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 12 
+
+VII. R ESULTS 
+
+In this section, we evaluate the proposed time-optimal trajectory generation framework in terms of solution quality, time optimality, and enhancements to the position estimate of a vision-based localization system. All the quadrotor parameters used in this section are provided in Tab. I, where the RPG configuration is for simulation, and the EXP configuration is for real-world drones. The same solver setup given in Tab. II is utilized for all tests. TABLE I: Quadrotor configurations                         
+
+> m(kg) l(m) Jdiag (g ·m2)(f , f )(N) cτω(rad s −1)RPG 0.7 0.125 [2.4,1.8,3.7] [0.0, 8.5] 0.033 [10, 10, 6] EXP 1.0 0.125 [2.5,2.1,4.3] [0.0, 8.5] 0.013 [10, 10, 6]
+> Jdiag denotes the diagonal elements of the inertia matrix.
+
+A. Time-Optimal Trajectory Generation −10                
+
+> 0
+> 10
+> Body Rate [rad/s]  ωxωyωzωxωyωz
+> 0510
+> Time [s]
+> 0
+> 5
+> Thrust [N]
+> u1u2u3u4
+> 0510
+> Time [s]
+> u1u2u3u4
+
+Fig. 11: TOWP trajectory (blue) versus TOGT trajectory (yellow) on the Split-S track. Note that while both trajectories satisfy the single-rotor thrust and body-rate constraints, the TOGT trajectory has more timing advantage as it makes better use of the navigable space of each gate. We first consider a basic racing scenario with a Split-S track shown in ig. 11 where time is the only meirc and no other objective, such as perception awareness, is incorporated. We benchmark different approaches in terms of their result-ing durations finishing two laps. The start and en positions are (−5.0, 4.75 , 1.1) m and (4 .5, −0.45 , 1.55) m, respectively, both with stationary flight status. Note that one lap is from the first gate at (−0.6, −0.86 , 3.78) m to the last gate at 
+
+(−1.95 , 6.81 , 1.55) m. All gates are sqaure with the same inner side length of 1.45 m. The quadrotor’s collision volumn is modeled as a ball with a diameter of 0.4 m. TABLE II: Parameters of optimization             
+
+> Optimization Step Paramter Name Symbol Value Step II Num. of polynomial pieces Mp5Step III Initial sampling time ∆¯ t2 ms Convergence tolerance ϵtol 1e−5
+> Max. iteration Nmax 5000
+
+TABLE III: Trajectory benchmarking in the Split-S track.                                                             
+
+> Methods Duration (s) Comp. Time (s) Length (m) Pure Time Optimality CPC [16] 14.25 2631.0 210.34 Poly [10] 16.75 6.13 221.91 Fast-Fly [17] 14.25 256.48 210.13 TOWP-Ours 14.22 79.37 209.27 TOGT-Ours 13.33 68.63 192.82
+> Perception-Aware TOWP-Ours LA 15.36 144.21 205.59
+> FOV 15.25 210.39 216.80 PUM 14.94 267.67 210.77 FOV-PUM 15.52 455.41 210.48 LA-FOV 15.37 245.75 211.31 LA-PUM 15.14 459.79 209.05 LA-FOV-PUM 15.62 467.74 210.70 Perception-Aware TOGT-Ours LA 14.62 169.29 187.83
+> FOV 14.41 263.51 195.55 PUM 14.20 331.11 196.05 FOV-PUM 14.87 351.16 199.87 LA-FOV 14.56 177.64 196.78 LA-PUM 14.24 328.08 194.86 LA-FOV-PUM 15.65 459.02 196.92
+
+Note: Our approaches are marked in blue or red. For example, represents optimizing a TOGT trajectory with PUM objective. 
+
+We qualitatively evaluate the generated flight trajectories shown in Fig. 11. We see that the TOGT trajectory (yellow) clearly has an advantage over the TOWP trajectory (blue) in terms of timing as it traverses as close as possible to the inner edges of the gates. This is attributed to the explicit modeling of the gate geometry. As a result, while the TOWP trajectory produces a 4.14 s of lap time, the TOGT can push this limit to 3.84 s, which is 7.2% shorter. Moreover, the total duration of the TOGT trajectory is 6.3% shorter than that of the TOWP, with a 12.4 m reduction in the total required travel distance. It is worth mentioning that the shorter lap time of the TOGT trajectory is not due to violating body rate or single-rotor thrust constraints. As displayed in the bottom panels of Fig. 11, both trajectories meet the same actuation constraints. This result verifies that incorporating gate constraints into the planning problem is essential to achieve the true minimum lap time. Then, we compare our methods with state-of-the-art ap-proaches. In Tab. III, we present trajectory durations, com-IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 13 13.5 14.0 14.5 15.0 15.5 16.0 16.5 
+
+> Trajectory Duration (s)
+> 0
+> 1000
+> 2000
+> Comp. Time (s)
+
+Fig. 12: Quantitative comparison of computational cost and optimized trajectory duration. Our TOGT formulation yields the best performance in both metrics. putation times, and total trajectory lengths from different methods. While [17] and [16] converge to trajectories with durations comparable to our waypoint-constrained approach, our method achieves these results with significantly lower computational overhead. It is almost four times faster than Fast-Fly [17] and more than thirty times faster than CPC [16]. Although Reference [10] is more computationally efficient, the resulting timing is sub-optimal, which is 2.52 s longer than our approach. After switching the racing mode from waypoint passing to gate traversing, our approach triumphs in all metrics. The total duration is 0.89 s shorter than all the waypoint-flight methods. Moreover, even the computation time drops due to the relaxation of the geometric constraints. The benefits of modeling gates extend beyond shorter lap times; it empowers the planner to handle collisions explicitly. For instance, we found that TOWP often results in mission failure by generating trajectories that collide with certain gates. This is especially prevalent in complex layouts, such as the two tracks shown in Fig. 1(b) and Fig. 1(c). By accounting for gate geometry and orientation, TOGT overcomes these issues. As illustrated in these figures, TOGT trajectories not only identify shortcuts through square, dive, and circle gates but also ensure collision avoidance by specifying entry/exit sides. TABLE IV: FPV camera configurations                      
+
+> αmax (◦)βmax (◦)Zmin (m)θtilt (◦)σu/v(px )
+> RPG 128.1 72.2 0.3 30.0 10.0 EXP 128.1 72.2 0.3 0.0 10.0 Note that θtilt denotes the tilted angle of the camera.
+
+B. Perception-Aware Time-Optimal Flights 
+
+We incorporate perception awareness into the trajectory optimization and observe the differences in the flight behavior. We assume the quadrotor is equipped with a forward-looking camera (See Tab. IV for the detailed parameters), and features of landmarks within the FOV can always be extracted and identified. In this experiment, each landmark (i.e., the racing gate) has four features in total at its inner corners. The opti-mization parameters for each perception objective are offered in Tab. V. In terms of the evaluation of the resulting visual quality, we sample the planned trajectory at 0.05 s intervals and compute the position uncertainty using our derived metric. If the uncertainty exceeds 2 m, a threshold beyond which the TABLE V: Parameters of perceptual costs             
+
+> Perception Type Symbol Value Motion Regularization wjerk 1e−7
+> LA wLA 0.005
+> λLA 3.0 FOV wFOV 0.05 PUM wPUM 0.0003
+> λv10 Note that the motion stabilization is applied to all perception-optimized planning.
+
+estimate becomes unreliable due to significant potential bias, we model the error accumulation by incrementing the last valid uncertainty value by 0.1 m for each subsequent sample. Finally, we visualize this uncertainty by plotting a circle whose radius corresponds to the accumulated uncertainty value at that timestamp. The results are given in Fig. 13, We see that when time is the sole optimization variable (see Fig. 13(a)), the quadrotor ignores perception requirements and often orients the camera toward regions where no gates are visible. This behavior leads to a rapid expansion of the uncertainty radius, signaling a significant degradation in lo-calization performance. The LA and FOV effectively mitigate the explosion of uncertainty in varying degree, but in different manners. As the names imply, the LA objective encourages the quadrotor to orient toward the future path. When the upcoming gate happens to be aligned with the future reference direction, the uncertainty can be reduced by the corresponding gate observations. However, if this is not the case, as seen in the rightmost trajectory segment of Fig. 13(b), the uncertainty remains at a high level due to the absence of visual landmarks. In contrast, the FOV objective (see Fig. 13(c)) produces a more consistent uncertainty pattern by actively maintaining the gate within the camera’s view. Notably, however, FOV exhibits a marked increase in uncertainty when the quadrotor just passes the last gate. This occurs because the quadrotor requires a certain transition period to reorient its camera toward the next gate, leading to a temporary loss of visual tracking. Furthermore, we observe that the overall uncertainty area is shrunk dramatically by incorporating the PUM objective. As illustrated in Fig. 13(d-f), the quadrotor automatically learns a strategy of orienting toward regions where the highest number of gates are visible. This behavior results in a significant im-provement in the richness and diversity of visible landmarks, leading to consistently small uncertainty circles throughout the trajectory. Quantitative visual quality comparisons are presented in Fig. 14 and Fig. 15. The results suggest that the PUM objective expands the distribution of trajectory segments where more than two gates are visible. Specifically, it achieves a median of two visible gates, whereas both LA and FOV have only one. Due to this enhanced landmark visibility, PUM achieves the lowest uncertainty. As shown in Fig. 15, the pure PUM case reaches an average analytical position uncertainty of 0.2418 m, while the FOV-PUM case achieves 0.2758 m. The correspond-ing PnP position uncertainty decreases accordingly, reaching a minimum average value of 0.4271 m and the smallest standard deviation of 0.6520 m. These results confirm that optimizing IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 14 
+
+(a) None (Pure Time Opt.) (b) LA (c) FOV 
+
+(d) PUM (e) FOV-PUM (f) LA-PUM 
+
+Fig. 13: Impact of various perception objectives on time-optimal trajectories and the evolution of position uncertainty. The circles represent the uncertainty area at discrete timestamps. Results demonstrate that trajectories optimized with PUM exhibit substantially lower position uncertainty than other methods. None LA FOV PUM FOV-PUM LA-PUM LA-FOV All 
+
+> 0.0
+> 1.0
+> 2.0
+> 3.0
+> 4.0
+> 5.0
+> Number of Visible Landmarks  Mean
+> Median
+
+Fig. 14: Distributions of visible landmarks/gates on Split-S track, which reveals that perception-aware flights boost the visibility substantially. None LA FOV PUM FOV-PUM LA-PUM LA-FOV All 
+
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> Uncertainty (m)
+> Analytic Pos.
+> PnP Pos.
+
+Fig. 15: Distributions of the derived analytical position uncer-tainty and the actual position uncertainty of the PnP method. To get the PnP uncertainty, we perturb the observed feature coordinates, re-evaluate the PnP problem 60 times, and com-pute the mean and covariance of the resulting pose estimates. IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 15 
+
+the derived position uncertainty is effective in reducing the actual numerical instability of the position estimates solved by the PnP method. This justifies the proposed metric as a valid measure to the true position uncertainty. Remarkably, using the PUM objective also proves to be the most effective strategy for preserving optimal timing. As shown in Tab. III, employing PUM yields the smallest increase in trajectory duration compared to the pure time-optimal baselines. Specifically, in the TOWP case, it results in a time increase of only 0.72 s, while for TOGT, the increase is a mere 0.87 s. This indicates that PUM avoids excessive deviations from the time-optimal maneuver, executing only the necessary orientation changes to enhance visual quality while preserving overall agility. In detail, one distinct feature of the PUM strategy compared to both LA and FOV is that it allows the quadrotor to fly backward, matching the behavior of the pure time-optimal trajectory, provided it can observe more gates by looking behind itself. While this strategy is counterintuitive for humans, it is logically sound from a robotic vision perspective; the performance of state estimation is governed by the number and geometry of all observed landmarks rather than a specific one enforced by the task itself. 
+
+C. Effectiveness of FOV Constraints 10 4 10 3 10 2 10 1 10 0 10 1 10 2 10 3 10 4         
+
+> wFOV
+> 0
+> 50
+> %
+> Optimal Time Target-Lost Percentage
+> 10.0
+> 12.5
+> 15.0
+> s
+> (a) wFOV = 0 .0(b) wFOV = 0 .01 (c) wFOV = 1 .0
+
+Fig. 16: Impact of the weight for the FOV constraints on the resulting flight behavior. As the penalty weight increases, the drone prioritizes visibility to the target gate more and eventually reaches a near-zero target-loss percentage. But it causes a longer time to complete the task. We are interested in how the quadrotor behavior changes as the strictness of the FOV constraints increases. In this experiment, the quadrotor is tasked with navigating a figure-8 track defined by six waypoints (see Fig. 1(a) but with all gates removed). One gate is positioned at (8 , 2) m to serve as the target object, and the quadrotor will attempt to maintain visibility of it throughout the flight. Fig. 16 demonstrates that increasing the weight wFOV leads to a monotonic decrease in the percentage of time the target is outside the FOV. However, this comes with a consequence of a growing trajectory duration. The duration stops growing when wFOV reaching a point at which the FOV constraints are always satisfied. We find that a small value of wFOV , such as 0.01, can cause huge differences in the quadrotor’s orienting behavior. We see the quadrotor proactively force its camera toward the gate to keep it visible. As the weighting factor increases to 1, the trajectory undergoes a salient structural change. This shift indicates that modulating the quadrotor’s orientation alone is no longer sufficient to maintain target visibility; instead, a coordinated adjustment of both translation and rotation is required to satisfy the visibility constraint. 
+
+D. Closed-Loop Evaluation 5  
+
+> 0
+> 5
+> 10
+> X (m)
+> 5
+> 0
+> 5
+> Y (m)
+> 0
+> 5
+> LA FOV PUM
+
+Fig. 17: Closed-loop execution of planned trajectories with LA, FOV, and PUM objectives, tracked using the proposed MPCTC. We observe that the PUM (purple) yields the smoothest tracking trajectory. To directly verify the effectiveness of the proposed percep-tion objectives in fully onboard performance, we incorporate a vision-based localization module into the simulation for closed-loop evaluation. We adopt the framework from [55] for the implementation of the localization module, which utilizes an extended Kalman filter (EKF) as the core fusion algorithm. One key difference is that we directly fuse simulated noisy inertial measurement units (IMU) readings with the pose es-timates from the PnP rather than using external visual-inertial odometry. This approach allows us to isolate the influence of other features in the scene, which is not the focus of this paper. We employ RotorS for the quadrotor dynamics simulation [65], and the MPCTC is the default tracking controller. TABLE VI: Close-loop execution benchmarking.                
+
+> Methods Pos. Uncertainty (m) Track. Error (m) Success Rate TOWP-Ours 0.3590 0.4192 55% LA 0.3541 0.4612 67% FOV 0.4634 0.3577 71% PUM 0.2228 0.3239 100%
+
+The resulting trajectories are displayed in Fig. 17. Quali-tatively, we observe that the PUM objective yields a signifi-cantly smoother tracking trajectory compared to those of LA and FOV. Tab. VI provides quantitative results regarding the position uncertainty of the planned trajectories, the tracking error in RMSE, and the success rate across 20 closed-loop flight tests. We notice that the trajectory optimized with PUM yields the smallest position uncertainty of 0.2228 m, resulting IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 16 
+
+in the lowest tracking error of 0.3239 m. Furthermore, it is the only perception objective that achieves a 100% success rate. These results demonstrate that incorporating PUM into trajectory optimization can significantly boost closed-loop flight performance and robustness. 
+
+E. Real-World Validation 
+
+Fig. 18: Indoor Split-S track for experiment validation. The quadrotor platform is equipped with an NVIDIA Jetson Orin NX 16GB onboard computer and an IMX219 fisheye camera for image capture. Betaflight firmware is employed for low-level body-rate control. We aim to validate the proposed planning and control system in real-world time-critical tasks. Please find our hard-ware specifications in Fig. 18 and the associated quadrotor parameters in Tab. I. Note that in the following experiments, we obtain the online state estimation from the motion capture system and perform the uncertainty evaluation offline based on the executed trajectory. This choice does not weaken our conclusion because the motion capture system provides a high-fidelity ground truth that is necessary to validate our theoretical uncertainty models. By using this setup, we decouple the performance of the planner from the potential failures of a specific online vision pipeline. This allows us to demonstrate that the planned trajectories inherently lead to better visual quality and lower position uncertainty when they are tracked with high accuracy. 
+
+1) Controller Evaluation: MPC vs. MPCTC: We begin by comparing the performance of MPC and the proposed MPCTC in tracking purely time-optimal trajectories shown in Fig 19. Note that in this classical cascaded planning and control framework, it is common practice to limit the maximum thrust to between 70% and 90% of its actual capacity during the planning stage. This ensures sufficient actuation margin in the tracking stage to account for external disturbances, unexpected tracking errors, and model mismatch. 2 1 0 1 2 3         
+
+> X (m)
+> 3
+> 2
+> 1
+> 0
+> 1
+> 2
+> 3
+> Y (m)
+> Thrust Limit: 70%
+> Reference
+> MPC
+> MPCTC
+> Start
+> End
+> 210123
+> X (m)
+> Thrust Limit: 90% 70% 80% 90%
+> Thrust Limit
+> 0.0
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> Mean Tracking Error (m)  Mean Tracking Error
+> MPC
+> MPCTC
+> 70% 80% 90%
+> Thrust Limit
+> 0.0
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> Max Tracking Error (m)  Maximum Tracking Error
+
+Fig. 19: Tracking trajectories of standard MPC versus our MPCTC against reference time-optimal trajectories planned with (a) 70% and (b) 100% thrust limit. The standard MPC performance degrades significantly when insufficient margin is reserved to compensate for tracking errors or disturbances From the results, it is evident that MPCTC outperforms MPC in terms of tracking accuracy under all thrust limit configurations. The executed trajectory aligns closely with the reference, regardless of the thrust limit setups, maintaining a tracking error of 0.07 m on average with a maximum below 0.23 m even at flight speeds up to 9.8 m/s. In contrast, MPC behaves more inconsistently, exhibiting significantly higher tracking error as the thrust limit increases. Furthermore, we found that the “corner-cutting” behavior that frequently affects MPC in high-speed flight is overcome by this new formulation. This is an important feature par-ticularly in perception-aware flight, as you want to precisely execute the planned trajectory instead of some improvisation on the fly that breaks the coordination between the translation and rotation to meet certain perception needs. Also, this feature is critical for the TOGT flight. When the planned trajectory passes near the edges of gates, the behavior of corner cutting will put the quadrotor in a severe risk of missing the gate or even colliding with the gate. To conclude, MPCTC is a desirable tracking controller for perception-aware, time-critical missions due to its high adherence to the given reference trajectory. 
+
+2) Position Uncertainty Evaluation: In this experiment, we execute the trajectories with the LA , FOV , PUM , FOV-PUM , and LA-PUM objectives, respectively, using the MPCTC, followed by comparing the corresponding position uncertainty along the trajectory. As shown in Fig. 20, all trajectories are executed with a high precision, passing through exactly the center of the gate. We see from Fig. 21 that since it is a complex Split-S track squeezed into a relatively small indoor environment, IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 17 4
+
+> 2
+> 0
+> 2
+> 4
+> X (m)
+> 4
+> 2
+> 0
+> 2
+> 4
+> Y (m)
+> 0
+> None
+> LA
+> FOV
+> PUM
+> FOV-PUM
+> LA-PUM
+
+Fig. 20: Executed trajectories with various perception objec-tives on a real-world Split-S track. the quadrotor has to perform aggressive rotations to finish the track in the shortest possible time, thus creating severe motion blur in the captured images and making keeping the gate visible very challenging. In such a challenging scenario, the LA and FOV still manage to maintain good visibility of the upcoming gate, albeit with different objective formulations. As expected, the PUM demonstrates a different flight strategy, looking sideways at L-1 and backward at L-2, L-3, and L-6 to see more gates. Please visit our website for detailed footages in this experiments. Fig. 22 provides a quantitative evaluation of perception quality. It can be observed that in such extremely aggressive flights, FOV turns out to be the strategy that provides the best visibility of gates, although it only considers the upcoming gate in the optimization. It reaches the lowest interval where no gates are visible, which is 12.1%. In the FOV-PUM case, this number further reduces to 7.7%. As a result, the percentage of sampled frames where the PnP solver provides a reasonable output reaches a high of 67.6% with PUM and 65.8% with FOV-PUM. One plausible cause is that in such a small race track where the gate distribution is dense and each trajectory segment between gates is short, the quadrotor must produce much more intense aggressive rotations than usual to keep the lap time low, which comes at the cost of undermined perception quality. In this scenario, while the FOV constraint formulation remains effective due to its constraint nature, those cost-function-based formulations, such as LA and PUM, end up losing authority in determining the final maneuver, leading to unsatisfactory visual quality. It is worth mentioning that PUM still provides a salient improvement in perception quality over LA. Interestingly, LA reaches an even lower valid percentage than the baseline with no perception awareness. A direct reason for this is that LA results in slightly longer periods with no gates visible. This highlights a fundamental limitation of LA: the heuristic of orienting toward the future path does not guarantee sufficient gate visibility across all track geometries. In tracks involving intense and tight turns, LA may not be a suitable strategy for guiding trajectory optimization. Meantime, the result also suggests that while PUM may be theoretically optimal for uncertainty minimization, the final position estimate may not reach the theoretical optimum. Several factors contribute to this discrepancy, including missing key feature observations during actual trajectory execution or noise in gate corner detection that causes unanticipated large biases. Therefore, in practice, it is essential to intelligently combine these percep-tion objectives to achieve desirable outcomes. VIII. D ISCUSSION AND CONCLUSIONS 
+
+A. Limitations 
+
+This work presents two primary limitations. First, the frame-work currently considers only position uncertainty, assuming that orientation measurements remain accurate. While roll and pitch angles can be estimated from IMU measurements without significant bias, the yaw angle is susceptible to ac-cumulated drift, particularly when the landmark layout is ill-conditioned or only a single, distant landmark is visible. In future work, we plan to incorporate yaw uncertainty metrics into the perception objective design. The second limitation stems from the cascaded control structure, which cannot perfectly reproduce the planned tra-jectory and necessitates a trade-off between completion time and tracking accuracy. Increasing the progress weight reduces the time gap relative to the planned duration but inevitably increases tracking error. Consequently, this requires careful parameter tuning, particularly when traversing small gates or when the intended path grazes the edges of the gate frame. 
+
+B. Our Approach vs. RL 
+
+While both this work and various RL approaches [5], [12], [66], [67] target the same task of autonomous drone racing, they address fundamentally different research problems. 
+
+Theoretical Limits and Benchmarking: In essence, this paper focuses on identifying the theoretical control limits of a quadrotor using a nominal model in minimum-time tasks. This limit applies to all control strategies, including RL, provided they operate on the same model. Consequently, one of our primary contributions is a benchmarking methodology for evaluating controller performance rather than a system intended to outfly RL in the real world. 
+
+Generalizability and Explainability: RL often requires extensive retraining and hyperparameter fine-tuning when switching to a new race track. In contrast, our approach generalizes by nature and can provide a solution for any track configuration almost immediately. Furthermore, our method is explainable, while RL operates in a black-box manner. Explainability allows for the direct inspection of the under-lying optimization landscape. This transparency is crucial for identifying the specific causes of failure and for providing formal guarantees of performance 
+
+Multi-Objective Flexibility: Our approach offers greater flexibility in handling diverse objectives, such as the IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 18 
+
+L-1 L-2 L-3 L-4 L-5 L-6 
+
+> (a) LA  (b) FOV  (c) PUM
+
+Fig. 21: FPV images of perception-aware time-optimal flights at six different locations. While LA and FOV exhibit similar views, PUM differs from them by looking toward directions where multiple gates are visible instead of only the upcoming one, such as locations L-1 and L-6. None LA FOV PUM FOV-PUM LA-PUM 
+
+> 0.0
+> 1.0
+> 2.0
+> 3.0
+> 4.0
+> 5.0
+> 6.0
+> 7.0
+> Number of Visible Landmarks  Mean
+> Median
+
+(a) Landmark Visibility None LA FOV PUM FOV-PUM LA-PUM  
+
+> 35
+> 40
+> 45
+> 50
+> 55
+> 60
+> 65
+> 70
+> Valid Percentage (%)
+> 37.3% 35.9%
+> 67.6%
+> 46.4%
+> 65.8%
+> 45.6%
+
+(b) PnP Pos. Availability 
+
+Fig. 22: Landmark visibility and position estimate availability in the real-world experiments. perception-aware metrics introduced in this paper. While RL can also incorporate a variety of reward functions, doing so increases the risk of trapping the policy in poor local minima and inevitably results in slower convergence. In com-parison, our formulation inherits the advantages of traditional optimization-based planning methods, maintaining a clear path to convergence even when subjected to complex perception requirements. In conclusion, our approach and RL excel in distinct con-texts and are not mutually exclusive. If a researcher needs to rapidly determine the theoretical minimum lap time for a track with known gate geometries and layouts, our method provides an immediate solution with an optimality guarantee. Further-more, it can provide the expert demonstrations required to train imitation learning models, which subsequently facilitate the convergence of RL policies. 
+
+C. Conclusions 
+
+In this paper, we presented a unified perception-aware time-optimal planning and control framework for vision-based UAVs. By integrating three distinct perception objectives, look-ahead, sequential field-of-view constraints, and position uncertainty minimization, we demonstrated that explicitly ac-counting for perceptual quality significantly reduces state esti-mation uncertainty and enhances closed-loop robustness. Our findings highlight that FOV and PUM are particularly effective in racing scenarios, as it enables the drone to maximize the utility of environmental visual features to improve localization performance. Extensive numerical and real-world experiments are performed to validate the proposed autonomous system. These results provide a robust foundation for a wide range of time-critical applications, from high-speed drone racing to autonomous infrastructure inspection. ACKNOWLEDGMENT The authors would like to acknowledge the Learning Sys-tems & Robotics Lab (formerly the Dynamic Systems Lab) at UTIAS, led by Dr. Angela Schoellig, for providing facil-ity support for the laboratory flight experiments. This work was supported by the European Union’s Horizon Europe Research and Innovation Programme under grant agreement No. 101120732 (AUTOASSESS) and the European Research Council (ERC) under grant agreement No. 864042 (AGILE-FLIGHT). REFERENCES [1] J. Xing, I. Geles, Y. Song, E. Aljalbout, and D. Scaramuzza, “Multi-task reinforcement learning for quadrotors,” IEEE Robotics and Automation Letters , 2024. [2] M. Bosello, F. Pinzarrone, S. Kiade, D. Aguiari, Y. Keuter, A. AlShehhi, G. Caminati, K. L. Wong, K. S. Chou, J. Halepota et al. , “On your own: Pro-level autonomous drone racing in uninstrumented arenas,” arXiv preprint arXiv:2510.13644 , 2025. [3] J. Xing, G. Cioffi, J. Hidalgo-Carri´ o, and D. Scaramuzza, “Autonomous power line inspection with drones via perception-aware mpc,” in 
+
+IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2023, pp. 1086–1093. [4] D. Hanover, A. Loquercio, L. Bauersfeld, A. Romero, R. Penicka, Y. Song, G. Cioffi, E. Kaufmann, and D. Scaramuzza, “Autonomous drone racing: A survey,” IEEE Transactions on Robotics , 2024. [5] E. Kaufmann, L. Bauersfeld, A. Loquercio, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Champion-level drone racing using deep reinforcement learning,” Nature , vol. 620, no. 7976, pp. 982–987, 2023. IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 19 
+
+[6] J. Xing, A. Romero, L. Bauersfeld, and D. Scaramuzza, “Bootstrapping reinforcement learning with imitation for vision-based agile flight,” in 
+
+8th Conference on Robot Learning (CoRL) , 2024, accepted at CoRL 2024; arXiv preprint arXiv:2403.12203. [7] G. Li, A. Tunchez, and G. Loianno, “Pcmpc: Perception-constrained model predictive control for quadrotors with suspended loads using a single camera and imu,” in 2021 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2021, pp. 2012–2018. [8] D. Falanga, P. Foehn, P. Lu, and D. Scaramuzza, “Pampc: Perception-aware model predictive control for quadrotors,” in IEEE/RSJ Interna-tional Conference on Intelligent Robots and Systems (IROS) . IEEE, 2018, pp. 1–8. [9] Y. Song, K. Shi, R. Penicka, and D. Scaramuzza, “Learning perception-aware agile flight in cluttered environments,” IEEE International Con-ference on Robotics and Automation (ICRA) , 2023. [10] C. Qin, M. S. Michet, J. Chen, and H. H.-T. Liu, “Time-optimal gate-traversing planner for autonomous drone racing,” in IEEE international conference on robotics and automation (ICRA) . IEEE, 2024. [11] C. Pfeiffer and D. Scaramuzza, “Human-piloted drone racing: Visual processing and control,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 3467–3474, 2021. [12] Y. Song, A. Romero, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Reach-ing the limit in autonomous racing: Optimal control versus reinforcement learning,” Science Robotics , vol. 8, no. 82, p. eadg1462, 2023. [13] M. Diehl and S. Gros, “Numerical optimal control,” Optimization in Engineering Center (OPTEC) , 2011. [14] D. Mellinger and V. Kumar, “Minimum snap trajectory generation and control for quadrotors,” in IEEE international conference on robotics and automation . IEEE, 2011, pp. 2520–2525. [15] H. G. Bock and K.-J. Plitt, “A multiple shooting algorithm for direct solution of optimal control problems,” IFAC Proceedings Volumes ,vol. 17, no. 2, pp. 1603–1608, 1984. [16] P. Foehn, A. Romero, and D. Scaramuzza, “Time-optimal planning for quadrotor waypoint flight,” Science robotics , vol. 6, no. 56, p. eabh1221, 2021. [17] Z. Zhou, G. Wang, J. Sun, J. Wang, and J. Chen, “Efficient and robust time-optimal trajectory planning and control for agile quadrotor flight,” 
+
+IEEE Robotics and Automation Letters , vol. 8, no. 12, pp. 7913–7920, 2023. [18] Z. Shen, G. Zhou, and H. Huang, “Sequential convex programming for time-optimal quadrotor waypoint flight,” in IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2024, pp. 3108–3115. [19] S. Dong, Z. Shen, R. Reiter, H. Huang, B. Gao, H. Chen, and W.-H. Chen, “A fast semidefinite convex relaxation for optimal control problems with spatio-temporal constraints,” 2026. [20] S. Spedicato and G. Notarstefano, “Minimum-time trajectory generation for quadrotors in constrained environments,” IEEE Transactions on Control Systems Technology , vol. 26, no. 4, pp. 1335–1344, 2017. [21] J. Arrizabalaga and M. Ryll, “Towards time-optimal tunnel-following for quadrotors,” in International Conference on Robotics and Automation (ICRA) . IEEE, 2022, pp. 4044–4050. [22] T. Fork and F. Borrelli, “Euclidean and non-euclidean trajec-tory optimization approaches for quadrotor racing,” arXiv preprint arXiv:2309.07262 , 2023. [23] A. Romero, R. Penicka, and D. Scaramuzza, “Time-optimal online replanning for agile quadrotor flight,” IEEE Robotics and Automation Letters , vol. 7, no. 3, pp. 7730–7737, 2022. [24] K. Teissing, M. Novosad, R. Penicka, and M. Saska, “Real-time planning of minimum-time trajectories for agile uav flight,” IEEE Robotics and Automation Letters , 2024. [25] A. Romero, S. Sun, P. Foehn, and D. Scaramuzza, “Model predictive contouring control for time-optimal quadrotor flight,” IEEE Transactions on Robotics , vol. 38, no. 6, pp. 3340–3356, 2022. [26] D. Kulic, G. Venture, K. Bekris, and E. Coronado, “MPCC++: Model predictive contouring control for time-optimal flight with safety con-straints,” in Robotics: Science and Systems Conference (RSS 2024) ,2024. [27] J. Ji, X. Zhou, C. Xu, and F. Gao, “Cmpcc: Corridor-based model pre-dictive contouring control for aggressive drone flight,” in International Symposium on Experimental Robotics . Springer, 2020, pp. 37–46. [28] C. Richter, A. Bry, and N. Roy, “Polynomial trajectory planning for aggressive quadrotor flight in dense indoor environments,” in Robotics Research: The 16th International Symposium ISRR . Springer, 2016, pp. 649–666. [29] M. W. Mueller, M. Hehn, and R. D’Andrea, “A computationally efficient algorithm for state-to-state quadrocopter trajectory generation and feasi-bility verification,” in IEEE/RSJ International Conference on Intelligent Robots and Systems . IEEE, 2013, pp. 3480–3486. [30] Z. Wang, X. Zhou, C. Xu, and F. Gao, “Geometrically constrained tra-jectory optimization for multicopters,” IEEE Transactions on Robotics ,vol. 38, no. 5, pp. 3259–3278, 2022. [31] Z. Han, Z. Wang, N. Pan, Y. Lin, C. Xu, and F. Gao, “Fast-racing: An open-source strong baseline for SE3 planning in autonomous drone racing,” IEEE Robotics and Automation Letters , vol. 6, no. 4, pp. 8631– 8638, 2021. [32] Q. Wang, D. Wang, C. Xu, A. Gao, and F. Gao, “Polynomial-based online planning for autonomous drone racing in dynamic environments,” in IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2023, pp. 1078–1085. [33] C. Qin, J. Chen, Y. Lin, A. Goudar, A. P. Schoellig, and H. H.-T. Liu, “Time-optimal planning for long-range quadrotor flights: An automatic optimal synthesis approach,” arXiv preprint arXiv:2407.17944 , 2024. [34] R. Penicka and D. Scaramuzza, “Minimum-time quadrotor waypoint flight in cluttered environments,” IEEE Robotics and Automation Letters ,vol. 7, no. 2, pp. 5719–5726, 2022. [35] Y. Song, M. Steinweg, E. Kaufmann, and D. Scaramuzza, “Autonomous drone racing with deep reinforcement learning,” in IEEE/RSJ Interna-tional Conference on Intelligent Robots and Systems (IROS) . IEEE, 2021, pp. 1205–1212. [36] R. Reiter, C. Qin, L. Bauersfeld, and D. Scaramuzza, “Unifying quadro-tor motion planning and control by chaining different fidelity models,” 2025. [37] J. Ji, N. Pan, C. Xu, and F. Gao, “Elastic tracker: A spatio-temporal tra-jectory planner for flexible aerial tracking,” in International Conference on Robotics and Automation (ICRA) . IEEE, 2022, pp. 47–53. [38] H. Wang, X. Zhang, Y. Liu, X. Zhang, and Y. Zhuang, “Svpto: Safe visibility-guided perception-aware trajectory optimization for aerial tracking,” IEEE Transactions on Industrial Electronics , vol. 71, no. 3, pp. 2716–2725, 2023. [39] Q. Wang, Y. Gao, J. Ji, C. Xu, and F. Gao, “Visibility-aware trajectory optimization with application to aerial tracking,” in IEEE/RSJ Interna-tional Conference on Intelligent Robots and Systems (IROS) . IEEE, 2021, pp. 5249–5256. [40] Y. Zhao, B. Lu, and M. Alipour, “Optimized structural inspection path planning for automated unmanned aerial systems,” Automation in Construction , vol. 168, p. 105764, 2024. [41] T. Panigati, M. Zini, D. Striccoli, P. F. Giordano, D. Tonelli, M. P. Limongelli, and D. Zonta, “Drone-based bridge inspections: Current practices and future directions,” Automation in Construction , vol. 173, p. 106101, 2025. [42] D. Kim, M. Pezzutto, L. Schenato, and H. J. Kim, “Visibility-constrained control of multirotor via reference governor,” in 62nd IEEE Conference on Decision and Control (CDC) . IEEE, 2023, pp. 5714–5721. [43] Q. Yu, C. Qin, L. Luo, H. H.-T. Liu, and S. Hu, “CPA-planner: Motion planner with complete perception awareness for sensing-limited quadrotors,” IEEE Robotics and Automation Letters , vol. 8, no. 2, pp. 720–727, 2022. [44] B. Zhou, J. Pan, F. Gao, and S. Shen, “Raptor: Robust and perception-aware trajectory replanning for quadrotor fast flight,” IEEE Transactions on Robotics , vol. 37, no. 6, pp. 1992–2009, 2021. [45] Y. Song, K. Shi, R. Penicka, and D. Scaramuzza, “Learning perception-aware agile flight in cluttered environments,” in IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2023, pp. 1989–1995. [46] Z. Zhang and D. Scaramuzza, “Fisher information field: an efficient and differentiable map for perception-aware planning,” arXiv preprint arXiv:2008.03324 , 2020. [47] J. Lim, N. Lawrance, F. Achermann, T. Stastny, R. Girod, and R. Sieg-wart, “Fisher information based active planning for aerial photogram-metry,” in IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2023, pp. 1249–1255. [48] C. Papachristos, F. Mascarich, S. Khattak, T. Dang, and K. Alexis, “Localization uncertainty-aware autonomous exploration and mapping with aerial robots using receding horizon path-planning,” Autonomous Robots , vol. 43, no. 8, pp. 2131–2161, 2019. [49] L. Bartolomei, L. Teixeira, and M. Chli, “Perception-aware path plan-ning for UAVs using semantic segmentation,” in IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2020, pp. 5808–5815. [50] V. Murali, I. Spasojevic, W. Guerra, and S. Karaman, “Perception-aware trajectory generation for aggressive quadrotor flight using differential IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 20 
+
+flatness,” in American Control Conference (ACC) . IEEE, 2019, pp. 3936–3943. [51] I. Spasojevic, V. Murali, and S. Karaman, “Perception-aware time optimal path parameterization for quadrotors,” in IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2020, pp. 3213–3219. [52] M. Faessler, A. Franchi, and D. Scaramuzza, “Differential flatness of quadrotor dynamics subject to rotor drag for accurate tracking of high-speed trajectories,” IEEE Robotics and Automation Letters , vol. 3, no. 2, pp. 620–626, 2017. [53] M. S. Grewal, L. R. Weill, and A. P. Andrews, Global positioning systems, inertial navigation, and integration . John Wiley & Sons, 2007. [54] H. Cram´ er, Mathematical methods of statistics . Princeton University Press, 1999, vol. 9. [55] P. Foehn, D. Brescianini, E. Kaufmann, T. Cieslewski, M. Gehrig, M. Muglikar, and D. Scaramuzza, “Alphapilot: Autonomous drone racing,” Autonomous Robots , vol. 46, no. 1, pp. 307–320, 2022. [56] M. Wang, Q. Wang, Z. Wang, Y. Gao, J. Wang, C. Cui, Y. Li, Z. Ding, K. Wang, C. Xu et al. , “Unlocking aerobatic potential of quadcopters: Autonomous freestyle flight generation and execution,” 
+
+Science Robotics , vol. 10, no. 101, p. eadp9905, 2025. [57] R. Kingslake, A history of the photographic lens . Academic press, 1989. [58] T. D. Barfoot, State estimation for robotics . Cambridge University Press, 2024. [59] S. A. Bahnam, R. Ferede, T. M. Blaha, A. E. Lang, E. Lucassen, Q. Missinne, A. E. Verraest, C. De Wagter, and G. C. de Croon, “Mono-race: Winning champion-level drone racing with robust monocular ai,” 
+
+arXiv preprint arXiv:2601.15222 , 2026. [60] A. Wachter, An interior point algorithm for large-scale nonlinear optimization with applications in process engineering . Carnegie Mellon University, 2002. [61] J. A. Andersson, J. Gillis, G. Horn, J. B. Rawlings, and M. Diehl, “CasADi: a software framework for nonlinear optimization and optimal control,” Mathematical Programming Computation , vol. 11, no. 1, pp. 1–36, 2019. [62] R. Verschueren, G. Frison, D. Kouzoupis, J. Frey, N. van Duijkeren, A. Zanelli, B. Novoselnik, T. Albin, R. Quirynen, and M. Diehl, “acados – a modular open-source framework for fast embedded optimal control,” 
+
+Mathematical Programming Computation , 2021. [63] G. Frison and M. Diehl, “HPIPM: a high-performance quadratic programming framework for model predictive control,” IFAC-PapersOnLine , vol. 53, no. 2, pp. 6563–6569, 2020, 21st IFAC World Congress. [64] M. Diehl, H. G. Bock, and J. P. Schl¨ oder, “A real-time iteration scheme for nonlinear optimization in optimal feedback control,” SIAM Journal on control and optimization , vol. 43, no. 5, pp. 1714–1736, 2005. [65] F. Furrer, M. Burri, M. Achtelik, and R. Siegwart, Robot Operating System (ROS): The Complete Reference (Volume 1) . Cham: Springer International Publishing, 2016, ch. RotorS—A Modular Gazebo MAV Simulator Framework, pp. 595–625. [Online]. Available: http://dx.doi.org/10.1007/978-3-319-26054-9 23 [66] A. Romero, E. Aljalbout, Y. Song, and D. Scaramuzza, “Actor–critic model predictive control: Differentiable optimization meets reinforce-ment learning for agile flight,” IEEE Transactions on Robotics , vol. 42, pp. 673–692, 2025. [67] A. Verraest, S. Bahnam, R. Ferede, G. de Croon, and C. De Wagter, “Skydreamer: Interpretable end-to-end vision-based drone racing with model-based reinforcement learning,” arXiv preprint arXiv:2510.14783 ,2025. 
+
+APPENDIX AUNCERTAINTY IN THE BEARING VECTOR MEASUREMENTS 
+
+The standard deviation of the bearing vector has the follow-ing relationship to that of the image coordinates: 
+
+σρ = | ∂ρc
+
+∂[u, v ]⊤ |
+
+ σu
+
+σv
+
+
+
+. (61) Expanding the Jacobian matrix by using the chain rule yields: 
+
+∂ρc
+
+∂[u, v ]⊤ = ∂ρc
+
+∂[xn, y n]⊤
+
+∂[xn, y n]⊤
+
+∂[u, v ]⊤ . (62) We calculate their expressions separately: 
+
+∂ρc
+
+∂x n
+
+=
+
+
+
+cos( θ) · ( xn 
+
+> θ
+
+)2 + sin( θ) ·
+
+ 1 
+
+> θ
+
+− x2
+
+> n
+> θ3
+
+
+
+cos( θ) · xnyn 
+
+> θ2
+
+− sin( θ) · xnyn
+
+> θ3
+
+− sin( θ) · xn
+
+> θ
+
+ ,∂ρc
+
+∂y n
+
+=
+
+
+
+cos( θ) · xnyn 
+
+> θ2
+
+− sin( θ) · xnyn
+
+> θ3
+
+cos( θ) · ( yn 
+
+> θ
+
+)2 + sin( θ) ·
+
+ 1 
+
+> θ
+
+− y2
+
+> n
+> θ3
+
+
+
+− sin( θ) · yn
+
+> θ
+
+ ,
+
+(63) 
+
+∂[xn, y n]⊤
+
+∂[u, v ]⊤ =
+
+" 1 
+
+> fx
+
+00 1
+
+> fy
+
+#
+
+. (64) When θ is small, the left matrix can be approximated as: 
+
+∂ρc
+
+∂[xn, y n]⊤ ≈
+
+ 1 00 1
+
+−xn −yn
+
+ . (65) It is noticed that (65) indeed corresponds to the maximum entry values for | ∂ρc 
+
+> ∂[xn,y n]⊤
+
+|; as θ increases from 0, the absolute values will decrease rapidly, approaching zero as θ approaches infinity. As a result, multiplying the above result with (64) gives an upper bound of the uncertainty in the bearing vector: 
+
+σρ ≤ [| σu
+
+fx
+
+|, | σv
+
+fy
+
+|, | σuxn
+
+fx
+
++ σv yn
+
+fy
+
+|]⊤. (66) Since (cx, c y ) generally represents the coordinate of the image center and hence umax ≈ 2cx and vmax ≈ 2cy , the following inequality holds: 
+
+| σuxn
+
+fx
+
++ σv yn
+
+fy
+
+| ≤ | σucx
+
+f 2
+
+> x
+
++ σv cy
+
+f 2
+
+> y
+
+|. (67) Substituting this into (66) yields: 
+
+σρ ≤ [| σu
+
+fx
+
+|, | σv
+
+fy
+
+|, | σucx
+
+fx
+
++ σv cy
+
+fy
+
+|]⊤, (68) which completes the proof. APPENDIX BPROOF OF PROPOSITION 1Assume that Σρ is a isotropic matrix. Inserting ρc =
+
+Rcw ρw into (34) gives: 
+
+J = 1
+
+d (I3 − (Rcw ρw)( Rcw ρw)⊤)( −Rcw )= Rcw (I3 − ρw(ρw)⊤)/d 
+
+| {z }
+
+> A
+
+· R⊤
+
+> cw
+
+Rcw 
+
+| {z }
+
+> I3
+
+= Rcw A.
+
+(69) Therefore, we can rewrite the FIM as: 
+
+I = J⊤ΣρJ = A⊤(R⊤
+
+> cw
+
+ΣρRcw )A = A⊤ΣρA, (70) where the identity R⊤
+
+> cw
+
+ΣρRcw = Σρ holds true because Σρ
+
+is a diagonal matrix with all diagonal entries being the same value, and Rcw is an orthogonal matrix. IEEE JOURNAL OF L ATEX CLASS FILES, FEBRUARY 2026 21 
+
+APPENDIX CPROOF OF PROPOSITION 2We begin by considering the following geometric relation-ship from the camera projection model: 
+
+L
+
+(l/ cos ϕ) = dfx
+
+⇒ d = L cos ϕ · fx
+
+l . (71) To analyze the uncertainty in depth estimation, we consider the standard error propagation formula: 
+
+σZ = | dZ dl | · σl, (72) where σl is the standard deviation of the measurement noise in the observed landmark size. Taking the derivative of Z with respect to l, we obtain: 
+
+dZ dl = −L cos ϕ · fx
+
+l2 = −Z2
+
+L cos ϕ · fx
+
+. (73) Now let us examine the uncertainty σl. The landmark size in the image is typically computed from the difference between two detected image features: 
+
+l = |(u1 + nu1 ) − (u2 + nu2 )| (74) where each feature location ui ∼ N (0 , σ u), and nui denotes the associated noise. Assuming independent Gaussian noise, the standard deviation of l becomes: 
+
+σl = pσ2 
+
+> u
+
++ σ2 
+
+> u
+
+= √2σu. (75) Putting it into (72), we obtain the final expression for the depth uncertainty: 
+
+σZ = |√2Z2
+
+L cos ϕ · fx
+
+| · σu. (76)

@@ -1,0 +1,278 @@
+Title: MMH-Planner: Multi-Mode Hybrid Trajectory Planning Method for UAV Efficient Flight Based on Real-Time Spatial Awareness
+
+URL Source: https://arxiv.org/pdf/2603.02683v1
+
+Published Time: Wed, 04 Mar 2026 01:48:02 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+> JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 1
+
+# MMH-Planner: Multi-Mode Hybrid Trajectory Planning Method for UAV Efficient Flight Based on Real-Time Spatial Awareness 
+
+Yinghao Zhao, Chenguang Dai, Liang Lyu, Zhenchao Zhang, Chaozhen Lan, and Hong Xie 
+
+Abstract —Motion planning is a critical component of intel-ligent unmanned systems, enabling their complex autonomous operations. However, current planning algorithms still face limi-tations in planning efficiency due to inflexible strategies and weak adaptability. To address this, this paper proposes a multi-mode hybrid trajectory planning method for UAVs based on real-time environmental awareness, which dynamically selects the optimal planning model for high-quality trajectory generation in response to environmental changes. First, we introduce a goal-oriented spatial awareness method that rapidly assesses flight safety in the upcoming environments. Second, a multi-mode hybrid trajectory planning mechanism is proposed, which can enhance the planning efficiency by selecting the optimal planning model for trajectory generation based on prior spatial awareness. Finally, we design a lazy replanning strategy that triggers replanning only when necessary to reduce computational resource consumption while maintaining flight quality. To validate the performance of the proposed method, we conducted comprehensive comparative experiments in simulation environments. Results demonstrate that our approach outperforms existing state-of-the-art (SOTA) algorithms across multiple metrics, achieving the best perfor-mance particularly in terms of the average number of planning iterations and computational cost per iteration. Furthermore, the effectiveness of our approach is further verified through real-world flight experiments integrated with a self-developed intelligent UAV platform. 
+
+Index Terms —Unmanned aerial vehicles, Motion planning, Hybrid planning, Replanning strategy, Unknown environment 
+
+I. I NTRODUCTION 
+
+# WITH the continuous advancement of intelligent tech-nologies, unmanned systems have emerged as a focus of global attention [1]–[5]. Owing to their unique advantages, such as high flexibility and strong adaptability, unmanned aerial vehicles (UAVs) have been widely deployed across numerous fields [6]–[9]. However, in most current practical applications, UAV operations still rely on human control or pre-programmed flight paths, which falls short of meeting the demands for safe, autonomous, intelligent, and efficient 
+
+Yinghao Zhao, Chenguang Dai, Liang Lyu, Zhenchao Zhang, and Chaozhen Lan are with the School of Surveying and Mapping, Information Engineering University, Zhengzhou, 450001, China (e-mail: zhaoyinghao@whu.edu.cn; cgdai2008@163.com; lvliangvip@163.com; zhzhc 1@163.com; lan cz@163.com). Hong Xie is with the School of Geodesy and Geomatics, Hubei Luojia Laboratory, Wuhan University, Wuhan 430079, China (e-mail: hxie@sgg.whu.edu.cn). 
+
+operations, especially in unknown and complex environments such as beneath forest canopies, indoors, or underground. Con-sequently, there is a pressing need to enhance the autonomy and intelligence of UAVs. 
+
+A. Existing Problems 
+
+As a critical component of intelligent UAVs, the motion planning module generates real-time, high-quality trajectories that are safe, smooth, and dynamically feasible [10], [11]. This is achieved by integrating real-time scene perception data with target location information, ensuring the UAV reaches its destination securely, stably, and rapidly. Despite significant advancements in recent years [12]–[14], persistent challenges persist in motion planning algorithms. First, current motion planning algorithms fail to incorporate the complexity of real-time navigational environments as prior information, resulting in suboptimal rationality and adaptability of the optimization models. Second, existing algorithms primarily fall into two categories: hard-constraint optimization and soft-constraint optimization. Hard-constraint algorithms deliver high planning quality but suffer from low computational efficiency and adaptability. Soft-constraint algorithms, while highly efficient and adaptable, struggle to strictly satisfy all constraints in their planning results, preventing an optimal balance between quality and efficiency. Furthermore, current algorithms often adopt small-horizon, high-frequency replanning strategies to enhance trajectory optimality and safety. However, this strat-egy generates excessive unnecessary replanning (no or limited improvement in terms of security, continuity, and optimality), wasting limited computational resources. In summary, how to achieve rational, efficient, and high-quality trajectory genera-tion is still an open question. 
+
+B. Contributions 
+
+To address the aforementioned challenges, this paper pro-poses a hybrid intelligent replanning algorithm capable of autonomously selecting the optimal planning model based on real-time navigation spatial awareness, named MMH (Multi-Mode Hybrid)-Planner. First, we design a goal-oriented spatial awareness method that rapidly assesses the impact of obstacles within the upcoming area using goal-oriented sensing ray, providing a priori guidance for subsequent trajectory planning. 
+
+0000–0000/00$00.00 © 2021 IEEE  
+
+> arXiv:2603.02683v1 [cs.RO] 3 Mar 2026 JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 2
+
+Fig. 1: Framework of the multi-mode hybrid planner. Second, a hybrid intelligent planning mechanism incorporat-ing three distinct modes (Fast, Standard, and Emergency) is developed based on the characteristics of different planning models. This mechanism fully integrates the advantages of various trajectory optimization models, enabling real-time selection of the most appropriate planning mode according to the awareness of the upcoming area. This ensures maximum fulfillment of trajectory generation efficiency, quality, and flight safety. Finally, a lazy re-planning mechanism is designed to trigger trajectory replanning only when necessary (speed or safety deteriorates). This approach minimizes the waste of onboard computational resources while maintaining flight safety and optimality. The main contributions of this work are summarized as follows: 1) A goal-oriented spatial awareness method is introduced for rapid safety assessment of the upcoming environments, providing effective guidance for trajectory planning. 2) A multi-mode hybrid replanning mechanism is proposed, which flexibly selects the optimal planning model for trajectory generation based on the spatial awareness. This mechanism fully leverages the strengths of three unique planning models to enhance the replanning efficiency. 3) A lazy replanning strategy is designed to reduce unnec-essary replanning iterations and conserve limited onboard computational resources. 4) Sufficient comparison experiments are conducted in sim-ulation, and real-world experiment is also carried out to validate the effectiveness of the proposed method. II. R ELEATED WORK 
+
+In recent years, a variety of motion planning algorithms have been proposed and adopted. Based on their underlying principles, widely used high-quality motion planning algo-rithms can be broadly categorized into two main classes: soft-constrained optimization [15]–[17] and hard-constrained optimization [18]–[20]. 
+
+A. Hard-constrained Optimization 
+
+Hard-constrained optimization methods originated with the minimum snap trajectory generation approach introduced by Mellinger and Kumar [18], which represents UAV trajectories using piecewise polynomials and solves a quadratic program-ming (QP) problem. Later, to enhance trajectory safety, many researchers have adopted a two-stage trajectory generation method [20]–[22]: first constructing a safe flight corridor (SFC) (composed of cubes, spheres, or convex polyhedra) to represent safe space, and then solving a QP problem within this space to generate a safe flight trajectory. To efficiently compute spatiotemporally optimal trajectories, [21] proposed a novel MINCO trajectory representation method, enabling joint spatial-temporal optimization and significantly improving trajectory quality. Building on MINCO, [22] introduced the Bubble Planner, which further enhanced planning efficiency through innovations in SFC generation and reuse. Subse-quently, the same team proposed an unmanned aerial system called SUPER [23], capable of autonomous obstacle avoidance at speeds up to 20 m/s in unknown complex environments. However, this method essentially follows the SFC-based hard-constrained dual-trajectory planning strategy of Faster [20]. While it ensures high trajectory quality, its planning efficiency remains relatively low. Overall, hard-constrained methods produce high-quality trajectories, but their need to construct SFCs and strictly satisfy constraints leads to relatively low computational efficiency and susceptibility to sensor noise. 
+
+B. Soft-constrained Optimization 
+
+In contrast, soft-constrained optimization methods offer better real-time performance and adaptability. They formulate the path planning problem as a nonlinear optimization problem by incorporating safety, smoothness, and dynamic feasibility into the cost function. [12] employed a hybrid A* search to generate an initial kinodynamic path and efficiently opti-mized the trajectory using B-splines. However, this method remains prone to local minima and planning failure when the initial trajectory quality is poor. To address this, the authors later significantly improved planning success rates JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 3
+
+using topological path guidance [24]. To eliminate the depen-dency on computationally expensive euclidean signed distance fields (ESDF), [25] proposed TGK-Planner, which uses an improved kinodynamic RRT* method for initial trajectory search and trajectory optimization. [13] also introduced the well-known EGO-Planner, which directly computes distance gradients from collision-free geometric paths instead of relying on ESDF, substantially improving computational efficiency. Later, [26] integrated real-time environmental information into planning decisions, enabling UAVs to dynamically adjust flight aggressiveness, thereby enhancing adaptability and planning performance. However, although soft-constrained methods per-form well in real-time performance and adaptability, their elastic optimization nature makes it difficult to guarantee high-quality results or strictly satisfy all predefined constraints. In summary, both hard-constrained methods (strictly satisfy constraints) and more flexible soft-constrained methods suffer from their respective drawbacks, making it challenging for them to plan flexibly and efficiently in complex scenarios. III. T ECHNICAL APPROACH 
+
+A. System Overview 
+
+The main workflow of this method is illustrated in Fig. 1, comprising three key components: goal-oriented spatial awareness of the navigation environment, multi-mode hybrid trajectory planning mechanism, and lazy replanning strategy. First, to rapidly assess the impact of obstacles within the upcoming navigation environment on flight tasks, this paper utilizes the maximum sensing range of sensors to check obstacles in the target direction and adjacent areas. Based on these checking results, it determines whether obstacles in the upcoming spaces affect the current flight. Second, based on the navigation spatial awareness results and the characteristics of different trajectory optimization models, the optimal trajectory optimization mode is specifically selected to achieve the best balance between safety, quality, and efficiency. Subsequently, the designed lazy replanning strategy triggers trajectory replanning when necessary to ensure flight safety and continuity. Finally, as the UAV moves, data acquired by sensors continuously updates the local map in real time, providing essential data for avoidance planning. 
+
+B. Goal-oriented Spatial Awareness 
+
+In traditional planning methods, the trajectory generation process primarily relies on obstacle positions for collision-free path search and optimization, without leveraging the spatial distribution of obstacles to adjust the planning strategy. This causes the limited flexibility, making it difficult to plan efficiently in complex environments. To address this limitation, unlike conventional approaches that directly perform trajectory search and optimization, this paper introduces a goal-oriented environment complexity awareness method. This method eval-uates the obstacle interference between the UAV’s current position and the target position, thereby providing efficient and effective information support for the subsequent flexible selection of the optimal trajectory planning algorithm. The main procedure of the method is outlined in Algorithm 1. 
+
+Algorithm 1 Goal-Oriented Complexity Awareness Algorithm for Passage Environment 
+
+Require: UAV’s position P , goal’s position G, maximum sensor range r and map data M
+
+Ensure: Passage environment safety S (True or False)  
+
+> 1:
+
+Pg ← SenseRay (P, G, r ) 
+
+> 2:
+
+plist ← Pg .discrete ()  
+
+> 3:
+
+n ← 1 
+
+> 4:
+
+while 0 < n < p list .size () − 1 do  
+
+> 5:
+
+S ← JudgePointSafe (pn−1, M ) 
+
+> 6:
+
+if not S then  
+
+> 7:
+
+break  
+
+> 8:
+
+S ← BothSideJudge (pn−1, p n, M ) 
+
+> 9:
+
+if not S then  
+
+> 10:
+
+break  
+
+> 11:
+
+n ← n + 1  
+
+> 12:
+
+return S
+
+First, based on the sensor’s maximum perception range r,the endpoint position GM of the sensing ray is computed using the UAV’s current position P and the goal position 
+
+G. The sensing ray −−−→
+
+P G M (shown as the colored segment in Fig. 2) is then uniformly sampled to obtain a sequence of sampling points plist {p0, · · · , p n} (colored dots in Fig. 2), with the sampling interval determined by the resolution of the occupancy grid map (Lines 1-2). Subsequently, safety inspection is performed based on the sampling results. If a sampling point pn lies inside an obstacle (e.g., points p4 and p5
+
+in Fig. 2), the UAV’s flight safety is considered compromised, and the safety flag S is set to False (Lines 3-6). Otherwise, narrow space detection is conducted. The narrow space detec-tion method adopted in this paper is computationally simple yet efficient. It is primarily based on the normal directions to the vector between adjacent discrete points, performing bidirectional obstacle detection within a certain distance along these normals. If obstacles are detected on both sides of the normal (as at point p3 in Fig. 2), the current traversable area is considered to contain a narrow passage, and the flight safety is also regarded as compromised, with S also marked as False (Lines 7-9). The awareness result will also directly determine the selection of the planning model in the next part. 
+
+C. Multi-Mode Hybrid Trajectory Planning 
+
+Obstacle density in real-world environments is highly het-erogeneous, ranging from open areas with sparse obstructions to narrow passages with dense obstacles. Consequently, relying on a single, fixed trajectory optimization model is clearly insufficient to handle the diverse flight demands flexibly, often leading to suboptimal performance in both planning efficiency and trajectory quality. To address this issue, building upon the awareness of environmental complexity outlined in Sec. III-B, this paper proposes a multi-mode hybrid intelligent plan-ning mechanism. This mechanism incorporates three distinct planning modes: Fast Planning Mode (FPM), Standard Opti-mization Mode (SOM), and Emergency Obstacle Avoidance Mode (EAM). Each mode employs a trajectory optimization JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 4
+
+Fig. 2: Schematic diagram of the goal-oriented spatial aware-ness method. This figure illustrates three distinct perception scenarios. Specifically, the regions corresponding to green rays indicate no obstacles are detected, representing a safe environment. The areas covered by yellow rays reveal passage through narrow regions via local perception, while red rays denote scenarios where obstacle checking confirms that the rays pass through obstacles. Both the latter two cases involve obstacles that compromise the current flight safety, thereby necessitating obstacle avoidance planning. generation model with unique characteristics. Through the collaborative operation of these multiple models, leveraging their respective strengths while mitigating weaknesses, the mechanism achieves optimal planning efficiency. 
+
+1) Fast Planning Mode (FPM): When the safety flag S is True, indicating no obstacles are detected along the sensing ray, as shown in Fig. 3a, the environment is presumed to be sparsely cluttered with obstacles or to pose negligible threat to the ongoing flight mission. In such scenarios, we can disre-gard trajectory safety considerations and focus on enhancing trajectory quality and computational efficiency. Therefore, we adopt the more direct and efficient planning model, which can rapidly generate high-quality trajectory without considering safety constraint [27]: 
+
+min   
+
+> DP,T
+
+J(DP , T) (1) s.t. P(n)(t) ≤ σn, 0 ≤ t ≤ ∥ T∥1 (2) 
+
+P = Φ( DP , T), 1 ≤ n ≤ N
+
+where DP and T denote the boundary conditions to be optimized and the trajectory time allocation, respectively. σn
+
+represents the feasibility constraint, and ∥T∥1 indicates the total trajectory duration. The trajectory P is generated by the mapping P = Φ( DP , T). Throughout the optimization pro-cess, the n-th-order derivative of the trajectory is constrained not to exceed the threshold σn (e.g., limits on velocity and acceleration) over the interval 0 ≤ t ≤ ∥ T∥1, thereby ensuring dynamic feasibility. By disregarding safety considerations and building upon extensive validation, this method can efficiently compute a spatiotemporally optimal trajectory that satisfies all dynamic constraints. 
+
+2) Standard Optimization Mode (SOM): When S is False, indicating the perception ray passes through an obstacle or a narrow space (as shown in Fig. 3b), the obstacle is deemed a safety threat to the current flight mission, necessitating stan-dard obstacle avoidance trajectory planning. In such scenarios, we aim to rapidly generate a trajectory that strictly guarantees both safety and trajectory quality to achieve high-quality, safe drone flight. To achieve this, we first employ the A* algorithm to rapidly search for a locally safe and passable trajectory (black line segment in Fig. 3b) and construct SFC (purple region in Fig. 3b); Subsequently, based on the concept of hard constraints, we use the same method in [21] to construct multiple inequality constraints according to the solution space indicated by SFC, and then solve for the spatiotemporal op-timal flight trajectory that satisfies all constraints. The overall optimization function to be adopted is as follows: 
+
+min 
+
+> p(t),T
+
+Z T
+
+> 0
+
+u(t)T W u (t)dt + ρ(T ) (3) s.t. u(t) = p(s)(t), ∀t ∈ [0 , T ],
+
+G
+
+
+
+p(t), . . . , p (s)(t)
+
+
+
+≤ 0, ∀t ∈ [0 , T ],p(t) ∈ F , ∀t ∈ [0 , T ],p[s−1] (0) = ¯ po, p [s−1] (T ) = ¯ pf (4) where p(t) denotes the flight trajectory. T and W represent the time and a positive diagonal matrix of the flight tra-jectory, respectively. u(t) denotes the control input of the UAV. ¯po and ¯pf denote the initial and final states of the flight trajectory, respectively. ρ(T ) is the time penalty term, 
+
+G  p(t), . . . , p (s)(t) used to adjust the relative magnitude between control consumption and trajectory time consumption. By solving this optimization function through transformation, a spatiotemporally optimal flight trajectory can be rapidly generated within a safe flight corridor, as detailed in the referenced paper [21]. However, due to the limited solution space of hard constraint methods and their susceptibility to noise, this approach may fail to plan effectively in complex obstacle regions. In such cases, to ensure flight continuity, an emergency obstacle avoidance mode is triggered to adopt the more adaptable soft constraint method. 
+
+3) Emergency Avoidance Mode (EAM): Since FPM pro-duces result quickly but lack safety, while SOM offers high quality but suffer from relatively slow planning and weak adaptability, EAM will be swiftly triggered when newly de-tected obstacles threaten the current flight trajectory during operation, which ensures safety and planning success rates. In such scenarios, priority shifts from planning quality to trajec-tory real-time performance and safety. Compared to FPM that disregard safety, or SOM requiring time-consuming SFC con-struction, soft-constraint methods excel in both real-time capa-bility and adaptability, making them the optimal choice. While soft-constraint approaches cannot guarantee strict compliance with predefined constraints, they offer superior adaptability. Additionally, it is crucial to note that in emergency situations, a certain degree of dynamic boundary violation is clearly acceptable to ensure flight safety and continuity. Therefore, for emergency obstacle avoidance, we adopt the core concept of EGO-Planner [13], known for its high computational efficiency and ESDF-free operation. However, unlike the standard EGO-JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 5 
+
+> (a) Fast Planning Stage (b) Standard Optimization Stage
+> (c) Emergency Obstacle Avoidance Stage
+
+Fig. 3: Schematic diagram of the multi-mode hybrid planning mechanism. When no obstacles are detected by the sensing ray, as shown in (a), the system operates in fast planning mode to rapidly generate high-quality trajectories (red curves) without incorporating safety constraints. Conversely, when obstacles are detected (indicated by red collision points in (b)), the system switches to standard optimization mode. In this mode, a spatiotemporally optimized avoidance trajectory is generated within the SFC constructed based on an initial collision-free geometric path. Once newly emerged obstacles (blue solid triangles in (c)) interfere with the ongoing flight trajectory, the emergency obstacle avoidance mode is activated immediately, triggering local re-optimization to promptly compute a safe and dynamically feasible alternative trajectory (green curve). Planner, which relies on a relatively fixed weighting scheme in its optimization, this paper introduces a more adaptive and robust optimization method. Specifically, while EGO-Planner leverages a locally searched geometric path (e.g., the black geometric path in Fig. 3c) generated by A* to replace ESDF for gradient evaluation, our method further analyzes this path using the narrow-space detection algorithm proposed in Sec. III-B. The detection outcome then dynamically guides the adjustment of optimization weights. The overall objective function adopted is formulated as follows: 
+
+min  
+
+> Q
+
+J = λ1(N )Js + λ2(N )Jc + λ3Jf
+
+λ1(N ) = 
+
+(
+
+λhigh  
+
+> 1
+
+if N = 0 ,λlow  
+
+> 1
+
+if N = 1 , λ2(N ) = 
+
+(
+
+λlow  
+
+> 2
+
+if N = 0 ,λhigh  
+
+> 2
+
+if N = 1 
+
+(5) where Q denotes the control points of the B-spline. N
+
+represents the narrow space detection state: N = 1 indicates a narrow passage area, while N = 0 indicates an open passage area. Js, Jc and Jf denote the penalty terms for trajectory smoothness, safety, and dynamic feasibility, respectively (spe-cific calculation methods are provided in [13]). λ1(N ), λ2(N )
+
+and λ3 are the penalty coefficients for the three penalty terms. The coefficient adjustment rule is: 1) In narrow passages (N = 1 ): Adopt high-safety and low-smoothness weighting (decrease λ1, increase λ2). 2) In open passages ( N = 0 ): Adopt high-smoothness and low-safety weighting (increase λ1,decrease λ2). This optimization function enables real-time, robust gener-ation of safe, re-optimized local trajectories, improving the stability of feasible trajectory generation. 
+
+D. Lazy Replanning Strategy 
+
+Due to the limited sensing range of sensors and the demand for high planning efficiency, trajectory planning typically operates within a small local area. Consequently, the results of a single trajectory planning session are insufficient to support the entire flight mission, and continuous trajectory replanning based on real-time environmental data is required to ensure the UAV safely reaches its target location. Current planning meth-ods typically adopt fixed-high-frequency replanning strategies to ensure trajectory quality and safety. However, such strate-gies inevitably trigger numerous unnecessary replanings (no or JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 6
+
+TABLE I: Performance comparison of four methods in different environments.                                                                                                                                                                                                                
+
+> Scene Method Flight time (s) Flight distance (m) Energy (m 2/s 5)Avg Std Max Min Avg Std Max Min Avg Std Max Min
+> 0FastPlanner 15.39 0.21 15.71 15.08 40.06 0.06 40.14 40.00 21.78 14.92 49.84 10.46 EGOPlanner 17.84 0.02 17.87 17.80 40.44 0.08 40.55 40.35 46.63 2.60 50.37 42.31 ROTP 16.22 0.11 16.44 16.13 40.02 0.15 40.31 39.91 9.42 0.89 10.25 7.73
+> Proposed 16.52 0.02 16.55 16.49 39.89 0.01 39.90 39.89 15.56 0.06 15.66 15.50 0.05 FastPlanner 17.51 1.66 21.42 15.50 42.89 2.04 46.95 40.49 98.77 72.68 299.76 42.99 EGOPlanner 18.23 0.63 19.78 17.62 41.14 0.42 41.83 40.62 148.53 37.89 222.63 100.13 ROTP 17.29 0.37 17.88 16.64 40.64 0.63 41.94 40.13 67.71 31.97 127.51 28.13 Proposed 17.04 0.34 18.11 16.67 40.20 0.25 41.01 40.02 43.93 22.83 112.08 26.53
+> 0.1 FastPlanner 18.20 1.87 21.71 15.39 43.44 2.21 47.71 40.76 125.43 52.85 237.56 41.77
+> EGOPlanner 18.45 0.31 19.08 17.73 41.24 0.27 41.84 40.90 205.29 41.94 281.53 135.20 ROTP 18.69 0.95 21.36 17.58 41.87 0.95 43.65 40.20 106.33 41.93 174.33 39.58 Proposed 17.89 0.86 19.85 16.97 40.84 0.62 41.96 40.14 80.91 28.92 134.19 44.71 0.2 FastPlanner 20.97 2.57 25.80 16.74 46.81 2.58 50.66 41.96 256.32 113.76 542.59 115.84 EGOPlanner 19.91 1.96 23.87 17.99 42.38 1.17 45.30 41.33 261.16 87.43 477.40 169.32 ROTP 19.23 0.80 21.29 18.10 42.97 1.76 46.99 40.56 129.92 38.24 195.80 57.08 Proposed 18.62 1.35 22.00 17.06 41.66 1.16 43.95 40.45 136.43 50.00 247.06 78.87
+> *Bold values denote the optimal results for each scenario in the corresponding metrics.
+
+limited improvement in terms of security, continuity, and opti-mality), wasting limited onboard computational resources. To address this issue, this paper proposes a lazy local replanning strategy: 
+
+1) Replanning range: To minimize unnecessary replanning in few-obstacles scenarios, each trajectory planning operation is conducted over a range exceeding the sensor’s maximum sensing range, meaning portions of the planned trajectory will extend into unknown environment. While this approach cannot guarantee trajectory safety within unknown areas, it avoids triggering replanning when such areas contain no obstacles or when newly encountered obstacles do not impact the planned trajectory. Thus, this strategy reduces unnecessary planning while preserving flight trajectory quality and conserving com-putational resources. However, to avoid overconfidence and excessive planning time caused by overly long single-run distances, we typically limit the planning range to a distance achievable at maximum speed within 5 seconds of flight. 
+
+2) Replanning conditions: Local trajectory replanning is triggered only under two conditions: 1) Since current trajectory planning methods typically set the target point’s velocity to zero, replanning is initiated when the current flight trajectory has been executed beyond the halfway point. This aims to maintain high-speed flight throughout the journey and prevent deceleration at the trajectory’s end from affecting current flight performance. 2) Since portions of the trajectory occur in uncharted environments, local replanning will be rapidly trig-gered for emergency obstacle avoidance when newly detected obstacles threaten the safety of the ongoing flight trajectory. Through these strategies, we achieve autonomous obstacle avoidance for UAVs in complex environments using fewer computational resources, without compromising flight quality or safety. IV. EXPERIMENTAL IMPLEMENTATION AND RESULTS 
+
+A. Benchmark Comparison 
+
+To comprehensively evaluate the performance of the pro-posed method, we conducted detailed comparative experi-ments in simulation environments against three state-of-the-art (SOTA) algorithms: FastPlanner [12], EGO-Planner [13], 
+
+(a) 0.05 obs./m 2
+
+(b) 0.1 obs./m 2
+
+(c) 0.2 obs./m 2
+
+Fig. 4: Flight trajectory comparison of the four methods in different environments. The red, pink, green, and blue trajectories correspond to the proposed method, EGO-Planner, ROTP, and FastPlanner, respectively. It should be noted that for scenario with 0 obs./m 2 (i.e., an obstacle-free environment), the trajectories generated by all methods are straight lines and completely overlap. Therefore, comparative trajectory plots for this scenario are not displayed. and ROTP [11]. Both EGO-Planner and FastPlanner are well-known motion planning frameworks that have gained widespread recognition and adoption due to their excellent per-formance in trajectory quality and planning efficiency. ROTP is a previous work from our research team, excels not only in local trajectory replanning but also maintains stable navigation capability in environments with large obstacles. All algorithms in our simulations were implemented using their open-source codes. The maximum velocity and acceleration of the UAV dynamics were set to 3.0 m/s and 2.0 m/s 2, respectively, while JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 7
+
+(a) Flight time (s) (b) Flight dist (m) 
+
+(c) Energy (d) The number of planning iterations 
+
+Fig. 5: Performance trends of the four planning methods in different environments: an evaluation of flight time, flight distance, flight energy, and the number of replanning iterations. TABLE II: Comparison of the four methods in terms of planning iterations and average computational cost                                          
+
+> Scene Avg. Number of Planning Iterations Avg. Computational Cost Per Iteration (ms) FastP. EgoP. ROTP Ours FastP. EgoP. ROTP Ours
+> 025.0 25.0 5.0 9.0 0.9 0.8 3.0 0.1
+> 0.05 29.9 27.5 15.2 12.7 2.0 1.1 2.5 0.3
+> 0.1 32.7 30.1 21.1 17.5 2.2 1.2 2.7 0.7
+> 0.2 40.9 35.1 32.2 22.5 2.7 1.4 2.6 0.9
+> *Bold values denote the optimal results for each scenario in the corresponding metrics.
+
+the sensor field of view (FOV) and maximum sensing range were configured as [80°, 60°] and 4.5 m. All experiments were performed on a hardware platform with an Intel Core i9-13980HX processor (2.20 GHz), 32 GB of RAM, Ubuntu 20.04 and ROS Noetic. Obstacle density in real-world environments is highly het-erogeneous, encompassing both sparsely obstructed regions and densely cluttered areas. To accurately simulate this vari-ability and rigorously evaluate algorithm performance across different scenarios, we generated random maps in a 50 ×50 ×3
+
+m3 volume with four distinct obstacle density levels: 0 obs./m 2
+
+(obstacle-free environment), 0.05 obs./m 2, 0.1 obs./m 2, and 0.2 obs./m 2. For each density, three distinct maps were randomly created. Subsequently, all planning methods were evaluated through five flight trials per map using same start and goal positions. The detailed experimental results are summarized in TA-BLE I. The experimental results demonstrate that across four distinct obstacle density environments, the proposed algorithm achieved the optimal performance. It delivered the best or second-best results among the four methods in terms of flight time, flight distance, energy consumption, and the standard deviation, which demonstrates that the proposed method not only exhibits outstanding planning efficiency but also pos-sesses excellent stability. Fig. 5 illustrates the trends of the aforementioned metrics as obstacle density increases. It is evident that our approach exhibits a trend closer to linear variation. This not only demonstrates the enhanced robustness of our method but also validates the efficacy of our multi-mode hybrid replanning mechanism. It shows that the framework seamlessly adapts its planning mode to mitigate the challenges posed by rising obstacle density, thereby ensuring graceful performance scaling. As shown in Fig. 4, we also present a comparison of flight trajectories across different obstacle density environments. The flight trajectories of our method were also more rational and smoother, consistent with the benchmark results. Notably, as shown in TABLE II, compared to the other three methods, our approach significantly outper-JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 8
+
+forms them in terms of average number of planning iterations and computational cost per iteration, substantially reducing computational overhead. This experimental outcome primarily stems from our algorithm’s more adaptable planning method-ology and replanning strategy. Our method dynamically selects the most appropriate planning model based on the awareness of the real-time scene. In open areas without safety risks, it employs the FPM for fast trajectory generation, prioritizing planning efficiency to reduce planning time. In obstacle-rich avoidance scenarios, it utilizes the SOM’s hard-constraint planning method to generate high-quality obstacle-avoidance trajectories, enhancing trajectory quality. When newly emerg-ing obstacles threaten trajectory safety, EAM performs real-time local trajectory re-optimization, enhancing the urgency, safety, and continuity of obstacle avoidance. Furthermore, by adopting a long-range lazy replanning strategy instead of fixed high-frequency replanning, new trajectory planning is triggered only when necessary (speed or safety deteriorates). This significantly reduces the number of planning iterations while ensuring flight safety and efficiency, further lowering computational resource consumption. In contrast, FastPlanner [12] employs control space sam-pling for initial trajectory search and utilizes heuristic func-tions for efficiency. Therefore, as shown in Fig. 4, although its backend optimization improves the trajectory quality in smoothness and safety, it still suffers from reduced trajectory optimality, prone to extensive detours and getting stuck in local optima. The EGO-Planner [13], overly reliant on the initial guidance trajectory, prioritizes returning to the original path after each obstacle avoidance. This causes the trajectory to oscillate around the initial path, increasing both planning time and energy consumption. Although the ROTP [11] also adopts a planning strategy combining hard and soft constraints, it pre-dominantly utilizes the hard-constraint-based algorithm named GCOPTER [21]. While this method generates extremely high-quality trajectories, its delayed replanning strategy and ex-cessive reliance on the result of GCOPTER often lead to an overemphasis on trajectory smoothness, resulting in elongated paths. 
+
+B. Real-World Experiment 
+
+To validate the effectiveness of the proposed method, we conducted practical flight experiment in outdoor environment using a fully self-developed intelligent UAV platform. The UAV and its configuration are shown in Fig. 6, equipped with a MID360 LiDAR for obstacle data acquisition. During the experiment, we utilized [28] to provide the state estimates. All algorithm modules ran on an onboard computer featuring an Intel Core i7-13980HX (2.20 GHz) processor with 16GB of memory, operating under Ubuntu 20.04 with the ROS Neotic software environment. The experimental scenario features multiple plant obstacles of varying sizes, representing a typical unstructured and irreg-ular environment. Within this environment, the UAV is tasked with flying to a location 31 meters from the starting point. During this flight mission, the drone must perform multiple planning iterations to avoid obstacles, effectively validating 
+
+Fig. 6: The fully self-developed intelligent quadrotor (250mm wheelbase) used in real-world experiments. the effectiveness of the algorithm proposed in this paper. Additionally, for this flight experiment, we set the maximum flight speed and acceleration limits for the UAV to 3.0 m/s and 2.0 m/s 2, respectively, with the sensor sensing range set to 5 m. Ultimately, the UAV completed the flight in 13.1 seconds, covering a trajectory length of 32.3 meters. It achieved a maximum speed of 3.04 m/s and an average speed of 2.46 m/s. Additionally, the entire flight mission consumed 11 replanning iterations, with each iteration averaging 1.3 ms. The complete flight trajectory, constructed obstacle map, multi-view images, and detailed planning information in different stages are shown in Fig. 7. Meanwhile, the UAV’s flight trajectory is color-coded to represent its instantaneous speed, using a gradient from blue to red, where increasing redness indicates higher velocity. From the experimental results, it can be clearly observed that through the collaboration of different planning modes (SOM, FPM, and EAM), the UAV successfully and rapidly completed the obstacle avoidance task, with a smooth and rational overall flight trajectory. The UAV maintained high-speed flight for most of the mission, except during the initial, final, and emergency avoidance phases. This experiment verifies that the proposed algorithm effectively supports safe, fast, and efficient navigation for UAVs in unknown environments. V. C ONCLUSION 
+
+In this paper, we propose a multi-mode hybrid replanning method, capable of autonomously selecting the optimal plan-ning model for trajectory generation according to the real-time spatial awareness. First, we design a goal-oriented spatial safety assessment method to rapidly evaluate the impact of obstacles within the upcoming navigation area on the current flight mission and to provide prior guidance for subsequent trajectory planning. Second, we develop a hybrid intelligent planning mechanism incorporating three distinct modes (FPM, SOM, and EAM) tailored to the characteristics of different planning models. This mechanism selects the optimal tra-jectory optimization model for path generation based on the navigation spatial awareness, leveraging the strengths of each JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 9
+
+Fig. 7: Experimental results of obstacle avoidance flight in real-world outdoor environment by integrating the proposed method with the customized quadrotor, which includes the complete flight trajectory, the concurrently constructed environmental map, and the status when different modes (SOM, FPM, EAM) were triggered (as shown in red dashed circle). In (a), the blue transparent polyhedrons are the constructed SFC, while the blue trajectory is the optimal flight path generated by SOM. In (b), the cyan trajectory is the fast planning result by FPM. In (c), the red trajectory is locally re-optimized result by EAM. planning model to achieve a more reasonable trade-off be-tween planning efficiency and trajectory quality while ensuring flight safety. Finally, a lazy replanning strategy was devel-oped to trigger trajectory replanning only when necessary, significantly reducing the waste of onboard computational resources. Comprehensive comparative experiments evaluated the algorithm’s performance, and practical flight tests were conducted using an fully self-developed intelligent UAV hard-ware platform in real-world environments. The experimental results robustly validate the effectiveness and superiority of the proposed algorithm, demonstrating its capability to support fast, safe, and autonomous UAV flight. REFERENCES [1] J. Guo, Y. Wan, A. Ma, and Y. Zhong, “A global-local collaborative and decomposition-based multi-objective evolutionary optimization method for uav 3-d path planning,” IEEE Internet of Things Journal , 2025. [2] J. Du, B. Huang, and B. Jia, “An efficient uav coverage path planning method for 3-d structures,” IEEE Internet of Things Journal , 2025. [3] R. Dom´ ınguez, C. P´ erez-del Pulgar, G. J. Paz-Delgado, F. Polisano, J. Babel, T. Germa, I. Dragomir, V. Ciarletti, A.-C. Berthet, L. C. Danter                                 
+
+> et al. , “Cooperative robotic exploration of a planetary skylight surface and lava cave,” Science Robotics , vol. 10, no. 105, p. eadj9699, 2025. [4] Y. Zhou, L. Yan, Y. Han, L. Zhu, Y. Zhao, and H. Xie, “Hfch: Hybrid frontier guided fast uav autonomous exploration for complete and high-quality mapping in unknown environment,” Advanced Engineering Informatics , vol. 69, p. 103834, 2026. [5] M. Wang, Q. Wang, Z. Wang, Y. Gao, J. Wang, C. Cui, Y. Li, Z. Ding, K. Wang, C. Xu et al. , “Unlocking aerobatic potential of quadcopters: Autonomous freestyle flight generation and execution,”
+> Science Robotics , vol. 10, no. 101, p. eadp9905, 2025. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 10
+
+[6] X.-Y. Zhang, H. Yu, X. Zheng, H. Wang, C. Mu, and P. Guo, “Hybrid deep reinforcement learning for uav inspection in large-scale wind farms: Deployment and routing optimization,” IEEE Transactions on Industrial Informatics , 2025. [7] D. Liu, B. Fei, W. Bao, X. Zhu, and X. Li, “Dawn: Dynamic task plan-ning of multi-uav with two-layer optimization mechanism in uncertain environments,” IEEE Internet of Things Journal , vol. 11, no. 23, pp. 37 813–37 830, 2024. [8] Y. Zhao, L. Yan, H. Xie, J. Dai, and P. Wei, “Autonomous exploration method for fast unknown environment mapping by using uav equipped with limited fov sensor,” IEEE Transactions on Industrial Electronics ,vol. 71, no. 5, pp. 4933–4943, 2023. [9] B. Zhou, H. Xu, and S. Shen, “Racer: Rapid collaborative exploration with a decentralized multi-uav system,” IEEE Transactions on Robotics ,vol. 39, no. 3, pp. 1816–1835, 2023. [10] X. Zhou, X. Wen, Z. Wang, Y. Gao, H. Li, Q. Wang, T. Yang, H. Lu, Y. Cao, C. Xu et al. , “Swarm of micro flying robots in the wild,” Science Robotics , vol. 7, no. 66, p. eabm5954, 2022. [11] Y. Zhao, L. Yan, J. Dai, X. Hu, P. Wei, and H. Xie, “Robust planning system for fast autonomous flight in complex unknown environment using sparse directed frontier points,” Drones , vol. 7, no. 3, p. 219, 2023. [12] B. Zhou, F. Gao, L. Wang, C. Liu, and S. Shen, “Robust and effi-cient quadrotor trajectory generation for fast autonomous flight,” IEEE Robotics and Automation Letters , vol. 4, no. 4, pp. 3529–3536, 2019. [13] X. Zhou, Z. Wang, H. Ye, C. Xu, and F. Gao, “Ego-planner: An esdf-free gradient-based local planner for quadrotors,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 478–485, 2020. [14] J. Tordesillas and J. P. How, “Mader: Trajectory planner in multiagent and dynamic environments,” IEEE Transactions on Robotics , vol. 38, no. 1, pp. 463–476, 2021. [15] Y. Zhao, L. Yan, Y. Chen, J. Dai, and Y. Liu, “Robust and efficient tra-jectory replanning based on guiding path for quadrotor fast autonomous flight,” Remote Sensing , vol. 13, no. 5, p. 972, 2021. [16] N. Ratliff, M. Zucker, J. A. Bagnell, and S. Srinivasa, “Chomp: Gradient optimization techniques for efficient motion planning,” in 2009 IEEE international conference on robotics and automation , pp. 489–494. IEEE, 2009. [17] V. Usenko, L. Von Stumberg, A. Pangercic, and D. Cremers, “Real-time trajectory replanning for mavs using uniform b-splines and a 3d circular buffer,” in 2017 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pp. 215–222. IEEE, 2017. [18] D. Mellinger and V. Kumar, “Minimum snap trajectory generation and control for quadrotors,” in 2011 IEEE international conference on robotics and automation , pp. 2520–2525. IEEE, 2011. [19] C. Richter, A. Bry, and N. Roy, “Polynomial trajectory planning for aggressive quadrotor flight in dense indoor environments,” in Robotics Research: The 16th International Symposium ISRR , pp. 649–666. Springer, 2016. [20] J. Tordesillas, B. T. Lopez, and J. P. How, “Faster: Fast and safe trajec-tory planner for flights in unknown environments,” in 2019 IEEE/RSJ international conference on intelligent robots and systems (IROS) , pp. 1934–1940. IEEE, 2019. [21] Z. Wang, X. Zhou, C. Xu, and F. Gao, “Geometrically constrained tra-jectory optimization for multicopters,” IEEE Transactions on Robotics ,vol. 38, no. 5, pp. 3259–3278, 2022. [22] Y. Ren, F. Zhu, W. Liu, Z. Wang, Y. Lin, F. Gao, and F. Zhang, “Bubble planner: Planning high-speed smooth quadrotor trajectories using receding corridors,” in 2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pp. 6332–6339. IEEE, 2022. [23] Y. Ren, F. Zhu, G. Lu, Y. Cai, L. Yin, F. Kong, J. Lin, N. Chen, and F. Zhang, “Safety-assured high-speed navigation for mavs,” Science Robotics , vol. 10, no. 98, p. eado6187, 2025. [24] B. Zhou, J. Pan, F. Gao, and S. Shen, “Raptor: Robust and perception-aware trajectory replanning for quadrotor fast flight,” IEEE Transactions on Robotics , vol. 37, no. 6, pp. 1992–2009, 2021. [25] H. Ye, X. Zhou, Z. Wang, C. Xu, J. Chu, and F. Gao, “Tgk-planner: An efficient topology guided kinodynamic planner for autonomous quadrotors,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 494–501, 2020. [26] L. Quan, Z. Zhang, X. Zhong, C. Xu, and F. Gao, “Eva-planner: Environmental adaptive quadrotor planning,” in 2021 IEEE International Conference on Robotics and Automation (ICRA) , pp. 398–404. IEEE, 2021. [27] Z. Wang, X. Zhou, C. Xu, J. Chu, and F. Gao, “Alternating minimiza-tion based trajectory generation for quadrotor aggressive flight,” IEEE Robotics and Automation Letters , vol. 5, no. 3, pp. 4836–4843, 2020. [28] K. Chen, R. Nemiroff, and B. T. Lopez, “Direct lidar-inertial odometry: Lightweight lio with continuous-time motion correction,” arXiv preprint arXiv:2203.03749 , 2022.

@@ -1,0 +1,305 @@
+Title: 2603.03904v1.pdf
+
+URL Source: https://arxiv.org/pdf/2603.03904v1
+
+Published Time: Thu, 05 Mar 2026 01:49:52 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Architecture and evaluation protocol for transformer-based visual object tracking in UAV applications 
+
+## Augustin Borne ∗ 1,2,3 , Pierre Notin 1,2 , Dr. Christophe Hennequin 1, Dr. Sebastien Changey 1, Dr. Stephane Bazeille 2, Prof. Christophe Cudel 2, and Prof. Franz Quint 31French-German Research Institute of Saint-Louis, Saint-Louis, France 
+
+> 2
+
+## Université de Haute-Alsace, Mulhouse, France 
+
+> 3
+
+## Karlsruhe University of Applied Sciences, Karlsruhe, Germany 
+
+# Abstract 
+
+Object tracking from Unmanned Aerial Vehicles (UAVs) is challenged by platform dynamics, camera motion, and limited onboard resources. Existing visual trackers either lack robustness in complex scenarios or are too compu-tationally demanding for real-time embedded use. We propose an Modular Asynchronous Tracking Architec-ture (MATA) that combines a transformer-based tracker with an Extended Kalman Filter, integrating ego-motion compensation from sparse optical flow and an object trajectory model. We further introduce a hardware-independent, embedded oriented evaluation protocol and a new metric called Normalized time to Failure (NT2F) to quantify how long a tracker can sustain a tracking sequence without external help. Experiments on UAV benchmarks, including an augmented UAV123 dataset with synthetic occlusions, show consistent improvements in Success and NT2F metrics across multiple tracking processing frequency. A ROS 2 implementation on a Nvidia Jetson AGX Orin confirms that the evaluation protocol more closely matches real-time performance on embedded systems. 
+
+Keywords: UAV tracking, visual object tracking, vi-sion transformers, estimation filter, motion compensa-tion, embedded systems, real time 
+
+# 1 Introduction 
+
+Tracking objects from an Unmanned Aerial Vehicle (UAV) is difficult due to high platform dynamics, fre-quent object occlusions, and significant camera motion. Moreover, the entire perception pipeline must run in real time on Size, Weight, and Power (SWaP) constrained embedded hardware. At the same time, reliable onboard tracking is essential for many UAV applications. Visual Object Tracking (VOT) aims to localize a target in a video sequence from an initial position. The search is usually restricted to a local region for computational efficiency. However, this approach struggles with fast mo-tion, occlusions, and camera movement. Early tracking 
+
+> ∗Corresponding author: augustin.borne@uha.fr
+
+models relied on correlation filters, e.g. MOSSE [1] and KCF [2]. While computationally efficient, they are sensi-tive to occlusions and large deformations. The advent of deep learning introduced Siamese network-based track-ers, e.g SiamFC [3] and SiamRPN [4]. They significantly improved accuracy by learning robust appearance rep-resentations, yet they can struggle with long-term oc-clusions and significant scale changes. More recently, transformer-based architectures have been adapted for VOT, modeling global context and improving resilience to difficult challenges such as occlusions, deformations, and background clutter, but are computationally heavy. Notable models include TransT [5], OSTrack [6], and SeqTrack [7]. Recent approaches also explore prompt-based and foundation model trackers, leveraging textual or visual prompts to enable flexible tracking, including PIVOT [8] or ChatTracker [9], however prompt-based models are often too large for embedded real-time de-ployment. These limitations highlight that there is still substantial room for improvement in designing tracking solutions that are both accurate and lightweight for real-time UAV applications. Despite progress in VOT, key challenges remain. Standard trackers often ignore the temporal dimension, and struggle with rapid target mo-tion, occlusions, or camera-induced movement. Accuracy and efficiency trade-offs are significant: transformers are precise but slow, correlation filters are fast but less ac-curate, and Siamese networks lie in between. Moreover, standard evaluation protocols assume a single tracker, while embedded or robotic systems may involve multiple blocks at different frequencies, making real-time perfor-mance highly dependent on both algorithm and hard-ware. In this study, we address these challenges by propos-ing a Modular Asynchronous Tracking Architecture (MATA), which combines a transformer-based tracker, MixFormerV2 [10], with an Extended Kalman Filter (EKF) [11]. This design leverages the high accuracy of vision transformers while benefiting from the EKF’s real-time estimation capabilities on embedded devices. The EKF integrates camera ego-motion compensation, estimated via a lightweight sparse Lucas-Kanade opti-cal flow [12], with a constant-velocity object trajectory 1
+
+> arXiv:2603.03904v1 [cs.CV] 4 Mar 2026
+
+model, improving robustness under occlusions and rapid target motion. To evaluate multi-module tracking sys-tems independently of hardware constraints, we intro-duce a hardware-independent evaluation protocol that simulates an onboard processing chain. It models asyn-chronous data flows between modules, allowing each com-ponent to operate at its own frequency. This modu-lar protocol enables fair cross-platform comparison while assessing both temporal robustness and real-time feasi-bility. We also formalize the Normalize time to failure (NT2F) metric, which quantifies how long a tracker can maintain a target, and introduce an augmentation tool that synthetically generates smooth occlusions of varying shapes and sizes following target trajectories, to better evaluate trackers under occlusion scenarios. This tool was used to create an augmented version of UAV123 (UAV123+occ). The evaluation protocol is validated by comparing its results to a ROS 2 implementation on a Nvidia Jetson AGX Orin [13]. We validate the MATA method on UAV123 [14], VTUAV [15], and UAV123+occ dataset. The key contributions of this work are: 1. A hardware-independent evaluation protocol simu-lating asynchronous multi-block processing 2. A Modular Asynchronous Tracking Architecture (MATA) that enhances robustness in difficult con-ditions, including occlusions. 3. The design of a robustness metric and an augmenta-tion tool to generate synthetic occlusions, enabling systematic evaluation of tracker performance under challenging scenarios. 
+
+# 2 MATA: a Modular Asyn-chronous Tracking Architecture 
+
+We propose a tracking framework called the Modular Asynchronous Tracking Architecture (MATA), which or-ganizes independent, interchangeable blocks around a transformer-based tracking algorithm. In an image se-quence, an object’s apparent motion comes from two sources: the object’s own movement and the motion of the camera. MATA models these two effects separately and combine them in an estimation-filter block to pro-duce bounding boxes at real-time rates. As shown in figure 1, the architecture includes four main modules: a camera-motion compensation block that estimates the camera’s ego-motion, a visual tracking block based on a vision-transformer model, and an object-motion estima-tion block that fuses the previous outputs with a dynamic model to generate high-frequency bounding-box predic-tions. Thanks to its modular design, any block in MATA can be replaced, upgraded, removed, or extended with additional components as needed. 
+
+## 2.1 Explainable scoring mechanism 
+
+VOT models can estimate prediction confidence in vari-ous ways, from direct score prediction to metrics based on response maps or feature distributions. For instance, MixFormerV2 [10] confidence is estimated by an MLP on special tokens, while OSTrack [6] uses the maximum value in the center heatmap. Both integrate confidence estimation end-to-end, but deep networks may produce overconfident scores that poorly reflect true tracking ac-curacy, reducing reliability for downstream tasks and making uncertainty harder to interpret. A confidence score representing a probability within [0 , 1] is better for interpretability. Applying a softmax to a neural net-work’s outputs naturally enforces this range and nor-malization. Based on this principle, we propose a con-fidence score that leverages the probability mass func-tions (PMFs) produced by MixFormerV2 model for each bounding box coordinate across the discrete spatial posi-tions of the feature map. The bounding box is defined by its top-left and bottom right corners coordinates noted respectively ( xtl , ytl ) and ( xbr , ybr ). Let Xxtl , Xytl , Xxbr 
+
+and Xybr be discrete random variables. Their PMFs are defined as pi(x) = P(Xi = x) with i ∈ { xtl , y tl , x br , y br }
+
+and x ∈ [0 , N ] where N is the number of features in the PMF. For each PMF, the peak position is defined as 
+
+k∗ 
+
+> i
+
+= arg max k pi(k).
+
+Si =
+
+> kmax ,i
+
+∑
+
+> k=kmin ,i
+
+pi(k)
+
+kmin ,i = min (k∗ 
+
+> i
+
+− αN  
+
+> 2
+
+, 1)
+
+kmax ,i = max (k∗ 
+
+> i
+
++ αN  
+
+> 2
+
+, N )
+
+(1) For each coordinate i, we compute a score Si as defined in Eq. 1. A window of width αN , where α is a hyperpa-rameter (set to 0.03 in our experiments), centered at k∗ 
+
+> i
+
+,is defined. The score for each coordinate is computed as the sum of probabilities within this window. The bounds kmin ,i and kmax ,i define the window limits and handle boundary effects at the edges of the feature map. The final confidence score is defined by the lowest confi-dence score over the four coordinate scores, S = min i Si.By utilizing these PMFs, this scoring method quantifies how concentrated the predicted probabilities are around their modes, providing an interpretable and spatially grounded confidence estimate for the bounding box lo-calization. While the score is applied in 1D along each bounding box coordinate due to the special 1D output format of MixFormerV2, it can be easily extended to 2D heatmaps by replacing the linear window around the mode with a square window over the spatial grid, pro-vided the heatmap resolution is sufficient. 
+
+## 2.2 Camera movement compensation 
+
+Camera ego-motion compensation removes the apparent motion caused by the camera rather than by the tar-get, which is essential for isolating true object dynam-ics. Ego-motion can be estimated using Visual-inertial fusion or directly from images. To the best of our knowl-edge, no dataset in the literature provides sufficient cal-ibrated IMU–image tracking data from a UAV perspec-tive. Thus, we rely on image-based methods only. Cam-2era motion is approximated with geometric models of varying complexity [16], ranging from translation and similarity transforms to affine and full projective homo-graphies. A practical and lightweight solution, used in OpenCV [17], tracks sparse features detected with stan-dard corner or keypoint detectors [18, 19] using pyramidal Lucas–Kanade optical flow [20], and estimates an affine transform between frames. Each frame is then warped accordingly, with slight cropping or zooming to hide bor-der artifacts. In our application setting, onboard computation is severely constrained, making feature-based estimation impractical because feature detection and matching dom-inate runtime. To estimate inter-frame camera motion, we use a two-stage approach combining sparse optical flow and homography optimization. Unlike affine mod-els, the homography is better suited to the large view-point variations typical of low-altitude UAV imagery. To reduce computational cost, we sample points on a reg-ular grid rather than performing feature detection. We then use the classical approach with the pyramidal Lu-cas–Kanade algorithm to track point, producing corre-spondences {(pi, p′
+
+> i
+
+)}Ni=1 , where pi and p′ 
+
+> i
+
+respectively denote the positions of the i-th point in the current and next frame. Outliers are removed with RANSAC [21], retaining only inliers for transformation estimation. To better capture UAV camera motion, which can include significant perspective changes at low altitude, we model the 2D inter-frame relationship using an homography 
+
+H ∈ R3×3, with g the homography projection as detailed in equation 2. 
+
+g(x, y ) = 
+
+[x′
+
+y′
+
+]
+
+with s
+
+x′
+
+y′
+
+1
+
+ ∼ H
+
+xy
+
+1
+
+
+
+H =
+
+h11 h12 h13 
+
+h21 h22 h23 
+
+h31 h32 h33 
+
+
+
+(2) We compute the covariance of the estimated homogra-phy using the first-order approximation of non-linear pa-rameter uncertainty, as described in Hartley and Zisser-man [22], Result 5.10. This covariance matrix quantifies the uncertainty in the estimated transformation and is used as a confidence score for the estimated inter-frame ego-motion in downstream tasks. 
+
+## 2.3 Object trajectory estimation 
+
+The objective is to estimate the true trajectory of the ob-ject across time, ensuring a consistent representation of its motion in the 2D image frame. This estimation is non-trivial because the observed 2D motion results from the combination of two distinct dynamic components: the ego-motion of the camera and the intrinsic motion of the object. This is typically handled using estimation filters, most notably Kalman filter (KF) based [23] approaches. In VOT field, KF have been employed to enhance base trackers, providing higher robustness to occlusion such as mean-shift [24, 25] and STC [26], while in multi-object tracking, variants like SORT [27] improve tracking by combining a KF with efficient data association. The BOT-SORT variant [28] incorporates ego-motion com-pensation to enhance tracking performance, while OC-SORT [29] introduces an Observation-Centric Re-Update (ORU) mechanism that uses virtual trajectories to sta-bilize updates after extended periods of prediction-only tracking. The estimation filter yields estimations when the tracker cannot provide a reliable position either while it is unavailable due to computing time, or because the object becomes unobservable (e.g., due to occlusion), re-quiring the position to be predicted from camera motion estimation and target dynamic model. For our estimation filter, we employ an Extended Kalman Filter (EKF) [30] to handle the inherent nonlin-earity of the observed system. This serves as a proof of concept demonstrating that combining an estimation fil-ter with a vision-transformer-based VOT model can im-prove tracking performance. For the object’s intrinsic motion, a constant-velocity model is adopted, providing a simple yet effective dynamic representation for short time periods without the complexity of more sophisti-cated models including acceleration, jerk or turn rate dy-namics. Camera ego-motion is modeled using an homog-Figure 1: Overview of the Modular Asynchronous Tracking Architecture: Example with tracker running at 10 Hz, estimation filter at 30 Hz and ego motion at 30 Hz. Update Predict EKF Check measure validity ?   
+
+> VOT Template update Camera @30Hz
+> Sparse optical flow Homography estimation Search area update Tracking block Ego-motion block Object trajectory estimation block
+> Object position Check bbox validity ?bbox / score Homography / score bbox Score
+> @10Hz @30Hz @30Hz
+
+3raphy transformation as described in section 2.2. The filter state and measurements vectors are defined in equa-tion 3. The state vector is combining the bounding box 1
+
+coordinates Xtl = [xtl , y tl 
+
+], Xbr = [xbr , y br 
+
+], the homog-raphy parameters XH = [h11 , h 12 , ..., h 32 , h 33 
+
+], and the bounding box center velocity Xv = [ ˙xc, ˙yc
+
+]. The mea-surement vector follows the same partitioning and is com-posed only of the observable quantities Ztl = [xtl , y tl 
+
+],
+
+Zbr = [xbr , y br 
+
+] and ZH = [h11 , h 12 , ..., h 32 , h 33 
+
+]. Since no direct measurements of the bounding box center veloc-ity are available, Xv are estimated through the prediction step of the filter. 
+
+X = [Xtl Xbr XH Xv
+
+]⊤
+
+Z = [Ztl Zbr ZH
+
+]⊤ (3) During prediction, the predicted state vector is com-puted from the state transition function f that can be split in four parts similarly to state vector X, giving the equations 4. Considering g the homography projection as defined in 2.2 based on the homography matrix de-rived from the coefficients of estimated states XH,k−1,and Jg(x, y ) the Jacobian of g with reference to pixel coordinates (x, y )
+
+Xk = f (Xk−1) = 
+
+
+
+Xtl,k 
+
+Xbr,k 
+
+XH,k 
+
+Xv,k 
+
+
+
+Xtl,k 
+
+Xbr,k 
+
+XH,k 
+
+Xv,k 
+
+ =
+
+
+
+p(Xtl,k −1) + Jg(Xv,k −1)dt 
+
+p(Xbr,k −1) + Jg(Xv,k −1)dt 
+
+XH,k −1
+
+Jg(Xv,k −1)
+
+
+
+(4) For each processed frame, the tracker and ego-motion components provide a measurement along with a confi-dence score. Since both components rely on image data, their outputs are highly dependent on scene conditions and can be significantly variable. The confidence score reflects, to some extent, the reliability of each measure-ment. We therefore introduce a rejection mechanism prior to the EKF, ensuring that only high-confidence measurements are incorporated into the filter. As a con-sequence, the measurement noise covariance matrix R is set with fixed low values, reflecting the assumed reliabil-ity of the retained measurements. However, this strategy remains sensitive to false positives, which may still de-grade the EKF estimation quality. The EKF initial state X0 is set as the initialization bounding box for Xbb 0 , with homography XH0 set to the identity and bounding box velocity Xv0 set to zero. The process noise covariance Q and the initial state covari-ance P0 are treated as hyper-parameters and have been tuned experimentally, with different values assigned to the bounding box, ego-motion, and velocity components to balance responsiveness and stability. 
+
+> 1A bounding box is defined by its top-left (tl) and bottom-right (br) corners.
+
+## 2.4 Overall MATA system 
+
+The proposed system ( cf. figure 1) adopts a multi-block architecture, integrating camera-ego compensation, atracker, and an estimation filter to provide robust, real-time visual object tracking on UAV platforms. The first block, the camera-ego compensation module, takes each input image and estimates the apparent motion induced by the UAV’s own movement ( cf. section 2.2). It out-puts the inter-frame transformation along with the asso-ciated covariance. The second block, the tracker, receives the input image and outputs the target bounding box along with a confidence score. Depending on the under-lying VOT algorithm, it may use fixed, online, or hybrid templates. In our approach, we make minimal modifica-tions, when possible, the original confidence measure is replaced with the score described in section 2.1, and any template update mechanism is simplified to a threshold-based update τtemplate . The third block, the estimation filter, fuses information from the tracker and the camera-ego compensation module as seen in section 2.3. The filter performs partial updates whenever new measure-ments arrive, as the tracker and camera-ego compensa-tion modules operate at different frequencies. It produces a refined estimate of the target bounding box, providing a more robust and temporally consistent tracking result. The blocks are interconnected as follows. To update the tracker, we maintain an exponentially weighted moving average (EWMA) of the predicted confidence score. If the EWMA falls below a threshold τewma or the current score drops significantly relative to the EWMA (by more than τdiff ), the tracker measurement is discarded; other-wise, it is used to update the target state. The inter-frame transformations from the ego-motion block are used only if their covariance is below a maximum thresh-old τσ . The tracker search region is updated based on the refined bounding box provided by the estimation filter. This system faces several challenges, including handling measurements at varying frequencies with computational delays, running in parallel on resource-constrained em-bedded platforms, and designing an evaluation protocol that accounts for these real-time and asynchronous char-acteristics. 
+
+# 3 Experiment 
+
+## 3.1 Embedded oriented evaluation pro-tocol 
+
+Most tracking benchmarks, such as the VOT chal-lenges [31], provide several protocols to evaluate accu-racy, robustness, and real-time performance. In the short-term protocol, the tracker is reinitialized after each failure, thus focusing on accuracy in nominal conditions. The long-term protocol (LTP), dominant in the litera-ture, initializes once and evaluates continuous localiza-tion and target-presence confidence. To account for real-time constraints, VOT2021 [32] introduced a real-time short-term variant in which frames are processed at a fixed rate (e.g., 20 FPS), and missing predictions are com-4pleted using a zero-order hold. This protocol jointly eval-uates tracking accuracy and inference speed, thereby re-flecting real-time tracking performance as a function of the underlying hardware. Consequently, when sufficient computational resources are available such that all frames are processed in real time, this protocol becomes equiva-lent to the long-term evaluation protocol. One intuitive option is to evaluate trackers by applying down-sampling to the input frames, which yields what we refer to as the down-sampling evaluation protocol (DSP). In this pro-tocol, frames are uniformly sub-sampled (e.g., keeping every nth frame), resulting in sequences with lower ef-fective frame rate. Such sub-sampling has been used in evaluation studies to investigate tracker performance at different temporal resolutions by discarding intermedi-ate frames [33]. While DSP is easy to implement and represents a step toward assessing frame rate effects, it remains insufficient for real-time evaluation, as simply down-sampling the input does not take into account the actual processing time of the tracker. Furthermore, all these protocols assume a monolithic tracker that directly processes image frames, which is unrealistic for embedded or robotic systems. In practice, a full processing pipeline consists of multiple interconnected modules each oper-ating at its own frequency. Real-time behavior then de-pends not only on algorithmic complexity but also on the hardware platform, meaning that the same tracker can behave very differently on a GPU powered system versus a lighter embedded device. To bridge the gap between development, benchmarking, and deployment, we pro-pose an embedded oriented evaluation protocol (EOP) that mimics an onboard processing chain. It evaluates tracking using independent blocks with different update rates and optional one-period latency to simulate block processing time (e.g., a 5 Hz tracker on a 30 Hz stream processes every sixth frame and outputs one step later). Blocks communicate via a shared structure, with missed updates being either propagated or skipped according to each block rules. The frequency and output delay of each block are fully tunable by hand and act as hyper-parameters, independent of hardware or software. This allows replicating the same processing conditions across different platforms and implementations. By design, it is modular, enabling new components to be added easily. We can see in Fig. 2 that three evaluation protocols are presented: LTP, DSP, and the proposed EOP protocol. In this example, the target tracker processes one out of every four frames (approximately 7.5 Hz), and we aim to obtain an overall estimate of the performance it would achieve on an embedded system. In the LTP timeline, the tracker processes every frame; as a result, the predictions closely match the ground truth. However, this scenario is unrealistic, as it does not account for computational delays. The second approach, based on downsampling the dataset (DSP), increases the motion between frames, but in practice remains similar to LTP: the tracker still processes every frame without delay, and additional in-formation is lost due to discarded frames. In contrast, in the EOP timeline, the processing delay is explicitly taken into account. A zero-order hold is applied to the prediction until a new output is produced by the VOT block. Consequently, this evaluation more closely reflects the actual behavior of a tracker running on an embedded system. Finally, Fig. 2 also allows a comparison between classical VOT algorithms (EOP timeline) and the pro-posed MATA tracking algorithms. Thanks to the asyn-chrony of its constituent blocks, MATA is able to gener-ate a new prediction at every frame, thereby mitigating the computational delay inherent to the VOT model. 
+
+## 3.2 Datasets 
+
+To ensure a representative evaluation under aerial track-ing conditions, we focus on datasets specifically designed for UAV-based visual object tracking. In particular, we use the UAV123 dataset [34], a widely adopted bench-mark for aerial tracking performance, and the VTUAV dataset [35], considering only the RGB part of its test split. Although these datasets provide valuable evalu-ation material, they contain few sequences with occlu-sion 2, even though UAV tracking often encounters par-tial or complete occlusions from vegetation, buildings, or environmental obstacles. These scenarios are crucial for evaluating trajectory estimation filters. To address this limitation and better evaluate the ro-bustness of MTA, we developed a data augmentation tool to generate artificial occlusions. For each frame, a binary occlusion mask is generated based on hand-crafted fea-tures such as shape, motion, and timing, specifying the start and end frames of the occlusion event. From these, the system samples start and end positions outside the image and generates a small set of “hit points” where the occlusion should intersect the target ground truth. A per-frame trajectory is then obtained by linear interpolation between these points, with small random acceleration jit-ter added to mimic natural motion. For each occlusion event, a single occlusion object is first selected from sev-eral geometric shapes, including rectangles ( cf. Fig. 3c), ellipses, circles ( cf. Fig. 3a), blobs, or irregular polygons (cf. Fig. 3b) and its shape parameters are randomly sam-pled and scaled to the target size. This same object is then used throughout the entire sequence, moving along the per-frame trajectory to produce the occlusion. At each frame of the occlusion event, the binary mask of the shape is alpha-blended onto the RGB frame, producing smooth occlusions. Importantly, only the overall shape and the start/end frames of each occlusion event are hand-crafted. All other parameters, including alpha, size, exact shape parameters, number of intersection points, speed, and acceleration, are randomly sampled, ensur-ing that the augmented sequences are non-deterministic, which prevents any bias in the evaluation. For fair com-parison between algorithms, the random seed was fixed so that each method is evaluated on the same sequence of augmented occlusion scenarios. Ground-truth annota-tions are left unchanged, forcing the tracker and filter to rely on motion prediction during these intervals.       
+
+> 2Respectively ≈12% and ≈20% of number of sequences for VTUAV and UAV123
+
+5Figure 2: Comparison of evaluation protocols: the long-term protocol (LTP) commonly used in the literature; the down-sampling protocol (DSP), which ignores processing delays; and the proposed asynchronous frame processing (EOP) protocol, which accounts for processing delays. Example of a VOT tracker running at 7.5–10 Hz, effectively processing every fourth frame. Differences in prediction rate can be observed between a classical VOT tracker (see EOP timeline) and the proposed MATA architecture. 0 1 2  
+
+> VOT
+> N34...
+> Prediction
+> Ground truth
+> Evaluation
+> LTP DSP EOP
+> Frame number
+> Prediction
+> Ground truth
+> MATA  Ego-motion
+> EKF
+> Evaluation result
+> Excellent Fair Bad Very bad
+> VOT Prediction Ground truth Evaluation VOT Prediction Ground truth Evaluation VOT
+> Evaluation
+
+Figure 3: Example of shape applied to sequences on UAV123 dataset 
+
+(a) Circle shape (b) Polygon and stripe shape (c) Rectangle shape 
+
+## 3.3 Evaluation metrics 
+
+To evaluate the performance of each algorithm, we adopt standard evaluation metrics commonly used in the VOT community. We are using precision rate, the distance between predicted and ground-truth centers, and success rate (SR), the fraction of frames with sufficient bounding-box overlap. The MSR captures success across various overlap thresholds. We are using a normalized precision rate (PR) to account for varying object sizes and reso-lutions. Computational efficiency is reported via frames per second (FPS). The definitions and computation pro-tocols for these metrics follow those presented in [36]. However, these classical metrics fail to capture how long a tracker can maintain a reliable tracking before a failure occurs. This limitation becomes particularly evident in scenarios where the tracker has no influence on the cam-era motion, for instance, when the camera continues to follow the object even after the tracker has lost it. In such cases, a tracker might “recover” the target purely by chance, which artificially inflates its performance. To better quantify temporal persistence, several works have proposed time-linked robustness measures, such as the Mean Time Between Failures (MTBF) [37], the track-ing length [38], or the robustness metric used in the VOT challenges. These metrics estimate how often a tracker fails or how long it remains on target across en-tire sequences. Inspired by these approaches but aim-ing for a simpler and more interpretable measure, we in-troduce the Normalized Time-to-Failure (NT2F) which quantify how long a tracker maintain a valid target esti-mate before the first failure, normalized by the sequence length. Given a sequence of N frames, let IoU t denote the intersection-over-union between the predicted and ground-truth bounding boxes at frame t, and let τ be a failure threshold (we use τ = 0 ). For each sequence, the frame index of the first failure Tf is computed and the sequence N T 2F score is obtained with equation 5. 
+
+NT2F = Tf
+
+NTf =
+
+{
+
+min {t ∈ [0 , N − 1] | IoU t ≤ τ }, if exists ,N, otherwise (5) At the dataset level, the N T 2F metric is computed as the 6mean of the individual N T 2F sequence values. This met-ric measures the portion of a sequence during which the tracker keeps the target before losing it for the first time. 
+
+N T 2F is a normalized variant of the tracking length met-ric, focusing on how long a tracker can reliably track without external help. 
+
+## 3.4 Experimental setup 
+
+The system is evaluated on high-performance server and embedded edge platforms. Server experiments use an NVIDIA A100 GPU with both standard and proposed evaluation protocols ( cf. section 3.1). In this study We employ six modular blocks: simulated camera (30 Hz), optical flow (30 Hz), VOT tracker (various frequency), motion filter 2.3 (30 Hz), decision (30 Hz), and saving modules (30 Hz). With the exception of the tracker block, all modules operate in real time on SWaP hard-ware, so the one-period delay is applied exclusively to the tracker. We vary the tracking frequency to charac-terize the system under different possible embedded con-figurations. We simulate tracking at speed from 5 to 30 FPS with the filter fixed at 30 FPS. After experimen-tal trials, we observed the best results when using an ego-motion block based on a 16 × 16 matrix of points, uniformly distributed over the image. The method is validated on an NVIDIA Jetson AGX Orin representa-tive of edge-AI platforms. For the embedded evalua-tion, the system is implemented within a ROS 2 frame-work, with each component running in a separate node inside its own Docker container. We allocate at least one CPU core per container, and two cores for the filter and tracker, which leverage a multithreaded executor to parallelize subscriber callbacks and computation. Com-munication uses the default DDS implementation. The experiment assesses system behavior under 50 W power mode. We evaluate two transformer-based state-of-the-art trackers, OSTrack [6] and MixFormerV2 [10]. These models achieve competitive accuracy on literature track-ing benchmarks. For the evaluation, UAV123 provides per-frame annotations, whereas VTUAV provides anno-tations only every 10th frame. Therefore, to compute the metrics, we subsample the predictions for the VTUAV evaluation, while using all predicted states for UAV123. 
+
+# 4 Results 
+
+Table 1 compares baseline trackers and their MATA vari-ants on three datasets using long-term evaluation proto-col and the proposed evaluation protocol (EOP). MATA consistently improves NT2F for both trackers across all datasets. For OSTrack, it also increases SR. For Mix-FormerV2 it slightly reduces SR except for EOP at 10Hz, but yields notable NT2F gains. Overall, MATA primarily enhances long-term robustness while maintaining com-petitive SR performance. We observe an overall metric reduction between EOP @ 30 Hz and EOP @ 10 Hz, this is show the impact of tracker speed on performance. Table 2 reports results on UAV123+occ at 10 Hz across different challenges. MATA improves both SR and NT2F for OSTrack in all categories, with notable gains under occlusion and high dynamics. For MixFormerV2, MATA also improves most challenges, with a slight drop only in the out-of-view case, while maintaining comparable or higher NT2F. Overall, MATA enhances robustness un-der challenging conditions. The ablation study was conducted on the UAV123+occ dataset ( cf. section 3.2) using the proposed evaluation protocol, with all track-ers operating at 15 Hz. Results are summarized in ta-ble 3. As shown in this study, MATA (Configuration 2) consistently outperforms baseline MixFormerV2 (Con-figuration 1), particularly in NT2F, demonstrating ro-bust long-term tracking. Configuration 3 shows that the explainable score mainly benefits long-term stabil-ity, improving NT2F while keeping PR and SR compa-rable to the baseline. Removing camera motion com-pensation (Configuration 4) leads to a clear performance drop, highlighting its importance for accurate motion prediction. Alternative dynamic models using acceler-ation and jerk terms (Configurations 5 and 6) partially recover this loss, but remain inferior to the final constant-velocity MATA model. Disabling measurement thresh-olding (Configuration 7) slightly degrades performance, confirming the benefit of filtering unreliable measure-ments. Overall, these results confirm that each compo-nent of the proposed MATA framework contributes to the final performance, with the estimation filter design and camera motion compensation being key factors for robust long-term tracking. Table 4 reports the perfor-mance of tested trackers on the NVIDIA Jetson Orin AGX using the UAV123+occ dataset. The EOP and LTP columns report the absolute differences of SR and NT2F between server evaluations and embedded system results. EOP accounts for the tracker’s actual embed-ded speed, whereas LTP does not. We observe that the EOP protocol reproduces more closely the embed-ded performance than LTP, indicating that EOP better captures the effect of real-time and asynchronous process-ing on resource-constrained hardware. Interestingly, the MATA-enhanced architecture no longer provides clear improvements in the embedded setup, suggesting that its benefits may be diminished under actual hardware con-straints (hypotheses for this are discussed in section 5). 
+
+# 5 Discussion 
+
+The results show that MATA enhances long-term robust-ness across diverse conditions, while the EOP protocol provides a more realistic assessment of embedded track-ing performance under real-time constraints. The experimental results confirm that EOP offers a closer approximation of embedded tracking performance than LTP. When tracker speed is correctly configured, EOP reproduces embedded trends well, making it a valu-able tool for early-stage embedded system design. In contrast, LTP ignores real-time constraints and there-fore overestimates achievable performance. Compared to UAV123, the relatively low variation in VTUAV perfor-7Table 1: Performance of OSTrack and MixFormerV2, with and without MTA, on UAV123, UAV123+occ, and VTUAV under LTP and EOP protocols. EOP is evaluated at 30 Hz and 10 Hz, the latter matching the runtime observed on NVIDIA Jetson Orin. Protocol VOT MATA UAV123 UAV123+occ VTUAV SR NT2F SR NT2F SR NT2F LTP OSTrack ✗ 82.8 79.5 75.9 72.7 74.2 59.3 OSTrack ✓ 83.6 79.5 78.5 74.1 74.8 61.1 MixFormerV2 ✗ 84.3 79.1 78.2 68.8 75.6 55.2 MixformerV2 ✓ 83.2 79.7 77.2 72.0 73.9 59.0 EOP @ 30 Hz OSTrack ✗ 80.1 76.9 73.3 70.1 74.9 59.4 OSTrack ✓ 81.9 77.9 76.0 72.2 75.7 61.6 MixFormerV2 ✗ 81.9 77.5 75.8 67.2 76.2 55.2 MixformerV2 ✓ 79.1 78.6 74.5 73.0 74.9 60.4 EOP @ 10 Hz OSTrack ✗ 63.9 56.2 57.9 50.9 72.8 55.8 OSTrack ✓ 69.8 64.4 65.8 60.0 75.5 58.2 MixFormerV2 ✗ 65.5 52.2 60.8 44.5 74.4 48.4 MixformerV2 ✓ 68.5 64.2 64.7 60.3 72.6 56.4 Table 2: Metrics per challenges on UAV123+occ with EOP evaluation with tracker at 10Hz VOT MATA Occlusion Distractor High dynamic Out of view SR NT2F SR NT2F SR NT2F SR NT2F OSTrack ✗ 50.2 43.4 67.8 60.6 32.0 16.1 41.2 39.8 OSTrack ✓ 59.9 49.9 74.6 65.0 38.3 24.0 47.1 35.9 MixFormerV2 ✗ 52.9 37.0 70.3 50.6 36.2 14.9 46.5 32.8 MixformerV2 ✓ 59.1 50.8 72.4 61.1 35.1 25.1 46.4 36.7 Table 3: Impact of individual components on tracking performance on UAV123+occ, with tracking at 10 Hz using EOP. # Ego motion EKF Score Details PR SR MSR NT2F 1 ✗ ✗ ✗ MixFormerV2 (Baseline) 79.3 60.8 51.8 44.5 2 ✓ ✓ ✓ MATA (section 2.4) 78.1 64.7 53.5 60.3 
+
+3 ✗ ✗ ✓ section 2.1 78.8 60.8 51.5 46.4 4 ✗ ✓ ✓ no camera compensation 76.4 61.6 51.5 48.1 5 ✓ ✓ ✓ constant acceleration model 77.9 64.5 53.3 57.0 6 ✓ ✓ ✓ constant jerk model 75.4 62.4 51.6 54.9 7 ✓ ✓ ✓ no threshold on measurements 77.5 63.1 52.5 57.6 mance across LTP, EOP @ 30 Hz, and EOP @ 10 Hz is likely due to sparse annotations. This sparsity leads to the loss of fine-grained ground-truth target states, es-pecially important with SR where traditional trackers might recover the target and inflate the SR value. How-ever, the performance degradation is more pronounced in term of NT2F. We also observe a remaining gap remains between EOP and embedded results. This discrepancy mainly arises from EOP’s assumption that computation latency dominates, whereas in ROS 2 systems, commu-nication latency plays a significant role. Even real-time-capable modules, such as ego-motion estimation, may be slowed by inter-node communication. In practice, each block is subject to three types of latency: processing de-lay (blocking), waiting delay (e.g., awaiting new input), and communication delay (non-blocking but cumulative). These latencies are highly variable and non-deterministic on embedded platforms, unlike the constant delays as-sumed in EOP. MATA improves robustness over the baseline with some limitations. Under LTP, it increases NT2F while maintaining comparable SR, demonstrating improved long-term stability. Under EOP, its advantage grows as tracker speed decreases, confirming its effectiveness for low-FPS tracking and occlusion scenarios. However, MATA relies heavily on accurate ego-motion compensa-8Table 4: Embedded performance on UAV123+occ (Jetson Orin AGX). EOP and LTP show absolute differences of SR and NT2F with reference to the embedded baseline VOT MATA Embedded EOP LTP SR NT2F FPS SR NT2F FPS SR NT2F FPS OSTrack ✗ 58.6 51.0 10.5 3.7 4 10.5 17.3 21.7 30 OSTrack ✓ 58.4 51.3 9.2 0.5 1.6 9.2 20.1 22.8 30 MixFormerV2 ✗ 63.8 51.0 11.1 5.7 8.5 11.1 14.4 17.8 30 MixFormerV2 ✓ 59.7 49.8 9.7 1.0 3.8 9.7 17.5 22.2 30 tion, as confirmed by the ablation study. The remain-ing performance gap between EOP and embedded eval-uations highlights limitations of the current MATA im-plementation. Since MATA was tuned under EOP as-sumptions, delayed ego-motion estimates in the embed-ded system directly reduce its effectiveness, indicating a primarily engineering-related limitation. Moreover, the current MATA formulation assumes instantaneous mea-surements, which does not hold in current ROS 2 imple-mentation. Future work will therefore focus on reducing communication latency and extending MATA to explic-itly model and compensate for measurement delays. Thus, these findings demonstrate that MATA signifi-cantly improves long-term robustness, while EOP effec-tively bridges the gap between algorithm design and re-alistic embedded deployment. 
+
+# 6 Conclusion 
+
+This paper addressed the conventional VOT limitations in UAV scenarios with the MATA framework, which in-tegrates ego-motion compensation and estimation filter with modern deep trackers. The experiments on the UAV123 dataset augmented with synthetic occlusions demonstrated that MATA consistently improves long-term performance. The proposed embedded oriented evaluation protocol which aimed to mimics embedded implementation further highlighted the benefits of the proposed framework under realistic speed constraints. Future work will focus on improving confidence inter-pretability, extending the evaluation protocol with com-munication delay, and exploring more efficient embedded implementations. 
+
+# Acknowledgments 
+
+This work is financed by the Agence de l’Innovation de Défense (AID) from the french ministry of defense. 
+
+# References 
+
+[1] D. S. Bolme, J. R. Beveridge, B. A. Draper, and Y. M. Lui, “Visual object tracking using adaptive correlation filters,” in 2010 IEEE Computer Society Conference on Computer Vision and Pattern Recog-nition , pp. 2544–2550, 2010. [2] J. F. Henriques, R. Caseiro, P. Martins, and J. Batista, “High-speed tracking with kernelized cor-relation filters,” IEEE Trans. Pattern Anal. Mach. Intell. , vol. 37, p. 583–596, Mar. 2015. [3] L. Bertinetto, J. Valmadre, J. F. Henriques, A. Vedaldi, and P. H. S. Torr, “Fully-convolutional siamese networks for object tracking,” in Computer Vision – ECCV 2016 Workshops (G. Hua and H. Jé-gou, eds.), (Cham), pp. 850–865, Springer Interna-tional Publishing, 2016. [4] B. Li, J. Yan, W. Wu, Z. Zhu, and X. Hu, “High performance visual tracking with siamese region proposal network,” in 2018 IEEE/CVF Confer-ence on Computer Vision and Pattern Recognition ,pp. 8971–8980, 2018. [5] X. Chen, B. Yan, J. Zhu, D. Wang, X. Yang, and H. Lu, “Transformer tracking,” 2021. [6] B. Ye, H. Chang, B. Ma, S. Shan, and X. Chen, “Joint Feature Learning and Relation Modeling for Tracking: A One-Stream Framework,” in Computer Vision – ECCV 2022: 17th European Conference, Tel Aviv, Israel, October 23–27, 2022, Proceed-ings, Part XXII , (Berlin, Heidelberg), pp. 341–357, Springer-Verlag, Oct. 2022. [7] X. Chen, H. Peng, D. Wang, H. Lu, and H. Hu, “Seqtrack: Sequence to sequence learning for visual object tracking,” in 2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) ,pp. 14572–14581, 2023. [8] S.-F. Chen, J.-C. Chen, I.-H. Jhuo, and Y.-Y. Lin, “Improving visual object tracking through vi-sual prompting,” IEEE Transactions on Multimedia ,vol. 27, pp. 2682–2694, 2025. [9] Y. Sun, F. Yu, S. Chen, Y. Zhang, J. Huang, Y. Li, C. Li, and C. Wang, “Chattracker: enhancing visual tracking performance via chatting with multimodal large language model,” in Proceedings of the 38th In-ternational Conference on Neural Information Pro-cessing Systems , NIPS ’24, (Red Hook, NY, USA), Curran Associates Inc., 2024. 9[10] Y. Cui, T. Song, G. Wu, and L. Wang, “Mix-formerv2: efficient fully transformer tracking,” in 
+
+Proceedings of the 37th International Conference on Neural Information Processing Systems , NIPS ’23, (Red Hook, NY, USA), Curran Associates Inc., 2023. [11] G. Welch and G. Bishop, “An introduction to the kalman filter,” tech. rep., University of North Car-olina at Chapel Hill, USA, 1995. [12] B. D. Lucas and T. Kanade, “An iterative image registration technique with an application to stereo vision,” in Proceedings of the 7th International Joint Conference on Artificial Intelligence - Volume 2 ,IJCAI’81, (San Francisco, CA, USA), p. 674–679, Morgan Kaufmann Publishers Inc., 1981. [13] NVIDIA, “Nvidia announces availability of jetson agx orin developer kit to advance robotics and edge ai,” NVIDIA Newsroom , Mar 2022. [14] M. Mueller, N. Smith, and B. Ghanem, “A bench-mark and simulator for uav tracking,” in Com-puter Vision – ECCV 2016 (B. Leibe, J. Matas, N. Sebe, and M. Welling, eds.), (Cham), pp. 445– 461, Springer International Publishing, 2016. [15] P. Zhang, J. Zhao, D. Wang, H. Lu, and X. Ruan, “Visible-thermal uav tracking: A large-scale bench-mark and new baseline,” in 2022 IEEE/CVF Con-ference on Computer Vision and Pattern Recogni-tion (CVPR) , pp. 8876–8885, 2022. [16] R. Hartley and A. Zisserman, Multiple View Ge-ometry in Computer Vision . Cambridge University Press, 2 ed., 2004. [17] G. Bradski, “The OpenCV Library,” Dr. Dobb’s Journal of Software Tools , 2000. [18] J. Shi and Tomasi, “Good features to track,” in 1994 Proceedings of IEEE Conference on Computer Vi-sion and Pattern Recognition , pp. 593–600, 1994. [19] E. Rublee, V. Rabaud, K. Konolige, and G. Brad-ski, “Orb: An efficient alternative to sift or surf,” in 
+
+2011 International Conference on Computer Vision ,pp. 2564–2571, 2011. [20] J.-Y. Bouguet, “Pyramidal implementation of the lucas kanade feature tracker description of the algo-rithm,” tech. rep., Intel Corporation, 1999. [21] M. A. Fischler and R. C. Bolles, “Random sample consensus: a paradigm for model fitting with ap-plications to image analysis and automated cartog-raphy,” Commun. ACM , vol. 24, p. 381–395, June 1981. [22] R. Hartley and A. Zisserman, Multiple view geom-etry in computer vision . Cambridge: Cambridge Univ. Press, 2. edition, 17.printing ed., 2018. [23] R. E. Kalman, “A new approach to linear filtering and prediction problems,” Journal of Basic Engi-neering , vol. 82, pp. 35–45, 03 1960. [24] V. Karavasilis, C. Nikou, and A. Likas, “Visual tracking by adaptive kalman filtering and mean shift,” in Artificial Intelligence: Theories, Models and Applications (S. Konstantopoulos, S. Peran-tonis, V. Karkaletsis, C. D. Spyropoulos, and G. Vouros, eds.), (Berlin, Heidelberg), pp. 153–162, Springer Berlin Heidelberg, 2010. [25] I. A. Iswanto and B. Li, “Visual object tracking based on mean-shift and particle-kalman filter,” 
+
+Procedia Computer Science , vol. 116, pp. 587–595, 2017. Discovery and innovation of computer sci-ence technology in artificial intelligence era: The 2nd International Conference on Computer Science and Computational Intelligence (ICCSCI 2017). [26] K. Mehmood, A. Jalil, A. Ali, B. Khan, M. Murad, W. U. Khan, and Y. He, “Context-aware and oc-clusion handling mechanism for online visual object tracking,” Electronics , vol. 10, no. 1, 2021. [27] A. Bewley, Z. Ge, L. Ott, F. Ramos, and B. Up-croft, “Simple online and realtime tracking,” in 2016 IEEE International Conference on Image Processing (ICIP) , IEEE, Sept. 2016. [28] N. Aharon, R. Orfaig, and B.-Z. Bobrovsky, “Bot-sort: Robust associations multi-pedestrian track-ing,” 2022. [29] J. Cao, J. Pang, X. Weng, R. Khirodkar, and K. Ki-tani, “Observation-centric sort: Rethinking sort for robust multi-object tracking,” 2023. [30] A. E. Bryson, Applied Optimal Control, Optimiza-tion, Estimation and Control . New York: Routledge, 1st edition ed., 1975. [31] M. Kristan, J. Matas, A. Leonardis, T. Vo-jir, R. Pflugfelder, G. Fernandez, G. Nebehay, F. Porikli, and L. Čehovin, “A novel performance evaluation methodology for single-target trackers,” 
+
+IEEE Transactions on Pattern Analysis and Ma-chine Intelligence , vol. 38, pp. 2137–2155, Nov 2016. [32] M. Kristan, J. Matas, A. Leonardis, M. Felsberg, R. Pflugfelder, J.-K. Kaemaraeinen, H. J. Chang, M. Danelljan, L. C. Zajc, A. Lukezic, O. Drbohlav, J. Kaepylae, G. Haeger, S. Yan, J. Yang, Z. Zhang, G. Fernandez, M. Abdelpakey, G. Bhat, L. Cerkezi, H. Cevikalp, S. Chen, X. Chen, M. Cheng, Z. Cheng, Y.-C. Chiu, O. Cirakman, Y. Cui, K. Dai, M. M. Dasari, Q. Deng, X. Dong, D. K. Du, M. Dunnhofer, Z.-H. Feng, Z. Feng, Z. Fu, S. Ge, R. K. Gorthi, Y. Gu, B. Gunsel, Q. Guo, F. Gurkan, W. Han, Y. Huang, F. J. Lawin, S.-J. Jhang, R. Ji, C. Jiang, Y. Jiang, F. Juefei-Xu, Y. Jun, X. Ke, F. S. Khan, B. Hak Kim, J. Kittler, X. Lan, J. H. Lee, B. Leibe, H. Li, J. Li, X. Li, Y. Li, B. Liu, C. Liu, J. Liu, 10 L. Liu, Q. Liu, H. Lu, W. Lu, J. Luiten, J. Ma, Z. Ma, N. Martinel, C. Mayer, A. Memarmoghadam, C. Micheloni, Y. Niu, D. Paudel, H. Peng, S. Qiu, A. Rajiv, M. Rana, A. Robinson, H. Saribas, L. Shao, M. Shehata, F. Shen, J. Shen, K. Simonato, X. Song, Z. Tang, R. Timofte, P. Torr, C.-Y. Tsai, B. Uzun, L. Van Gool, P. Voigtlaender, D. Wang, G. Wang, L. Wang, L. Wang, L. Wang, L. Wang, Y. Wang, Y. Wang, C. Wu, G. Wu, X.-J. Wu, F. Xie, T. Xu, X. Xu, W. Xue, B. Yan, W. Yang, X. Yang, Y. Ye, J. Yin, C. Zhang, C. Zhang, H. Zhang, K. Zhang, K. Zhang, X. Zhang, X. Zhang, X. Zhang, Z. Zhang, S. Zhao, M. Zhen, B. Zhong, J. Zhu, and X.-F. Zhu, “The ninth visual object tracking vot2021 challenge results,” in 2021 IEEE/CVF In-ternational Conference on Computer Vision Work-shops (ICCVW) , pp. 2711–2738, 2021. [33] H. K. Galoogahi, A. Fagg, C. Huang, D. Ramanan, and S. Lucey, “Need for Speed: A Benchmark for Higher Frame Rate Object Tracking,” in 2017 IEEE International Conference on Computer Vision (ICCV) , (Venice), pp. 1134–1143, IEEE, Oct. 2017. [34] M. Mueller, N. Smith, and B. Ghanem, “A bench-mark and simulator for uav tracking,” in Com-puter Vision – ECCV 2016 (B. Leibe, J. Matas, N. Sebe, and M. Welling, eds.), (Cham), pp. 445– 461, Springer International Publishing, 2016. [35] P. Zhang, J. Zhao, D. Wang, H. Lu, and X. Ruan, “Visible-thermal uav tracking: A large-scale bench-mark and new baseline,” in 2022 IEEE/CVF Con-ference on Computer Vision and Pattern Recogni-tion (CVPR) , pp. 8876–8885, 2022. [36] A. Borne, C. Hennequin, S. Bazeille, P. D. Faria, F. Quint, S. Changey, and C. Cudel, “Military aerial multimodal dataset for RGB-T object tracking: benchmark and efficient algorithm,” in Autonomous Systems for Security and Defence II (L. Kampmei-jer, B. Masini, and Z. Milosevic, eds.), vol. 13680, p. 136800G, International Society for Optics and Photonics, SPIE, 2025. [37] P. Carr and R. T. Collins, “Assessing tracking per-formance in complex scenarios using mean time be-tween failures,” in 2016 IEEE Winter Conference on Applications of Computer Vision (WACV) , pp. 1–10, 2016. [38] G. Nebehay, A Deformable Part Model for One-Shot Object Tracking . PhD thesis, Graz University of Technology, 2016. 11

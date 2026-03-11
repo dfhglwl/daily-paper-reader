@@ -1,0 +1,663 @@
+Title: Robust Tightly-Coupled Filter-Based Monocular Visual-Inertial State Estimation and Graph-Based Evaluation for Autonomous Drone Racing
+
+URL Source: https://arxiv.org/pdf/2603.02742v1
+
+Published Time: Wed, 04 Mar 2026 01:54:56 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Robust Tightly-Coupled Filter-Based Monocular Visual-Inertial State Estimation and Graph-Based Evaluation for Autonomous Drone Racing 
+
+Maulana Bisyir Azhari, Donghun Han, Sungjun Park, and David Hyunchul Shim 
+
+Abstract — Autonomous drone racing (ADR) demands state estimation that is simultaneously computationally efficient and resilient to the perceptual degradation experienced during extreme velocity and maneuvers. Traditional frameworks typi-cally rely on conventional visual-inertial pipelines with loosely-coupled gate-based Perspective-n-Points (PnP) corrections that suffer from a rigid requirement for four visible features and information loss in intermediate steps. Furthermore, the absence of GNSS and Motion Capture systems in uninstru-mented, competitive racing environments makes the objective evaluation of such systems remarkably difficult. To address these limitations, we propose ADR-VINS, a robust, monocular visual-inertial state estimation framework based on an Error-State Kalman Filter (ESKF) tailored for autonomous drone racing. Our approach integrates direct pixel reprojection errors from gate corners features as innovation terms within the filter. By bypassing intermediate PnP solvers, ADR-VINS maintains valid state updates with as few as two visible corners and utilizes robust reweighting instead of RANSAC-based schemes to handle outliers, enhancing computational efficiency. Fur-thermore, we introduce ADR-FGO, an offline Factor-Graph Optimization framework to generate high-fidelity reference trajectories that facilitate post-flight performance evaluation and analysis on uninstrumented, GNSS-denied environments. The proposed system is validated using TII-RATM dataset, where ADR-VINS achieves an average RMS translation error of 0.134 m, while ADR-FGO yields 0.060 m as a smoothing-based reference. Finally, ADR-VINS was successfully deployed in the A2RL Drone Championship Season 2, maintaining stable and robust estimation despite noisy detections during high-agility flight at top speeds of 20.9 m/s. We further utilize ADR-FGO for post-flight performance evaluation in high-stakes, uninstrumented racing environments. Supplementary video: https://youtu.be/nzC4S16EFcQ 
+
+I. I NTRODUCTION 
+
+Autonomous drone racing (ADR) has emerged as a pre-mier benchmark for high-speed robotics, pushing the limits of perception, state estimation, and control. Beyond its competitive appeal, ADR serves as a proxy for time-critical real-world applications such as search and rescue, rapid medical delivery, and high-speed interception [1]. In ADR, micro-aerial vehicles (MAVs) must navigate complex gate sequences at velocities exceeding 20 m/s, where latencies or drifts can result in catastrophic failure. The primary technical challenge lies in maintaining robust state estimation amidst  
+
+> This work was supported in part by the Institute of Civil Military Technology Cooperation funded by the Defense Acquisition Program Ad-ministration, and in part by the Ministry of Trade, Industry, and Energy of Korean Goverment under Grant UM22206RD2. All authors are with the Unmanned Systems Research Group (USRG), School of Electrical Engineering, Korea Advanced Institute of Science and Techonogy (KAIST), Daejeon 305701, South Korea.
+
+{mbazhari, donghun.han, sj2park, hcshim }@kaist.ac.kr  
+
+> Fig. 1. Left: The autonomous drone racing platform used in the A2RL Drone Championship Season 2, featuring a low-cost monocular RGB camera and IMU sensors. Right: Autonomous racing flight at high speeds over 20 m/s featuring the proposed ADR-VINS for its real-time state estimation.
+
+extreme maneuvers—which induce motion blur, light flick-ers, and significant vibrations—while operating under limited computational and power constraints of small platforms, such as shown in Fig. 1 which was used in A2RL Drone Championship Season 2 1.The current State-of-the-Art (SOTA) navigational frame-works in ADR often adopt a cascaded or loosely-coupled architecture [2], [3], [4], [5], [6], [7]. These systems typi-cally utilize a standalone Visual-Inertial Navigation System (VINS) or Odometry (VIO) module for ego-motion esti-mation [9], [10], [11], and correct the accumulated drift using Perspective-n-Point (PnP) pose estimations relative to known gates. However, this approach has several limitations. First, it places a heavy reliance on the underlying VIO performance, which can degrade rapidly during aggressive maneuvers. Second, the PnP step requires a strict minimum of four visible features for a unique solution—often violated by occlusions or sharp turns—and exhibits high sensitivity to detection noise, often leading to increased latency through RANSAC-based filtering. Furthermore, reducing multiple 2D pixel measurements into a single 3D pose before filter integration discards significant geometric information. Furthermore, research progress within the ADR com-munity is significantly constrained by the high cost and logistical overhead of ”gold-standard” large-scale Motion Capture (MoCap) systems. Consequently, while recent au-tonomous systems have demonstrated human-competitive performance [4] even in uninstrumented environments [5], their evaluation often relies on end-to-end mission success, omitting the standardized, quantitative metrics for detection, state estimation, and control precision. This gap leaves a question unanswered: what level of precision is truly ”good enough” for superhuman racing? Without a verifiable ref-erence, evaluating system performance in uninstrumented environments remains difficult.                                                                                                    
+
+> 1https://a2rl.io/autonomous-drone-race
+> arXiv:2603.02742v1 [cs.RO] 3 Mar 2026 TABLE I COMPARISON OF GATE -B ASED STATE -E STIMATION METHODS FOR AUTONOMOUS DRONE RACING .
+> Ref Validation Sensors Gate/Corner Detection State Estimation Pipeline Top Speed Real-World Dataset Camera IMU Additional Gate Corner Type [2] AIRR ∗-Stereo Yes 1D LiDAR -U-Net 1-stage †ROVIO + Drift EKF 8 m/s [3] AIRR ∗-Mono Yes 1D LiDAR GateNet Snake-Gate 2-stages RANSAC + PnP + MHE 9.2 m/s [4] Self-hosted -Stereo Yes --U-Net 1-stage †T265-VIO + PnP + Drift KF 22 m/s [5] Self-hosted -Stereo Yes -YoloV8 U-Net 2-stages T265-VIO + PnP + Drift KF + EKF 21.1 m/s [6] A2RL S1 ∗-Mono Yes --U-Net 1-stage †VINS-Mono/OpenVINS + PnP + Drift KF 12.5 m/s [7] A2RL S1 ∗-Mono Yes -YoloV8-Pose 1-stage ‡OpenVINS + PnP + Drift KF 12.2 m/s [8] A2RL S1 ∗-Mono Yes Motor RPM GateNet LSD 2-stages RANSAC + PnP + EKF 28.2 m/s Ours A2RL S2 ∗TII-RATM Mono Yes -RTMO 1-stage ‡ESKF 20.9 m/s
+> ∗Competition-based real-world validation. AIRR: Alphapilot’s Artificial Intelligence Robotic Racing 2019, A2RL S1: A2RL Drone Championship Season 1 (April 2025), A2RL S2: A2RL Drone Championship Season 2 (January 2026). Ours provide both competition-based and open-source dataset-based validation.
+> †Bottom-up approach which detects the corner by segmentation then associate the corners within the same gate via part-affinity fields (PAFs).
+> ‡Top-down approach which detects gate and corner simultaneously in one model.
+
+To address these challenges, the primary contributions of this work are as follows:  
+
+> •
+
+ADR-VINS : A tightly-coupled monocular visual-inertial state estimator based on an Error-State Kalman Filter (ESKF) [12] that directly integrates gate corner reprojection errors as innovation terms. By eliminating intermediate PnP solvers and RANSAC, the method enables valid updates with as few as two visible corners under high-speed racing conditions.  
+
+> •
+
+ADR-FGO : An offline factor-graph optimization frame-work [13] that performs global batch optimization to produce a trajectory-consistent reference estimate for post-flight evaluation in uninstrumented racing environ-ments.  
+
+> •
+
+Validation and Deployment : Experimental validation on the TII-RATM dataset and successful deployment in the A2RL Drone Championship Season 2, demonstrat-ing stable estimation at speeds exceeding 20 m/s. II. R ELATED WORKS 
+
+Autonomous drone racing (ADR) architectures are gener-ally categorized into modular and end-to-end approaches [1]. Modular pipelines, such as Swift [4], On Your Own [5], and 
+
+MonoRace [8], decouple perception from control (e.g., MPC or RL), enabling better transferability of each module across different high-level tasks. State estimation implementations vary significantly across these systems, as summarized in Table I. Early competitions allowed for more diverse sensor suites, including stereo cam-eras and 1D LiDARs [2], [3]. Consequently, benchmarks like 
+
+Swift [4] and On Your Own [5] relied on proprietary stereo vision (Intel T265), which limits transferability to different camera setups. Recent competitions like the A2RL Drone Championships emphasize restrictive monocular RGB and low-quality IMU setups. In A2RL S1, the 3rd [7] and 4th [6] place entries utilized general VIO [10], [11] with PnP-pose corrections, which often degrade under severe high-speed conditions. Conversely, the winner MonoRace [8] employed an IMU-Pose EKF, using sub-pixel corner detection and RANSAC-based rejection prior to gate-based PnP estimation to correct IMU propagation. Despite these advancements, PnP-based estimation re-mains fundamentally limited by a rigid four-feature require-ment and high sensitivity to detection noise. Furthermore, compressing 2D pixel measurements into a single 3D pose discards underlying geometric uncertainty, while RANSAC-based rejection introduces latency and is prone to noise and initial guess. Although [2] utilized reprojection residuals to mitigate drift, the system remained secondary to the underlying VIO module. In contrast, our proposed ADR-VINS tightly couples these residuals within an ESKF, en-abling robust corrections with as few as two visible corners and employing Huber-based reweighting to handle outliers without RANSAC-induced latency. Finally, current ADR evaluations typically focus on lap times rather than granular estimation or control precision [4], [5]. Existing benchmarking efforts often suffer from practical limitations: Team Fly4Future [6] used GNSS for outdoor evaluation, but this results in a reference obtained in an en-vironment entirely distinct from the uninstrumented, GNSS-denied arenas used in competition; Team KAIST [7] used MAPLAB [14] for full-batch optimization, yet it requires loop-closures that are difficult to satisfy in feature-sparse high-speed racing; and Team MAVLab [8] used agreement checks between EKF and PnP estimates, but these are self-referential and may mask common-mode errors. To address these limitations, we propose ADR-FGO, an offline, non-causal factor-graph optimization framework [13]. By lever-aging global measurements and non-causal smoothing, ADR-FGO generates a significantly more accurate trajectory, pro-viding the reference needed to evaluate system performance in uninstrumented racing environments. III. ADR-VINS ADR-VINS is a computationally efficient, real-time monocular visual-inertial estimator tailored for autonomous drone racing by tightly coupling gate corner detections within the filter backend. As illustrated in Fig. 2, the visual mea-surement module detects the gate’s bounding box and corners simultaneously, which are then reordered to resolve switched corners and associated with the known gate map. These visual measurements are then fused with IMU measurements in an ESKF estimator. 
+
+A. Detection 
+
+For an incoming image Ik ∈ RH×W at discrete time k, the model predicts a set of detections ˆGk =
+
+{ ˆGk, 0, . . . , ˆGk,N −1}. Each detection contains the pixel co-ordinates uc∈{ T L,T R,BR,BL } = [ u, v ]⊤ ∈ [0 , W ] × [0 , H ],15 /62 
+
+> ES KFVisual Measurements Input
+
+• Uses a robust residual -reweighting with Huber function (M -Estimator). 
+
+• It is fast , with around  10  ms  pipeline . (previous system pipeline was around 30  ms )    
+
+> -With the main bottleneck being the detection (7 -10 ms ).
+> Detection Update
+> Propagation
+> Reordering Association Image
+> IMU
+> Gate Map
+
+(a)  (b) Fig. 2. Overview of the proposed ADR-VINS. (a) The framework consists of a visual measurement pipeline (including detection, reordering, and association) and a tightly-coupled Error-State Kalman Filter (ESKF) that fuses raw IMU data with direct pixel reprojection errors to provide robust, high-rate state estimation. (b) Illustration of the corner detections (yellow dots), reprojections (red dots), and its errors (red lines). 
+
+undistorted and normalized as ˜uc = [˜ u, ˜v]⊤, and confidence scores sc ∈ [0 , 1] for the four inner corners: top-left (TL), top-right (TR), bottom-right (BR), and bottom-left (BL). 
+
+B. Reordering 
+
+To resolve corner label switching due to visual ambiguities at high maneuvers (roll > 60 ◦) and limited training data in such scenarios, detected corners are reordered based on the current nominal state (pwb , qwb ) and camera extrinsics 
+
+(Rbc , pbc ). We project a gravity-aligned ”up” vector μup 
+
+and ”right” vector ˜μright = [ −˜μup,v , ˜μup,u ]⊤ into the image plane using a probe point pW 
+
+> ref
+
+. This point is obtained by back-projecting the detection centroid ¯u to a heuristic distance d = 3 m and transforming it to the world frame: 
+
+pW 
+
+> ref
+
+= R(qwb )( Rbc [˜ ud, ˜vd, d ]⊤ + pbc ) + pwb 
+
+∆ ˜ μ = π(R⊤
+
+> bc
+
+(R(qwb )⊤(pW 
+
+> ref
+
++ gz − pwb )) − pbc )
+
+− π(R⊤
+
+> bc
+
+(R(qwb )⊤(pW 
+
+> ref
+
+− gz − pwb )) − pbc )˜μup = ∆ ˜ μ
+
+∥∆ ˜ μ∥ ,
+
+(1) where gz = [0 , 0, 1] ⊤ and π(·) is perspective projection to the image plane. Corners are then assigned to physical labels 
+
+j ∈ { T L, T R, BR, BL } by maximizing: 
+
+S(j, c ) = σup j (δc · μup ) + σright j (δc · μright ), (2) where δc = ˜ uc − ¯u and σ ∈ {− 1, 1} denotes the target quadrant for each corner (e.g., TL: {+1 , −1}). 
+
+C. Association 
+
+Detections ˆGk,n are associated with map gates Gk,m ∈ G 
+
+that are within the camera field of view. We solve for the optimal association m∗ by minimizing a cost function J(m)
+
+that fuses spatial and scale consistency: 
+
+m∗ = arg min 
+
+> m
+
+dm
+
+ρm
+
+t.s. dm∗ < 75 px ∧ ρm∗ > 0.2 (3) where dm = ∥C( ˆGk,n ) − C(Gk,m )∥2 represents the Eu-clidean distance in the image plane between the detection centroid and the projected map gate centroid. The function 
+
+C(·) computes the center of the gates’s corner coordinates. The term ρm is the area consistency ratio: 
+
+ρm = min( A( ˆGk,n )/A (Gk,m ), A(Gk,m )/A ( ˆGk,n )) (4) where the function A(·) computes the area of the gate based on the detected corners. The ratio ρm serves as a proxy for proximity, distinguishing between overlapping gates at varying depths to ensure correct association. Once gates are associated, we resolve potential left-right flips that occur when a gate is viewed from the rear by comparing the total reprojection error. We further discard far away gates with more than 15 m distance from camera. The resulting measurements at time k are defined as the set Zk = {zk, 0, . . . , zk,M −1}, where each measurement 
+
+zk,i = {˜ui, pW
+
+> G,i
+
+} represents the pair of a 2D corner detection and its associated 3D gate corner in the world frame. 
+
+D. Error-State Kalman Filter 
+
+The core of ADR-VINS is an Error-State Kalman Filter (ESKF) [12] that maintains a high-rate nominal state while estimating small perturbations to ensure numerical stability on the SO (3) manifold. The filter recursively propagates the state using high-frequency IMU data and performs updates by minimizing feature residuals from corner detections. 
+
+1) State Definition: The nominal state ¯x is a vector com-prising the body position ¯p, velocity ¯v, attitude quaternion 
+
+¯q, and IMU biases ¯ba and ¯bω :
+
+¯x = [¯ p⊤, ¯v⊤, ¯q⊤, ¯b⊤ 
+
+> a
+
+, ¯b⊤ 
+
+> ω
+
+]⊤ (5) The true state x is defined as the composition ( ⊕) of the nominal state ¯x and the error state δx ∈ R15:
+
+x = ¯ x ⊕ δx, (6) where error state vector δx ∈ R15 is defined as δx =[δp⊤, δ v⊤, δ θ⊤, δ b⊤ 
+
+> a
+
+, δ b⊤ 
+
+> ω
+
+]⊤. The individual components of the true state are as follows: 
+
+p = ¯ p + δp, v = ¯ v + δv, q = ¯ q ⊗ exp( δθ/2) ,
+
+ba = ¯ba + δba, bω = ¯bω + δbω . (7) where exp( ·) is the exponential map from so (3) to SO (3) ,and δθ represents the small attitude pertubation. 
+
+2) IMU Propagation: We model raw IMU measurements 
+
+am ∈ R3 and ωm ∈ R3 as corrupted by additive white noise 
+
+n and slowly varying biases b:
+
+am = R⊤(a − g) + ba + na, ωm = ω + bω + nω , (8) where na ∼ N (0 , σ 2
+
+> a
+
+) and nω ∼ N (0 , σ 2 
+
+> ω
+
+). The biases ba
+
+and bω are modeled as random walk processes driven by 
+
+nb ∼ N (0 , σ 2 
+
+> b
+
+) such that ˙ba = nba and ˙bω = nbω .At each IMU step ∆t, the nominal state is propagated using kinematic integration: 
+
+¯pk+1 = ¯ pk + ¯ vk∆t + 12 (R(¯ qk)( am,k − ¯ba,k ) + g)∆ t2
+
+¯vk+1 = ¯ vk + ( R(¯ qk)( am,k − ¯ba,k ) + g)∆ t
+
+¯qk+1 = ¯ qk ⊗ exp(( ωm,k − ¯bω,k )∆ t)
+
+(9) The error state dynamics are governed by δ ˙x = Fcδx +
+
+Gcw, where Gc and w is the noise jacobian and vector, respectively. The system Jacobian Fc is defined as: 
+
+Fc =
+
+
+
+0 I 0 0 00 0 −[R(¯ q)( am − ¯ba)] × −R(¯ q) 00 0 −[ωm − ¯bω ]× 0 −I0 0 0 0 00 0 0 0 0
+
+ (10) where I ∈ R3×3 and 0 ∈ R3×3 are identity and zero matrices, respectively. For discrete-time implementation, we compute the transition matrix Fk ≈ I + Fc∆t. The discrete process noise matrix Qk ∈ R15 ×15 is constructed as a block-diagonal matrix: 
+
+Qk =
+
+
+
+Qp Qpv 0 0 0Q⊤ 
+
+> pv
+
+Qv 0 0 00 0 Qθ 0 00 0 0 Qba 00 0 0 0 Qbω
+
+ (11) where the individual noise blocks are: Qp = I · σ2
+
+> a
+
+∆t3/3,
+
+Qpv = I · σ2
+
+> a
+
+∆t2/2, Qv = I · σ2
+
+> a
+
+∆t, Qθ = I · σ2 
+
+> ω
+
+∆t, Qba =
+
+I · σ2 
+
+> ba
+
+∆t, and Qbω = I · σ2 
+
+> bω
+
+∆t. The error covariance P is then propagated as: 
+
+Pk+1 = FkPkF⊤ 
+
+> k
+
++ Qk (12) 
+
+3) Update: For each measurement zk,i ∈ Z k, the mea-surement residual rk,i is defined as: 
+
+rk,i = ˜ uk,i − h(¯ xk, pW
+
+> G,i
+
+) (13) The observation model h(·) projects the world-frame land-mark into normalized image coordinates via: 
+
+h(¯ xk, pW
+
+> G,i
+
+) = π(pC
+
+> k,i
+
+)= π  R⊤
+
+> bc
+
+ R(¯ q)⊤(pW 
+
+> G,i
+
+− ¯p) − pbc 
+
+ (14) where pC 
+
+> k,i
+
+= [ xC , y C , z C ]⊤ is the corner landmark in the camera frame. The measurement Jacobian Hk,i is defined as: 
+
+Hk,i = ∂h ∂δ x = ∂π ∂pC
+
+> k,i
+
+· ∂pC
+
+> k,i
+
+∂δ x , where: 
+
+∂π ∂pC
+
+> k,i
+
+=
+
+1/z C 0 −xC /(zC )2
+
+0 1/z C −yC /(zC )2
+
+
+
+∂pC
+
+> k,i
+
+∂δ x = [ −R⊤
+
+> bc
+
+R(¯ q)⊤ 03×3 · · · 
+
+R⊤
+
+> bc
+
+[R(¯ q)⊤(pW 
+
+> G,i
+
+− ¯p)] × 03×3 03×3]
+
+(15) To handle outliers without RANSAC latency, we imple-ment robust reweighting using a Huber function. The inno-vation covariance S = HPH ⊤ + Rcov is used to compute the Mahalanobis distance e = √r⊤S−1r. The measurement covariance Rcov is then inflated by w:
+
+w = min(1 .0, τe
+
+e ), Ref f,k,i = 1
+
+w Rcov,k,i (16) The nominal state ¯x is updated using the Kalman gain K
+
+and error perturbation δx:
+
+Kk,i = PkH⊤
+
+> k,i
+
+(Hk,i PkH⊤ 
+
+> k,i
+
++ Ref f,k,i )−1
+
+¯xk ← ¯xk ⊕ δxk, where: δxk = Kk,i rk
+
+Pk ← (I − Kk,i Hk,i )Pk
+
+(17) 44 /62             
+
+> Unmanned Systems Resea
+> 𝑿 𝟎 𝑿 𝟏 𝑿 𝟐 𝑿 …𝑿 𝒌 −𝟐 𝑿 𝒌 −𝟏 𝑿 𝒌 𝑿 𝟑
+> IMU Preintegration
+> Factor s
+> Gate Corner
+> Visual Factors
+> ADR -VINS
+> Prior Factor s
+> Extrinsics
+> Prior Factor s
+> Keyframes
+> Keyframes w/o
+> Visual Factor s
+
+Fig. 3. The proposed factor graph structure in ADR-FGO. The graph integrates IMU pre-integration, gate corner detections, pose prior factors from ADR-VINS, and camera extrinsics priors. Keyframes are maintained even during visual outages to distribute drift and IMU biases across these visual-less sections to provide better interpolation. 
+
+The error state δx is reset to zero after each injection. The entire process of (13)-(17) is repeated sequentially for all available measurements zk,i ∈ Z k.IV. P OST -F LIGHT EVALUATION VIA ADR-FGO ADR-FGO is an offline, global full-batch factor-graph op-timization framework [13] designed to provide high-fidelity reference trajectories for evaluation and analysis of the real-time ADR-VINS estimates. By minimizing global repro-jection errors across the entire flight, ADR-FGO enforces trajectory-wide consistency and improves state estimates through batch smoothing. This results in a refined reference trajectory for benchmarking performance in uninstrumented environments. The proposed graph structure of ADR-FGO is illustrated in Fig. 3. 
+
+A. Factor Formulations 
+
+The optimization problem is composed of three primary factor types that constrain the state vector at keyframe i,defined as xk = [ pk, vk, qk, ba,k , bω,k ]⊤.
+
+1) IMU Preintegration Factors: We utilize IMU preinte-gration on the SO (3) manifold [15] to capture the relative motion (∆pk,k +1 , ∆vk,k +1 , ∆qk,k +1 ) between keyframes without repeated integration. The residual rIM U is defined as: 
+
+rIM U,k =
+
+R⊤ 
+
+> k
+
+(pk+1 − pk − vk∆t − 12 g∆t2) − ∆pk,k +1 
+
+R⊤ 
+
+> k
+
+(vk+1 − vk − g∆t) − ∆vk,k +1 
+
+log(∆ q⊤ 
+
+> k,k +1
+
+⊗ (q⊤ 
+
+> k
+
+⊗ qk+1 )) 
+
+
+
+(18) 
+
+2) Gate Corner Visual Factors: These factors minimize the reprojection error of measurement i relative to the known, fixed gate map G:
+
+rcorner,k,i = ¯uk,i − h(xk, pW
+
+> G,i
+
+) (19) 
+
+3) ADR-VINS Prior Factors: We anchor the global opti-mization to the real-time ADR-VINS results using soft priors to improve convergence: 
+
+rprior,k = xk ⊖ ¯xV IN S k (20) TABLE II RESULTS ON THE TII-RATM D ATASET .Seq ONLINE METHODS OFFLINE METHODS                                                                                                                                                                                                                                                                 
+
+> OpenVINS PnP-Pose PnP+EKF ADR-VINS MAPLAB ADR-FGO
+> etereveterevetereveterevetereveterev
+> Piloted  05P .296 1.77 .293 .466 4.05 -.282 1.59 .388 .130 1.73 .202 .194 1.60 .153 .052 1.16 .090 06P .943 2.21 .449 .488 4.17 -.350 2.64 .505 .134 1.69 .218 .159 1.35 .132 .061 1.47 .100 11P .369 3.12 .345 .398 3.39 -.242 1.76 .371 .132 1.85 .199 .249 2.20 .216 .054 1.25 .110 12P .204 2.39 .194 .298 3.87 -.245 1.62 .355 .169 2.02 .221 .297 1.67 .208 .049 1.39 .090 Avg @P .453 2.37 .321 .412 3.80 -.280 1.90 .405 .141 1.82 .210 .224 1.71 .177 .054 1.32 .098 Autonomous  05A .529 5.86 .754 .997 5.23 -.498 3.48 .923 .132 2.10 .329 .439 4.58 .674 .069 1.97 .141 06A .288 4.86 .507 .944 4.90 -.411 3.49 .910 .132 2.21 .325 .544 7.84 .675 .068 2.16 .162 11A .615 4.27 .504 .998 6.71 -.553 4.12 .751 .107 2.34 .218 .931 9.14 .996 .058 2.33 .139 12A .329 4.70 .428 .907 6.16 -.534 4.64 .864 .099 2.54 .248 .304 4.51 .386 .061 2.53 .155 17A .865 2.57 .592 1.34 6.08 -.394 2.68 .651 .191 1.97 .423 1.02 4.77 .844 .068 1.81 .195 18A .723 3.21 .765 1.23 6.18 -.584 2.65 .724 .208 2.17 .449 .773 5.38 .724 .059 1.98 .201 Avg @A .565 4.24 .575 1.07 5.87 -.495 3.51 .804 .145 2.23 .332 .668 6.04 .686 .064 2.13 .165 Avg .516 3.50 .483 .806 5.07 -.409 2.87 .644 .134 2.06 .283 .491 4.30 .501 .060 1.81 .138
+
+4) Extrinsics Prior Factor: This factor refine the camera-IMU transformation Tbc = ( Rbc , p bc ) to account for mechan-ical shifts caused by impacts. It also allows for the refinement of nominal extrinsics when exact extrinsics are unavailable, as in the TII-RATM dataset. Specifically, we refine the rotational extrinsics Rbc , the residual rext is defined as: 
+
+rext = Log ( ¯R⊤
+
+> bc
+
+Rbc ) (21) where Log (·) maps SO (3) to so (3) .
+
+B. Keyframe Selection 
+
+ADR-FGO generates a new keyframe at time k if there is available visual measurements or a predefined time threshold 
+
+τt has reached since the last keyframe, defined as: 
+
+(Zk̸ = ∅) ∨ (tk − tk−1 ≥ τt) (22) The second condition triggers ”visual-less” keyframes. It enables the optimizer to distribute accumulated drift and IMU biases across these keyframes, ensuring more accurate interpolation within segments lacking visual measurements. 
+
+C. Factor Graph Optimization 
+
+The final optimization minimizes a joint cost function over a set of keyframes K. The joint cost function is defined as: 
+
+min 
+
+> X
+
+X
+
+> k∈K
+
+∥rIM U,k ∥2ΣIM U + X
+
+> k∈K
+
+X
+
+> i∈I k
+
+∥ρ (rcorner,k,i ) ∥2Σcorner 
+
++ X
+
+> k∈K
+
+∥rprior,k ∥2Σprior + ∥rext ∥2Σext 
+
+!
+
+(23) where ΣIM U ∈ R9×9, Σcorner ∈ R2×2, Σprior ∈ R6×6, and 
+
+Σext ∈ R3×3 are the weighting matrices which define the relative importance of each constraint in the graph. ρ(·) is huber function to handle detection noise. V. E XPERIMENTS 
+
+We evaluate the proposed framework through benchmarks on the TII-RATM dataset and real-world closed-loop flights during the A2RL Drone Championship Season 2. The fol-lowing sections detail our implementation, dataset results, and competition deployment. 
+
+A. Implementation Details 
+
+In ADR-VINS, the detection is handled by RTMO-nano [16] optimized via TensorRT with FP16 precision with the ESKF uses Eigen3 library. The ADR-FGO utilizes SymForce [17] for jacobian computation and factor-graph optimization. 
+
+B. Metrics 
+
+We mainly report the root mean squared (RMS) of trans-lation ( et, [m]), rotation ( er , [deg]), and velocity ( ev , [m/s]) errors. We also report the mean of pixels for detection and reprojection errors. 
+
+C. TII-RATM Dataset Experiments 
+
+Description. TII-RATM dataset [18] provides 500 Hz IMU and 120 Hz monocular RGB camera data from a drone as well as its 275 Hz ground-truth from a MoCap system. The indoor arena measuring 25 × 9.7 × 7 m, where the drone was flown human-piloted and autonomously at 21 .8 m/s top speeds. Following [19], we use sequences 05P, 06P, 11P, 12P, 05A, 06A, 11A, 12A, 17A, and 18A for our reports. Other sequences are used for training the detection model and tuning the baselines and our methods. We limit the human-piloted flights to the first 3-laps. 
+
+Baselines. We benchmark ADR-VINS against Open-VINS [10] and our own implementation of PnP+EKF [8] (including its RANSAC-based filtering) using the detection module explained in Sec. III-A-III-C. For offline method, we benchmark ADR-FGO against MAPLAB[14], a framework that performs full-batch optimization and global loop-closure using OpenVINS for its initial state guess. 
+
+Initialization. We initialize all online methods using ground-truth states because poor starting positions in TII-RATM dataset hindered initial gate detection for PnP+EKF and ADR-VINS, while OpenVINS failed to initialize on autonomous sequences. In real-world racing, these are re-solved via hand-held motions to initialize OpenVINS pre-race (similar to T265-VIO [5]). For ADR-VINS, it can be statically placed on a podium with full visibility of the first gate for initial gate-based correction. 
+
+ADR-VINS Results. As shown in Table II, ADR-VINS achieved an average translational RMSE of 0.141 m and 
+
+0.145 m in piloted and autonomous flights, respectively. It 46 /62 Fig. 4. Qualitative comparison of ADR-VINS against baseline online methods across various tracks on TII-RATM dataset autonomous sequences, including an ellipse (Flight 06A), a lemniscate (Flight 12A), and a complex 3D racing track (Flight 18A). No Visible/Valid Gates  
+
+> Partial Gates Visibility
+> G1 G2 G3 G4 G5 G6 G7
+
+Fig. 5. Comparison of ADR-VINS with #2, #4, and #6 minimum corners visibility requirements for Flight 18A. Requiring only two corners enables earlier and more frequent updates, significantly reducing drift. ADR-FGO further minimizes this error by globally refining ADR-VINS, even in sections where gates are not visible. G1-G7 is the gate ordering. TABLE III ADR-FGO A BLATION STUDY .w/o vl KF w/o ext factor Full Seq. et er ev et er ev et er ev
+
+Avg @P .056 1.51 .111 .067 1.88 .115 .054 1.32 .098 Avg @A .064 2.37 .177 .070 2.15 .179 .064 2.13 .165  
+
+> •
+
+w/o vl KF: without visual-less keyframes.  
+
+> •
+
+w/o ext factor: without extrinsics factor. 
+
+significantly outperforms OpenVINS and PnP+EKF, reduc-ing translational, rotational, and velocity errors by 67% −
+
+74% , 28% − 44% , and 41% − 56% , respectively. Fig. 4 shows ADR-VINS tracks ground truth closely even during aggressive 3D maneuvers (e.g., Flight 18A) where baselines drift substantially. Note that PnP solvers are prone to noise and initial guess, leading to high raw PnP-Pose errors. While the PnP+EKF fusion mitigates these errors by 49% ,it remains uncompetitive with ADR-VINS. 
+
+Partial Gate Updates. Fig. 5 evaluates corner visibility constraints during Flight 18A. ADR-VINS achieves high-est accuracy ( 0.208 m) when requiring just two visible corners per update. Increasing this minimum to four (the PnP standard) or six corners (as used in [8]) degrades the 
+
+et to 0.228 m and 0.387 m, respectively. This shows that partial gate updates enable earlier, more frequent corrections, maintaining robust tracking even when aggressive maneuvers frequently make the gates out of sight. 
+
+ADR-FGO Results. As shown in Table II, ADR-FGO achieves an average translational error of 0.060 m, signif-icantly more accurate compared to MAPLAB with trans-lation error of 0.491 m, 88% relative improvement. This is largely due to MAPLAB’s failure in establishing loop-41 /62               
+
+> Unmanned Systems Research Gro
+> G1
+> G4
+> G5
+> G6
+> G3
+> G2 G3
+> G7 G1
+> (a )Good Visibility (b )Partial Visibility (c )Partial Visibility
+> Detections
+> ADR -VINS Reprojections
+> ADR -FGO Reprojections 0510 15 20
+> Error (pixels)
+> ADR-FGO ADR-VINS Detection
+> MEDIAN: 1.58, MEAN: 2.22, STD: 2.72 MEDIAN: 3.91, MEAN: 5.10, STD: 4.50 MEDIAN: 0.50, MEAN: 0.71, STD: 1.27
+
+Fig. 6. Top: Visualization of reprojection errors for ADR-VINS and ADR-FGO compared to raw detections on flight 18A. Bottom: Statistics of the detection and reprojection errors on TII-RATM dataset. 
+
+closures during high-speed flights. The 55% translational accuracy improvement against ADR-VINS making ADR-FGO suitable as the reference trajectory for evaluating and tuning ADR-VINS. As shown in Fig. 5, ADR-FGO produces smooth reference paths, recovering the trajectory even in sections without corner detections (red area). An ablation study in Table III further highlights that utilizing visual-less keyframes and refining camera-IMU extrinsics are beneficial. 
+
+Reprojection Errors. Image-space reprojection errors can serve as a proxy for evaluating state estimation performance. As shown in Fig. 6, the detection module has an error of 
+
+0.71 pixels, ADR-VINS maintains a 5.1 pixels reprojection errors in real-time, effectively bounding the drift. ADR-FGO further refines these estimates, halving the reprojection errors to 2.22 pixels. ADR-FGO’s refined reprojections align closely with the detections, maintaining high fidelity even during aggressive maneuvers and partial gate visibility. 
+
+D. A2RL Drone Championship Season 2 Deployment 
+
+Description. The system was deployed in the A2RL Drone Championship Season 2 in a competitive, uninstrumented racing track. The track ( 35 × 20 × 7 m) consisted of 12 gates per-lap, including difficult Split-S and ladder-down 
+
+maneuvers. All development, tuning, and experiments prior to the competition were conducted without the use of any on-premise MoCap systems, relying solely on onboard sensors and the known gate map. As MoCap systsem is not available in the competition site, we utilize ADR-FGO to generate a reference trajectory for evaluation and analysis. 47 /62              
+
+> Unmanned Systems Research Group
+> G1
+> G2
+> G3 G4
+> G6
+> G5
+> G8
+> G7
+> G9
+> G10
+> G11
+> G12 ADR -VINS
+> GT (ADR -FGO)
+> Start
+> G1 -G12 Gate orders 0
+> 5
+> 10
+> 15
+> 20
+> Velocity [m/s]
+> Velocity [m/s] Accel [m/s²]
+> 0246810 12 14
+> Elapsed Time [s]
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> Error [m]
+> First Gate First Lap Finish Estimation Error (ADR-VINS vs ADR-FGO) Control Error (ADR-VINS vs Planned Traj) Total Error (ADR-FGO vs Planned Traj) 010 20 30 40 50
+> Accel [m/s²]
+
+Fig. 7. Top: 3D visualization of ADR-VINS against GT (ADR-FGO) of our fastest flight in A2RL S2 track. Middle: Velocity and acceleration profile. Bottom: Error analysis. TABLE IV RESULTS ON A2RL S EASON 2 T RACK .PnP-Pose PnP+EKF ADR-VINS 
+
+et er ev et er ev et er ev
+
+.797 5.97 - .367 2.31 .717 .152 1.25 .413 
+
+Platform. Our real-world deployment utilizes a 30 × 28 ×
+
+10 cm, 960 g racing drone platform standardized for A2RL S2, as shown in Fig. 1. Perception is provided by an Arducam IMX219 rolling shutter camera ( 820 × 616 at 85 Hz) pitched at ∼ 45 ◦ with 155 ◦ × 115 ◦ FOV. The platform features an Jetson Orin NX computer interfaced with a Foxeer H7 flight controller (FC) via UART/MSP, receiving 500 Hz IMU data and sending 100 Hz control CTBR commands. We employ an MPC controller [20] to track the planned time-optimal trajectory from TOGT [21]. 
+
+Results. Fig. 7 shows the visualization of our fastest attempt at A2RL Season 2. ADR-VINS remained stable even during aggressive maneuvers like Split-S and Ladder-down, with top speed reaching 20 .9 m/s and acceleration over 5g.Based on the refined trajectory (ADR-FGO), ADR-VINS has translational RMSE of 0.152 m. While the control tracking error is 0.370 m and the total error (ADR-FGO vs planned trajectory) is 0.402 m. Note that the main contributor to the total error is the control tracking error. Furthermore, as shown in Table IV, ADR-VINS significantly outperforms the baselines, reducing the translational error by 58 .8% and the rotational error by 45 .9% compared to the PnP+EKF implementation. 
+
+Reprojection Errors. Fig. 8 compares how well the esti-mated drone position aligns with the actual gate corners seen by the camera. In this environment, ADR-VINS achieved a reprojection error of 7.53 pixels and ADR-FGO refines it to 
+
+3.86 pixels. This higher error compared to Sec.V.B is due to an increase in detection noise, camera noise, and limited training data, yet it was able to robustly provide accurate state-estimation. 
+
+Robustness. The benefit of our robust reweighting method is highlighted in Fig. 9. We ablate the way we fuse the noisy 43 /62    
+
+> Unmanned Systems Research Gr
+> G6
+
+G8
+
+G7        
+
+> G11
+> (a)Split -S(c)Partial Visibility (b)Ladder -Down
+> Detections
+> ADR -VINS Reprojections
+> ADR -FGO Reprojections G12
+> G60510 15 20
+> Error (pixels)
+> ADR-FGO ADR-VINS Detection
+> MEDIAN: 2.23, MEAN: 3.86, STD: 5.05 MEDIAN: 5.44, MEAN: 7.53, STD: 6.65 MEDIAN: 1.39, MEAN: 1.78, STD: 1.70
+
+Fig. 8. Top: Visualization of the corner detections and the reprojections of ADR-VINS and ADR-FGO estimates. Bottom: Statistics of the detection and reprojection errors on our fastest flight in A2RL S2. 5 0 5 10 15 20 25 30 x [m]   
+
+> 3
+> 0
+> 3
+> 6
+> 9
+> 12
+> 15 y [m]
+> GT (ADR-FGO) naive w/ 2test
+> w/ huber Start
+
+Fig. 9. Robustness ablation study visualization. Performance comparison of the proposed Huber-based reweighting, a χ2 (chi-squared) rejection test, and naive visual measurements fusion. The Huber-based method maintains stability against noisy detections where naive and χ2 test variants exhibit significant drift or failure. TABLE V TIMING OF ADR-VINS. Visual Measurements ESKF component: detection reorder.+assoc. propagation update time [ms]: 8.165 0.192 0.011 0.242 
+
+detections in the filter. A ”naive” version of ADR-VINS that treats all measurements equally quickly failed and drifted away outside the track. A χ2 rejection is slightly more stable but resulted in sections with significant drift. The Huber-based approach allowed the drone to ignore noisy data points while still using helpful information, resulting in a flight path that closely matched the high-accuracy reference. 
+
+Runtime. As detailed in Table V, ADR-VINS operates under 9 ms per frame, meeting the 85 Hz ( 11 .7 ms) camera’s real-time constraints. The RTMO-nano detection module dominates latency, while all remaining processes execute in sub-millisecond times. For comparison, in PnP+EKF, the RANSAC+PnP computation adds a net 0.4 ms latency, about 
+
+200% of the reordering+association time. Future improve-ments could reduce detection latency via smaller model or by upgrading to JetPack 6.2 to leverage an increased computational power budget. Finally, the offline ADR-FGO process takes about 15–60 seconds, depending on trajectory length and optimization convergence. VI. C ONCLUSION AND DISCUSSION 
+
+Conclusion. We presented ADR-VINS, a tightly-coupled ESKF framework for high-speed drone racing, combined with ADR-FGO for offline evaluation. The proposed system demonstrated high precision on the TII-RATM dataset and proven reliability during the A2RL Drone Championship Season 2 at speeds up to 20 .9 m/s . We also showed the utilization of ADR-FGO in evaluating the estimation, control, and system performance in uninstrumented environment. ADR-VINS Discussion. Despite its successful deploy-ment, the ADR-VINS is currently constrained by the la-bel quality and limited training data for its real-world de-ployment. Furthermore, it utilizes only inner corners in-stead of both inner and outer corners [8] for improved redundancy and accuracy. Nevertheless, the proposed filter maintains stable estimation despite these shortcomings. Syn-thetic dataset generation [22] could improve the detection performance. Furthermore, extended periods without visual measurements, inherent IMU drift could be a challenge; po-tentially, learning-based motion predictions [23], [19] could provide a more accurate state propagation. From the state-estimation framework perspective, utilizing the iterated or equivariant filter could potentially improve the performance. 
+
+ADR-FGO Discussion. While ADR-FGO provides high-fidelity accuracy for post-flight analysis and fine-tuning, its improvement in rotational accuracy over ADR-VINS is limited by the sparse gate features available. In contrast, frameworks like MAPLAB [14] utilize many more visual features for improved orientation estimates but it is unreliable at very high speed flights. Beyond trajectory improvement, ADR-FGO refines camera-IMU extrinsics, which could be used to improve extrinsics post-crash, as exemplified in [8]. In the future, the refined trajectories can serve as supervision for training data-driven motion models [23], [19] to further improve ADR-VINS state propagation when corner detec-tions are unavailable. 
+
+System Performance. Lastly, system-wide performance is currently limited by the tracking performance of the MPC and modeling inaccuracies, as tracking error dominates the total system error. Recent study [24] and the success of the A2RL S1 and S2 winners suggest that compared to MPC, RL-based control offers superior robustness and accuracy needed for high-speed racing at the performance’s edge. VII. A CKNOWLEDGEMENT 
+
+We acknowledge the use of Gemini 3 for coding assis-tance and manuscript refinement, specifically for improving the flow and grammar. All AI-generated refinement was reviewed and verified by the authors. We would also like to thank A2RL and everyone involved in the competition for providing excellent support during the competition. REFERENCES [1] D. Hanover, A. Loquercio, L. Bauersfeld, A. Romero, R. Penicka, Y. Song, G. Cioffi, E. Kaufmann, and D. Scaramuzza, “Autonomous drone racing: A survey,” IEEE Transactions on Robotics , 2024. [2] P. Foehn, D. Brescianini, E. Kaufmann, T. Cieslewski, M. Gehrig, M. Muglikar, and D. Scaramuzza, “Alphapilot: Autonomous drone racing,” Autonomous Robots , vol. 46, no. 1, pp. 307–320, 2022. [3] C. De Wagter, F. Paredes-Vall´ es, N. Sheth, and G. C. de Croon, “The sensing, state-estimation, and control behind the winning entry to the 2019 artificial intelligence robotic racing competition,” Field Robotics ,vol. 2, pp. 1263–1290, 2022. [4] E. Kaufmann, L. Bauersfeld, A. Loquercio, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Champion-level drone racing using deep reinforce-ment learning,” Nature , vol. 620, no. 7976, pp. 982–987, 2023. [5] M. Bosello, F. Pinzarrone, S. Kiade, D. Aguiari, Y. Keuter, A. AlShe-hhi, G. Caminati, K. L. Wong, K. S. Chou, J. Halepota, F. Alneyadi, J. Panerati, and G. Pau, “On your own: Pro-level autonomous drone racing in uninstrumented arenas,” IEEE Robotics and Automation Letters , vol. 11, no. 3, pp. 2674–2681, 2026. [6] F. Nov´ ak, M. Petrl´ ık, M. Novosad, P. M. Gupta, R. Pˇ eniˇ cka, and M. Saska, “Vision-only uav state estimation for fast flights without external localization systems: A2rl drone racing finalist approach,” 
+
+arXiv, preprint arXiv:2602.01860 , 2026. [7] M. B. Azhari, D. Han, J. I. You, S. Park, and D. H. Shim, “Drift-corrected monocular vio and perception-aware planning for autonomous drone racing,” arXiv, preprint arXiv:2512.20475 , 2025. [8] S. A. Bahnam, R. Ferede, T. M. Blaha, A. E. Lang, E. Lucassen, Q. Missinne, A. E. C. Verraest, C. D. Wagter, and G. C. H. E. de Croon, “Monorace: Winning champion-level drone racing with robust monocular ai,” arXiv, preprint arXiv:2601.15222 , 2026. [9] M. Bloesch, S. Omari, M. Hutter, and R. Siegwart, “Robust visual in-ertial odometry using a direct ekf-based approach,” in 2015 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) ,pp. 298–304, IEEE, 2015. [10] P. Geneva, K. Eckenhoff, W. Lee, Y. Yang, and G. Huang, “Openvins: A research platform for visual-inertial estimation,” in 2020 IEEE Inter-national Conference on Robotics and Automation (ICRA) , pp. 4666– 4672, IEEE, 2020. [11] T. Qin, P. Li, and S. Shen, “Vins-mono: A robust and versatile monoc-ular visual-inertial state estimator,” IEEE transactions on robotics ,vol. 34, no. 4, pp. 1004–1020, 2018. [12] J. Sola, “Quaternion kinematics for the error-state kalman filter,” arXiv preprint arXiv:1711.02508 , 2017. [13] F. Dellaert and M. Kaess, “Factor graphs for robot perception,” 
+
+Foundations and Trends® in Robotics , vol. 6, no. 1-2, pp. 1–139, 2017. [14] A. Cramariuc, L. Bernreiter, F. Tschopp, M. Fehr, V. Reijgwart, J. Nieto, R. Siegwart, and C. Cadena, “maplab 2.0–a modular and multi-modal mapping framework,” IEEE Robotics and Automation Letters , vol. 8, no. 2, pp. 520–527, 2022. [15] C. Forster, L. Carlone, F. Dellaert, and D. Scaramuzza, “On-manifold preintegration for real-time visual–inertial odometry,” IEEE transac-tions on robotics , vol. 33, no. 1, pp. 1–21, 2016. [16] P. Lu, T. Jiang, Y. Li, X. Li, K. Chen, and W. Yang, “Rtmo: Towards high-performance one-stage real-time multi-person pose estimation,” in Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 1491–1500, 2024. [17] H. Martiros, A. Miller, N. Bucki, B. Solliday, R. Kennedy, J. Zhu, T. Dang, D. Pattison, H. Zheng, T. Tomic, P. Henry, G. Cross, J. VanderMey, A. Sun, S. Wang, and K. Holtz, “SymForce: Symbolic Computation and Code Generation for Robotics,” in Proceedings of Robotics: Science and Systems , 2022. [18] M. Bosello, D. Aguiari, Y. Keuter, E. Pallotta, S. Kiade, G. Caminati, F. Pinzarrone, J. Halepota, J. Panerati, and G. Pau, “Race against the machine: A fully-annotated, open-design dataset of autonomous and piloted high-speed flight,” IEEE Robotics and Automation Letters ,vol. 9, no. 4, pp. 3799–3806, 2024. [19] S. A. Bahnam, C. De Wagter, and G. C. De Croon, “Self-supervised monocular visual drone model identification through improved oc-clusion handling,” in 2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pp. 18977–18984, 2025. [20] D. Falanga, P. Foehn, P. Lu, and D. Scaramuzza, “Pampc: Perception-aware model predictive control for quadrotors,” in IEEE International Conference on Intelligent Robots and Systems , IEEE, 2018. [21] C. Qin, M. S. Michet, J. Chen, and H. H.-T. Liu, “Time-optimal gate-traversing planner for autonomous drone racing,” in 2024 IEEE Inter-national Conference on Robotics and Automation (ICRA) , pp. 8693– 8699, 2024. [22] M. Jacinto, J. Pinto, J. Patrikar, J. Keller, R. Cunha, S. Scherer, and A. Pascoal, “Pegasus simulator: An isaac sim framework for multiple aerial vehicles simulation,” in 2024 International Conference on Unmanned Aircraft Systems (ICUAS) , pp. 917–922, 2024. [23] G. Cioffi, L. Bauersfeld, E. Kaufmann, and D. Scaramuzza, “Learned inertial odometry for autonomous drone racing,” IEEE Robotics and Automation Letters , vol. 8, no. 5, pp. 2684–2691, 2023. [24] Y. Song, A. Romero, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Reaching the limit in autonomous racing: Optimal control versus reinforcement learning,” Science Robotics , vol. 8, no. 82, p. eadg1462, 2023.

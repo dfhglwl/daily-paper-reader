@@ -1,0 +1,424 @@
+Title: Real-Time Generative Policy via Langevin-Guided Flow Matching for Autonomous Driving
+
+URL Source: https://arxiv.org/pdf/2603.02613v1
+
+Published Time: Wed, 04 Mar 2026 01:32:08 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# Real-Time Generative Policy via Langevin-Guided Flow Matching for Autonomous Driving 
+
+Tianze Zhu 1†, Yinuo Wang 1†, Wenjun Zou 1†, Tianyi Zhang 1, Likun Wang 1, Letian Tao 1, Feihong Zhang 1,Yao Lyu 1, Shengbo Eben Li 1,2∗
+
+Abstract — Reinforcement learning (RL) is a fundamental methodology in autonomous driving systems, where generative policies exhibit considerable potential by leveraging their ability to model complex distributions to enhance exploration. However, their inherent high inference latency severely impedes their deployment in real-time decision-making and control. To address this issue, we propose diffusion actor-critic with entropy regulator via flow matching (DACER-F) by introducing flow matching into online RL, enabling the generation of competitive actions in a single inference step. By leveraging Langevin dynamics and gradients of the Q-function, DACER-F dynamically optimizes actions from experience replay toward a target distribution that balances high Q-value information with exploratory behavior. The flow policy is then trained to efficiently learn a mapping from a simple prior distribution to this dynamic target. In complex multi-lane and intersection simulations, DACER-F outperforms baselines diffusion actor-critic with entropy regulator (DACER) and distributional soft actor-critic (DSAC), while maintaining an ultra-low inference latency. DACER-F further demonstrates its scalability on standard RL benchmark DeepMind Control Suite (DMC), achieving a score of 775.8 in the humanoid-stand task and surpassing prior methods. Collectively, these results establish DACER-F as a high-performance and computationally efficient RL algorithm. 
+
+I. I NTRODUCTION 
+
+Reinforcement learning (RL) is a foundational framework for sequential decision-making and control, with extensive applications in autonomous driving [1]–[3]. Conventional RL policies are typically designed to select a single optimal action. With the rising complexity and environmental uncertainty of autonomous driving, such unimodal policies often fall short of the safety and robustness requirements of advanced autonomous systems. Consequently, expressive policies ca-pable of modeling complex, multimodal action distributions while enhancing exploration and generalization have become a central focus of academic research. Generative models, with their powerful distribution-fitting capabilities, have emerged as the key technology for constructing such expressive policies. Their remarkable success in domains such as image generation demonstrates their ability to model complex data distribu-tions, showcasing robust representation learning capabilities.        
+
+> 1Tianze Zhu, Yinuo Wang, Wenjun Zou, Tianyi Zhang, Likun Wang, Letian Tao, Feihong Zhang and Yao Lyu are with the School of Vehicle and Mobility, Tsinghua University, Beijing, China (E-mail:
+
+{zhutz24, wyn23, zouwj20, zhangtia24, wlk23, tlt22, zfh24 }@mails.tsinghua.edu.cn , lyo.tobias@foxmail.com)   
+
+> 2Shengbo Eben Li is with the College of Artificial Intelligence, Tsinghua University, Beijing, China (E-mail:
+
+lish04@gamil.com ) 
+
+> †Tianze Zhu, Yinuo Wang, Wenjun Zou contribute euqually to this paper. * Corresponding Author: Shengbo Eben Li
+
+Within this trend, diffusion models are widely employed for constructing expressive RL policies. A substantial body of research has explored the integration of diffusion models within RL, particularly in offline settings where these models have demonstrated a notable capacity for effectively modeling the distributions of expert data [4], [5]. However, in the realm of online RL, the absence of a stationary target distribution has constrained diffusion model applications, primarily relying on complex reweighting techniques or intricate utilization of the reverse sampling process [6]–[8]. Despite the significant promise of diffusion models for policy representation, their inherent limitation of high infer-ence latency poses a significant barrier to autonomous driv-ing applications. To address this critical real-time challenge, we propose to introduce flow-based generative models into autonomous driving policy learning. Flow-based models [9] are a promising class of generative models, featuring efficient training and rapid inference speeds. These characteristics align perfectly with the low-latency demands of autonomous driving. Therefore, we propose the use of flow models for policy representation to significantly enhance inference effi-ciency. However, the application of flow matching models to online RL is confronted by a core challenge: these models necessitate a well-defined target distribution ptarget (a|s), which is inherently absent in online learning settings. To address this limitation, we propose diffusion actor-critic with entropy regulator via flow matching (DACER-F), an al-gorithm that successfully integrates flow matching with online RL by introducing a dynamic target guidance mechanism. Our key contributions are as follows: 1) We propose a dynamic target guidance mechanism by modeling the optimal policy as an energy-based distri-bution induced by the Q-function, with the density given by p(a|s) ∝ exp( Q(s, a )/α ) for α > 0. We subsequently develop a method to efficiently sample from this energy distribution using Langevin dynamics. This process yields target action samples, denoted a∗, that balance high Q-value information with exploratory behavior. 2) To the best of our knowledge, we are the first to integrate flow-matching generative models into autonomous driv-ing policy learning under a purely RL training paradigm. By utilizing the high-quality action samples a∗ generated via Langevin dynamics as dynamic targets, we success-fully bridge flow matching with online RL objectives, enabling the policy to efficiently learn complex mappings from a simple prior to the optimal action manifold. 
+
+> arXiv:2603.02613v1 [cs.LG] 3 Mar 2026
+
+3) We conduct extensive evaluations in complex multi-lane highway and intersection simulations, showing that DACER-F achieves final average rewards that are approx-imately 28.0% and 34.0% higher than diffusion actor-critic with entropy regulator (DACER) [6] and distribu-tional soft actor-critic (DSAC) [10], respectively, while reducing inference time by 84.0% relative to DACER. We further evaluate DACER-F on the DeepMind Control Suite (DMC) [11], where it consistently surpasses exist-ing methods across six challenging tasks, demonstrating robust scalability beyond driving. II. R ELATED WORKS 
+
+A. Generative Policy in Offline RL 
+
+The use of generative models to build expressive policies is a major trend in offline RL. Among these, diffusion models have become a dominant approach, primarily leveraging their advantage in modeling complex multimodal action distribu-tions. Pioneering studies, such as Diffusion Policy [12] and diffusion Q-learning (Diffusion-QL) [4], established the use of diffusion for complex policy learning. Subsequent work integrated trajectory-level guidance, such as rewards and con-straints [13]. A significant line of research addresses the inherent infer-ence latency of these diffusion-based models. Methods like Efficient Diffusion Policies (EDP) [14] and consistency-based distillation [15], [16] approximate action generation through one-step sampling, significantly reducing computational over-head. Current work continues to advance robustness and gen-eralization, for instance, by mitigating Q-value overestimation through pessimistic estimates [17] or improving optimization via actor-critic frameworks [18]. 
+
+B. Generative Policy in Online RL 
+
+The development of generative policies in online RL has explored several model classes. Among these, diffusion models are increasingly prominent. Seminal work by Yang et al. [19] introduced the action gradient method, which combines action gradient updates with behavior cloning for online policy improvement. Research has rapidly evolved to address key challenges. To tackle training complexity, Psenka et al. [20] developed Q-score matching (QSM), which aligns Q-function gradients with the score structure of the diffusion model to bypass full backpropagation. To enhance exploration and diversity, DACER [6] introduced an entropy regulation mechanism, while deep diffusion policy gradient (DDiffPG) [21] utilized unsupervised clustering to mine diverse policy patterns. Recent advancements have pushed performance and stability further. Reweighted Score Matching (RSM) [22] yielded the diffu-sion policy mirror descent (DPMD) and soft diffusion actor-critic (SDAC) algorithms, achieving performance significantly surpassing traditional methods. Q-weighted variational pol-icy optimization (QVPO) [7] similarly enhanced stability by combining Q-weighted variational lower bounds with entropy regularization. III. P RELIMINARY 
+
+A. Online Reinforcement Learning 
+
+RL problems are typically modeled as a Markov decision process (MDP). Specifically, an MDP is defined by a quintuple 
+
+M = ( S, A, P, R, γ ) where S denotes the state space, A
+
+denotes the action space, P (s′|s, a ) denotes the transition probability from state s to state s′ after action a, R(s, a ) is the reward function, and γ ∈ (0 , 1) is the discount factor. The core objective of RL is to learn a policy π by maximizing the expected cumulative discounted reward, 
+
+J(π) = Est∼dπ , a t∼π(·| st)
+
+" ∞X
+
+> t=0
+
+γtR(st, a t)
+
+#
+
+, (1) where dπ denotes the stationary state distribution induced by policy π. Maximizing this objective enables the agent to achieve long-term optimization within the environment. In pursuing this goal, the Q-function serves as a key tool for policy optimization, defined as 
+
+Qπ (s, a ) = Es′∼P (·| s,a )
+
+h
+
+R(s, a ) + γ Ea′∼π(·| s′)[Qπ (s′, a ′)] 
+
+i
+
+.
+
+(2) This equation is known as the Bellman expectation equation, describing the expected return for each state–action pair. In online RL, agents continuously learn and improve their policies through direct interaction with the environment. This process generates state transitions (st, a t, r t, s t+1 ), which are typically stored in an experience replay buffer B to facilitate off-policy training. Through experience replay, the agent can revisit past interactions across different time steps, thereby enhancing the stability and performance of the policy. 
+
+B. Flow Matching 
+
+Flow matching [9] is a generative modeling method pro-posed in recent years. Unlike diffusion models based on stochastic differential equations (SDEs) [23], it employs deter-ministic ordinary differential equations (ODEs) to characterize the gradual transformation from a noise distribution to a target data distribution, thereby simplifying the training objective and accelerating sampling. Its core lies in learning a time-dependent velocity field that drives samples along continuous trajectories from the prior noise distribution to the target distribution. Let x0 ∼ pprior (x) denote a noise sample from the prior, and x1 ∼ pdata (x) denote a target data sample. Define linear interpolation over time t ∈ [0 , 1] :
+
+xt = (1 − t) x0 + t x 1. (3) Along this interpolation path, the corresponding target velocity field is 
+
+u(xt) ≜ dx t
+
+dt = x1 − x0. (4) The training objective of Flow Matching is to learn a neural network vθ (x, t ) to regress this target velocity field. The optimization problem is: 
+
+LFM (θ) = E x0∼pprior , x 1∼pdata , t ∼U [0 ,1] 
+
+ ∥ u(xt) − vθ (xt, t ) ∥22
+
+.
+
+(5) Upon training convergence, vθ approximates the velocity field from the noise distribution to the data distribution. Thus, samples can be generated by numerically solving the following ODE: ddt zt = vθ (zt, t ), z0 ∼ pprior . (6) Advancing the initial noise z0 over time from t = 0 to 
+
+t = 1 yields z1 as a generated sample drawn from the target distribution pdata . In practice, sampling can be performed using the Euler method or a high-order ODE solver. IV. M ETHODOLOGY 
+
+A. Flow Models as Policy Representations 
+
+Based on the flow matching principle introduced in the previous section, we represent the policy πθ (·| s) as a condi-tional generative process. This process learns a velocity field 
+
+vθ (a, t, s ) determined by the state s, which transforms a simple prior noise a0 ∼ N (0 , I ) into a high-value action a1. This generative process (i.e., policy sampling) is defined by the integral of the following ODE: 
+
+a1 = πθ (s) = a0 +
+
+Z 10
+
+vθ (at, t, s )dt . (7) In practice, this integral is solved numerically. For exam-ple, using N -step Euler method for discretization, the action sampling process is expressed as: 
+
+a1 = a0 + 1
+
+N
+
+> N
+
+X
+
+> k=1
+
+vθ (ak, kN , s ). (8) To train this conditional velocity field vθ , we make it imitate a target vector field u(at, s ). As discussed in the previous section, under the linear interpolation path at = (1 −t)a0+ta 1,this target vector field is u(at, s ) = a1 − a0. Therefore, we train the policy network θ using the conditional flow matching (CFM) loss [9]: 
+
+LCFM (θ) = Es,a 0,a 1,t [|| vθ (at, t, s ) − (a1 − a0)|| 2], (9) where a1 is an action sampled from some “target distribution” 
+
+ptarget (·| s). However, in online RL, this ptarget is unknown. How to construct this target distribution in online RL is precisely the core challenge addressed in the next section. 
+
+B. Action-Strengthening Flow Policy 
+
+As mentioned earlier, the greatest challenge in current flow strategies and online RL is the lack of a suitable target distribution. To address this issue, we propose a dynamic target guidance mechanism. Rather than seeking a fixed imitation target, we assume that the optimal policy distribution π∗(a|s)
+
+can be approximated by an energy-based model implicitly defined by the Q-function: 
+
+p(a|s) ∝ exp( Q(s, a )/α ), (10) where α is a temperature parameter. This distribution inher-ently assigns high probabilities to actions with high Q-values. Consequently, the training objective for the flow policy is reformulated as the task of approximating the energy distri-bution implicitly defined by the Q-function. A straightforward approach leveraging the Q-function gradient, i.e., ∇aQ(s, a ),to seek the mode of this distribution, is as follows: 
+
+a ←− a + ∇aQ(s, a ). (11) However, in practice, we find that this pure gradient ascent approach [19] leads to overly deterministic policies that easily get stuck in narrow local distributions, neglecting the inherent randomness of the energy distribution itself. To address this issue, we instead employ Langevin dynamics, a standard technique for sampling from energy models, to obtain samples 
+
+a∗ from p(a|s) ∝ exp( Q(s, a )/α ). This ensures our target a∗
+
+both points toward high Q-values and preserves exploration. The specific sampling process is as follows: 
+
+at = at−1 + ηa∇aQ(s, a t−1) + p2ηaαξ, (12) where ηa denotes the step size, ξ is noise sampled from the Gaussian distribution N (0 , 1) , and α is the temperature pa-rameter previously defined in Eq. (10). The specific algorithm implementation is shown in Algorithm 1. 
+
+Algorithm 1 Langevin Optimize Action 
+
+Input: state s, initial action aB from buffer, step size ηa,temperature α, number of steps Nℓ
+
+a ← aB
+
+for i = 1 to Nℓ do 
+
+Compute Q ← Qϕ(s, a ),Compute gradient ∇aQ
+
+Sample ξ ∼ N (0 , I )
+
+a ← a + ηa∇aQ + √2ηaα ξ 
+
+Output: optimized action a⋆
+
+C. Critic Learning with Double Q-networks 
+
+To mitigate overestimation bias, the critic component em-ploys a dual Q-learning approach [24]. This method involves constructing and training two Q-networks, i.e., Qϕ1 (s, a ) and 
+
+Qϕ2 (s, a ), to approximate Q-values. Furthermore, training sta-bility is enhanced by employing target networks Q ¯ϕ1 (s, a ) and 
+
+Q ¯ϕ2 (s, a ), which are soft copies of the Q-networks [25]. The objective function for updating the Q-networks is derived from minimizing the Bellman error. For each Q-network Qϕi (s, a ),the loss function JQ(ϕi) is given by the following formula: 
+
+JQ(ϕi) = E 
+
+> (s,a,r,s ′)∼B
+> a′∼πθ(·| s′)
+
+h
+
+(r + γ min  
+
+> j=1 ,2
+
+Q ¯ϕj (s′, a ′) − Qϕi (s, a )) 2i
+
+,
+
+(13) where the objective value is computed as the minimum be-tween two target Q-networks, Q ¯ϕ1 (s′, a ′) and Q ¯ϕ2 (s′, a ′).Algorithm 2 DACER-F 
+
+Input: Discount factor γ, learning rates βQ, β F , target smoothing coefficient τ
+
+Initialize value networks Qϕ1 , Q ϕ2 and flow network vθ
+
+with random parameters ϕ1, ϕ 2, θ 
+
+Initialize target networks: ¯ϕ1 ← ϕ1, ¯ϕ2 ← ϕ2
+
+for each iteration do for each interaction step do 
+
+// Actor inference 
+
+Sample a ∼ πflow (·| s) using (8) Observe reward r and new state s′
+
+Store the experience (s, a, r, s ′) in the buffer B
+
+// Replay 
+
+Sample a batch of data from B
+
+// Critic update 
+
+Update value networks by minimizing JQ(ϕi)
+
+// Actor update 
+
+Update flow network by minimizing JF (θ)
+
+Update target networks: ¯ϕi ← (1 − τ ) ¯ϕi + τ ϕ i
+
+return trained parameters θ, ϕ 1, ϕ 2
+
+D. Practical Algorithm Implementation 
+
+Our total actor loss function JF (θ) is shown below, which is a hybrid objective. 
+
+JF (θ) = Ea∼πflow  
+
+> a0∼N (0 ,1)
+
+h
+
+− Q(s, π θ (s)) + λf ∥vθ (s, a t, t ) − (a⋆ − a0)∥22
+
+i
+
+.
+
+(14) This loss function combines policy improvement with guided imitation. This loss function consists of two core components: The first part is a policy gradient term (−Q(s, π θ (s)) ), a standard RL policy improvement objective used to directly increase the Q-value of actions output by the policy πθ to maximize the expected return. The second part is a flow-matching imitation term ( λf ∥vθ (s, a t, t )−(a⋆ −a0)∥22), which trains the flow policy vθ to imitate the optimized, ‘better’ target action a⋆ generated by Algorithm 1. Regarding the design of the dynamic weighting coefficient λf , to ensure training stability, we reference the approach from [26] and set 
+
+λf to an advantage-weighted form: λf ∝ ReLU( Q(s, a ⋆) −
+
+Q(s, a B)) , where aB is the original action sampled from the replay buffer. The complete training procedure is shown in Algorithm 2. V. E XPERIMENT 
+
+In this section, we conduct extensive simulations in two key types of procedurally generated driving scenarios [27], namely multi-lane highways and urban crossroads, to demon-strate the effectiveness of the proposed DACER-F algorithm. Subsequently, to verify its broad generalization capabilities, we evaluate the algorithm on the standard RL continuous control benchmark DMC. 
+
+A. Simulation Environment 
+
+We utilize two procedurally generated scenarios: a multilane highway for high-speed continuous driving and lane merging, and an urban intersection for complex turning interactions (straight, left, right, U-turn). Both scenarios support three switchable traffic densities (“sparse”, “normal”, “dense”) with passenger cars as participants. The action space is composed of acceleration and angular velocity increments, represented as 
+
+a = [∆ ax, ∆δ]. The observation space S concatenates three components: (1) the ego-vehicle state oego = [ vx, v y , r, a x, δ ];(2) the reference trajectory oref = [ x, y, cos( φ), sin( φ)] × W ,where W is the number of waypoints; and (3) surrounding vehicles osur = [ xsur , y sur , cos( φsur ), sin( φsur ), v sur , mask ] × M ,where M is the vehicle limit and mask (1/0) indicates validity. The reward function balances trajectory tracking, control cost, ride comfort, and driving safety. The tracking reward is 
+
+RTracking = −ρlat ·hlat (elat )−ρlong ·hlong (ev )−ρϕ ·hϕ(eϕ), where 
+
+h(·) is a Huber-like penalty. The control cost RControl = −ρacc ·|ax|3 −ρsteer ·| δ−δnom | uses a cubic penalty to suppress extreme inputs. The comfort reward RComfort = −ρyaw · hyaw (r) − ρjerk ·
+
+hjerk ( ˙ ax) − ρ∆steer · h∆steer ( ˙δ) penalizes abrupt dynamics. A liveness reward rlive = ρstep · 13 · clip (vx, 0, 3.0) encourages progress. Additionally, safety-related costs include: safe following distance cfront = ρfront ·(1 −tanh( x′
+
+> sur
+
+/(vx ·∆tsafe ))) ; safe space costs ( cspace , cside , crear ) for blind spots and improper maneu-vers; and a boundary cost cboundary = ρboundary · max(0 , d bound −
+
+dthresh + 1 .0) . Severe events like collisions and going off-road incur large penalties (e.g., 200, or dynamically calculated). The mentioned reward and cost weights are listed in Table I. All values are in international units by default. TABLE I: Hyper-parameters of reward and cost.                                    
+
+> Symbol Value Symbol Value
+> ∆ax[-0.4, 0.25] ∆δ[-0.025, 0.025]
+> ax[-0.8, 0.8] δ[-0.571, 0.571]
+> ρlat 1.5 ρlong 3.0
+> ρϕ0.3 ρacc 1.0
+> ρsteer 0.1 ρyaw 0.7
+> ρjerk 0.5 ρ∆steer 0.005
+> ρstep 1.0
+> M8∆tsafe 1.0
+> ρfront 10.0 ρside 0.0
+> ρspace 2.0 ρrear 0.0
+> ρboundary 20.0 dthresh 0.5
+> Nl20
+
+B. Training Settings 
+
+We conduct all RL training using the GOPS software [28]; key hyperparameters are detailed in Table II. To ensure a balanced distribution of scenarios, we apply randomization during state initialization. The initial state of the ego-vehicle is randomly selected from the traffic flow with a potential small offset. Similarly, the reference trajectory is chosen from current or adjacent lanes with a random target speed, and TABLE II: Training hyper-parameters.                         
+
+> Symbol Value
+> Actor learning rate βF1×10 −4
+> Two Critic learning rate βQ1×10 −4
+> Sample batch size 200 Replay batch size 512 Optimizer RAD Discount factor 0.99 Number of iterations 5×10 5
+> Policy update frequency 3Target update rate τ0.001 Langevin step size ηa0.03 Langevin temperature α0.01 Policy sampling steps 1
+
+surrounding vehicles are assigned random positional offsets. For network optimization, we employ the relativistic adaptive gradient descent (RAD) [2] optimizer. We employ a stan-dard experience replay method: all experiences (s, a, r, s ′) are stored in a fixed-size replay buffer, and a batch of data is uniformly sampled from this buffer at each training iteration to update the networks. 
+
+C. Policy Performance 
+
+To validate DACER-F, we compare it against two SOTA baselines: DSAC (a distributional algorithm with a unimodal Gaussian policy) and DACER (a diffusion-based online policy, configured with 20 sampling steps for optimal performance). We evaluate total average reward (TAR), arrival rate, and collision rate, reporting the mean and 95% confidence intervals across 5 random seeds. As shown in Fig. 1, DACER-F exhibits rapid convergence and superior sample efficiency, consistently outperforming both baselines. Upon convergence, DACER-F achieves a fi-nal TAR of 1238, which is 28.0% and 34.0% higher than DACER (967) and DSAC (924), respectively. This highlights our method’s exceptional capability in learning high-return policies. 
+
+Fig. 1: Total average reward comparison during training. As shown in Fig. 2, our method exhibits superior learning efficiency, with its arrival rate stabilizing near-optimal after 
+
+Fig. 2: Arrival rate comparison during training. just 1 × 10 5 iterations. This convergence is slightly faster than DACER and significantly outpaces DSAC. Furthermore, Fig. 3 illustrates that both our DACER-F and DACER achieve low collision rates after a brief 25,000-iteration exploration phase, consistently outperforming DSAC. Crucially, our method avoids the large initial collision spike observed in DACER, demonstrating exceptional early-stage stability and rapid safe policy learning. 
+
+Fig. 3: Collision rate comparison during training. In summary, the experimental results clearly demonstrate that compared to DSAC and DACER, DACER-F achieves a superior trade-off between task performance and safety. It successfully learns to significantly improve task efficiency while simultaneously and substantially reducing safety risks. 
+
+D. Visualization Demonstrations 
+
+To qualitatively evaluate the performance of the DACER-F policy, Fig. 4 and Fig. 5 present simulation cases in two typical driving scenarios. Fig. 4 visualizes an autonomous lane change in the multi-lane scenario, demonstrating a complete and smooth maneuver. At t = 3 .0 s (Fig. 4a), the agent (red vehicle) observes the vehicle ahead and decides to execute a lane change. Subsequently, at t = 4 .0 s (Fig. 4b), the policy begins to steer smoothly and initiate the maneuver. During the 
+
+t = 6 .5 s to t = 9 .5 s period (Figs. 4c, d), the agent accelerates steadily and safely merges into the left lane. Finally, at t =12 .5 s (Fig. 4e), the vehicle has resumed stable cruising in the new lane after reaching the set reference speed. (a) t = 3 .0 s (b) t = 4 .0 s (c) t = 6 .5 s (d) t = 9 .5 s (e) t = 12 .5 s
+
+Fig. 4: Visualization of an autonomous lane change maneuver executed by the DACER-F agent (red vehicle) in the multilane scenario. The sequence (a-e) shows the agent smoothly merging into the left lane to overtake a slower vehicle.  
+
+> (a)
+
+t = 17 .5 s (b) t = 21 .0 s (c) t = 25 .0 s (d) t = 28 .5 s (e) t = 34 .5 s
+
+Fig. 5: Visualization of a complex left-turn maneuver at the crossroad. The DACER-F agent (red vehicle) demonstrates social awareness by waiting for oncoming traffic (a), identifying a safe gap (b), and then proceeding to cross the intersection (c-e). Fig. 5 visualizes the complex interaction of the DACER-F algorithm with oncoming traffic at an intersection. At 
+
+t = 17 .5 s (Fig. 5a), the agent (red vehicle) arrives at the intersection, perceives the oncoming traffic, and waits for a safe opportunity to turn. At t = 21 .0 s (Fig. 5b), the DACER-F policy accurately identifies a safe gap in the traffic flow, then begins to accelerate and initiate the left-turn maneuver. Subsequently, during the t = 25 .0 s to t = 28 .5 s period (Figs. 5c, d), the agent efficiently crosses the intersection with smooth control. Finally, at t = 34 .5 s (Fig. 5e), the vehicle safely merges into the target lane. Combining these two cases, DACER-F demonstrates its capability for driving safety, real-time performance, and control smoothness when handling complex interaction scenarios, successfully achieving a balance between task efficiency and driving safety. 
+
+E. Time Efficiency 
+
+To evaluate the time efficiency of the algorithm, Fig. 6 com-pares the iteration time (training efficiency) and inference time (deployment efficiency) of DACER-F, DACER, and DSAC. Iteration time is defined as the average duration of a single training step, excluding the parallel environment interaction time, while inference time is the time required for the policy to generate a single action. All experiments were conducted DACER-F DACER DSAC 
+
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> 70
+> 80
+> 90
+> Time (ms)
+> 20.8
+> 70.1
+> 11.7
+
+(a) Iteration time DACER-F DACER DSAC  
+
+> 0.00
+> 0.25
+> 0.50
+> 0.75
+> 1.00
+> 1.25
+> 1.50
+> 1.75
+> 2.00
+> Time (ms)
+> 0.28
+> 1.75
+> 0.22
+
+(b) Inference time Fig. 6: Computational performance analysis. (a) The average iteration time reflects the training speed. (b) The inference time measures the execution latency of the policy. using PyTorch, an Intel Core i9-12900K CPU, and an NVIDIA RTX 3090 Ti GPU. For training efficiency (Fig. 6a), our method (20.8 ms) accelerates training by 3.37 times over DACER (70.1 ms) due to flow-matching’s simpler single-step objective. Although naturally slower than the MLP-based DSAC (11.7 ms), our approach demonstrates exceptional training efficiency for a generative policy. In terms of inference efficiency (Fig. 6b), which is crucial for real-time control, DACER-F (0.28 ms) is 6.25 times faster 0.0 0.2 0.4 0.6 0.8 1.0  
+
+> Iteration ×10 6
+> 0
+> 50
+> 100
+> 150
+> 200
+> 250
+> TAR
+
+(a) Dog-run 0.0 0.2 0.4 0.6 0.8 1.0   
+
+> Iteration ×10 6
+> 0
+> 200
+> 400
+> 600
+> 800
+> TAR
+
+(b) Dog-walk 0.0 0.2 0.4 0.6 0.8 1.0   
+
+> Iteration ×10 6
+> 0
+> 200
+> 400
+> 600
+> 800
+> TAR
+
+(c) Dog-stand 0.0 0.2 0.4 0.6 0.8 1.0  
+
+> Iteration ×10 6
+> 0
+> 100
+> 200
+> 300
+> 400
+> 500
+> 600
+> TAR
+
+(d) Dog-trot 0.0 0.2 0.4 0.6 0.8 1.0   
+
+> Iteration ×10 6
+> 0
+> 100
+> 200
+> 300
+> TAR
+
+(e) Humanoid-walk 0.0 0.2 0.4 0.6 0.8 1.0   
+
+> Iteration ×10 6
+> 0
+> 200
+> 400
+> 600
+> 800
+> TAR
+
+(f) Humanoid-stand DACER-F DIPO DSAC QSM DACER SAC SDAC QVPO 
+
+Fig. 7: Evaluating curves on benchmarks with 5 random seeds. The solid lines represent the mean, while the shaded regions indicate the confidence interval over five runs. TABLE III: Average Return on DMControl benchmarks with 5 random seeds. Mean ± Std. Bold = best; Higher is better. 
+
+Environment DACER-F DIPO DSAC QSM DACER SAC SDAC QVPO 
+
+Humanoid-stand 775.8 ± 12.7 8.7 ± 0.0 4.4 ± 0.4 8.1 ± 0.1 8.1 ± 0.4 6.9 ± 0.1 7.7 ± 0.0 7.6 ± 0.4 Humanoid-walk 226.5 ± 129.2 2.5 ± 0.1 1.1 ± 0.2 1.9 ± 0.0 1.9 ± 0.8 2.3 ± 0.0 1.8 ± 0.0 1.6 ± 0.1 Dog-trot 585.4 ± 28.8 449.9 ± 108.3 7.7 ± 3.2 187.5 ± 48.1 9.2 ± 1.4 10.0 ± 1.5 40.4 ± 34.2 27.3 ± 26.4 Dog-stand 879.2 ± 27.9 810.0 ± 27.5 25.1 ± 3.4 787.7 ± 28.2 25.6 ± 6.9 325.9 ± 253.8 639.0 ± 60.6 71.5 ± 61.3 Dog-walk 788.7 ± 37.4 707.4 ± 105.4 10.5 ± 2.0 458.3 ± 13.6 9.0 ± 0.7 162.4 ± 215.8 179.2 ± 138.1 31.1 ± 23.8 Dog-run 232.6 ± 27.3 167.3 ± 18.1 6.7 ± 1.4 157.0 ± 19.5 6.5 ± 0.5 71.5 ± 48.6 75.5 ± 48.4 6.2 ± 0.7 
+
+than DACER (1.75 ms), yielding an 84.0% time reduction. This acceleration results from replacing multi-step diffusion sampling with single-step generation. Notably, our 0.28 ms latency is highly competitive with the lightweight DSAC (0.22 ms), as both require only a single forward pass. Thus, DACER-F fully meets real-time standards, achieving MLP-level effi-ciency while preserving the powerful modeling capabilities of a generative policy. In conclusion, our method maintains powerful model ex-pressiveness while achieving efficient training and extremely low inference latency, striking an excellent trade-off between model performance and practical deployment efficiency. 
+
+F. Scalability Analysis 
+
+To validate DACER-F as a general-purpose RL algorithm beyond the autonomous driving domain, we further bench-mark it on standard continuous-control tasks. Specifically, we adopt DMC, a widely used continuous-control RL bench-mark, and evaluate DACER-F on six challenging locomotion tasks. These tasks require high-dimensional control and pre-cise balance/coordination, including agents such as humanoid (state/action dimensions: 67/24) and dog (state/action dimen-sions: 223/38). We compare DACER-F with seven representa-tive online RL baselines, including SAC [29] and DSAC [10], as well as expressive generative-policy methods: DIPO [19], QSM [20], DACER [6], SDAC [22], and QVPO [7]. The curves of the baseline experiment are illustrated in Fig. 7. And the detailed numerical comparisons across 6 high-dimensional locomotion tasks are summarized in Table III. DACER-F consistently delivers the best TAR across all six tasks, demonstrating remarkable stability and effectiveness. Experimental results show that baselines such as DSAC and DACER exhibit near-zero performance on complex tasks like humanoid-stand. We hypothesize that DSAC’s degradation is related to the sparse-reward nature of DMC locomotion tasks, under which distributional Q estimation is more prone to pessimistic value predictions, thereby weakening the learning signal for policy improvement. In contrast, methods based on vanilla diffusion policies (e.g., DACER) can be more suscep-tible to unstable learning dynamics in online RL. Without an efficient guidance mechanism like our Langevin-guided dynamic targets, policy optimization may become difficult in high-dimensional state–action spaces due to the resulting complex optimization landscape. Notably, in the humanoid-stand task, DACER-F attains an average TAR of 775.8, substantially exceeding DACER (8.1) and SAC (6.9). In the humanoid-walk task, DACER-F achieves 226.5, again outperforming all baselines by a large margin, including DIPO (2.5) and SAC (2.3). This underscores the effectiveness of Langevin-guided flow matching in navigat-ing complex energy distributions that traditional Gaussian or vanilla diffusion policies struggle to capture. In the dog-run task, DACER-F reaches 232.6, surpassing the strong DIPO baseline (167.3) by 39.0%. Overall, DACER-F demonstrates strong performance on challenging locomotion tasks while preserving the real-time inference advantage of single-step flow matching. VI. C ONCLUSION 
+
+In this paper, we propose DACER-F, a low-latency genera-tive policy for real-time autonomous driving decision-making and control. We address two critical challenges: (i) the high inference latency of existing generative policies and (ii) the lack of reliable target distributions in online RL. To reduce inference latency, we adopt flow matching as the policy representation, enabling efficient single-step sampling. To sta-bilize learning, we introduce a Langevin dynamics guidance mechanism that leverages the Q-function as an implicit energy model to construct dynamic target distributions with improved quality. Extensive driving simulations demonstrate the effec-tiveness of DACER-F, delivering strong performance across key metrics while maintaining an ultra-low inference latency of 0.28 ms. Empirical results on DMC indicate that DACER-F generalizes beyond driving, reaching 775.8 on humanoid-stand and consistently outperforming competitive baselines. Future work will focus on robustness under more challenging and diverse conditions. REFERENCES [1] S. E. Li, Reinforcement Learning for Sequential Decision and Optimal Control . Singapore: Springer Nature, 2023. [2] Y. Lyu, X. Zhang, S. E. Li, J. Duan, L. Tao, Q. Xu, L. He, and K. Li, “Conformal symplectic optimization for stable reinforcement learning,” 
+
+IEEE Transactions on Neural Networks and Learning Systems , vol. 36, no. 6, pp. 11 049–11 063, 2025. [3] Y. Wang, W. Wang, X. Song, T. Liu, Y. Yin, L. Chen, L. Wang, J. Duan, and S. E. Li, “Ode-based smoothing neural network for reinforcement learning tasks,” in International Conference on Learning Representations (ICLR) , 2025. [4] Z. Wang, J. J. Hunt, and M. Zhou, “Diffusion policies as an expressive policy class for offline reinforcement learning,” in International Confer-ence on Learning Representations (ICLR) , 2023. [5] P. Hansen-Estruch, I. Kostrikov, M. Janner, J. G. Kuba, and S. Levine, “Idql: Implicit q-learning as an actor-critic method with diffusion policies,” arXiv preprint arXiv:2304.10573 , 2023. [6] Y. Wang, L. Wang, Y. Jiang, W. Zou, T. Liu, X. Song, W. Wang, L. Xiao, J. Wu, J. Duan et al. , “Diffusion actor-critic with entropy regulator,” Advances in Neural Information Processing Systems , vol. 37, pp. 54 183–54 204, 2024. [7] S. Ding, K. Hu, Z. Zhang, K. Ren, W. Zhang, J. Yu, J. Wang, and Y. Shi, “Diffusion-based reinforcement learning via q-weighted variational pol-icy optimization,” Advances in Neural Information Processing Systems ,vol. 37, pp. 53 945–53 968, 2024. [8] Y. Wang, L. Wang, M. Tan, W. Zou, X. Song, W. Wang, T. Liu, G. Zhan, T. Zhu, S. Liu et al. , “Enhanced dacer algorithm with high diffusion efficiency,” arXiv preprint arXiv:2505.23426 , 2025. [9] Y. Lipman, R. T. Q. Chen, H. Ben-Hamu, M. Nickel, and M. Le, “Flow matching for generative modeling,” in International Conference on Learning Representations (ICLR) , 2023. [10] J. Duan, W. Wang, L. Xiao, J. Gao, S. E. Li, C. Liu, Y. Zhang, B. Cheng, and K. Li, “Distributional soft actor-critic with three refinements,” IEEE Trans. Pattern Anal. Mach. Intell. , vol. 47, no. 5, pp. 3935–3946, 2025. [11] Y. Tassa, Y. Doron, A. Muldal, T. Erez, Y. Li, D. d. L. Casas, D. Budden, A. Abdolmaleki, J. Merel, A. Lefrancq et al. , “Deepmind control suite,” 
+
+arXiv preprint arXiv:1801.00690 , 2018. [12] C. Chi, Z. Xu, S. Feng, E. Cousineau, Y. Du, B. Burchfiel, R. Tedrake, and S. Song, “Diffusion policy: Visuomotor policy learning via ac-tion diffusion,” The International Journal of Robotics Research , p. 02783649241273668, 2023. [13] A. Ajay, Y. Du, A. Gupta, J. B. Tenenbaum, T. S. Jaakkola, and P. Agrawal, “Is conditional generative modeling all you need for decision making?” in International Conference on Learning Representations (ICLR) , 2023. [14] B. Kang, X. Ma, C. Du, T. Pang, and S. Yan, “Efficient diffusion policies for offline reinforcement learning,” Advances in Neural Information Processing Systems , vol. 36, pp. 67 195–67 212, 2023. [15] Y. Chen, H. Li, and D. Zhao, “Boosting continuous control with consistency policy,” in Autonomous Agents and Multiagent Systems, (AAMAS) , 2024, pp. 335–344. [16] X. Duan, Y. He, F. Tajwar, R. Salakhutdinov, J. Z. Kolter, and J. Schnei-der, “Accelerating diffusion models in offline rl via reward-aware con-sistency trajectory distillation,” arXiv preprint arXiv:2506.07822 , 2025. [17] R. Zhang, Z. Luo, J. Sj¨ olund, T. Sch¨ on, and P. Mattsson, “Entropy-regularized diffusion policy with q-ensembles for offline reinforcement learning,” Advances in Neural Information Processing Systems , vol. 37, pp. 98 871–98 897, 2024. [18] C.-X. Gao, C. Wu, M. Cao, C. Xiao, Y. Yu, and Z. Zhang, “Behavior-regularized diffusion policy optimization for offline reinforcement learn-ing,” arXiv preprint arXiv:2502.04778 , 2025. [19] L. Yang, Z. Huang, F. Lei, Y. Zhong, Y. Yang, C. Fang, S. Wen, B. Zhou, and Z. Lin, “Policy representation via diffusion probability model for reinforcement learning,” arXiv preprint arXiv:2305.13122 , 2023. [20] M. Psenka, A. Escontrela, P. Abbeel, and Y. Ma, “Learning a diffusion model policy from rewards via q-score matching,” in International Conference on Machine Learning (ICML) , vol. 235, 2024, pp. 41 163– 41 182. [21] S. Li, R. Krohn, T. Chen, A. Ajay, P. Agrawal, and G. Chalvatzaki, “Learning multimodal behaviors from scratch with diffusion policy gradient,” Advances in Neural Information Processing Systems , vol. 37, pp. 38 456–38 479, 2024. [22] H. Ma, T. Chen, K. Wang, N. Li, and B. Dai, “Efficient online reinforcement learning for diffusion policy,” in International Conference on Machine Learning (ICML) , vol. 267, 2025. [23] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B. Poole, “Score-based generative modeling through stochastic differen-tial equations,” in International Conference on Learning Representations (ICLR) , 2021. [24] S. Fujimoto, H. Hoof, and D. Meger, “Addressing function approxi-mation error in actor-critic methods,” in International conference on machine learning (ICML) . PMLR, 2018, pp. 1587–1596. [25] H. Van Hasselt, A. Guez, and D. Silver, “Deep reinforcement learning with double q-learning,” in Proceedings of the AAAI conference on artificial intelligence , vol. 30, no. 1, 2016. [26] L. Lv, Y. Li, Y. Luo, F. Sun, T. Kong, J. Xu, and X. Ma, “Flow-based pol-icy for online reinforcement learning,” arXiv preprint arXiv:2506.12811 ,2025. [27] Y. Jiang, G. Zhan, Z. Lan, C. Liu, B. Cheng, and S. E. Li, “A rein-forcement learning benchmark for autonomous driving in general urban scenarios,” IEEE Transactions on Intelligent Transportation Systems ,vol. 25, no. 5, pp. 4335–4345, 2023. [28] W. Wang, Y. Zhang, J. Gao, Y. Jiang, Y. Yang, Z. Zheng, W. Zou, J. Li, C. Zhang, W. Cao et al. , “Gops: A general optimal control problem solver for autonomous driving and industrial control applications,” 
+
+Communications in Transportation Research , vol. 3, p. 100096, 2023. [29] T. Haarnoja, A. Zhou, P. Abbeel, and S. Levine, “Soft actor-critic: Off-policy maximum entropy deep reinforcement learning with a stochas-tic actor,” in International conference on machine learning (ICML) .PMLR, 2018, pp. 1861–1870.

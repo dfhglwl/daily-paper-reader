@@ -1,0 +1,724 @@
+Title: Robust Unscented Kalman Filtering via Recurrent Meta-Adaptation of Sigma-Point Weights
+
+URL Source: https://arxiv.org/pdf/2603.04360v1
+
+Published Time: Thu, 05 Mar 2026 02:31:25 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Robust Unscented Kalman Filtering via Recurrent Meta-Adaptation of Sigma-Point Weights 
+
+Kenan Majewski*, Michał Modzelewski, Marcin ˙ Zugaj, Piotr Lichota 
+
+Institute of Aeronautics and Applied Mechanics Warsaw University of Technology 
+
+Warsaw, Poland *kenan.majewski.dokt@pw.edu.pl 
+
+Abstract —The Unscented Kalman Filter (UKF) is a ubiquitous tool for nonlinear state estimation; however, its performance is limited by the static parameterization of the Unscented Transform (UT). Conventional weighting schemes, governed by fixed scaling parameters, assume implicit Gaussianity and fail to adapt to time-varying dynamics or heavy-tailed measurement noise. This work introduces the Meta-Adaptive UKF (MA-UKF), a framework that reformulates sigma-point weight synthesis as a hyperparameter optimization problem addressed via memory-augmented meta-learning. Unlike standard adaptive filters that rely on instantaneous heuristic corrections, our approach em-ploys a Recurrent Context Encoder to compress the history of measurement innovations into a compact latent embedding. This embedding informs a policy network that dynamically synthesizes the mean and covariance weights of the sigma points at each time step, effectively governing the filter’s trust in the prediction versus the measurement. By optimizing the system end-to-end through the filter’s recursive logic, the MA-UKF learns to maxi-mize tracking accuracy while maintaining estimation consistency. Numerical benchmarks on maneuvering targets demonstrate that the MA-UKF significantly outperforms standard baselines, exhibiting superior robustness to non-Gaussian glint noise and effective generalization to out-of-distribution (OOD) dynamic regimes unseen during training. 
+
+Index Terms —Unscented Kalman Filter, Meta-Learning, Adaptive Filtering, Nonlinear Estimation, Robust Tracking 
+
+I. I NTRODUCTION 
+
+The Unscented Kalman Filter (UKF) has established itself as a standard of nonlinear state estimation since its inception by Julier and Uhlmann [1]. By propagating a deterministic set of sigma points through the nonlinear system dynamics, the UKF captures posterior moments accurate to the third order for Gaussian inputs, circumventing the linearization errors in-herent in the Extended Kalman Filter (EKF) without requiring explicit Jacobian calculations [2]. However, the performance of the standard UKF is strictly governed by the parameteriza-tion of the Unscented Transform (UT), specifically, the scaling parameters ( α, β, κ) that determine the spread and weighting of the sigma points. While early efforts have explored model-based learning to optimize these sigma points [3], conventional implementations still largely rely on static parameters selected 
+
+a priori based on implicit assumptions of Gaussianity and sta-tionary noise statistics. Consequently, the filter’s adaptability 
+
+This work has been submitted to the IEEE for possible publication. Copyright may be transferred without notice, after which this version may no longer be accessible. 
+
+is severely limited in complex environments characterized by maneuvering targets, non-stationary dynamics, or heavy-tailed measurement noise [4]. To address these limitations, the field of Adaptive Kalman Filtering (AKF) has historically relied on heuristic noise estimation methods, such as Sage-Husa estimators [5] or Interacting Multiple Model (IMM) architectures [6]. While IMMs offer robustness by switching between varying dynamic models, they are computationally expensive and rely on a pre-defined, finite set of modes. More recently, the convergence of signal processing and deep learning has given rise to the broader paradigm of AI-aided Kalman filters [7]. Historically, the relationship between recursive estimators and neural net-works was often inverted, such as using EKFs to explicitly train the weights of Recurrent Neural Networks (RNNs) [8]. Today, deep learning actively enhances state estimation logic. Recent literature features model-based deep learning for ma-neuvering targets [9], self-supervised deep state-space models for tracking [10], and hybrid architectures that fuse RNNs with Kalman variants for complex trajectory prediction [11] and real-time sensor drift compensation [12]. In parallel, advancements in Differentiable Filtering enable filter parameters to be optimized end-to-end via backprop-agation [13], [14]. This concept has successfully been ex-panded across various Bayesian estimators, including end-to-end learning for differentiable particle filters [15] and neural-augmented adaptive grids for point-mass filters [16]. For continuous state spaces, approaches such as KalmanNet [17] learn to dynamically adjust the Kalman gain or noise co-variances from data streams. While these methods improve state estimation, many largely treat the underlying sigma-point geometry as a fixed inductive bias. Recognizing this gap, modern studies have begun to ex-plicitly target the adaptation of the Unscented Transform. Recent frameworks have proposed data-driven unknown input estimation for sigma-point filters [18], and utilized RNNs to auto-tune standard UKF hyperparameters dynamically [19]. Furthermore, neural networks have recently been proposed to fine-tune the explicit spatial placement of sample points in Gaussian filters [20]. However, these approaches still largely focus on tuning standard scalar constraints or rely on instan-taneous heuristic corrections, stopping short of reformulating the full synthesis of the UT as a continuous hyper-control 
+
+> arXiv:2603.04360v1 [cs.LG] 4 Mar 2026
+
+problem. Leveraging advancements in Gradient-Based Meta-Learning [21], [22], particularly foundational works that cast ”learning to learn” as a temporal sequence modeling problem via Memory-Augmented architectures [23], [24], we propose a novel framework that reformulates the tuning of sigma-point weights as a sequential decision-making process. In this context, the filter is viewed as a differentiable computational graph where hyperparameters are adapted in real-time to unseen dynamic regimes. This represents a shift from static model-based estimation to context-aware meta-learning, where adaptation logic is amortized into the hidden states of an RNN. In this work, we introduce the Meta-Adaptive UKF (MA-UKF). In contrast to end-to-end neural architectures that bypass state-space modeling, our framework maintains the structural integrity of the Bayesian recursion while adaptively regulating the UT parameters through a learned policy. Central to our architecture is a Recurrent Context Encoder [25], which compresses the history of measurement innovations into a latent embedding. This embedding enables the system to distinguish between dynamic maneuvers and sensor anomalies without explicit mode-switching logic. A policy network then maps this context to the optimal mean and covariance weights for the sigma points, satisfying the mathematical convexity constraints of the UT. By training the system end-to-end using analytical gradients through time [26], the MA-UKF learns to balance instantaneous tracking accuracy with long-term estimation stability. The contributions of this paper are threefold: 1) Differentiable Meta-Filtering: We cast the Unscented Transform parameterization as a bi-level optimization problem within a differentiable computational graph. This enables end-to-end learning of optimal, data-driven sigma-point weights via analytical gradients through time.. 2) Memory-Augmented Adaptation: We introduce a Re-current Context Encoder that compresses innovation history into a latent embedding. This temporal context drives a learned policy to dynamically modulate the sigma-point weights in real-time, effectively distinguish-ing actual maneuvers from sensor anomalies. 3) Robustness and OOD Generalization: We demonstrate that the MA-UKF significantly outperforms optimized standard filters and IMM baselines under heavy-tailed glint noise. Crucially, the learned policy exhibits strong out-of-distribution (OOD) generalization, maintaining accurate tracking against high-agility maneuvers unseen during training. The remainder of this paper is organized as follows: Section II provides the theoretical framework, detailing the Unscented Transform and the Meta-Learning objective. Sec-tion III describes the proposed MA-UKF architecture and the training methodology. Section IV presents the experimental setup and comparative results. Finally, Section V concludes the paper and outlines future research directions. II. T HEORETICAL FRAMEWORK 
+
+A. Problem Definition 
+
+Consider the state estimation problem for a discrete-time nonlinear dynamic system. While standard filtering approaches assume the system follows nominal Gaussian statistics, practi-cal applications often involve regime shifts and distributional mismatches. Let the true generative process be defined by: 
+
+xk = f (xk−1) + wk, wk ∼ D w(·), (1) 
+
+zk = h(xk) + vk, vk ∼ D v (·), (2) where xk ∈ Rnx is the state vector at time step k, zk ∈ Rnz
+
+is the measurement vector, and f : Rnx → Rnx and h :
+
+Rnx → Rnz are nonlinear transition and observation functions, respectively. In standard formulations, the process noise wk and measure-ment noise vk are assumed to be drawn from fixed Gaussian distributions, i.e., Dw = N (0, Q) and Dv = N (0, R). How-ever, in robust tracking scenarios (e.g., maneuvering targets or radar glint), the true distributions Dw and Dv are time-varying, multimodal, or characterized by non-zero skewness and high kurtosis. Our objective is to derive an optimal estimator Fθ parame-terized by θ, which produces a state estimate ˆxk at each time step. We seek to minimize the expected cumulative estimation error over a finite horizon T :
+
+θ∗ = arg min  
+
+> θ
+
+Eτ ∼P τ
+
+" TX
+
+> k=1
+
+∥xk − F θ (ˆ xk−1, zk)∥22
+
+#
+
+, (3) where τ = ( x0: T , z1: T ) represents a trajectory sampled from the true system distribution Pτ . Unlike traditional adaptive filtering, which attempts to explicitly estimate time-varying noise covariances Q or R, we seek to optimize the internal integration parameters of the filter itself directly via the parameter set θ.
+
+B. Standard Unscented Kalman Filter Formulation 
+
+The UKF approximates the state distribution using a set of 
+
+2nx + 1 sigma points, Xk−1 = {X ik−1}2nx 
+
+> i=0
+
+, with associated weights W (m) 
+
+> i
+
+for the mean and W (c) 
+
+> i
+
+for the covariance. Given the posterior estimate ˆxk−1 and covariance Pk−1 from the previous step, the sigma points are generated as: 
+
+X 0 
+
+> k−1
+
+= ˆ xk−1 (4) 
+
+X ik−1 = ˆ xk−1 +
+
+hp (nx + λ)Pk−1
+
+i
+
+> i
+
+, i = 1 , . . . , n x (5) 
+
+X i+nx 
+
+> k−1
+
+= ˆ xk−1 −
+
+hp (nx + λ)Pk−1
+
+i
+
+> i
+
+, i = 1 , . . . , n x (6) where [·]i denotes the i-th column of the matrix square root, typically computed via the lower-triangular Cholesky decomposition. The scaling parameter is defined as λ =
+
+α2(nx + κ) − nx, where α controls the spread of the sigma points and κ is a secondary scaling parameter. The constant weights corresponding to these points are given by: 
+
+W (m)0 = λnx + λ , (7) 
+
+W (c)0 = λnx + λ + (1 − α2 + β), (8) 
+
+W (m) 
+
+> i
+
+= W (c) 
+
+> i
+
+= 12( nx + λ) , i = 1 . . . 2nx. (9) where β is a scalar parameter used to incorporate prior knowledge of the underlying distribution (typically β = 2 for optimal Gaussian approximations). 
+
+Prediction Step: The sigma points are propagated through the nonlinear process function: 
+
+X ik|k−1 = f (X ik−1). (10) The a priori state mean and covariance are computed via weighted recombination: 
+
+ˆx− 
+
+> k
+
+=
+
+> 2nx
+
+X
+
+> i=0
+
+W (m) 
+
+> i
+
+X ik|k−1, (11) 
+
+P− 
+
+> k
+
+=
+
+> 2nx
+
+X
+
+> i=0
+
+W (c) 
+
+> i
+
+(X ik|k−1 − ˆx− 
+
+> k
+
+)( X ik|k−1 − ˆx− 
+
+> k
+
+)⊤ + Qk. (12) 
+
+Update Step: The propagated sigma points are then passed through the measurement function: 
+
+Zik|k−1 = h(X ik|k−1). (13) The predicted measurement mean ˆz− 
+
+> k
+
+, innovation covariance 
+
+Pzz , and cross-covariance Pxz are computed as: 
+
+ˆz− 
+
+> k
+
+=
+
+> 2nx
+
+X
+
+> i=0
+
+W (m) 
+
+> i
+
+Zik|k−1, (14) 
+
+Pzz =
+
+> 2nx
+
+X
+
+> i=0
+
+W (c) 
+
+> i
+
+(Zik|k−1 − ˆz− 
+
+> k
+
+)( Zik|k−1 − ˆz− 
+
+> k
+
+)⊤ + Rk, (15) 
+
+Pxz =
+
+> 2nx
+
+X
+
+> i=0
+
+W (c) 
+
+> i
+
+(X ik|k−1 − ˆx− 
+
+> k
+
+)( Zik|k−1 − ˆz− 
+
+> k
+
+)⊤. (16) Finally, the Kalman gain Kk is computed, and the posterior estimates are updated: 
+
+Kk = Pxz P−1 
+
+> zz
+
+, (17) 
+
+ˆxk = ˆ x− 
+
+> k
+
++ Kk(zk − ˆz− 
+
+> k
+
+), (18) 
+
+Pk = P− 
+
+> k
+
+− KkPzz K⊤ 
+
+> k
+
+. (19) 
+
+C. The Paradigm of Differentiable Filtering 
+
+Differentiable Filtering represents the convergence of Bayesian recursive estimation and deep learning. Traditionally, Kalman filters and neural networks were treated as separate entities: the former as model-based estimators and the latter as data-driven approximators. In the Differentiable Filtering paradigm, the filter itself is cast as a computational graph, analogous to a RNN, but with an inductive bias strictly imposed by the physical equations of motion and the Bayesian update rules [13], [14], [27]. Let Fθ denote the single-step UKF update function defined by equations (4) through (19). We can view the filter state at time k as a tuple sk = (ˆ xk, Pk). The filter evolution is then expressed as a differentiable recurrence: 
+
+sk = Fθ (sk−1, zk), (20) where θ represents the tunable parameters (e.g., the policy network weights governing sigma-point scaling). Crucially, operations such as the Cholesky decomposition required for the matrix square root in (5) and (6) are differentiable for positive-definite matrices. This enables the continuous flow of gradients through the stochastic covariance parameters of the filter [28]. To optimize θ, we compute the gradient of the cumulative loss L with respect to the parameters. Since the parameters 
+
+θ influence the entire trajectory, we employ Backpropagation Through Time (BPTT) [29]. Applying the chain rule, the total gradient is the accumulation of gradients at each time step: 
+
+dL
+
+dθ =
+
+> T
+
+X
+
+> k=1
+
+∂Lk
+
+∂sk
+
+dsk
+
+dθ , (21) where the total state derivative dsk 
+
+> dθ
+
+is computed recursively: 
+
+dsk
+
+dθ = ∂Fθ
+
+∂θ + ∂Fθ
+
+∂sk−1
+
+· dsk−1
+
+dθ . (22) Here, ∂Fθ 
+
+> ∂sk−1
+
+is the Jacobian of the UKF update step, capturing exactly how uncertainty Pk−1 propagates through the system nonlinearities k. By unrolling this computational graph and optimizing θ via automatic differentiation, we successfully retain the structural interpretability of the Kalman filter while gaining the data-driven adaptability of neural networks. 
+
+D. Context-Driven Meta-Policy Formulation 
+
+A fundamental limitation of the standard UKF is the static parameterization of the UT. The weights W = {W (m), W (c)}
+
+enforce a time-invariant geometry on the sigma points, im-plicitly assuming that the system’s nonlinearity and noise statistics remain stationary. In dynamic environments, this rigidity forces a compromise between tracking agility (high reactivity) and noise suppression (high stability). To resolve this, we reformulate the filtering problem within the paradigm of Differentiable Programming [24]. We treat the UKF not as a fixed algorithm, but as a directed computational graph, parameterized by a meta-policy πθ . This policy func-tions as a hyper-controller, dynamically modulating the filter’s integration parameters based on the estimation context. At each time step k, the policy processes the measurement innovation νk. This proxy signal is used to update a recurrent hidden state hk. This latent state summarizes the history of the trajectory, allowing the network to distinguish between tran-sient maneuvers and non-physical sensor noise. The adaptive weights are then synthesized as: 
+
+hk = RNN θ (νk, hk−1), (23) 
+
+Wk = {W (m) 
+
+> k
+
+, W (c) 
+
+> k
+
+} = πθ (hk). (24) These dynamic weights are immediately injected into the standard UKF prediction and update cycle to produce the posterior state estimate ˆxk.This architecture constitutes a bi-level optimization prob-lem [30]. The inner loop performs the recursive Bayesian state estimation, while the outer loop optimizes the policy parameters θ. Since the constituent operations of the UKF, including matrix multiplication, Cholesky decomposition, and linear system solution, are differentiable almost everywhere, the gradient of the cumulative estimation error ∇θ L can be computed analytically via BPTT. III. M ETA -A DAPTIVE UNSCENTED KALMAN FILTER 
+
+This section details the architecture of the proposed Meta-Adaptive UKF (MA-UKF). The framework is designed to decouple the physical state propagation from the statistical parameterization of the filter. As illustrated in Fig. 1, the system comprises three functional modules: innovation feature extraction, recurrent context encoding, and convex weight synthesis. 
+
+A. Innovation Feature Extraction 
+
+In recursive estimation, the innovation sequence νk con-stitutes the primary signal for adaptation. While classical adaptive filters utilize scalar metrics such as the Normalized Innovation Squared (NIS) to trigger heuristic logic [31], raw innovation magnitudes are highly sensitive to sensor modality, target range, and scale. To ensure numerical stability and facilitate efficient gradient propagation, we employ a learnable feature extraction stage. To circumvent the cyclic dependency we compute a proxy innovation ˜νk ∈ Rnz using the nominal geometric spread from the previous time step: 
+
+˜νk = zk −
+
+> 2nx
+
+X
+
+> i=0
+
+W (m)
+
+> i,k −1
+
+Zik|k−1. (25) This raw signal is projected into a high-dimensional feature space via a linear projection followed by Layer Normaliza-tion [32]: 
+
+ek = ReLU (LayerNorm (Win ˜νk + bin )) , (26) where Win ∈ Rdh×nz is a learnable projection matrix, 
+
+bin ∈ Rdh is a bias, and ek ∈ Rdh denotes the static feature vector of the instantaneous residual. This normalization is essential for robustness in the glint noise regime, where outlier measurements may exceed nominal variances by several orders of magnitude. 
+
+B. Recurrent Context Encoding 
+
+Instantaneous residuals alone are insufficient to distinguish between measurement outliers and the onset of a maneuver. While both phenomena yield large norms ∥νk∥, they exhibit distinct temporal structures: glint is typically uncorrelated and transient, whereas maneuvers manifest as correlated, low-frequency trends. To capture these temporal dependencies, we employ a Gated Recurrent Unit (GRU). The GRU functions as a non-linear Infinite Impulse Response (IIR) filter, integrating information over time to update a latent context embedding hk ∈ Rdh .The update dynamics are governed by: 
+
+uk = σg (Wuek + Uuhk−1 + bu), (27) 
+
+rk = σg (Wr ek + Ur hk−1 + br ), (28) 
+
+˜hk = tanh( Whek + Uh(rk ⊙ hk−1) + bh), (29) 
+
+hk = (1 − uk) ⊙ hk−1 + uk ⊙ ˜hk, (30) where σg (·) denotes the sigmoid activation, ⊙ represents the Hadamard product, and uk and rk are the update and reset gates, respectively. The parameter matrices are defined as Wu, Wr , Wh ∈ Rdh×dh for the input weights, and 
+
+Uu, Ur , Uh ∈ Rdh×dh for the recurrent weights, with cor-responding biases bu, br , bh ∈ Rdh . This mechanism allows the policy to selectively suppress high-frequency noise while retaining sensitivity to genuine dynamic shifts. 
+
+C. Convex Sigma-Point Weight Synthesis 
+
+The core contribution of the MA-UKF is the learned policy mapping πθ : hk → W k, which dynamically synthesizes the Unscented Transform parameters. First, the high-dimensional hidden state is projected onto a lower-dimensional context manifold ck ∈ Rdp :
+
+ck = ReLU (LayerNorm (Wproj hk + bproj )) , (31) where Wproj ∈ Rdp×dh and bproj ∈ Rdp .A critical constraint in Unscented filtering is the numer-ical stability of the covariance update, which requires the covariance matrices to remain positive semi-definite. Standard parameterizations (e.g., utilizing negative λ values) can yield non-positive definite matrices, inducing numerical instability and potentially leading to Cholesky decomposition failures during training. To guarantee stability, we enforce a convexity constraint on the sigma-point weights. The mean weights 
+
+W (m) and covariance weights W (c) are generated via aSoftmax function: 
+
+l(m) 
+
+> k
+
+= W(m) 
+
+> π
+
+ck + b(m) 
+
+> π
+
+, (32) 
+
+W (m) 
+
+> i,k
+
+= exp( l(m) 
+
+> i,k
+
+)
+
+P2nx 
+
+> j=0
+
+exp( l(m) 
+
+> j,k
+
+) , (33) where W(m) 
+
+> π
+
+∈ R(2 nx+1) ×dp and b(m) 
+
+> π
+
+∈ R2nx+1 . The co-variance weights W (c) are computed similarly. This constraint ensures that P 
+
+> i
+
+Wi = 1 and Wi > 0, guaranteeing that the predicted covariance P− 
+
+> k
+
+remains positive definite. While this restriction prevents the filter from capturing the higher-order kurtosis effects possible with negative weights, it provides the strict stability guarantee required for end-to-end differentiable training, ensuring that the Cholesky decompositions in the UKF remain valid throughout the optimization process. Meta-Learning Loop          
+
+> Differentiable UKF
+> Pk−1
+> ˆxk−1
+> Wk−1
+> zk
+> hk−1
+> Sigma Point Generation
+> Dynamics
+> f(·)Xk|k−1
+> Measurement
+> h(·)Zk|k−1
+> UKF Step
+> ˆxk
+> Pk
+> Reweighting
+> −˜νkEncoder ek
+> GRU
+> hk
+> Context Projection ckPolicy Head
+> Decoder
+> Softmax Constraint Wk
+
+Fig. 1. Architecture of the Meta-Adaptive UKF (MA-UKF). A Recurrent Context Encoder processes the innovation history to generate a latent context embedding, which drives a policy network to modulate the sigma-point weights in real-time. 
+
+D. Algorithm and Computational Flow 
+
+The recursive execution of the MA-UKF is summarized in Algorithm 1. A key design principle is the decoupling of the optimization burden: the computationally expensive training of the meta-policy is performed offline, allowing the dynamic, real-time adaptation of the filter parameters to be executed online via a highly efficient single forward pass of the lightweight RNN. 
+
+Algorithm 1 Meta-Adaptive UKF Recursive Step 
+
+Require: ˆxk−1, Pk−1, Wk−1, hk−1, zk, Qk, Rk, γ
+
+1: Xk−1 ← ˆxk−1, ˆxk−1 ± pγPk−1
+
+
+
+2: Xk|k−1 ← f (Xk−1)
+
+3: Zk|k−1 ← h(Xk|k−1)
+
+4: ˜νk ← zk − P2nx 
+
+> i=0
+
+W (m)
+
+> i,k −1
+
+Zk|k−1
+
+5: ek ← ReLU(LayerNorm( Win ˜νk + bin )) 
+
+6: hk ← GRU( ek, hk−1)
+
+7: Wk = {W (m) 
+
+> k
+
+, W (c) 
+
+> k
+
+} ← πθ (hk)
+
+8: ˆx− 
+
+> k
+
+← P2nx 
+
+> i=0
+
+W (m) 
+
+> i,k
+
+X ik|k−1
+
+9: P− 
+
+> k
+
+← P2nx 
+
+> i=0
+
+W (c) 
+
+> i,k
+
+(X ik|k−1 − ˆx− 
+
+> k
+
+)( X ik|k−1 − ˆx− 
+
+> k
+
+)⊤ + Qk
+
+10: ˆz− 
+
+> k
+
+← P2nx 
+
+> i=0
+
+W (m) 
+
+> i,k
+
+Zik|k−1
+
+11: Pzz ← P2nx 
+
+> i=0
+
+W (c) 
+
+> i,k
+
+(Zik|k−1 − ˆz− 
+
+> k
+
+)( Zik|k−1 − ˆz− 
+
+> k
+
+)⊤ + Rk
+
+12: Pxz ← P2nx 
+
+> i=0
+
+W (c) 
+
+> i,k
+
+(X ik|k−1 − ˆx− 
+
+> k
+
+)( Zik|k−1 − ˆz− 
+
+> k
+
+)⊤
+
+13: Kk ← Pxz P−1
+
+> zz
+
+14: ˆxk ← ˆx− 
+
+> k
+
++ Kk(zk − ˆz− 
+
+> k
+
+)
+
+15: Pk ← P− 
+
+> k
+
+− KkPzz K⊤
+
+> k
+
+16: return ˆxk, Pk, Wk, hk
+
+E. Computational Complexity Analysis 
+
+For real-time tracking applications, computational efficiency is paramount. The overhead introduced by the Meta-Adaptive block is governed by the feature extraction, GRU state up-date, and policy projection layers, yielding an additive time complexity of O(d2 
+
+> h
+
++ dhnz + dhdp + nxdp). Given the compact dimensionality of the proposed architecture ( nx =5, n z = 2 , d h = 32 , d p = 16 ), this neural inference sequence strictly requires on the order of a few thousand floating-point operations (FLOPs) per recursive cycle. By leveraging highly optimized dense matrix operations, this forward pass incurs sub-microsecond latency on contemporary micropro-cessors. Consequently, the total execution time of the MA-UKF imposes negligible overhead relative to a standard single-model UKF, whose performance bottleneck remains the O(n3
+
+> x
+
+)
+
+Cholesky decomposition and covariance updates. Crucially, this allows the MA-UKF to achieve robust adaptation while entirely circumventing the O(M · n3
+
+> x
+
+) multiplicative scaling inherent to IMM architectures evaluating M parallel hypothe-ses. 
+
+F. Training via End-to-End Analytical Gradients 
+
+We formulate the policy optimization as a supervised re-gression problem over a dataset of N trajectories. The loss function Lθ comprises a primary tracking error term and an auxiliary regularization term: 
+
+Lθ =
+
+> T
+
+X
+
+> k=1
+
+∥xk − F θ (ˆ xk−1, zk)∥22 + λaux ∥˜νk − g(ck)∥22. (34) Here g(·) is an auxiliary decoder, weighted by λaux , that reconstructs the innovation from the latent context ck. This regularization encourages the latent state hk to retain a rich representation of the innovation sequence, preventing mode collapse during training. IV. E XPERIMENTAL EVALUATION 
+
+To validate the efficacy of the proposed MA-UKF, we conducted a series of numerical experiments focusing on robust tracking in the presence of heavy-tailed measurement noise and unmodeled dynamic maneuvers. We benchmark the method against a nominal UKF, a hyperparameter-optimized UKF, and an IMM filter. 
+
+A. Simulation Environment and Datasets 
+
+We consider a 2D radar tracking scenario where the state vector x = [px, v x, p y , v y , ω ]⊤ evolves according to the Coordinated Turn (CT) kinematic model with a discrete-time sampling interval of ∆t = 0 .1 seconds. The radar provides noisy range and bearing measurements: 
+
+zk =
+
+hq 
+
+p2 
+
+> x
+
++ p2 
+
+> y
+
+, arctan( py /p x)
+
+i
+
++ vk. (35) 
+
+1) Training Regime (Stochastic CT): The MA-UKF is trained on a synthetic dataset of stochastic trajectories gen-erated via the standard CT model. For each trajectory, the initial state x0 is randomized: positions px, p y are sampled from U(−1000 , 1000) m, while the velocity is defined by a speed v ∼ U (10 , 30) m/s and a heading φ ∼ U (0 , 2π) rad. The turn rate is drawn from ω ∼ U ([ −0.5, −0.1] ∪ [0 .1, 0.5]) 
+
+rad/s, ensuring the model is trained on distinct left and right maneuvers rather than near-zero turn rates. The noise vk is drawn from a Gaussian Mixture Model (GMM): 
+
+vk ∼ (1 − ϵ)N (0 , R) + ϵN (0 , η R), (36) where ϵ = 0 .1 represents a 10% probability of a glint outlier (signal spike), and R is the nominal sensor noise covariance, and η = 20 is the glint scaling factor. 
+
+2) Evaluation Regime (OOD Generalization): Crucially, the evaluation is performed on a dataset representing a dy-namic regime unseen during training. We utilize a high-agility weave maneuver, where the target undergoes sinusoidal acceleration with randomized parameters: 
+
+a(t) = Ax sin( ωxt), A y cos( ωy t)⊤ . (37) For each evaluation sequence, the amplitudes Ax, Ay are sampled from U([ −20 , −10] ∪ [10 , 20]) m/s 2 and frequencies 
+
+ωx, ωy from U(−2, 2) rad/s. This trajectory violates the constant turn-rate assumption inherent in the filter’s state transition function ( f (·)). Fur-thermore, we test the robustness of the filter by doubling the severity of the measurement outliers during evaluation, setting the glint scaling factor to η = 40 . This combination of unmodeled dynamics and extreme noise strictly tests the generalization capability of the learned policy. 
+
+B. Implementation and Baselines 
+
+All models were implemented in Python using the JAX 
+
+and Equinox libraries for differentiable programming. The MA-UKF was trained for 1800 epochs using the Adam opti-mizer ( lr = 10 −3) with a batch size of 64 and sequence length of 60 on an NVIDIA RTX 3060 GPU. 
+
+Baseline 1: Nominal UKF. We compare against a standard UKF tuned for nominal performance. While the UT often employs a small spread ( α = 10 −3) to approximate local linearization, such settings are numerically unstable in high-noise regimes. Consequently, we adopt the parameterization proposed by [1]: α = 1.0, β = 2.0, and κ = 3 − nx.This setting places sigma points at ±√3σ from the mean, capturing the fourth-order moment of the Gaussian distribution and providing sufficient geometric spread. The process noise covariance Q and measurement noise R are fixed to the nominal ground-truth values. 
+
+Baseline 2: Optimized UKF (UKF ⋆). To establish a rigor-ous baseline, we utilized the Optuna framework to perform a hyperparameter optimization search over 100 trials. The resulting parameters ( α ≈ 17 .26 , β ≈ 2.59 , κ ≈ 0.15 )represent the empirical upper bound of performance for a static UKF on this specific dataset. 
+
+Baseline 3: IMM-UKF. : We also employ an IMM filter mixing two UKF modes: a Constant Velocity (CV) mode for straight-line motion and a CT mode for maneuvers [33]. The transition probability matrix diagonal is fixed at Πii = 0 .95 .A hyperparameter-optimized version (IMM-UKF ⋆) is also evaluated. 
+
+Proposed MA-UKF. The policy network utilizes a GRU with a hidden dimension of dh = 32 . The context encoder projects the innovation proxy ˜νk into the hidden space, and a subsequent projection layer maps the GRU output to a lower-dimensional manifold ( dp = 16 ) before the final policy head synthesizes the sigma-point weights. Throughout both the training and evaluation phases, the scaling parameter governing the sigma-point spread is fixed at γ = 3 .
+
+C. Quantitative Results 
+
+We conducted a Monte Carlo analysis encompassing N =1000 independent tracking episodes across both the training dataset and the unseen high-agility weave dataset, with each episode evaluated over a sequence length of 60 time steps. Table I summarizes the Average Root Mean Square Error (ARMSE) and the associated standard deviation for the po-sition estimates.                            
+
+> TABLE I MONTE CARLO PERFORMANCE BENCHMARK (1000 R UNS )
+> Method Training Regime Unseen Maneuver
+> ARMSE (m) ARMSE (m) UKF 105 .0±129 .6196 .0±229 .9
+> IMM-UKF 86 .4±121 .5184 .5±175 .8
+> UKF ⋆17 .8±14 .549 .7±33 .9
+> IMM-UKF ⋆18 .5±17 .458 .0±48 .8
+> MA-UKF (Ours) 6.3±7.344 .6±28 .8
+
+1) Robustness to Heavy-Tailed Noise: In the training regime, where the generative motion model closely aligns with the filter’s internal dynamics, baseline performance is predominantly limited by sensor anomalies. The nominal UKF yields an ARMSE of 105 .0 m, while the optimized UKF ⋆
+
+achieves 17 .8 m. This degradation is directly attributable to the heavy-tailed measurement noise. The standard weighted averaging operation of the UT is highly sensitive to outliers; consequently, a single glint measurement significantly biases the posterior mean and violates the implicit Gaussian assump-tion. In contrast, the MA-UKF achieves an ARMSE of just 6.3 m, representing a 64.6% reduction in error compared to the opti-mized UKF ⋆ and a 94.0% reduction against the nominal UKF. By analyzing the latent innovation embedding, the network identifies the spectral signature of glint, characterized by high amplitude and low temporal correlation. The system responds by dynamically down-weighting the sigma points. This mech-anism seamlessly performs ”soft” outlier rejection without the need for brittle validation gating or explicit thresholds. 
+
+2) Generalization to Unseen Maneuvers (OOD): The eval-uation regime leverages a high-agility weave trajectory that presents a severe structural mismatch to the filter’s constant turn-rate prediction model. This scenario tests the algorithm’s capacity to balance model trust against measurement reliance. As illustrated in Fig. 2, the baseline filters fail to handle the compounding severity of unmodeled dynamics and extreme noise. The UKF ⋆ exhibits track divergence, losing the target entirely. The IMM-UKF ⋆, while attempting to switch dynamic models to recapture the target, suffers from massive correction artifacts and erratic, high-amplitude jumps.   
+
+> Fig. 2. Trajectory tracking performance on the OOD maneuver. The optimized UKF ⋆(Blue) suffers catastrophic divergence, while the IMM-UKF ⋆(Green) exhibits violent corrections. The MA-UKF (Red) sustains robust track con-tinuity for longer, and closely hugs the underlying ground truth despite the simultaneous model mismatch and severe glint noise.
+
+The MA-UKF, conversely, successfully preserves the struc-tural geometry of the ground truth. It maintains consistent track continuity over longer periods and effectively smooths out the severe anomalies, outperforming the UKF ⋆ by 10.3% and the IMM-UKF ⋆ by 23.1%. Crucially, the standard devi-ation of the MA-UKF error ( ±28 .8 m) is nearly 8× lower than that of the nominal baseline UKF (±229 .9 m). The severe variance in the baselines correlates directly with the divergence events seen in the plot. By modulating the UT weights, the MA-UKF creates a flexible uncertainty manifold that instantaneously inflates the covariance yielding a highly resilient estimate. 
+
+D. Analysis of Learned Adaptation Strategy 
+
+To elucidate the decision-making logic of the meta-learner, we analyze the temporal evolution of the synthesized sigma-point weights. Fig. 3 displays the complete set of weight trajectories ( W0 through W10 ) for both the mean ( W (m))and covariance ( W (c)) distributions during a representative tracking sequence. Contrary to the static parameterization of standard filtering (where UT scaling constants are strictly fixed), the MA-UKF exhibits a highly dynamic, context-dependent weighting strategy. Two distinct behavioral paradigms emerge from this analysis, reflecting the network’s dual capacity for steady-state precision and transient robustness:    
+
+> Fig. 3. Temporal evolution of the learned sigma-point weights ( W0to W10 )during the maneuver. The distinct impulsive spiking behavior across the entire geometry, contrasted with the continuous micro-modulation between events, indicates that the policy dynamically expands and contracts the local geometric spread to accommodate rapid directional changes and reject anomalies.
+
+1) Continuous Micro-Modulation: Between major dy-namic shifts, the entire set of mean and covariance weights represents a continuously shifting geometry, fluctuating dynamically around nominal baselines. This indicates that the filter actively and continuously com-pensates for localized linearization errors inherent to a fixed UT spread at every individual time step. 2) Impulsive Covariance Resetting: Upon detecting un-modeled dynamic shifts or severe glint anomalies, the policy triggers a rapid reconfiguration of the sigma-point weights. As seen in Fig. 3, the distribution maintains mostly flat baseline while triggering sharp, sparse spikes that strictly correlate with maneuver inflection points and outlier events. This coordinated, impulsive action injects structural uncertainty to accommodate unmodeled accel-eration, increasing the Kalman gain’s reactivity, while simultaneously leveraging the latent context embedding to gate out non-physical sensor noise. These observations visually confirm that the MA-UKF suc-cessfully internalizes a control policy. Rather than converging to static optimal parameters, it dynamically orchestrates the 11 pairs of UT weights as control inputs to continuously trade off trust between the process and measurement models, em-ulating an advanced adaptive filter within a fully continuous, differentiable architecture. V. C ONCLUSION AND FUTURE WORK 
+
+This paper introduced the Meta-Adaptive Unscented Kalman Filter (MA-UKF), a novel framework uniting rigorous Bayesian estimation with data-driven meta-learning. By cast-ing the parameterization of the Unscented Transform as an end-to-end differentiable optimization problem, the MA-UKF learns to dynamically modulate its sigma-point geometry in real-time. This enables the filter to autonomously adapt to non-stationary dynamics and out-of-distribution regimes without relying on hand-crafted heuristics. Utilizing a Recurrent Context Encoder to map historical innovation sequences into an actionable latent embedding, the proposed architecture effectively disentangles transient sensor anomalies from genuine target maneuvers. Empirical results on complex, out-of-distribution tracking scenarios un-der heavy-tailed glint noise demonstrate that the MA-UKF achieves robust generalization, reducing position ARMSE by 77.2% and 10.3% compared to the nominal and rigorously hyperparameter-optimized UKF baselines, respectively. Future work will focus on validating the MA-UKF with real-world sensor data to assess Sim-to-Real transferability, and extending the differentiable formulation to Lie Groups to support robust 3D pose and orientation estimation in aerospace applications. REFERENCES [1] S. J. Julier and J. K. Uhlmann, “New extension of the kalman filter to nonlinear systems,” in Proceedings of Signal Processing, Sensor Fusion, and Target Recognition VI , vol. 3068. Spie, 1997, pp. 182–193. [2] E. A. Wan and R. Van Der Merwe, “The unscented kalman filter for nonlinear estimation,” in Proceedings of of the IEEE 2000 Adaptive Sys-tems for Signal Processing, Communications, and Control Symposium .IEEE, 2000, pp. 153–158. [3] R. Turner and C. E. Rasmussen, “Model based learning of sigma points in unscented kalman filtering,” Neurocomputing , vol. 80, pp. 47–53, 2012. [4] Y. Bar-Shalom, X. R. Li, and T. Kirubarajan, Estimation with applica-tions to tracking and navigation: theory algorithms and software . John Wiley & Sons, 2001. [5] A. P. Sage and G. W. Husa, “Adaptive filtering with unknown prior statistics,” in Proceedings of Joint Automatic Control Conference , no. 7, 1969, pp. 760–769. [6] H. A. Blom and Y. Bar-Shalom, “The interacting multiple model algorithm for systems with markovian switching coefficients,” IEEE Transactions on Automatic Control , vol. 33, no. 8, pp. 780–783, 1988. [7] N. Shlezinger, G. Revach, A. Ghosh, S. Chatterjee, S. Tang, T. Imbiriba, J. Dunik, O. Straka, P. Closas, and Y. C. Eldar, “Artificial intelligence-aided kalman filters: Ai-augmented designs for kalman-type algorithms,” 
+
+IEEE Signal Processing Magazine , 2025. [8] X. Wang and Y. Huang, “Convergence study in extended kalman filter-based training of recurrent neural networks,” IEEE Transactions on Neural Networks , vol. 22, no. 4, pp. 588–600, 2011. [9] N. Forti, L. M. Millefiori, P. Braca, and P. Willett, “Model-based deep learning for maneuvering target tracking,” in 2023 26th International Conference on Information Fusion (FUSION) . IEEE, 2023, pp. 1–6. [10] G. Wang, P. Cheng, S. Li, Y. Chen, B. Vucetic, and Y. Li, “Self-supervised deep state space model for enhanced indoor tracking,” in 
+
+ICC 2025-IEEE International Conference on Communications . IEEE, 2025, pp. 692–697. [11] C. Jia, J. Ma, and W. M. Kouw, “Multiple variational kalman-gru for ship trajectory prediction with uncertainty,” IEEE Transactions on Aerospace and Electronic Systems , vol. 61, no. 2, pp. 3654–3667, 2024. [12] D. Li, J. Zhou, and Y. Liu, “Recurrent-neural-network-based unscented kalman filter for estimating and compensating the random drift of mems gyroscopes in real time,” Mechanical Systems and Signal Processing ,vol. 147, p. 107057, 2021. [13] T. Haarnoja, A. Ajay, S. Levine, and P. Abbeel, “Backprop KF: Learn-ing discriminative deterministic state estimators,” Advances in Neural Information Processing Systems (NeurIPS) , vol. 29, 2016. [14] R. Jonschkowski, D. Rastogi, and O. Brock, “Differentiable particle filters: End-to-end learning with algorithmic priors,” in Proceedings of Robotics: Science and Systems , Pittsburgh, Pennsylvania, June 2018. [15] H. Wen, X. Chen, G. Papagiannis, C. Hu, and Y. Li, “End-to-end semi-supervised learning for differentiable particle filters,” in 2021 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2021, pp. 5825–5831. [16] J. Trejbal, J. Matouˇ sek, and J. Dun´ ık, “Neural augmented adaptive grid design for point-mass filter,” in 2025 26th International Carpathian Control Conference (ICCC) . IEEE, 2025, pp. 1–6. [17] G. Revach, N. Shlezinger, X. Ni, A. L. Escoriza, R. J. Van Sloun, and Y. C. Eldar, “Kalmannet: Neural network aided kalman filtering for partially known dynamics,” IEEE Transactions on Signal Processing ,vol. 70, pp. 1532–1547, 2022. [18] J. Y. Loo, Z. Y. Ding, V. M. Baskaran, S. G. Nurzaman, and C. P. Tan, “Sigma-point kalman filter with nonlinear unknown input estimation via optimization and data-driven approach for dynamic systems,” IEEE Transactions on Systems, Man, and Cybernetics: Systems , vol. 54, no. 10, pp. 6068–6081, 2024. [19] Z. Fan, D. Shen, Y. Bao, K. Pham, E. Blasch, and G. Chen, “Rnn-ukf: Enhancing hyperparameter auto-tuning in unscented kalman filters through recurrent neural networks,” in 2024 27th International Confer-ence on Information Fusion (FUSION) . IEEE, 2024, pp. 1–8. [20] H. Liu, Y. Chen, X. Sun, Y. Zhu, X. Wang, and H. Gui, “Finetuning the sample points in gaussian filters via neural networks,” IEEE Signal Processing Letters , vol. 33, pp. 371–375, 2025. [21] Y. Duan, J. Schulman, X. Chen, P. L. Bartlett, I. Sutskever, and P. Abbeel, “RL 2: Fast reinforcement learning via slow reinforcement learning,” arXiv preprint arXiv:1611.02779 , 2016. [22] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for fast adaptation of deep networks,” in Proceedings of International Conference on Machine Learning (ICML) . PMLR, 2017, pp. 1126– 1135. [23] J. X. Wang, Z. Kurth-Nelson, D. Tirumala, H. Soyer, J. Z. Leibo, R. Munos, C. Blundell, D. Kumaran, and M. Botvinick, “Learning to reinforcement learn,” arXiv preprint arXiv:1611.05763 , 2016. [24] N. Mishra, M. Rohaninejad, X. Chen, and P. Abbeel, “A simple neural attentive meta-learner,” arXiv preprint arXiv:1707.03141 , 2017. [25] K. Cho, B. van Merri¨ enboer, C. Gulcehre, D. Bahdanau, F. Bougares, H. Schwenk, and Y. Bengio, “Learning phrase representations using RNN encoder–decoder for statistical machine translation,” in Proceed-ings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP) , A. Moschitti, B. Pang, and W. Daelemans, Eds. Doha, Qatar: Association for Computational Linguistics, October 2014, pp. 1724–1734. [26] L. Franceschi, M. Donini, P. Frasconi, and M. Pontil, “Forward and reverse gradient-based hyperparameter optimization,” in Proceedings of International Conference on Machine Learning (ICML) . PMLR, 2017, pp. 1165–1173. [27] A. Kloss, M. Bauza, J. Wu, J. B. Tenenbaum, A. Rodriguez, and J. Bohg, “Accurate vision-based manipulation through contact reasoning,” in 2020 IEEE International Conference on Robotics and Automation (ICRA) .IEEE, 2020, pp. 6738–6744. [28] I. Murray, “Differentiation of the cholesky decomposition,” arXiv preprint arXiv:1602.07527 , 2016. [29] P. Werbos, “Backpropagation through time: what it does and how to do it,” Proceedings of the IEEE , vol. 78, no. 10, pp. 1550–1560, 1990. [30] T. Hospedales, A. Antoniou, P. Micaelli, and A. Storkey, “Meta-learning in neural networks: A survey,” IEEE Transactions on Pattern Analysis and Machine Intelligence , vol. 44, no. 9, pp. 5149–5169, 2021. [31] Z. Chen, C. Heckman, S. Julier, and N. Ahmed, “Weak in the NEES?: Auto-tuning kalman filters with bayesian optimization,” in 2018 21st International Conference on Information Fusion (FUSION) , 2018, pp. 1072–1079. [32] J. L. Ba, J. R. Kiros, and G. E. Hinton, “Layer normalization,” 2016. [Online]. Available: https://arxiv.org/abs/1607.06450 [33] L. Cork and R. Walker, “Sensor fault detection for uavs using a nonlinear dynamic model and the imm-ukf algorithm,” in 2007 Information, Decision and Control . IEEE, 2007, pp. 230–235.

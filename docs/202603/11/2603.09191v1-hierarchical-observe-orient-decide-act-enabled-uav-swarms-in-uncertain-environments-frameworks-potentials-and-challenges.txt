@@ -1,0 +1,289 @@
+Title: Hierarchical Observe-Orient-Decide-Act Enabled UAV Swarms in Uncertain Environments: Frameworks, Potentials, and Challenges
+
+URL Source: https://arxiv.org/pdf/2603.09191v1
+
+Published Time: Wed, 11 Mar 2026 00:35:53 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+> 1
+
+# Hierarchical Observe-Orient-Decide-Act Enabled UAV Swarms in Uncertain Environments: Frameworks, Potentials, and Challenges 
+
+Ziye Jia, Member, IEEE , Yao Wu, Qihui Wu, Fellow, IEEE , Lijun He, Member, IEEE ,Qiuming Zhu, Senior Member, IEEE , Fuhui Zhou, Senior Member, IEEE , and Zhu Han, Fellow, IEEE 
+
+Abstract —Unmanned aerial vehicle (UAV) swarms are increas-ingly explored for their potentials in various applications such as surveillance, disaster response, and military. However, UAV swarms face significant challenges of implementing effective and rapid decisions under dynamic and uncertain environments. The traditional decision-making frameworks, mainly relying on centralized control and rigid architectures, are limited by their adaptability and scalability especially in complex environments. To overcome these challenges, in this paper, we propose a hierar-chical Observe-Orient-Decide-Act (H-OODA) loop based frame-work for the UAV swarm operation in uncertain environments, which is implemented by embedding the classical OODA loop across the cloud-edge-terminal layers, and leveraging the net-work function virtualization (NFV) technology to provide flexible and scalable decision-making functions. In addition, based on the proposed H-OODA framework, we joint autonomous decision-making and cooperative control to enhance the adaptability and efficiency of UAV swarms. Furthermore, we present some typical case studies to verify the improvement and efficiency of the proposed framework. Finally, the potential challenges and possible directions are analyzed to provide insights for the future H-OODA enabled UAV swarms. 
+
+Index Terms —Unmanned aerial vehicle (UAV), Observe-Orient-Decide-Act (OODA), network function virtualization (NFV), hierarchical framework. 
+
+I. I NTRODUCTION 
+
+Unmanned aerial vehicles (UAVs), composed of multiple coordinated drones, are characterized by their flexibilities and applied in various domains, such as surveillance, search, rescue and agriculture, especially in areas inaccessible to humans [1], [2]. Besides, due to the potentials to operate collaboratively, autonomously, and adaptively in complex environments, UAV swarms gain significant attentions from both industries and academies [3]. However, the uncertain 
+
+This work was supported by National Natural Science Foundation of China under Grant 62231015 and 62301251. and in part by the Postgraduate Research & Practice Innovation Program of Jiangsu Province under Grant SJCX25_0152. ( Corresponding author: Yao Wu ). Ziye Jia, Yao Wu, Qihui Wu, Qiuming Zhu, and Fuhui Zhou are with the College of Electronic and Information Engineering, Nanjing Univer-sity of Aeronautics and Astronautics, Nanjing 211106, China, (e-mail: ji-aziye@nuaa.edu.cn, wu_yao@nuaa.edu.cn, wuqihui@nuaa.edu.cn, zhuqium-ing@nuaa.edu.cn, zhoufuhui@nuaa.edu.cn). Lijun He is with the School of Information and Control Engineering, China University of Mining and Technology, Xuzhou 221116, China, (e-mail: lijunhe.xd@gmail.com). Zhu Han is with the University of Houston, TX 77004, USA, and also with the Department of Computer Science and Engineering, Kyung Hee University, Seoul, 446-701, South Korea (hanzhu22@gmail.com ). 
+
+environments may disrupt the operations of UAV swarms due to the severe weather conditions, unexpected obstacles, etc. These challenges highlight the requirements for robust control frameworks and advanced decision-making mecha-nisms that can enable UAV swarms to adapt and respond to varying environmental conditions [4]. In particular, the ability to make informed decisions in real-time is significant for UAV swarms to operate effectively confronting with uncertain environments. To address the complexity and challenges associated with UAV swarms, the integration of advanced decision-making frameworks and network management technologies becomes necessary [5]. To this end, the Observe-Orient-Decide-Act (OODA) decision-making framework, originally developed for military applications, is widely adopted in various domains due to its ability to enhance the autonomy and responsive-ness in dynamic and unpredictable situations. By leverag-ing OODA, UAV swarms can improve their responsiveness to environmental variations and make informed decisions in real-time. Meanwhile, the network function virtualization (NFV) technology enables the creation of virtualized network functions, which promote the flexibility, scalability, and ef-ficiency in network management. Therefore, the integration of OODA and NFV provides UAV swarms with enhanced decision-making capabilities and optimized network resource allocation, enabling the effective operations in complex and uncertain environments. There exist some recent researches on the combination of OODA and UAVs, exploring the potentials to enhance the strategic decision-making and collaborative mission effective-ness. For example, [6] proposed an approach to evaluate the effectiveness of reconnaissance and strike UAV formations based on OODA, while another work [7] integrated OODA with artificial intelligence (AI) in UAV systems to provide a structured approach for decision-making. Although these studies have highlighted the potential of OODA in improving strategic decision-making for UAVs, the existing OODA-based methods typically focus on specific aspects of UAV op-erations, without considering the complexities of multi-UAV systems. Moreover, [8] proposed an architecture for elastic collaborative edge intelligence in UAV swarms, incorporating OODA principles to improve resource allocation decisions, and [9] incorporated OODA to improve the physical layer security in multi-UAV systems against hybrid wireless attacks. While these researches have applied the OODA principles 
+
+> arXiv:2603.09191v1 [cs.DC] 10 Mar 2026
+
+2Operational Execution Strategic Planning Environmental Scanning Situational Awareness             
+
+> Detect & Assess :
+> •Sensor Fusion:
+> Combine inputs from diverse sensors.
+> •Target Discrimination :
+> Differentiate and recognize
+> objects.
+> •Risk Surveillance:
+> Continuously scan for possible hazards.
+> Comprehend & Align:
+> •Geospatial Localization:
+> Achieve accurate positioning through GNSS.
+> •Contextual Analysis:
+> Evaluate the current operational landscape.
+> •Trajectory Optimization:
+> Calculate the most efficient travel
+> routes.
+> Determine & Allocate:
+> •Essential Scheduling:
+> Prioritize and schedule critical activities.
+> •Instant Adaptation:
+> Instantly adjust plans as circumstances change.
+> •Crisis Planning:
+> Anticipate and design responses to unexpected occurrences.
+> Implement & Verify:
+> •Command Execution:
+> Carry out movement and adjustment commands.
+> •Adaptive Reconfiguration:
+> Flexibly modify trajectory or mission parameters.
+> •Performance Surveillance :
+> Regularly survey operational status and system health.
+
+Observe 
+
+> Orient
+
+Decide Act 
+
+Fig. 1. Illustration of the classic OODA loop for a single UAV. 
+
+to multi-UAV systems, the related approaches basically rely on traditional architectures, which are limited in terms of scalability and flexibility. Therefore, it is necessary to explore a more comprehensive and adaptable framework to effectively integrate multiple UAVs and enable efficient decision-making in complex and dynamic environments [10]. Hence, building upon the Cloud-Edge-Terminal (CET) ar-chitecture, we propose the hierarchical OODA (H-OODA) framework to facilitate collaborative decision-making and adaptive management of UAV swarms. In particular, H-OODA can facilitate efficient management of UAV swarms via coop-erative perception, decision, execution, and reconfiguration. We firstly illustrate the detailed layers of the H-OODA frame-work, as well as the detailed mechanisms in both the intra-network and inter-network of UAV swarms. Then, we analyze the integration of hierarchical OODA and NFV for efficient UAV swarm operations. Besides, we provide case studies to verify the performance of the proposed H-OODA framework in UAV swarms. Moreover, the challenges and future research directions are discussed. In short, the key contributions of this work are summarized as follows. 
+
+• We develop a novel CET H-OODA framework inte-grating cloud, edge, and terminal layers to improve au-tonomous decision-making, data processing, and action coordination for UAV swarms in dynamic environments. 
+
+• The NFV technology is innovatively incorporated into the H-OODA framework to enable flexible and scalable deployment of network functions across different layers in UAV swarms, thereby enhancing the overall efficiency and adaptability. 
+
+• We design the hierarchical decision-making mechanism that leverages a layered architecture to fuse local and global information, enabling more informed and timely decision-making. II. H-OODA F RAMEWORK FOR UAV S WARMS 
+
+A. Overview of Classical OODA Loop 
+
+The classical OODA loop, originally proposed by U.S. Air Force Colonel John Boyd, serves as a foundational decision-making framework adopted across various domains [11], particularly in volatile, uncertain, and complex scenarios. Fig. 1 illustrates the fundamental four-stage interactions between the agents and environments, which specifically depicts the application of the OODA loop for a single UAV, highlighting the practical implementation of the framework. The theoretical basis of the OODA loop stems from cognitive psychology and information processing theories, emphasizing the significance of situational awareness and decision-making speed. Besides, the efficacy of the loop lies in facilitating rapid decision-making in complex and dynamic environments by breaking down the process into manageable stages. Fig. 1 outlines the procedures and functions of a UAV at each stage of the OODA loop, detailed as follows. 3Cloud 
+
+Edge Terminal     
+
+> Orient Decide
+> Situation cognition
+> Observe
+> Orient
+> Decide Act
+> Orient Decide
+> Situation cognition
+> Observe
+> Orient
+> Decide Act
+> Orient
+> Decide
+> Situation cognition
+> Observe
+> Orient
+> Decide Act
+> Observe
+> Orient
+> Decide Act
+
+## … …
+
+> Ori Ori Ori ent ent Ori Ori Ori ent ent
+> Ori Ori
+> Control line Environmental cognitive data
+> OODA Loop UAV cognitive data
+> Logistics Delivery Urban Patrol Agricultural Monitoring
+
+Fig. 2. Nested CET H-OODA framework within UAV swarms.  
+
+> •
+
+Observe: Initially, the environment is observed both actively and passively using sensor fusion techniques to detect and assess risks, including target discrimination and continuous risk surveillance.  
+
+> •
+
+Orient: During the orientation, the UAV achieves geospa-tial localizations through global navigation satellite sys-tems (GNSS) for accurate positioning, and conducts con-textual analysis to evaluate current operational scenarios, along with possible trajectories optimization.  
+
+> •
+
+Decide: In this stage, through internal or online discus-sions and inferences, the UAV determines the scheduling and instant adaptation plans, considering all potential outcomes.  
+
+> •
+
+Act: The final stage is executing the decision from the previous stage, adjusting actions as needed during implementation to ensure effectiveness and alignment with desired outcomes. The classical OODA loop is a cyclical process where the outcome of the Act stage becomes the new input for the 
+
+Observe stage, creating a continuous feedback. This iterative process enables a UAV to learn from its experiences and adjust the strategies, and accordingly adapt to circumstance variations and improve the decision-making. Consequently, UAVs can respond promptly to emerging situations while minimizing error risks. Moreover, the four stages of the OODA loop can overlap to a certain extent, since they are not distinct and separate exactly. For example, the Orient 
+
+stage may involve some degree of decision-making, while the Decide stage can necessitate additional observation and analysis. Such flexibility is vital in real-world scenarios where stage boundaries are generally indistinct. Due to these characteristics, the classical OODA loop for a UAV has been widely applied in diverse domains such as military and business. However, as for the UAV swarms in complex environments, a single OODA loop is not applicable directly. 
+
+B. H-OODA Design for UAV Swarms 1) CET Architecture: The operational effectiveness of UAV swarms in complex environments such as logistics delivery, urban patrol, and agricultural monitoring, relies on the ability to process vast amounts of data, expedite decision-making, and coordinate actions harmoniously. To achieve this goal, we propose the CET H-OODA framework, as shown in Fig. 2, which leverages the advantages of stratified organiza-tional design, enabling decentralized decision-making while maintaining overall coordination. To clarify the efficacy of the CET H-OODA framework, we analyze the critical role of its hierarchical structure in enhancing spectrum situation 4
+
+awareness, which is significant for the effective operation of UAV swarms. Note that the CET H-OODA structure primarily consists of the terminal layer, edge layer, as well as cloud layer, elaborated as follows.  
+
+> •
+
+Terminal Layer : Multiple UAV swarms comprise the terminal layer, with each swarm consisting of a group of UAVs that collaborate to form a local frequency spectrum situation awareness map. The OODA loop at each swarm processes local data to inform decisions on frequency usage, facilitating adaptive transmission parameter adjustments in response to local condition variations.  
+
+> •
+
+Edge Layer : The edge layer fuses data from multiple terminal UAV swarms, forming a regional frequency spectrum situation awareness map. By integrating data from multiple terminals, the OODA loop at the edge layer enables regional frequency usage decisions, allowing for adaptive transmission parameter adjustments in response to varying regional conditions.  
+
+> •
+
+Cloud Layer : The cloud layer provides a global spec-trum situation awareness map by integrating data from multiple edge layers, incorporating 3D terrain mapping and dynamic interference modeling for comprehensive mission planning. The OODA loop at the cloud layer facilitates global frequency usage decisions, enabling adaptive transmission parameter adjustments in response to the global condition variation. While batch processing of edge-layer data inherently introduces latency, the lightweight predictive caching strategies can significantly reduce synchronization delays without compromising global decision accuracy [12]. With the CET layers, H-OODA enables large-scale data processing and decision-making. For instance, in the logistics delivery, the hierarchical approach allows UAVs to gather and analyze real-time spectrum data, ensuring reliable communi-cation with the control center. As for urban patrols, the hi-erarchical design supports dynamic adaptation of surveillance strategies based on continuous spectrum situation awareness, enabling drones to optimize their operations in response to varying frequency conditions. In agricultural monitoring, H-OODA facilitates the efficient transmission and analysis of crop health data, allowing UAVs to adjust their monitoring strategies based on real-time spectrum states. By coordinating multiple UAV swarms within this framework, H-OODA en-hances the situational awareness and operational effectiveness, demonstrating the synergy between the hierarchical approach and spectrum situation awareness. 
+
+2) Nested H-OODA Loops: The CET architecture facili-tates UAV swarms leveraging the OODA loop at each layer. However, the seamless coordination and decision-making re-quire collaborative interactions among the OODA loops at different levels. To address this point, the H-OODA loops are nested to enable information exchange and synchronization cross CET-layers, characterized by embedding the OODA loops at each level within adjacent levels. Additionally, the nested structure allows each layer to maintain a consistent view of the operating environment while adapting to changing conditions in a unified and coordinated manner. For instance, when a terminal UAV swarm detects any abnormity about the local situation, the OODA loop at the swarm rapidly assesses the situation and initiates a response. The message is then transmitted to the edge OODA loops, which integrates all the information from terminal UAV swarms to form a regional understanding of the current situa-tion. Accordingly, the edge OODA loop subsequently adjusts its decision-making parameters to account for the varying regional conditions and transmits these adjustments to both the terminal and cloud OODA loops. Then, the cloud OODA loop integrates the regional information from edge layers to form a global understanding of the situation, informing strate-gic decisions about frequency usage and allocation. These decisions are then transmitted back down to the edge and terminal layers, ensuring a unified and coordinated view of the operating environment and enabling seamless adaptation to environment variations. The implementation of OODA stages is tailored to each layer’s operational requirements. The terminal-layer process-ing prioritizes real-time execution, with efficient detection algorithms analyzing the raw sensor data instantly, local nav-igation driving rapid trajectory adjustments, and flight control systems executing time-critical safety decisions. The edge-layer operations center on regional coordination, aggregating terminal data to construct comprehensive situation maps that support coordinated maneuvers and optimized resource allo-cation. At the cloud layer, the global data integration enables strategic mission planning through advanced algorithms, with subsequent parameter updated widely in the network. Such tiered approach maintains appropriate processing granularity at each level while preserving the consistency of the system. By integrating the autonomous operation of UAV swarms with the nested CET H-OODA framework, we can achieve a more robust and adaptive solution for real-time decision-making in complex electromagnetic environments. The nested OODA loops collectively create a multi-scale decision-making system that enhances both situational awareness and oper-ational adaptability. At the finest scale, the terminal-layer loops provide real-time micro-level awareness of immediate environments through direct sensor inputs, enabling rapid local responses. These local observations aggregate at edge layers to form meso-level regional awareness, supporting coordinated adaptations across UAV subgroups. The cloud layer synthesizes this information into the macro-level mission awareness for the strategic adaptation. The continuous bi-directional information flows between layers ensure local actions remain mission-aligned while global strategies adapt to ground realities. The UAV swarms can adjust their trans-mission parameters in real-time to optimize frequency usage, ensuring efficient communications and low interferences. III. I NTEGRATION OF NFV WITH H-OODA IN UAV SWARMS 
+
+The implementation of H-OODA loops in UAV swarms necessitates flexible configurations of network functions and adaptive mechanisms, while the NFV techniques can provide 5/39
+
++6)
+
+> Ȝ
+
+6N_YOIGR3GINOTK   
+
+> •9ULZ]GXKNGXJ]GXKOTZKMXGZOUT
+> •5VKXGZOUTY GTJJGZGIGTTUZHKJKIU[VRKJ
+
+)RU[JOLOIGZOUT        
+
+> •:NXKKRG_KXIRU[JOLOIGZOUTYZX[IZ[XKH_YKVGXGZOUTUL VXUMXGSYGTJJGZG
+> •'[ZUSGZKJJKVRU_SKTZULS[RZO\KTJUX GVVROIGZOUTYZNXU[MNZNK5XINKYZXGZUX
+> 5XINKYZXGZOUT
+> *GZGHGYK
+> 2UGJ(GRGTIK
+> 8KMOUTGR *GZG +JMK *GZG
+> )KTZKX
+> *GZG
+> 'VV RUMOI
+> 'VV RUMOI
+> 'VV 2UMOI
+> •3OIXUYKX\OIKYHGYKJYULZ]GXKGXINOZKIZ[XK
+> •2OMNZ]KOMNZ\OXZ[GRO`GZOUT
+> •+TJZUKTJG[ZUSGZOUTUXINKYZXGZOUT
+> •6XUMXGSSGHRK YROIKJ
+> 3OIXU9KX\OIK
+> 9ROIOTM
+> 5T*KSGTJ
+
+3OIXUYKX\OIKY  
+
+> Fig. 3. Network cloudification evolution of NFV.
+
+flexible and scalable decision-making functions. Therefore, the integration of NFV and H-OODA brings more insights for the UAV swarm operation. 
+
+A. Preliminaries of NFV 
+
+NFV can enable the virtualization of network functions, enabling the deployment and management in a flexible and scalable manner. In detail, Fig. 3 illustrates the cloudification evolution of NFV, which transforms the traditional physical machines into a more flexible and scalable microservices-based architecture. In particular, the traditional form is char-acterized by tightly integrated components, such as Internet protocol multimedia subsystem (IMS) and evolved packet core (EPC), which are heavily dependent on hardwares. In contrast, the cloudification involves the separation of programs and data, as well as the automated deployment of multi-vendor applications via the orchestrator. By decoupling the network functions from the underlying hardwares, NFV can facilitate the dynamic computing resource allocation, scalable communication mechanism, and rapid network function re-configuration. Moreover, the virtualization of network functions enables the creation of complex network services composed of mul-tiple functions. Specifically, the NFV-based service function chain (SFC) can be leveraged to create a flexible and scalable service function path [13] that supports H-OODA implementa-tion in UAV swarms. By chaining multiple network functions such as data collection, data analysis, and decision-making, SFC can enable the H-OODA of UAV swarms to collect and analyze data, make decisions, and take actions in a rapid and efficient manner. 
+
+B. Applying NFV to Enhance H-OODA in UAV Swarms 
+
+The NFV enabled H-OODA mechanism presents a transfor-mative approach to optimize UAV operations in dynamic en-vironments. In particular, UAV swarms can leverage the virtu-alized network functions, programmable network topologies, and resilient resource optimizations, thereby enhancing the operational effectiveness. The integration also enables UAV swarms to simultaneously execute multiple missions, instantly respond to unexpected circumstances as well as requirements, and maintain comprehensive situational awareness of dynamic environments. In detail, NFV plays a crucial role at each stage of the H-OODA framework as follows.  
+
+> •
+
+In the Observe stage, NFV facilitates the rapid deploy-ment and scaling of virtualized data collection modules, ensuring that UAVs can swiftly gather relevant infor-mation without being constrained by fixed infrastructure limitations.  
+
+> •
+
+In the Orient stage, NFV supports the analysis and interpretation of the collected data through SFC, which enables the dynamic chaining of multiple virtual network functions (VNFs) for data filtering, aggregation, and preliminary analysis. The orchestration of SFCs enables flexible data routing, ensuring the important information can be processed quickly and accurately.  
+
+> •
+
+In the Decide stage, the orchestration capabilities of NFV provide adequate resources and facilitate the execution of advanced decision-making algorithms [14], enabling UAV swarms to make informed and data-driven deci-sions. Besides, when VNFs are equipped with predictive analytics and intelligence abilities, UAV swarms can deal with more complex missions efficiently.  
+
+> •
+
+In the Act stage, NFV leverages the software-defined networking (SDN) technique to establish virtualized, mission-specific communication networks [15], ensuring reliable and timely data exchange between UAV swarms and ground control stations. The centralized control plane of SDN can optimize network traffic and dynamically adjust network configurations in response to changing conditions, thereby enhancing the overall responsiveness of UAV operations. The H-OODA framework demonstrates clear advantages over traditional OODA implementations through its hierar-620.31 56.7 118.44 27.54 25.14 25.08 2.71 7.56 15.79            
+
+> Single Lay er Edge-End H-OODA 020 40 60 80 100 120
+> Values
+> Average number of targets detected
+> Average time (s)
+> Success rate (%)
+
+Fig. 4. Performance comparison under different OODA frameworks. 
+
+chical architecture. By distributing processing across mul-tiple layers, the framework achieves faster response time while maintaining effective coordination through edge-layer aggregation. Furthermore, the integration of NFV technology enables superior adaptation capabilities. IV. C ASE STUDIES AND EXPERIMENTAL RESULTS 
+
+To validate the effectiveness of the proposed H-OODA framework, we investigate the performance in a UAV swarm based target search scenario for the OODA loops of single-layer, edge-end, and H-OODA. The experiment is conducted in a simulated environment with a fixed 100 ×100 square meters area, where 15 UAVs are deployed to search for moving targets. Each UAV is equipped with sensors that have a specific sensing range, and they utilize the OODA loop to search and track the target within this range. To ensure the results reliability, the experiment is repeated 10,000 times and the average results are obtained. As shown in Fig. 4, the results demonstrate that the H-OODA framework outperforms both the single-layer and edge-end OODA framework in terms of search efficiency, target search time, and success rate. The H-OODA framework is adept at searching and tracking moving targets, achieving higher search efficiency and success rates, which is accounted by that the H-OODA framework leverages the advantages of each layer and enhances the overall performance. In particular, the cloud layer provides a broader environmental perspective, while the edge and end layers offer more detailed information about the target location. The combination of multiple layers enables the H-OODA framework to make informed decisions and adapt effectively to situation variations. In contrast, the single-layer OODA framework relies solely on its sensing range, limiting its ability to search and track targets. Although the edge-end OODA outperforms the single-layer OODA, it still exhibits limitations in sensing range and decision-making capabilities. To further assess the benefits of NFV enabled H-OODA framework, we analyze two key performance metrics of the system service quality of experience (QoE) and error rate of 0 200 400 600 800 1000 1200 1400 -1 012    
+
+> QoE
+> Iteration
+> D3QN, loop=1
+> D3QN, loop=2
+> D3QN, loop=4
+> D3QN, loop=8
+
+(a) QoE under different H-OODA loops. 0 200 400 600 800 1000 1200 1400 0.06 0.08 0.10 0.12 0.14 0.16     
+
+> Error  rate
+> Iteration
+> D3QN, loop=1
+> D3QN, loop=2
+> D3QN, loop=4
+> D3QN, loop=8
+
+(b) Error rates under different H-OODA loops. Fig. 5. Comparisons of different H-OODA loops. 
+
+SFC deployments, in which QoE is related with delay, energy cost, as well as bandwidth allocation. Besides, the impact of the H-OODA depths, is defined as the number of cycles (1, 2, 4, and 8) that the loop executes on these metrics, realized by the dueling double deep Q-network (D3QN) algorithm. As depicted in Fig. 5a, the results show that QoE of the system improves significantly with increasing H-OODA loop depth, since deeper H-OODA loops consider a wider range of situations and possibilities, enabling the system to make more informed decisions and take more accurate actions. Conse-quently, at the loop depth of 8, the system achieves superior user experience, demonstrating a positive correlation between H-OODA loop depth and QoE. Moreover, as illustrated in Fig. 5b, the error rate of the system exhibits a downward trend with increasing depth of H-OODA loop, since deeper OODA loops can more accurately identify and respond to various situations, effectively mitigating erroneous decisions and actions. As a result, at the loop depth of 8, the system demonstrates enhanced reliability and stability, highlighting the critical role of deepened OODA loops in ensuring robust 7
+
+system performance. The experimental results show that the H-OODA frame-work achieves reliable target detection and mission comple-tion under varying conditions. The hierarchical coordination among cloud, edge, and terminal layers ensures efficient operations in dynamic environments and rapid adaptations to changing scenarios, making the framework well-suited for ap-plications such as disaster response and urban surveillance. Its distributed architecture and dynamic resource allocation fur-ther ensure the stable performance across operational scales. V. C HALLENGES AND FUTURE DIRECTIONS 
+
+The design of the H-OODA framework for UAV swarms holds significant promise to enhance the decision-making and adaptability in dynamic environments. However, the following challenges should still be addressed, which are summarized in Table I, including the data processing complexity, com-munication reliability and bandwidth limitations, balance of autonomy and human supervision, as well as security and resilience. Moreover, we explore the possible directions to deal with these challenges for future researches. 
+
+A. Challenges of Implementing H-OODA in UAV Swarms 1) Data Processing Complexity: A primary challenge to deploy the H-OODA loop in UAV swarms is the large volume and complexity of data generated by multiple sensors, cam-eras, etc. It requires advanced data analyses, machine learning algorithms, and distributed computing resources to swiftly process the data, transform it into executable information, and make corresponding timely decisions. 
+
+2) Communication Reliability and Bandwidth Limitations: 
+
+The reliable and low-latency communication is vital for real-time decision-making and coordination in UAV swarm operations. However, maintaining seamless connections of individual drones with the edge and cloud layers is challeng-ing, since the limitations of bandwidth, signal interference, and potential disruptions in unpredictable environments can all hinder reliable communication. Therefore, robust commu-nication mechanisms are essential for adapting to dynamic conditions. 
+
+3) Balance of Autonomy and Human Supervision: It is challenging to strike a balance between the autonomy degree of UAV swarms and the need for human supervision. While increasing autonomy can enhance the agility and respon-siveness of UAV swarms, it also raises concerns regarding accountability and ethical decision-making. Hence, the well-defined protocols, clear lines of responsibility, and ethical considerations in mission planning are essential for achieving this balance. 
+
+4) Security and Resilience: UAV swarms are inherently susceptible to a variety of security threats, including cyber-attacks, signal jamming, and physical interference. A security breach may result in disastrous consequences, jeopardizing the safety and integrity of swarm operations and their services. Consequently, the development and implementation of robust cybersecurity measures and resilience strategies are crucial to     
+
+> TABLE I CHALLENGES OF H-OODA IN UAV S WARMS
+> Challenge Research Direction
+> Data processing complexity - Algorithm optimization - Advanced edge computing - Distributed data fusion Communication reliability and bandwidth limitations - Enhanced communication protocol - Dynamic spectrum management - Multi-modal communication - Cognitive radio technology Balance of autonomy and human supervision - Explainable AI - Human-machine collaboration - Ethical decision framework Security and resilience - Post-quantum cryptography - AI-enhanced threat detection - Resilience testing protocol
+
+mitigating these threats and ensuring the reliability of UAV swarm operations. In brief, the implementation of the H-OODA loop in UAV swarms poses new challenges. To ensure successful and responsible operations, it is essential to design holistic approaches that addresses the interdependencies among the data processing, communication, autonomy, and security. By tackling these challenges, we can fully leverage the potentials of H-OODA enabled UAV swarms in dynamic environments. 
+
+B. Future Directions  
+
+> •
+
+To deal with the data processing complexity, the develop-ments of advanced algorithmic optimization techniques, edge computing mechanisms, and distributed data fusion methodologies are crucial. These directions can enable the efficient processing of vast datasets, ensuring swift and accurate decision-making in dynamic environments. On this basis, UAV swarms can effectively process and analyze large amounts of data in real-time, thereby facilitating informed decision-making.  
+
+> •
+
+To address the communication reliability and bandwidth limitations, the directions to develop enhanced communi-cation protocols, dynamic spectrum management strate-gies, multi-modal communication systems, and cognitive radio technologies are significant. These innovations can ensure robust and low-latency links, even with the signal interference and potential disruptions, thereby enabling the seamless operation of UAV swarms in unpredictable terrains.  
+
+> •
+
+To balance the autonomy with human supervision, it is essential to establish well-defined rules for autonomy that incorporate explainable AI, human-machine collab-oration, and ethical decision mechanisms. By designing protocols that ensure clear lines of responsibility and foster collaborations between humans and UAV swarms, we can leverage the strengths of both human intuition and machine efficiency. These approaches can improve the trust and accountability for autonomous decision-making of UAV swarms. 8 
+
+> •
+
+To guarantee the security and resilience for UAV swarm operations, the development of post-quantum cryptogra-phy, AI-enhanced threat detection, and resilience test-ing protocols is crucial. Future works can explore in-tegrating machine learning techniques to enhance the environmental perception and threat assessment capabil-ities within the H-OODA framework. The development of hybrid decision-making models may further balance the operational reliability and adaptive performance. By integrating these technologies, it strengthens the cyberse-curity measures and helps develop strategies to mitigate potential threats. Such an integrated approach provides a robust defense against cyber threats and ensures the reliable operation of UAV swarms. In short, the H-OODA loop facilitates UAV swarms with the potentials to revolutionize operations in uncertain en-vironments, but also brings non-negligible challenges. By addressing these challenges and exploring possible future directions, the H-OODA enabled UAV swarms can realize safe and effective deployment and implementation. VI. C ONCLUSIONS 
+
+In this work, we have proposed the H-OODA loop frame-work to address the efficient task implementation for UAV swarms in uncertain environments. The mechanism of H-OODA has been particularly analyzed to reveal the insights in UAV swarms. Moreover, we have investigated the potentials of combining H-OODA with NFV to improve the flexibility and efficiency of UAV swarms. Besides, detailed use cases have been conducted to validate the advantages of H-OODA. In addition, the challenges and possible directions of H-OODA framework have been analyzed. The multi-layer H-OODA framework enables seamless scalabilities from simple surveil-lances to complex disaster response operations, maintaining operational effectiveness through adaptive coordination be-tween global mission control and local decision-making. Such a scalable architecture fulfills essential requirements in UAV swarm applications with dynamically changing demands. We envision that future research will continue to address the open challenges of H-OODA in UAV swarms. REFERENCES [1] M. L. Harchaoui, S. Ouahouah, O. Bekkouche, M. Bagaa, and A. Der-ouiche, “5G-based ground risk mitigation for UAVs: A deep rein-forcement learning approach,” in 2024 IEEE Global Communications Conference , Cape Town, South Africa, Dec. 2024, pp. 1539–1544. [2] N. H. Motlagh, M. Bagaa, and T. Taleb, “UAV-based IoT platform: A crowd surveillance use case,” IEEE Commun. Mag. , vol. 55, no. 2, pp. 128–134, Feb. 2017. [3] W. Wu, F. Zhou, B. Wang, Q. Wu, C. Dong, and R. Q. Hu, “Unmanned aerial vehicle swarm-enabled edge computing: Potentials, promising technologies, and challenges,” IEEE Wireless Commun. , vol. 29, no. 4, pp. 78–85, Aug. 2022. [4] S. Ouahouah, M. Bagaa, J. Prados-Garzon, and T. Taleb, “Deep-reinforcement-learning-based collision avoidance in UAV environment,” 
+
+IEEE Internet Things J. , vol. 9, no. 6, pp. 4015–4030, Mar. 2022. [5] O. Bekkouche, K. Samdanis, M. Bagaa, and T. Taleb, “A service-based architecture for enabling UAV enhanced network services,” IEEE Netw. ,vol. 34, no. 4, pp. 328–335, Apr. 2020. [6] P. Sun, Y. Huang, and K. Wang, “An effectiveness evaluation method-ology of reconnaissance/strike UAV formation based on OODA,” in 
+
+Proceedings of 3rd International Conference on Autonomous Unmanned Systems , Singapore, Apr. 2024. [7] O. Alharasees, M. S. Abdalla, and U. Kale, “Evaluating AI-UAV systems: A combined approach with operator group comparison,” in 5th International Congress on Human-Computer Interaction, Optimization and Robotic Applications (HORA) , Istanbul, Turkiye, Jun. 2023. [8] Y. Qu, H. Sun, C. Dong, J. Kang, H. Dai, Q. Wu, and S. Guo, “Elastic collaborative edge intelligence for UAV swarm: Architecture, challenges, and opportunities,” IEEE Commun. Mag. , vol. 62, no. 1, pp. 62–68, Jan. 2024. [9] Y. Chen, G. Liu, Z. Zhang, L. He, and S. He, “Improving physical layer security for multi-UAV systems against hybrid wireless attacks,” IEEE Trans. Veh. Technol. , vol. 73, no. 5, pp. 7034–7048, Nov. 2023. [10] T. Bouzid, N. Chaib, M. L. Bensaad, and O. S. Oubbati, “5G network slicing with unmanned aerial vehicles: Taxonomy, survey, and future directions,” Trans. Emerging Telecommun. Technol. , vol. 34, no. 3, p. e4721, Dec. 2022. [11] C. Richards, “Boyd’s OODA loop,” Necesse , vol. 5, no. 1, pp. 142–165, 2020. [12] A. I. Ameur, O. S. Oubbati, A. Lakas, A. Rachedi, and M. B. Yagoubi, “Efficient vehicular data sharing using aerial P2P backbone,” IEEE Trans. Intell. Veh. , Jun. 2024, early Access. [13] Y. Wu, Z. Jia, Q. Wu, and Z. Lu, “Adaptive QoE-aware SFC orchestra-tion in UAV networks: A deep reinforcement learning approach,” IEEE Trans. Network Sci. Eng. , vol. 11, no. 6, pp. 6052–6065, Aug. 2024. [14] O. S. Oubbati, H. Badis, A. Rachedi, A. Lakas, and P. Lorenz, “Multi-UAV assisted network coverage optimization for rescue operations using reinforcement learning,” in 2023 IEEE 20th Consumer Communications & Networking Conference , Las Vegas, NV, USA, Mar. 2023. [15] H. Cao, N. Kumar, L. Yang, M. Guizani, and F. R. Yu, “Resource orchestration and allocation of E2E slices in softwarized UAVs-assisted 6G terrestrial networks,” IEEE Trans. Netw. Serv. Manage. , vol. 21, no. 1, pp. 1032–1047, Feb. 2024.

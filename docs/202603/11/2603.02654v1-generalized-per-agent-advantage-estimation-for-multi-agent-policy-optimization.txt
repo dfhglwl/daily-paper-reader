@@ -1,0 +1,3647 @@
+Title: Generalized Per-Agent Advantage Estimation for Multi-Agent Policy Optimization
+
+URL Source: https://arxiv.org/pdf/2603.02654v1
+
+Published Time: Wed, 04 Mar 2026 01:44:17 GMT
+
+Number of Pages: 20
+
+Markdown Content:
+# Generalized Per-Agent Advantage Estimation for Multi-Agent Policy Optimization 
+
+# Seongmin Kim 
+
+KAIST Daejeon, Korea seongmin.kim@kaist.ac.kr 
+
+# Giseung Park 
+
+University of Toronto Toronto, Ontario, Canada giseung.park@utoronto.ca 
+
+# Woojun Kim 
+
+Carnegie Mellon University Pittsburgh, Pennsylvania, USA woojunk@andrew.cmu.edu 
+
+# Jiwon Jeon 
+
+KAIST Daejeon, Korea jiwon.jeon@kaist.ac.kr 
+
+# Seungyeol Han ∗
+
+UNIST Ulsan, Korea syhan@unist.ac.kr 
+
+# Youngchul Sung 
+
+KAIST Daejeon, Korea ycsung@kaist.ac.kr 
+
+## ABSTRACT 
+
+In this paper, we propose a novel framework for multi-agent re-inforcement learning that enhances sample efficiency and coor-dination through accurate per-agent advantage estimation. The core of our approach is Generalized Per-Agent Advantage Estima-tor (GPAE), which employs a per-agent value iteration operator to compute precise per-agent advantages. This operator enables stable off-policy learning by indirectly estimating values via action probabilities, eliminating the need for direct 𝑄 -function estima-tion. To further refine estimation, we introduce a double-truncated importance sampling ratio scheme. This scheme improves credit assignment for off-policy trajectories by balancing sensitivity to the agent’s own policy changes with robustness to non-stationarity from other agents. Experiments on benchmarks demonstrate that our approach outperforms existing approaches, excelling in coordi-nation and sample efficiency for complex scenarios. 
+
+## KEYWORDS 
+
+Multi-Agent Reinforcement Learning; Multi-Agent Credit Assign-ment Problem; Policy Optimization 
+
+ACM Reference Format: 
+
+Seongmin Kim, Giseung Park, Woojun Kim, Jiwon Jeon, Seungyeol Han, and Youngchul Sung. 2026. Generalized Per-Agent Advantage Estimation for Multi-Agent Policy Optimization. In Proc. of the 25th International Confer-ence on Autonomous Agents and Multiagent Systems (AAMAS 2026), Paphos, Cyprus, May 25 – 29, 2026 , IFAAMAS, 20 pages. https://doi.org/10.65109/ OBIA4073 
+
+## 1 INTRODUCTION 
+
+Multi-agent reinforcement learning (MARL) addresses coopera-tive tasks where agents learn policies to maximize shared rewards through environmental interactions [ 24 ]. These tasks face chal-lenges from coordination requirements and partial observability.   
+
+> ∗Corresponding author
+> This work is licensed under a Creative Commons Attribution Inter-national 4.0 License.
+> Proc. of the 25th International Conference on Autonomous Agents and Multiagent Systems (AAMAS 2026), C. Amato, L. Dennis, V. Mascardi, J. Thangarajah (eds.), May 25 – 29, 2026, Paphos, Cyprus .©2026 International Foundation for Autonomous Agents and Multiagent Systems (www.ifaamas.org). https://doi.org/10.65109/OBIA4073
+
+While independent learning approaches [ 37 ] often suffer from non-stationarity issues, the centralized training and decentralized ex-ecution (CTDE) paradigm [ 15 , 19 ] enables agents to utilize global information during training while maintaining local observation dependency during execution. Within CTDE, various algorithms have emerged, including value-based methods like VDN and QMIX [ 28 , 34 ] and multi-agent pol-icy gradient (MAPG)-based methods such as COMA and MAPPO [ 8, 42 ]. Among these, MAPPO, an extension of Proximal Policy Optimization (PPO, Schulman et al . [32] ), has gained popularity for its strong performance. However, MAPPO’s reliance on Gener-alized Advantage Estimator (GAE) [ 31 ] introduces limitations: (1) reduced sample efficiency due to on-policy constraints, and (2) inad-equate credit assignment from estimating identical advantages for all agents. While techniques like V-traces enhance sample efficiency in single-agent settings, their application to multi-agent systems has not been theoretically or experimentally explored. The second problem is that MAPPO updates policies based on centralized critic with GAE, which estimates the same advantage for all individual agents’ actions in the same timestep. This approach is inadequate for solving the multi-agent credit assignment problem, which is a significant challenge in MARL where the contribution of individual agents to the global reward must be accurately assessed. The multi-agent credit assignment problem significantly impacts MARL performance [ 4 , 44 ]. Value-based methods address this with value function factorization [ 28 , 33 ], but lack theoretical guarantees and often fail to provide accurate credit assignment in complex tasks. In MAPG area, COMA employ counterfactual baselines but suffer from variance and scalability issues. DAE [ 18 ] offers a GAE-based approach but lacks policy-invariance [ 22 ], potentially leading to sub-optimal convergence. Motivated by these limitations, we investigate an advantage estimator for ensuring precise per-agent credit assignment at 𝑛 -step horizons, remains policy-invariant, and enables stable off-policy reuse under MAPG within CTDE. The key contributions of our work are summarized as follows: 
+
+• We propose Generalized Per-Agent Advantage Estimator ,which provides explicit per-agent credit signals under CTDE and unifies on-policy learning and off-policy reuse within a single estimator. 
+
+• We establish contraction of the per-agent operator and show policy invariance of GPAE theoretically. 
+
+> arXiv:2603.02654v1 [cs.MA] 3 Mar 2026
+
+• We propose a double-truncated importance sampling scheme tailored to multi-agent coupling, improving stability and maintaining credit fidelity compared to single-truncation or individual-only truncation. 
+
+• We demonstrate the practical benefits of our method through extensive experiments, showing significant performance im-provements in MARL tasks. 
+
+## 2 BACKGROUND 2.1 Dec-POMDP and CTDE Setup 
+
+A multi-agent system can be modeled as a Decentralized Partially Observable Markov Decision Process (Dec-POMDP) [ 23 ], defined by the tuple ⟨S , A, 𝑃, 𝑅, Z, 𝑂, 𝑛, 𝛾 ⟩, where S is the global state space, 
+
+A = Î𝑛 𝑖 =1 A𝑖 is the joint action space of 𝑛 agents, with A𝑖 being the action space of agent 𝑖 , 𝑃 (𝑠 ′ |𝑠, 𝒂 ) is the state transition probability given the current state 𝑠 and joint action 𝒂 = {𝑎 1, . . . , 𝑎 𝑛 }, 𝑅 (𝑠, 𝒂 )
+
+is the shared reward function, Z is the observation space, and 
+
+𝑂 (𝑜 𝑖 |𝑠, 𝑖 ) specifies the observation probabilities for each agent 𝑖 ,and 𝛾 ∈ [ 0, 1) is the discount factor. The goal of MARL is to learn a policy 𝝅 = Î𝑛 𝑖 =1 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 ) for each agent that maximizes the expected cumulative reward 𝐽 (𝝅 ) =
+
+E𝝅 
+
+Í ∞ 
+
+> 𝑡 =0
+
+𝛾 𝑡 𝑅 (𝑠 𝑡 , 𝒂 𝑡 ). The CTDE paradigm facilitates MARL by allowing agents to use global information including full state 𝑠 
+
+during training, while restricting each agent’s policy to depend only on local observations 𝑜 𝑖 during execution. Note that our theo-retical analysis assumes full observability during training, which is common in many CTDE-based MARL studies [ 17 , 39 ] to enable rigorous analysis. Extending theory to partially observable settings remains challenging, as solving Dec-POMDPs is NEXP-complete and requires super-exponential time in the worst case [1, 43]. 
+
+## 2.2 Advantage Estimation and Credit Assignment 
+
+In MAPG methods, accurate advantage estimation plays a central role in stabilizing policy updates and enabling effective credit as-signment. Among existing estimators, GAE [ 31 ] is widely adopted for its ability to balance bias and variance through an exponentially-weighted sum of temporal difference (TD) errors with bias-variance trade-off parameter 𝜆 .MAPPO [ 42 ], a strong baseline in cooperative MARL, extends PPO to the multi-agent setting under CTDE. It applies GAE as the default advantage estimator for each agent. However, MAPPO treats all agents identically by assuming a shared team advantage: 
+
+𝐴 𝑖 (𝑠, a) = 𝐴 global (𝑠, a) ∀𝑖, (1) which ignores the agent-specific impact on the joint outcome and thus limits the fidelity of credit assignment. To address this lim-itation, COMA [ 8] proposes a per-agent advantage formulation using a counterfactual baseline that marginalizes out the individual agent’s contribution. COMA computes a per-agent advantage using a counterfactual baseline as: 
+
+𝐴 𝑖, COMA (𝑠, a) = 𝑄 (𝑠, a) − ∑︁ 
+
+> 𝑎 𝑖
+
+𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )𝑄 (𝑠, (𝑎 𝑖 , a−𝑖 )) , (2) where a−𝑖 represents the actions of all agents except 𝑖 . This formu-lation enables per-agent credit assignment by marginalizing over agent 𝑖 ’s actions. More recently, Difference Advantage Estimation (DAE) [ 18 ] was developed as a GAE-based alternative by incorporating potential-based difference rewards to address multi-step credit assignment: 
+
+𝐴 𝑖, DAE  
+
+> 𝑡
+
+=
+
+> ∞
+
+∑︁ 
+
+> 𝑙 =0
+
+(𝛾𝜆 )𝑙 𝛿 𝑖 𝑡 +𝑙 , (3) where 𝛿 𝑖 𝑡 +𝑙 = 𝑟 𝑡 +𝑙 − 𝛽 𝑙 +1E𝑎 𝑖 [𝑟 𝑡 +𝑙 ] + 𝛾𝑉 𝑡 +𝑙 +1 − 𝑉 𝑡 +𝑙 with bias-credit assignment control parameter 𝛽 .
+
+## 3 MOTIVATION 
+
+MARL poses unique challenges, among which the multi-agent credit assignment problem is a key bottleneck. Accurately assigning credit to individual agents based on their contributions to the global reward is critical for effective learning. However, existing methods in MAPG domain exhibit fundamental limitations. Building on the background and Eq. (1) , we note that MAPPO’s reliance on a single advantage function for every agent can mask each agent’s distinct contributions. COMA advantage relies on TD (0) estimation, which limits its ability to leverage 𝑛 -step esti-mation and 𝑛 -step credit-assignment. DAE [ 18 ] extends GAE with a potential-based difference reward to address credit assignment. While DAE allows a 𝑛 -step credit assignment, it is not policy in-variant due to the estimated reward bias term, which can lead to suboptimal results. Additionally, DAE suffers from instability in explicit reward estimation. Beyond credit assignment, sample inefficiency further compli-cates learning in MAPG. Importance sampling offers a theoretical means to utilize off-policy data, but high variance under MARL often reduces its practical utility. While single-agent methods like V-trace [ 7 ] control variance by truncating importance sampling ratios, their effectiveness does not readily transfer to multi-agent systems because each agent’s behavior interdepends on others. We thus seek an advantage estimator that (i) delivers per-agent, 
+
+𝑛 -step credit signals under CTDE, (ii) remains policy-invariant to avoid bias, and (iii) is compatible with off-policy data. Table 1 summarizes how existing MAPG estimators fall short with respect to these criteria. 
+
+Table 1: Comparison of MAPG advantage estimators                   
+
+> Advantage Credit Off-Policy Additional Assignment Bias( 𝜆 =1)GAE No No No COMA 1-step No No DAE 𝑛 -step No Yes
+> GPAE (Ours) 𝒏 -step Yes No
+
+Guided by these requirements, we introduce GPAE, which pro-vides 𝑛 -step, per-agent credit signals while preserving policy in-variance and enabling off-policy reuse. 3.1 Credit Assignment in the Presence of Anomalous Behavior 
+
+Before detailing the methodology, we provide some preliminary experimental results in this section to reinforce our motivation. Here, we examine how various advantage estimators respond when an agent deviates from cooperation. For the experiment, we use the SMAX [ 29 ] environment, a JAX-implemented version of SMAC [ 30 ], which is a widely used bench-mark for MARL algorithms. In SMAX, agents collaborate to achieve a common goal, typically involving cooperation in battle against enemy. In the SMAX-3m task, three agents cooperate to win a battle, requiring careful coordination and credit assignment. To demonstrate how methods handle the multi-agent credit as-signment, we modify the SMAX-3m task by introducing 5% probabil-ity that one agent performs a stop action. This irregularity disrupts coordination, underscoring the need for robust credit assignment and stable advantage estimation. We focus on whether each advantage estimator can accurately penalize the “misbehaving” agent’s suboptimal action and thus guide the overall team to learn more robust behaviors. In particular, we track the difference in per-agent advantage at the timestep where the anomalous action occurs. Formally, we measure: 
+
+Δ𝐴 = 1
+
+𝑁 − 1∑︁ 𝑗 ≠𝑖 
+
+ˆ𝐴 𝑗 𝑡 − ˆ𝐴 𝑖 𝑡 ,
+
+where ˆ𝐴 𝑖 𝑡 is the per-agent advantage for the misbehaving agent 𝑖 
+
+at timestep 𝑡 , and ˆ𝐴 𝑗 𝑡 are the advantages of the other 𝑁 − 1 agents. A higher Δ𝐴 indicates that the advantage more strongly penalizes the anomalous agent relative to agents acting optimally, implying better credit assignment. 0.00 0.05 0.10 0.15        
+
+> GPAE (off-policy)
+> GPAE
+> DAE
+> GAE
+> COMA
+> 0.13 0.05 0.01 0.00 0.02
+> Advantage Gap Δ A
+> 0.4 0.6
+> 0.63 0.60 0.57 0.54 0.41
+> Win Rate
+> (a) Advantage Gap Δ𝐴 0.00 0.05 0.10 0.15
+> GPAE (off-policy)
+> GPAE
+> DAE
+> GAE
+> COMA
+> 0.13 0.05 0.01 0.00 0.02
+> Advantage Gap Δ A
+> 0.4 0.6
+> 0.63 0.60 0.57 0.54 0.41
+> Win Rate (b) Performance
+
+Figure 1: (a) Advantage gap Δ𝐴 indicating how strongly each method penalizes the anomalous agent. Higher Δ𝐴 means more effective credit assignment against the “stop” action. (b) Average win rates, illustrating overall learning stability and performance. 
+
+Figure 1(a) compares the advantage gap Δ𝐴 of several advantage estimators. Our proposed GPAE yields the highest Δ𝐴 (particularly in its off-policy form), demonstrating its ability to measure credit assignment effectively, while COMA and DAE achieves a nonzero gap but are less effective in credit assignment. Note that GAE us-ing common advantage for all agents cannot extract advantage gap. Figure 1(b) shows the average win rate, assessing the overall performance. For this figure, we used the same PPO-style policy optimization only with advantage changed. Note that COMA performs significantly worse than other advan-tage estimation methods even though it extracts larger advantage gap than GAE and DAE. The main difference of COMA from other methods is that COMA uses one-step estimation for advantage, which is prone to large errors, whereas all others use 𝑛 -step advan-tage estimation. Hence, we recognize that the accuracy of estima-tion by 𝑛 -step estimation as well as credit assignment is important for performance. It is seen that under the 𝑛 -step estimation frame-work, the advantage gap, i.e., credit assignment indeed translates to the overall performance and its impact saturates as the advantage gap increases, following our intuition. These observations motivate our approach to unify on-policy and off-policy advantage estimation around 𝑛 -step signals while preserving per-agent credit assignment. In the following sections, we introduce GPAE and the associated DT-ISR weighting, along with theoretical properties and empirical validation. 
+
+## 4 METHODOLOGY 
+
+In this section, we introduce two contributions of our work. First, based on our value iteration operator, we propose a novel advan-tage estimator, called Generalized Per-agent Advantage Estimator (GPAE ). Then we extend the method to the off-policy case with theoretical insights, and propose a double-truncated importance sam-pling for the off-policy correction term in the weighted advantage. 
+
+## 4.1 Generalized Per-Agent Advantage Estimation 
+
+To begin, we consider the counterfactual value function 
+
+E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] , where 𝑄 denotes the joint action-value func-tion estimate 𝑄 𝝅 , and 𝒂 −𝑖 represents the actions of all agents except agent 𝑖 . For convenience, we define: 
+
+𝐸𝑄 𝑖 := E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] .
+
+Here, 𝐸𝑄 𝑖 serves as an estimate of the per-agent state-value function ,which averages out only the action of agent 𝑖 under its policy 𝜋 𝑖 and thus has (𝑠, 𝒂 −𝑖 ) as its argument, in contrast to the full state-value function 𝑉 (𝑠 ) = E𝒂 ∼𝝅 [𝑄 (𝑠, 𝒂 )] having only 𝑠 as the argument. To build an efficient way to update 𝐸𝑄 𝑖 , we present a new per-agent value iteration operator R𝑖 , a specifically designed for MARL to facilitate effective credit assignment by focusing on per-agent value estimation. For now, it only considers on-policy learning, thus we denote the operator with R𝑖 
+
+> on
+
+.
+
+Definition 4.1. The value iteration operator R𝑖  
+
+> on
+
+for 𝐸𝑄 𝑖 is defined as 
+
+R𝑖 
+
+> on
+
+𝐸𝑄 𝑖 := 𝐸𝑄 𝑖 + E𝑎 𝑖 
+
+> 0∼𝜋 𝑖
+
+"
+
+E𝝅 
+
+∑︁  
+
+> 𝑡 ≥0
+
+(𝛾𝜆 )𝑡  𝑟 𝑡 + 𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 
+
+
+
+(𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖  
+
+> 0
+
+) = (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )
+
+ #
+
+, (4) where 𝐸𝑄 𝑖 𝑡 := E𝑎 𝑖 𝑡 ∼𝜋 𝑖 [𝑄 (𝑠 𝑡 , 𝑎 𝑖 𝑡 , 𝒂 −𝑖 𝑡 )] and 𝜆 ∈ ( 0, 1] is a bias-variance trade-off parameter. 
+
+R𝑖  
+
+> on
+
+introduces the ability to compute per-agent state-value esti-mates efficiently, incorporating partial averaging over the actions of the agent 𝑖 while retaining dependencies on the actions of other agents, 𝒂 −𝑖 . This structure enables 𝑛 -step credit assignment from the value estimation step, in contrast to existing methods that con-sider only 1-step credit assignment and value estimation separately. Our proposed method provides a more stable and efficient learning method with estimation by connecting advantage and value in a novel way. The operator R𝑖  
+
+> on
+
+possesses desirable theoretical properties. We establish the contraction property of R𝑖 , which ensures conver-gence to a unique fixed point: 
+
+Theorem 4.1. R𝑖  
+
+> on
+
+is a 𝛾 -contraction, which means that 𝐸𝑄 𝑖 con-verges to the unique fixed point. If 𝜆 = 1, the fixed point is 
+
+E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] .
+
+Proof Sketch. Rewriting 𝑅 𝑖  
+
+> on
+
+by shifting the TD-error indices shows that the difference between two inputs 𝐸𝑄 𝑖, 1 and 𝐸𝑄 𝑖, 2 is scaled by a geometric factor (𝛾𝜆 )𝑡 . Taking the sup-norm gives an overall contraction of at most 𝛾 , so 𝑅 𝑖  
+
+> on
+
+is a 𝛾 -contraction. For 𝜆 = 1,the TD terms telescope, leaving [𝑄 𝝅 (𝑠, 𝒂 ) − E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] ,and the fixed point becomes E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] . □
+
+Theorem 4.1 states that E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] can be estimated directly from the policy distribution of agent 𝑖 and the actions of the remaining agents, without the dual process of estimating the true joint 𝑄 value and marginalizing over the policy at 𝑄 .From the definition 4.1 to compute the 𝑛 -step advantage with per-agent TD error without compromising the structure of the operator R𝑖 
+
+> on
+
+, the following theorem is presented: 
+
+Theorem 4.2. The inner conditional expectation term of R𝑖 , i.e., 
+
+E𝝅 [Í𝑡 ≥0 (𝛾𝜆 )𝑡 (𝑟 𝑡 + 𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 )] given (𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖  
+
+> 0
+
+) = (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )
+
+reduces to 𝑄 𝝅 (𝑠, 𝒂 )− E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] , ensuring policy invariance with 𝜆 = 1.
+
+Proof Sketch. With 𝜆 = 1, the sum Í𝑡 (𝑟 𝑡 + 𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 )
+
+collapses to 𝑄 𝝅 (𝑠, 𝒂 )− E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] by telescoping. Since the baseline term involving 𝐸𝑄 𝑖 has zero gradient under decentralized execution, this advantage yields the correct policy gradient. □
+
+Theorem 4.2 suggests that these 𝑛 -step TD-errors can be uti-lized to achieve unbiased policy updates. In general, The trade-off between variance and bias can be controlled by adjusting 𝜆 .Using Theorem 4.2, we propose the GPAE for on-policy learning: 
+
+ˆ𝐴 𝑖, GPAE,on  
+
+> 𝑡
+
+:=∑︁  
+
+> 𝑙 ≥𝑡
+
+(𝛾𝜆 )𝑙 −𝑡 𝛿 𝑖, GPAE  
+
+> 𝑙
+
+, (5) where 𝛿 𝑖, GPAE  
+
+> 𝑙
+
+= 𝑟 𝑙 + 𝛾𝐸𝑄 𝑖 𝑙 +1 − 𝐸𝑄 𝑖 𝑙 is the per-agent TD error. In the single-agent case, GPAE reduces to GAE( 𝜆 ). This demon-strates GPAE as a generalization of GAE( 𝜆 ) for multi-agent scenar-ios with explicit credit assignment. 
+
+## 4.2 Extension to Off-Policy Estimation 
+
+While R𝑖 and GPAE were originally defined for on-policy learn-ing, adapting them to off-policy scenarios requires addressing the mismatch between the behavior policy 𝜇 𝑖 and the target policy 𝜋 𝑖 .To achieve this, we reformulate R𝑖  
+
+> on
+
+to include importance sam-pling ratio (ISR) weights, allowing the estimation of per-agent value functions and advantages in an off-policy setting. 
+
+Definition 4.2. The generalized per-agent operator R𝑖 is now defined as: 
+
+R𝑖 𝐸𝑄 𝑖 := 𝐸𝑄 𝑖 + E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+·
+
+ 𝑟 𝑡 + 𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 
+
+ 𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖 
+
+> 0
+
+ #
+
+, (6) where (𝑠 0, 𝒂 0) = (𝑠, 𝒂 ), 𝜌 𝑖  
+
+> 0
+
+= 𝜋 𝑖 (𝑎 𝑖       
+
+> 0|𝑜 𝑖
+> 0)
+> 𝜇 𝑖 (𝑎 𝑖
+> 0|𝑜 𝑖
+> 0)
+
+, 𝝁 = Î𝑁 𝑖 =1 𝜇 𝑖 is the behavior policy, and 𝑐 𝑖 𝑡 is the trace weight for off-policy correction. For the case of on-policy learning, 𝑐 𝑖 𝑡 is substituted for the value of 𝜆 , a bias-variance trade-off parameter. This operator introduces the necessary corrections to the per-agent value updates by weighting the contributions of sampled transitions according to their likelihood under the target policy. The theoretical properties of R𝑖 , including its contraction prop-erty, remain intact under the condition that the behavior policy sufficiently explores the state-action space. The off-policy GPAE is constructed analogously by incorporating ISR weights into the per-agent TD error. Finally, our off-policy generalized per-agent advantage estimator is given by: 
+
+ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+:=∑︁  
+
+> 𝑙 ≥𝑡
+
+𝛾 𝑙 −𝑡 
+
+ 𝑙 Ö
+
+> 𝑗 =𝑡 +1
+
+𝑐 𝑖 𝑗 
+
+
+
+𝛿 𝑖, GPAE  
+
+> 𝑙
+
+, (7) where 𝛿 𝑖, GPAE  
+
+> 𝑙
+
+= 𝑟 𝑙 + 𝛾𝐸𝑄 𝑖 𝑙 +1 − 𝐸𝑄 𝑖 𝑙 remains the per-agent TD error. Note that the per-agent value iteration operator denoted by 
+
+R𝑖 and ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+expanded to off-policy learning, are the broader framework that encompass on-policy learning case. That is to say, 
+
+R𝑖 and ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+in Eq. 6 and 7 inherently transform into R𝑖  
+
+> on
+
+and 
+
+ˆ𝐴 𝑖, GPAE,on  
+
+> 𝑡
+
+in Eq. 4 and 5 in the on-policy scenario, without the necessity of additional modifications. To ensure the validity of the off-policy extension, we establish the following theoretical guarantees: 
+
+Theorem 4.3. R𝑖 is a 𝛾 -contraction in the general off-policy case. 
+
+ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+also guarantees policy invariance with 𝑐 𝑖 𝑡 = 𝝆 𝑡 .
+
+Proof Sketch. In the off-policy operator 𝑅 𝑖 , each TD term is weighted by 𝑐 𝑖 𝑡 ∈ [ 0, 1]. Bounding these weights shows that the operator still scales differences by at most 𝛾 , preserving the 𝛾 -contraction. When 𝑐 𝑖,𝑡 = 𝜌 𝑡 (full IS ratios), all bias terms vanish and the expression matches the on-policy case [ 26 ], giving the same 
+
+𝑄 𝜋 − E𝑎 𝑖 𝑄 form. Thus the estimator remains unbiased. □
+
+While Theorem 4.3 establishes the theoretical foundations, prac-tical implementation requires addressing variance explosion due to the use of off-policy samples. This phenomenon, arising from the mismatch between behavioral and target policies, necessitates introducing a bias into the ISR weight to stabilize learning. In single-agent settings, techniques like V-trace have been effective in achiev-ing this balance. However, applying V-trace directly to multi-agent systems introduces new challenges, which we address in the fol-lowing subsection. 4.3 Choice of Off-Policy Correction Term 𝑐 𝑖 
+
+To stabilize off-policy estimation in MARL, we extend the idea of truncated importance sampling ratio (ISR). In single-agent methods, the weight is defined as 𝑐 𝑡 = min (1, 𝜌 𝑡 ), which bounds variance by truncating the ISR. Directly applying this to multi-agent sys-tems, however, fails to account for the interaction between agents: a shared joint ratio controls variance but obscures individual contri-butions, whereas using only agent-specific ratios preserves credit signals but can destabilize training. To address this, we introduce a new double-truncated ISR weight (DT-ISR) that balance variance control with per-agent credit sensitivity. We first consider two direct approaches to obtain weights in multi-agent systems. Single truncation (ST) applies a shared trunca-tion on a joint ISR 𝝆 = Î𝑗 ∈ N 𝜋 𝑗 𝑡 /𝜇 𝑗 𝑡 , defining 𝑐 𝑖, ST  
+
+> 𝑡
+
+= 𝜆 min  1, 𝝆  for every agent 𝑖 . ST effectively controls variance under non-stationary team dynamics because all agents receive the same bounded weight, but it makes the update insensitive to an individual agent’s policy change and thus weakens per-agent credit signals. As opposed to ST, we can only consider the ISR of the own policy: 
+
+𝑐 𝑖, IT  
+
+> 𝑡
+
+= 𝜆 min  1, 𝜌 𝑖 𝑡 
+
+ , where 𝜌 𝑖 𝑡 = 𝜋 𝑖 𝑡 /𝜇 𝑖 𝑡 and IT denotes individual truncation. This can be effective to focus on own individual policy, but it ignores shifts induced by the team. As a result, the training signal is evaluated under a mismatched occupancy. This leads to unstable learning due to biased updates since samples collected under outdated team behavior are not sufficiently discounted. Therefore, it is essential to propose a novel truncation scheme for MARL that incorporates the strengths of both IT and ST. The scheme should be constrained by a bound of 1 while maintaining a close alignment with both individual ISR 𝜌 𝑖 𝑡 and joint ISR 𝝆 .In this regard, we propose a novel truncation scheme for the trace coefficient of multi-agent off-policy correction: a double-truncated importance sampling ratio (DT-ISR) weight :
+
+𝑐 𝑖, DT  
+
+> 𝑡
+
+= 𝜆 min  1, 𝜌 𝑖 𝑡 min (𝜂, 𝝆 −𝑖 𝑡 ) , (8) where 𝝆 −𝑖 𝑡 = Î𝑗 ≠𝑖 𝜋 𝑗 𝑡 /𝜇 𝑗 𝑡 , and 𝜂 is a constant that serves to mitigate the effects of other agents’ policies, while making the unique ISR of agent 𝑖 less intrusive. This formulation ensures that the unique contribution of agent 𝑖 is preserved while mitigating variance in-troduced by the collective policies of other agents. DT-ISR provides a better approximation of the ISR weight, enabling more effective off-policy value and advantage estimation with improved stability. To motivate and evaluate our proposed method, we present key visualizations in Fig. 2. We choose the environment SMAX-1s1z 
+
+with 0.5𝑀 training timestep, in which two agents with different dynamics cooperate to destroy enemies, thus accurate credit as-signment can drive rapid learning. Here, we take 𝜂 = 1.05 for 𝑐 𝑖, DT  
+
+> 𝑡
+
+.The Fig. 2(a), 2(b) illustrate the average distance of each truncation weight from the true individual ISR 𝜌 𝑖 and joint ISR 𝝆 , denoted as 
+
+𝑑 (𝜌 𝑖 , 𝑐 𝑖 ) and 𝑑 (𝝆 , 𝑐 𝑖 ), respectively. Fig. 2(c) highlights the average gap between these two distances, which shows how the weight is balanced between the two true ISRs. The average gap is defined as 
+
+Δ𝑐 𝑖 := E𝜏 [| 𝑑 (𝝆 , 𝑐 𝑖 ) − 𝑑 (𝜌 𝑖 , 𝑐 𝑖 )|] , (9) where 𝑐 𝑖 is given off-policy correction term and 𝜏 is a trajectory sample. The smaller this gap, the better the truncation method is at approximating the true joint ISR while maintaining accurate individual ISR estimates. As shown in Fig. 2(c), DT-ISR is effective DT ST IT No Correction 0 0.25 0.5           
+
+> Environment Steps
+> 0.00
+> 0.05
+> 0.10
+> 0.15
+> Distance
+> ×10 5
+> (a) Distance from 𝜌 𝑖 00.25 0.5
+> Environment Steps
+> 0.00
+> 0.05
+> 0.10
+> 0.15
+> Distance
+> ×10 5(b) Distance from 𝝆 00.25 0.5
+> Environment Steps
+> 0.00
+> 0.03
+> 0.06
+> Average Gap Δ ci
+> ×10 5
+> (c) Gap between (a) and (b) 00.25 0.5
+> Environment Steps
+> 0.0
+> 0.5
+> 1.0
+> Eval Win Rate
+> ×10 5(d) Performance
+
+Figure 2: Off-policy correction comparisons in the SMAX-1s1z task. (a) Distance from true 𝜌 𝑖 , (b) Distance from joint true 𝝆 , (c) Gap between (a) and (b), (d) Final performance. Legend is shared across all plots. DT-ISR demonstrates the lowest gap Δ𝑐 𝑖 and the highest performance. 
+
+in reducing the gap Δ𝑐 𝑖 when compared to other methods. Nonethe-less, further validation is required to confirm that the minimization of the gap correlates with stable learning. Fig. 2(d) compares the performance of DT against IT, ST, and without off-policy correction, demonstrating the superiority of DT in achieving higher win rates. This analysis underscores the advantages of our DT-ISR, laying a strong foundation for further exploration of robust off-policy corrections in MARL. 
+
+## 4.4 Overall Learning Structure and Algorithm 
+
+We now summarize the overall training pipeline of GPAE with DT-ISR under CTDE. The procedure integrates the on- and off-policy estimators into a practical optimization loop. At each iteration, (i) trajectories are collected by the joint policy 𝝅 = Î𝑁 𝑖 =1 𝜋 𝑖 , (ii) stored into a short replay buffer 𝑅 , and (iii) gradient updates are performed by sampling mini-batches from 𝑅 . Actors 𝜽 are updated per agent, and a centralized critic head parameterizes 𝐸𝑄 𝑖 (𝑠, 𝑎 −𝑖 ; 𝝍 ).For each sampled trajectories, we compute GPAE by Eq. 7, and the value function is optimized using the following loss function: 
+
+𝐿 (𝜓 ) =∑︁  
+
+> 𝜏 ∈ B
+
+(𝐸𝑄 𝑖 𝜓 − 𝐸𝑄 𝑖 𝑡𝑎𝑟𝑔 )2, (10) where B represents the replay buffer, and the target value 𝐸𝑄 𝑖 𝑡𝑎𝑟𝑔 
+
+is explicitly given by 
+
+𝐸𝑄 𝑖 𝑡𝑎𝑟𝑔 = 𝐸𝑄 𝑖 𝜓 + 𝜌 𝑖 𝑡 ˆ𝐴 𝑖,𝐺𝑃𝐴𝐸 𝑡 , (11) where 𝜌 𝑖 𝑡 = min (1, 𝜌 𝑖 𝑡 ) is a bounded individual ISR for stable learning and 𝜓 denotes a parameter of target value network. Actors are updated with PPO-style clipped objectives using 𝐴 𝑖 𝑡 .The complete procedure is summarized in Algorithm 1, which unifies our theoretical operator into an implementable CTDE algo-rithm with off-policy sample reuse. 
+
+Algorithm 1 GPAE Initialize shared policy parameter 𝜽 , shared value parameter 𝝍 
+
+for 𝑁 agents Initialize trajectory buffer 𝑅 with batch reuse length 𝑀 
+
+for each iteration 𝑚 do 
+
+Collect a set of trajectories 𝐵 𝑚 from the environment by the joint policy 𝝅 𝑚 
+
+Store 𝐵 𝑚 in the trajectory buffer 𝑅 
+
+Compute ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+and 𝐸𝑄 𝑖 𝑡𝑎𝑟𝑔 with Eq. 7 and Eq. 11 by using the samples stored in 𝑅 
+
+for each gradient step do 
+
+Update the actor parameter 𝜽 with PPO actor loss Update the critic parameter 𝝍 with Eq. 10 
+
+end for end for 
+
+## 5 EXPERIMENTAL RESULTS 5.1 Experimental Setup 
+
+We evaluated the proposed method in two challenging MARL en-vironments, SMAX and MABrax , implemented in JAX [ 2]. These environments are representative of discrete and continuous action domains respectively, and serve as standard testbeds for evaluating GPAE’s credit assignment under partial observability. Figure 3 pro-vides an overview of the two environments used in our evaluation.       
+
+> (a) Halfcheetah-6x1 task of MABrax s
+> s
+> s
+> s
+> s
+> Z
+> Z
+> ZZ
+> ZZ
+> Z
+> Z
+> s
+> Z
+> Z(b) 3s5z task of SMAX
+
+Figure 3: Illustration of the two evaluation environments. MABrax is a Multi-agent version of Brax [ 9], where each agent represents an individual joint of a robot tasked with coordinated movement, with continuous action spaces. MABrax focuses on multi-agent continuous control, with each agent corresponding to an individual joint of a robot. proper credit assignment based on cen-tralized values is crucial to ensure synchronized actions among the joints. Limited observations further emphasize the need for precise credit assignment, as effective coordination is necessary to complete tasks successfully. Figure 3(a) illustrates the halfcheetah-6x1 task, where six agents independently control the hip, thigh, and leg joints of a half-cheetah robot to generate coordinated forward locomotion. 
+
+SMAX is a JAX-based implementation of the StarCraft Multi-agent Challenge (SMAC, Samvelyan et al . [30] ). SMAX involves discrete action spaces where effective inter-agent cooperation is critical for task success. Agents engage in combat to achieve a common goal, with the win rate serving as the primary evaluation metric. Multi-agent credit assignment plays a pivotal role in en-abling agents to coordinate under partial observability. Figure 3(b) includes the 3s5z scenario, where three Stalker units and five Zealot units form a cooperative team against a mirrored adversarial team. The gray squares in the figure visualize attacks between units. 
+
+Baselines. Our method is compared against baseline algorithms, focusing on its performance relative to other existing advantage estimating MAPG methods. Specifically, we consider representative baselines including MAPPO [ 42 ], which utilizes GAE[ 31 ] as an advantage estimator. We also compare against DAE[ 18 ], a variant of advantage estimation using reward estimation, and COMA [ 8 ], a classical counterfactual baseline for credit assignment. In addition, QMIX [ 28 ] and VDN [ 34 ] are included as value decomposition approaches for discrete-action tasks. Note that QMIX and VDN are not applicable for continuous-action tasks. Furthermore, we provide an ablation study to assess the impact of the DT-ISR scheme and analyze the influence of hyperparameter 𝜂 on learning performance. Including the environment, the implementation of MAPPO, VDN and QMIX is based on Rutherford et al . [29] . For GPAE, we provide our own implementation, where off-policy sample reuse is achieved through a short replay buffer. Since DAE has no existing public implementation, we implemented it from scratch. Similarly, COMA lacks a JAX-based implementation, so we implemented it closely following the original description. 
+
+Evaluation Protocol. All methods were trained for 10M timesteps in each environment, and evaluated every 0.5M timesteps. For each task, we conducted 5 independent runs with different random seeds and report the mean and standard deviation across seeds. In SMAX, performance is measured by the win rate, while in MABrax it is measured by episodic return. The results reported in the main ta-bles correspond to the final performance at the end of training. In addition, we provide aggregated learning curves that combine results across all tasks within each environment, where the shaded region indicates the standard error of the mean. Computationally, our algorithm increases wall-clock training time by at most 6% com-pared to GAE within same MAPPO across all SMAX and MABrax tasks. All experiments were conducted on a server equipped with NVIDIA TITAN Xp GPUs and Intel(R) Xeon(R) CPU E5-2620 v4 @ 2.10GHz. 
+
+## 5.2 Comparison with Baselines 
+
+Across SMAX tasks, GPAE consistently achieves superior perfor-mance over all baseline methods. A notable trend is that MAPPO-based advantage estimators already outperform value decomposi-tion baselines such as QMIX and VDN, underscoring the effective-ness of policy-gradient approaches in cooperative MARL. Build-ing on this, GPAE delivers an additional margin of improvement, demonstrating its ability to stabilize training with precise credit assignment and improve sample efficiency with off-policy sample Table 2: Performance comparison after learning 1 × 10 7 timesteps. The upper section shows the average win rate performances in SMAX tasks, with values presented as mean (standard deviation). The lower section shows the episode returns in MABrax tasks, with values presented as mean ± standard deviation. For each task, we conducted experiments with 5 random seeds. The bold numerals denote the highest performance for each task. Note that QMIX and VDN are not applicable to continuous tasks, and therefore, no results are available for MABrax tasks. 
+
+Domain Task GPAE (off) GPAE (on) MAPPO DAE COMA QMIX VDN SMAX 3s5z_vs_3s6z 87.3 ±3.9 6.1 ±2.0 2.6 ±0.7 6.5 ±2.0 0.0 ±0.0 1.3 ±0.8 0.5 ±0.4 
+
+5m_vs_6m 93.7 ±1.0 8.8 ±0.9 3.1 ±1.8 4.2 ±2.5 0.3 ±0.6 3.9 ±0.6 3.2 ±1.9 
+
+10m_vs_11m 98.5 ±2.7 47.5 ±2.8 36.4 ±2.4 25.0 ±8.2 1.3 ±0.3 32.8 ±0.9 22.6 ±8.0 
+
+6h_vs_8z 99.5 ±0.1 99.8 ±0.2 99.0 ±0.2 98.9 ±0.1 80.4 ±4.9 75.3 ±5.3 96.1 ±2.6 
+
+smacv2_5_units 81.0 ±1.3 80.0 ±1.7 75.2 ±0.9 77.1 ±1.2 54.0 ±1.9 59.5 ±3.3 39.4 ±2.9 
+
+smacv2_10_units 75.0 ±1.3 69.0 ±1.7 63.5 ±2.5 65.7 ±0.6 47.4 ±0.4 62.1 ±1.6 29.5 ±2.4 
+
+MABrax halfcheetah-6x1 3463 ±68 3138 ±32 2965 ±45 2983 ±26 2017 ±39 N/A N/A ant-8x1 3285 ±151 1557 ±82 1247 ±49 1279 ±40 901 ±96 N/A N/A ant-4x2 3574 ±217 1666 ±32 1379 ±124 1441 ±50 950 ±27 N/A N/A walker2d-6x1 912 ±18 697 ±19 489 ±77 591 ±25 242 ±64 N/A N/A hopper-3x1 1572 ±110 1356 ±66 1088 ±65 1050 ±63 709 ±203 N/A N/A humanoid-9|8 445 ±4 286 ±4 258 ±7 261 ±6 214 ±45 N/A N/A reuse. Importantly, GPAE shows its benefits even when restricted to on-policy samples only, already surpassing MAPPO and DAE. This highlights that the improvement is not solely due to sample reuse but also stems from the design of our estimator. When extended with off-policy sample reuse, GPAE achieves further gains in both performance and sample efficiency. In Fig-ures 4, which aggregate performance across all SMAX and MABrax tasks respectively, GPAE exhibits clearly steeper learning curves at early timesteps, indicating that it learns effective coordination poli-cies with fewer samples. This advantage is particularly evident in the most challenging SMAX scenarios such as 3s5z_vs_3s6z and 
+
+5m_vs_6m , where credit assignment is nontrivial. While MAPPO and DAE degrade under these conditions, GPAE sustains more re-liable coordination. By contrast, COMA shows clear weaknesses, with its one-step counterfactual structure failing to capture long-range dependencies, leading to consistently poor performances. QMIX and VDN demonstrate relatively steady but inferior results compared to MAPPO-based estimators, further highlighting that value decomposition is less suitable for these SMAX tasks. Turning to the continuous-control benchmarks in MABrax, the gap between GPAE and other baselines remains significant. Value decomposition methods such as QMIX and VDN are not applicable in continuous domains, leaving MAPG estimators and COMA as the primary points of comparison. Here, GPAE again surpasses MAPPO and DAE, which, while competitive, struggle to maintain stability across high-dimensional action spaces. COMA proves highly un-stable in this setting, similar to results from discrete tasks, further confirming the limitations of traditional counterfactual baselines based on TD(0) estimation. Taken together, these findings highlight that GPAE consistently outperforms the baselines across diverse domains. Even without off-policy augmentation, GPAE shows improvements over the ex-isting methods, while with sample reuse it achieves unmatched sample efficiency and performance. In both discrete and continuous GPAE (off-policy) GPAE (on-policy)            
+
+> MAPPO DAE COMA QMIX VDN 00.2 0.4 0.6 0.8 1.0
+> Environment Steps
+> 0.0
+> 0.5
+> 1.0
+> Eval Win Rate
+> ×10 7
+> (a) SMAX 00.2 0.4 0.6 0.8 1.0
+> Environment Steps
+> 0
+> 1000
+> 2000
+> Episode Return
+> ×10 7(b) MABrax
+
+Figure 4: (a) and (b) represent the learning curve of the ag-gregated performance for all tasks on SMAX and MABrax, respectively. 
+
+domains, GPAE establishes itself as a unified framework that not only improves asymptotic performance but also accelerates learn-ing, thereby validating its effectiveness as a solution for multi-agent credit assignment. 
+
+## 5.3 Ablation Study 
+
+DT-ISR Weight. We isolate the effect of the truncation scheme on 
+
+GPAE by fixing the advantage estimator and varying only the off-policy weighting: no correction, single truncation (ST), individual truncation (IT), and our double truncation (DT-ISR). All variants employ the same off-policy sample reuse protocol described in Sec-tion 5. We focus on two SMAX scenarios, 5m_vs_6m and 3s5z /3s6z .As summarized in Table 2, these tasks exhibit the largest perfor-mance gaps between GPAE and other advantage estimators. The ablation is designed to verify how success is realized on the most demanding settings when off-policy data is reused. In particular, the analysis asks whether stability can be retained while preserving per-agent credit assignment. Table 3 reports win rate performance after 10M timesteps. DT-ISR consistently outperforms other truncation schemes, achieving higher final performance. These results are consistent with the findings in Section 4.3, where DT-ISR improved off-policy learning stability across a broader set of tasks. The improvement here stems from the same mechanism: balancing stability and credit sensitivity by combining the strengths of joint and individual truncation. 
+
+Table 3: Ablation study on DT-ISR. 
+
+method 5m_vs_6m 3s5z_vs_3s6z 
+
+DT-ISR 93.7 87.3 
+
+ST-ISR 44.4 80.8 IT-ISR 58.6 83.7 No Correction 34.5 74.9 
+
+Table 4: Impact of 𝜂 on DT-ISR weights. 
+
+𝜂 5m_vs_6m 3s5z_vs_3s6z 
+
+win rate Δ𝑐 𝑖 win rate Δ𝑐 𝑖 
+
+1.0 95.2 -0.00154 84.5 -0.00105 1.056 93.7 -0.00409 87.3 -0.0067 1.1 93.1 -0.00553 83.2 -0.00918 1.15 39.4 -0.00561 80.3 -0.00938 
+
+Impact of 𝜂 and Trace Dynamics. We analyze the impact of vary-ing the double-truncation parameter 𝜂 on key metrics, including learning performance in SMAX, measured by win rate. We also compute Δ𝑐 𝑖 as defined in Eq. 9, which measures the difference between the distance of truncation weights from the true joint ISR and individual ISR. The results are presented in Table 4, showing that DT-ISR is robust to changes in 𝜂 , with performance remain-ing stable across a range of values. Specifically, performance is consistently good for 𝜂 values between 1.0 and 1.05. The ablation suggests that the performance gain arises from applying off-policy weights that integrate per-agent 𝑛 -step advan-tages, control variance, and preserve credit assignment. DT-ISR supplies this coupling with a single hyperparameter 𝜂 .
+
+## 6 RELATED WORKS 
+
+Multi-Agent Policy Gradient. Multi-agent policy gradient is an effective approach under CTDE because it can exploit the global state to estimate the centralized critic. MADDPG [ 19 ] uses indi-vidual critic for each agent with global information. PS-TRPO [ 10 ]proposes parameter sharing for actor-critic to reduce the network size. COMA [ 8] estimates individual advantage with a counter-factual baseline, which enables explicit credit assignment. DOP [40 ] and FACMAC [ 25 ] propose off-policy policy gradient methods based on value decomposition. IPPO [ 5] and MAPPO [ 42 ] show that PPO performs strongly in the SMAC environment. HAPPO [ 16 ]proposed a sequential update structure of MAPPO, with individual actor networks. Kuba et al . [17] analyzed the variance of MAPG, and proposed a baseline that minimizes the variance [17]. 
+
+Multi-Agent Credit Assignment Problem. Credit assignment methods are commonly categorized into two approaches: implicit 
+
+and explicit credit assignment. Implicit approaches such as VDN [ 34 ], QMIX [ 28 ], QTRAN [ 33 ], and several subsequent studies [ 14 , 38 ] rely on value decomposition to implicitly infer individ-ual contributions from the global Q-function. Explicit methods aim to assign credit directly, often through reward shaping or ad-vantage decomposition. LIIR [6] learns intrinsic rewards based on individual state-action pairs. COMA [ 8 ] introduces a counterfac-tual baseline for computing per-agent advantages, while DAE [ 18 ]extends this idea by incorporating potential-based difference re-wards into GAE [ 31 ]. Closely related, Castellini et al . [3] propose a principled formulation of policy gradients that leverage marginal contribution signals. Beyond these primary categories, methods such as MAAC [ 12 ] and intention sharing [ 13 ] employ attention mechanisms to enhance inter-agent coordination through struc-tured representation learning. 
+
+Off-Policy Value Estimation. 𝑛 -step estimation can provide more accurate value estimation for policy gradient methods. TD( 𝜆 ) [ 35 ]and GAE [ 31 ] has been used widely for on-policy methods. In single-agent RL, 𝑛 -step off-policy value estimation has been developed for improved sample efficiency. Retrace( 𝜆 ) [ 21 ] and V-trace [ 7 ] pro-pose low-variance value estimation by using truncated importance sampling trace. DISC [ 11 ] proposed using GAE-V (i.e., GAE with V-trace) for off-policy advantage estimation. GePPO [ 27 ] and Meng et al . [20] analyzes the reuse of off-policy samples with PPO. For the multi-agent value-based method, SMIX( 𝜆 ) [ 41 ] extends QMIX by estimating the joint action value function based on 𝑛 -step return and expected SARSA [ 36 ], where credit assignment is still implicit by value factorization. 
+
+## 7 CONCLUSION 
+
+One of the most important challenges in MARL is addressing the multi-agent credit assignment problem. While various approaches have attempted to tackle this issue, explicit study and analysis of credit assignment within policy gradient-based methods have been relatively underexplored. Our work directly addresses this gap by introducing a novel framework that accurately estimates per-agent advantages, enabling more effective policy updates. By leveraging our new value operator and integrating advanced techniques like double-truncated importance sampling weight, we provide a prin-cipled approach to credit assignment that enhances both on-policy and off-policy learning. With its solid theoretical foundation, GPAE paves the way for the development of more efficient, robust, and scalable multi-agent systems. 
+
+## ACKNOWLEDGMENTS 
+
+This work was supported by Center for Applied Research in Artifi-cial Intelligence (CARAI) Grant funded by Defense Acquisition Pro-gram Administration (DAPA) and Agency for Defense Development (ADD) of Republic of Korea (UD230017TD, 50%), and the National Research Foundation of Korea(NRF) grant funded by the Korea gov-ernment(MSIT) (No. RS-2025-00557589, Generative Model Based Efficient Reinforcement Learning Algorithms for Multi-modal Ex-pansion in Generalized Environments, 50%). REFERENCES 
+
+[1] Daniel S Bernstein, Robert Givan, Neil Immerman, and Shlomo Zilberstein. 2002. The complexity of decentralized control of Markov decision processes. Mathe-matics of operations research 27, 4 (2002), 819–840. [2] James Bradbury, Roy Frostig, Peter Hawkins, Matthew James Johnson, Chris Leary, Dougal Maclaurin, George Necula, Adam Paszke, Jake VanderPlas, Skye Wanderman-Milne, and Qiao Zhang. 2018. JAX: composable transformations of Python+NumPy programs. (2018). http://github.com/jax-ml/jax [3] Jacopo Castellini, Sam Devlin, Frans A. Oliehoek, and Rahul Savani. 2022. Differ-ence Rewards Policy Gradients. Neural Computing and Applications Special Issue on Adaptive and Learning Agents 2021 (2022), 24. [4] Wubing Chen, Wenbin Li, Xiao Liu, Shangdong Yang, and Yang Gao. 2023. Learn-ing Explicit Credit Assignment for Cooperative Multi-Agent Reinforcement Learning via Polarization Policy Gradient. Proceedings of the AAAI Conference on Artificial Intelligence 37 (2023), 11542–11550. [5] Christian Schroeder de Witt, Tarun Gupta, Denys Makoviichuk, Viktor Makoviy-chuk, Philip HS Torr, Mingfei Sun, and Shimon Whiteson. 2020. Is independent learning all you need in the starcraft multi-agent challenge? arXiv preprint arXiv:2011.09533 (2020). [6] Yali Du, Lei Han, Meng Fang, Ji Liu, Tianhong Dai, and Dacheng Tao. 2019. LIIR: Learning individual intrinsic reward in multi-agent reinforcement learning. 
+
+Advances in Neural Information Processing Systems 32 (2019). [7] Lasse Espeholt, Hubert Soyer, Remi Munos, Karen Simonyan, Vlad Mnih, Tom Ward, Yotam Doron, Vlad Firoiu, Tim Harley, Iain Dunning, et al . 2018. Impala: Scalable distributed deep-rl with importance weighted actor-learner architectures. In International Conference on Machine Learning . PMLR, 1407–1416. [8] Jakob N. Foerster, Gregory Farquhar, Triantafyllos Afouras, Nantas Nardelli, and Shimon Whiteson. 2018. Counterfactual multi-agent policy gradients. In 
+
+Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 32. [9] C. Daniel Freeman, Erik Frey, Anton Raichuk, Sertan Girgin, Igor Mordatch, and Olivier Bachem. 2021. Brax - A Differentiable Physics Engine for Large Scale Rigid Body Simulation . http://github.com/google/brax [10] Jayesh K Gupta, Maxim Egorov, and Mykel Kochenderfer. 2017. Cooperative multi-agent control using deep reinforcement learning. In International Conference on Autonomous Agents and Multiagent Systems . Springer, 66–83. [11] Seungyul Han and Youngchul Sung. 2019. Dimension-wise importance sampling weight clipping for sample-efficient reinforcement learning. In International Conference on Machine Learning . PMLR, 2586–2595. [12] Shariq Iqbal and Fei Sha. 2019. Actor-attention-critic for multi-agent reinforce-ment learning. In International Conference on Machine Learning . PMLR, 2961– 2970. [13] Woojun Kim, Jongeui Park, and Youngchul Sung. 2020. Communication in multi-agent reinforcement learning: Intention sharing. In International Conference on Learning Representations .[14] Woojun Kim and Youngchul Sung. 2023. An Adaptive Entropy-Regularization Framework for Multi-Agent Reinforcement Learning. In Proceedings of the 40th International Conference on Machine Learning (Proceedings of Machine Learning Research, Vol. 202) . PMLR, 16829–16852. [15] Landon Kraemer and Bikramjit Banerjee. 2016. Multi-agent reinforcement learn-ing as a rehearsal for decentralized planning. Neurocomputing 190 (2016), 82–94. [16] Jakub Grudzien Kuba, Ruiqing Chen, Muning Wen, Ying Wen, Fanglei Sun, Jun Wang, and Yaodong Yang. 2022. Trust Region Policy Optimisation in Multi-Agent Reinforcement Learning. In International Conference on Learning Representations .[17] Jakub Grudzien Kuba, Muning Wen, Linghui Meng, Haifeng Zhang, David Mguni, Jun Wang, Yaodong Yang, et al . 2021. Settling the variance of multi-agent policy gradients. Advances in Neural Information Processing Systems 34 (2021), 13458– 13470. [18] Yueheng Li, Guangming Xie, and Zongqing Lu. 2022. Difference Advantage Estimation for Multi-Agent Policy Gradients. In Proceedings of the 39th Interna-tional Conference on Machine Learning (Proceedings of Machine Learning Research, Vol. 162) . PMLR, 13066–13085. [19] Ryan Lowe, Yi Wu, Aviv Tamar, Jean Harb, Pieter Abbeel, and Igor Mordatch. 2017. Multi-agent actor-critic for mixed cooperative-competitive environments. In Proceedings of the 31st International Conference on Neural Information Processing Systems . 6382–6393. [20] Wenjia Meng, Qian Zheng, Gang Pan, and Yilong Yin. 2023. Off-policy proximal policy optimization. In Proceedings of the AAAI Conference on Artificial Intelligence ,Vol. 37. 9162–9170. [21] Rémi Munos, Tom Stepleton, Anna Harutyunyan, and Marc Bellemare. 2016. Safe and efficient off-policy reinforcement learning. Advances in Neural Information Processing Systems 29 (2016). [22] Andrew Y. Ng, Daishi Harada, and Stuart J. Russell. 1999. Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping. In 
+
+Proceedings of the Sixteenth International Conference on Machine Learning .[23] Frans A Oliehoek. 2012. Decentralized POMDPs. In Reinforcement Learning .Springer, 471–503. [24] Afshin Oroojlooy and Davood Hajinezhad. 2023. A review of cooperative multi-agent deep reinforcement learning. Applied Intelligence 53, 11 (2023), 13677– 13722. [25] Bei Peng, Tabish Rashid, Christian Schroeder de Witt, Pierre-Alexandre Kami-enny, Philip Torr, Wendelin Böhmer, and Shimon Whiteson. 2021. FACMAC: Factored multi-agent centralised policy gradients. Advances in Neural Information Processing Systems 34 (2021), 12208–12221. [26] Doina Precup, Richard S. Sutton, and Satinder P. Singh. 2000. Eligibility Traces for Off-Policy Policy Evaluation. In Proceedings of the Seventeenth International Conference on Machine Learning .[27] James Queeney, Yannis Paschalidis, and Christos G Cassandras. 2021. Generalized proximal policy optimization with sample reuse. Advances in Neural Information Processing Systems 34 (2021), 11909–11919. [28] Tabish Rashid, Mikayel Samvelyan, Christian Schroeder, Gregory Farquhar, Jakob Foerster, and Shimon Whiteson. 2018. QMIX: Monotonic value function factori-sation for deep multi-agent reinforcement learning. In International Conference on Machine Learning . PMLR, 4295–4304. [29] Alexander Rutherford, Benjamin Ellis, Matteo Gallici, Jonathan Cook, Andrei Lupu, Gardhar Ingvarsson, Timon Willi, Ravi Hammond, Akbir Khan, Chris-tian Schroeder de Witt, Alexandra Souly, Saptarashmi Bandyopadhyay, Mikayel Samvelyan, Minqi Jiang, Robert Tjarko Lange, Shimon Whiteson, Bruno Lacerda, Nick Hawes, Tim Rocktäschel, Chris Lu, and Jakob Nicolaus Foerster. 2024. Jax-MARL: Multi-Agent RL Environments and Algorithms in JAX. In The Thirty-eight Conference on Neural Information Processing Systems Datasets and Benchmarks Track .[30] Mikayel Samvelyan, Tabish Rashid, Christian Schroeder de Witt, Gregory Far-quhar, Nantas Nardelli, Tim G. J. Rudner, Chia-Man Hung, Philip H. S. Torr, Jakob Foerster, and Shimon Whiteson. 2019. The StarCraft Multi-Agent Challenge. In Proceedings of the 18th International Conference on Autonomous Agents and MultiAgent Systems .[31] John Schulman, Philipp Moritz, Sergey Levine, Michael Jordan, and Pieter Abbeel. 2016. High-Dimensional Continuous Control Using Generalized Advantage Estimation. In International Conference on Learning Representations .[32] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. 2017. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347 
+
+(2017). [33] Kyunghwan Son, Daewoo Kim, Wan Ju Kang, David Earl Hostallero, and Yung Yi. 2019. QTRAN: Learning to factorize with transformation for cooperative multi-agent reinforcement learning. In International Conference on Machine Learning .PMLR, 5887–5896. [34] Peter Sunehag, Guy Lever, Audrunas Gruslys, Wojciech Marian Czarnecki, Vini-cius Zambaldi, Max Jaderberg, Marc Lanctot, Nicolas Sonnerat, Joel Z. Leibo, Karl Tuyls, and Thore Graepel. 2018. Value-Decomposition Networks For Cooperative Multi-Agent Learning Based On Team Reward. 2085–2087. [35] Richard S Sutton. 1988. Learning to predict by the methods of temporal differences. 
+
+Machine Learning 3, 1 (1988), 9–44. [36] Richard S Sutton and Andrew G Barto. 2018. Reinforcement learning: An intro-duction . MIT Press. [37] Ming Tan. 1993. Multi-agent reinforcement learning: Independent vs. cooperative agents. In Proceedings of the Tenth International Conference on Machine Learning .330–337. [38] Jianhao Wang, Zhizhou Ren, Terry Liu, Yang Yu, and Chongjie Zhang. 2021. QPLEX: Duplex Dueling Multi-Agent Q-Learning. In International Conference on Learning Representations .[39] Jiangxing Wang, Deheng Ye, and Zongqing Lu. 2023. More Centralized Training, Still Decentralized Execution: Multi-Agent Conditional Policy Factorization. In 
+
+The Eleventh International Conference on Learning Representations .[40] Yihan Wang, Beining Han, Tonghan Wang, Heng Dong, and Chongjie Zhang. 2020. DOP: Off-policy multi-agent decomposed policy gradients. In International Conference on Learning Representations .[41] Xinghu Yao, Chao Wen, Yuhui Wang, and Xiaoyang Tan. 2021. Smix ( 𝜆 ): En-hancing centralized value functions for cooperative multiagent reinforcement learning. IEEE Transactions on Neural Networks and Learning Systems (2021). [42] Chao Yu, Akash Velu, Eugene Vinitsky, Jiaxuan Gao, Yu Wang, Alexandre Bayen, and Yi Wu. 2022. The surprising effectiveness of PPO in cooperative multi-agent games. In Proceedings of the 36th International Conference on Neural Information Processing Systems . Article 1787. [43] Kaiqing Zhang, Zhuoran Yang, and Tamer Başar. 2021. Multi-agent reinforce-ment learning: A selective overview of theories and algorithms. Handbook of reinforcement learning and control (2021), 321–384. [44] Meng Zhou, Ziyu Liu, Pengwei Sui, Yixuan Li, and Yuk Ying Chung. 2020. Learn-ing implicit credit assignment for cooperative multi-agent reinforcement learning. 
+
+Advances in neural information processing systems 33 (2020), 11853–11864. A PROOFS A.1 Proof of Theorem 4.1 
+
+We show that the operator R𝑖  
+
+> on
+
+is a 𝛾 -contraction under 𝐿 ∞-norm. With the function 𝐸𝑄 𝑖 = E𝑎 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] , we define the nota-tion 𝐸𝑄 𝑖 𝑡 := E𝑎 𝑖 𝑡 ∼𝜋 𝑖 [𝑄 (𝑠 𝑡 , 𝑎 𝑖 𝑡 , 𝒂 −𝑖 𝑡 )] . Then, we have 
+
+R𝑖 
+
+> on
+
+𝐸𝑄 𝑖 = 𝐸𝑄 𝑖 + E𝑎 𝑖 
+
+> 0∼𝜋 𝑖
+
+"
+
+E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+(𝛾𝜆 )𝑡 
+
+𝑟 𝑡 + 𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 
+
+
+
+𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖 
+
+> 0
+
+# # 
+
+(12) 
+
+= E𝑎 𝑖 
+
+> 0∼𝜋 𝑖
+
+"
+
+E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+(𝛾𝜆 )𝑡 
+
+𝑟 𝑡 + 𝛾 (1 − 𝜆 )𝐸𝑄 𝑖 𝑡 +1
+
+
+
+𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖 
+
+> 0
+
+# # 
+
+, (13) where (𝑠 0, 𝒂 0) = (𝑠, 𝒂 ). Eq. (13) is obtained by rearranging the time index for −𝐸𝑄 𝑖 𝑡 term inside the double expectation of the RHS of (12) . Now, consider two functions 𝐸𝑄 𝑖, 1 and 𝐸𝑄 𝑖, 2 both with the argument (𝑠, 𝒂 −𝑖 ) and the difference between the two operators’ outputs R𝑖 
+
+> on
+
+𝐸𝑄 𝑖, 1 and R𝑖 
+
+> on
+
+𝐸𝑄 𝑖, 2: With (𝑠 0, 𝒂 0) = (𝑠, 𝒂 ),
+
+R𝑖 
+
+> on
+
+𝐸𝑄 𝑖, 1 − R 𝑖 
+
+> on
+
+𝐸𝑄 𝑖, 2
+
+= E𝑎 𝑖 
+
+> 0∼𝜋 𝑖
+
+"
+
+E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+(𝛾𝜆 )𝑡 
+
+𝛾 (1 − 𝜆 )( 𝐸𝑄 𝑖, 1 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1)− 
+
+𝐸𝑄 𝑖, 2 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1)) 
+
+
+
+𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖 
+
+> 0
+
+# # 
+
+(14) 
+
+= E𝑎 𝑖 
+
+> 0∼𝜋 𝑖
+
+"
+
+E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+(𝛾𝜆 )𝑡 (𝜆 −1 − 1)Δ𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) 𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖 
+
+> 0
+
+# # 
+
+, (15) where Δ𝐸𝑄 𝑖 := 𝐸𝑄 𝑖, 1−𝐸𝑄 𝑖, 2. Now consider the 𝐿 ∞-norm of R𝑖 𝐸𝑄 𝑖, 1−R𝑖 
+
+> on
+
+𝐸𝑄 𝑖, 2:
+
+R𝑖 
+
+> on
+
+𝐸𝑄 𝑖, 1 − R 𝑖 
+
+> on
+
+𝐸𝑄 𝑖, 2
+
+> ∞
+
+= E𝑎 𝑖 
+
+> 0∼𝜋 𝑖
+
+"
+
+E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+(𝛾𝜆 )𝑡 (𝜆 −1 − 1)Δ𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+# # 
+
+> ∞
+
+(16) 
+
+≤ E𝑎 𝑖 
+
+> 0∼𝜋 𝑖
+
+"
+
+E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+(𝛾𝜆 )𝑡 (𝜆 −1 − 1) sup 
+
+> 𝑠, 𝒂 −𝑖
+
+Δ𝐸𝑄 𝑖 (𝑠, 𝒂 −𝑖 )
+
+# # 
+
+> ∞
+
+(17) 
+
+≤ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+(𝛾𝜆 )𝑡 (𝜆 −1 − 1)
+
+# # 
+
+· Δ𝐸𝑄 𝑖 
+
+> ∞
+
+(18) 
+
+=∑︁  
+
+> 𝑡 ≥1
+
+(𝛾𝜆 )𝑡 (𝜆 −1 − 1) Δ𝐸𝑄 𝑖 
+
+> ∞
+
+(19) 
+
+= 𝛾𝜆 (𝜆 −1 − 1)
+
+1 − 𝛾𝜆 Δ𝐸𝑄 𝑖 
+
+> ∞
+
+(20) 
+
+= 𝛾 (1 − 𝜆 )
+
+1 − 𝛾𝜆 Δ𝐸𝑄 𝑖 
+
+> ∞
+
+(21) 
+
+≤ 𝛾 Δ𝐸𝑄 𝑖 
+
+> ∞
+
+(22) since 𝜆 ∈ ( 0, 1], thus R𝑖  
+
+> on
+
+is a 𝛾 -contraction. With 𝜆 = 1, the unique fixed point is given by E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 ,
+
+𝒂 −𝑖 )] . We can show this as follows. The inner conditional expecta-tion of the second term in the RHS of (12) is given by 
+
+= E𝜏 ∼𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 
+
+
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+= E𝜏 ∼𝝅 
+
+
+
+𝛾 0 (𝑟 (𝑠 0, 𝑎 0) + 𝛾𝐸𝑄 𝑖  
+
+> 1
+
+− 𝐸𝑄 𝑖 
+
+> 0
+
+)+ 𝛾 1 (𝑟 (𝑠 1, 𝑎 1) + 𝛾𝐸𝑄 𝑖  
+
+> 2
+
+− 𝐸𝑄 𝑖 
+
+> 1
+
+)+ 𝛾 2 (𝑟 (𝑠 2, 𝑎 2) + 𝛾𝐸𝑄 𝑖  
+
+> 3
+
+− 𝐸𝑄 𝑖 
+
+> 2
+
+)+ · · · 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+
+
+> (𝑎 )
+
+= E𝜏 ∼𝝅 
+
+ ∞∑︁ 
+
+> 𝑡 =0
+
+𝛾 𝑡 𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+
+
+− E𝜏 ∼𝝅 
+
+
+
+𝐸𝑄 𝑖  
+
+> 0
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+
+
+= 𝑄 𝝅 (𝑠, 𝒂 ) − 𝐸𝑄 𝑖  
+
+> 0
+
+|(𝑠 0,𝒂 −𝑖   
+
+> 0)=(𝑠, 𝒂 −𝑖 )
+
+= 𝑄 𝝅 (𝑠, 𝒂 ) − 𝐸𝑄 𝑖 , (23) where 𝜏 = (𝑠 1, 𝒂 1, 𝑠 2, 𝒂 2, · · · ) denotes the state-action trajectory. Then, the second term in the RHS of (4) is expressed as 
+
+E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝒂 ))] − E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] . (24) By adding the first term E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] in the RHS of (4) to (24), we have 
+
+R𝑖 
+
+> on
+
+E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] = E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝒂 )] 
+
+for any 𝑄 . In particular, we choose 𝑄 = 𝑄 𝝅 :
+
+R𝑖 
+
+> on
+
+E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] = E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝒂 )] 
+
+= E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] .
+
+Hence, E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] is the fixed point of R𝑖 
+
+> on
+
+. □
+
+## A.2 Proof of Theorem 4.2 
+
+Proof. It is already shown that in the case with 𝜆 = 1, the inner conditional expectation reduces to 𝑄 𝝅 (𝑠 0, 𝒂 0)− E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖  
+
+> 0
+
+)] 
+
+in eq. (23). The invariance of policy gradient of (23) can be shown in a similar way to the proof in [ 8 ]. That is, the policy gradient with respect to policy parameter 𝜃 with the advantage (23) becomes the true policy gradient 𝑔 = E𝝅 
+
+Í 𝑖 (∇ 𝜃 log 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )) 𝑄 𝝅 (𝑠, 𝒂 ) if the offset term 𝑔 𝑜 = E𝝅 
+
+hÍ𝑖 (∇ 𝜃 log 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )) 𝐸𝑄 𝑖 )
+
+i
+
+= 0. This con-dition is valid under the decentralized execution assumption of 𝝅 = Î𝑁 𝑖 =1 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 ) as shown below [8]: 
+
+𝑔 𝑜 = E𝝅 
+
+"∑︁ 
+
+> 𝑖
+
+∇𝜃 log 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )𝐸𝑄 𝑖 
+
+#
+
+=∑︁ 
+
+> 𝑖
+
+∑︁ 𝑠 
+
+𝑑 𝝅 (𝑠 )∑︁ 
+
+> 𝒂
+
+𝝅 (𝒂 |𝒐 )∇ 𝜃 log 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )𝐸𝑄 𝑖 
+
+=∑︁ 
+
+> 𝑖
+
+∑︁ 𝑠 
+
+𝑑 𝝅 (𝑠 )∑︁ 
+
+> 𝒂 −𝑖
+
+∑︁ 𝑎 𝑖 
+
+𝝅 (𝒂 −𝑖 |𝒐 −𝑖 )𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )∇ 𝜃 log 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )𝐸𝑄 𝑖 
+
+=∑︁ 
+
+> 𝑖
+
+∑︁ 𝑠 
+
+𝑑 𝝅 (𝑠 )∑︁ 
+
+> 𝒂 −𝑖
+
+𝝅 (𝒂 −𝑖 |𝒐 −𝑖 )∑︁ 
+
+> 𝑎 𝑖
+
+𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )∇ 𝜃 log 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )𝐸𝑄 𝑖 
+
+=∑︁ 
+
+> 𝑖
+
+∑︁ 𝑠 
+
+𝑑 𝝅 (𝑠 )∑︁ 
+
+> 𝒂 −𝑖
+
+𝝅 (𝒂 −𝑖 |𝒐 −𝑖 )∑︁ 
+
+> 𝑎 𝑖
+
+∇𝜃 𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )𝐸𝑄 𝑖 
+
+=∑︁ 
+
+> 𝑖
+
+∑︁ 𝑠 
+
+𝑑 𝝅 (𝑠 )∑︁ 
+
+> 𝒂 −𝑖
+
+𝝅 (𝒂 −𝑖 |𝒐 −𝑖 )𝐸𝑄 𝑖 ∇𝜃 ∑︁ 
+
+> 𝑎 𝑖
+
+𝜋 𝑖 (𝑎 𝑖 |𝑜 𝑖 )
+
+=∑︁ 
+
+> 𝑖
+
+∑︁ 𝑠 
+
+𝑑 𝝅 (𝑠 )∑︁ 
+
+> 𝒂 −𝑖
+
+𝝅 (𝒂 −𝑖 |𝒐 −𝑖 )𝐸𝑄 𝑖 ∇𝜃 1
+
+= 0. □
+
+## A.3 Proof of Theorem 4.3 
+
+Part I: Showing 𝛾 -contraction 
+
+We show that the operator R𝑖 is a 𝛾 -contraction under 𝐿 ∞-norm: 
+
+R𝑖 𝐸𝑄 𝑖 = 𝐸𝑄 𝑖  
+
+> 0
+
++ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ 
+
+𝑟 𝑡 + 𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 
+
+
+
+𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖 
+
+> 0
+
+# # 
+
+(25) 
+
+= (1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) 𝐸𝑄 𝑖  
+
+> 0
+
++ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ (26) 
+
+·
+
+
+
+𝑟 𝑡 + 𝛾 (1 − 𝑐 𝑖 𝑡 +1)𝐸𝑄 𝑖 𝑡 +1
+
+
+
+𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖 
+
+> 0
+
+# # 
+
+, (27) where (𝑠 0, 𝒂 0) = (𝑠, 𝒂 ). Eq. (27) is obtained by rearranging the time index for −𝐸𝑄 𝑖 𝑡 term inside the double expectation of the RHS of (25). Now, consider 𝐸𝑄 𝑖, 1 and 𝐸𝑄 𝑖, 2, in the same manner as A.1: 
+
+R𝑖 𝐸𝑄 𝑖, 1 − R 𝑖 𝐸𝑄 𝑖, 2 = (1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) 𝐸𝑄 𝑖, 1 (𝑠 0, 𝒂 −𝑖  
+
+> 0
+
+)− 𝐸𝑄 𝑖, 2 (𝑠 0, 𝒂 −𝑖  
+
+> 0
+
+)
+
+!
+
++ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖  
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 +1
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+!
+
+(1 − 𝑐 𝑖 𝑡 +1)·
+
+
+
+𝐸𝑄 𝑖, 1 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) − 𝐸𝑄 𝑖, 2 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1)
+
+ # # 
+
+= (1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) Δ𝐸𝑄 𝑖 
+
+> 0
+
++ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖  
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡  
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+!
+
+(1 − 𝑐 𝑖 𝑡 ) Δ𝐸𝑄 𝑖 𝑡 
+
+# # 
+
+(28) where Δ𝐸𝑄 𝑖 := 𝐸𝑄 𝑖, 1 −𝐸𝑄 𝑖, 2. Now consider the 𝐿 ∞-norm of R𝑖 𝐸𝑄 𝑖  
+
+> 1
+
+−R𝑖 
+
+> on
+
+𝐸𝑄 𝑖 
+
+> 2
+
+:
+
+R𝑖 𝐸𝑄 𝑖, 1 (𝑠, 𝒂 −𝑖 ) − R 𝑖 𝐸𝑄 𝑖, 2 (𝑠, 𝒂 −𝑖 ) ∞
+
+(29) 
+
+= (1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) Δ𝐸𝑄 𝑖  
+
+> 0
+
++ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+
+
+· ( 1 − 𝑐 𝑖 𝑡 )Δ𝐸𝑄 𝑖 𝑡 
+
+# # 
+
+> ∞
+
+(30) 
+
+≤ (1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) + E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ (1 − 𝑐 𝑖 𝑡 )
+
+# # 
+
+· Δ𝐸𝑄 𝑖 
+
+> ∞
+
+,
+
+(31) where (31) is obtained by the definition of 𝐿 ∞-norm, the trian-gle inequality and the fact that the terms (1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) and 
+
+𝛾 𝑡   Î 𝑡 −1 
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ (1 − 𝑐 𝑖 𝑡 ) in front of Δ𝐸𝑄 𝑖 in (30) are all nonnegative. (Note that the trace coefficient 𝑐 𝑖 𝑡 ∈ [ 0, 1].) Now, consider the scaling term in front of Δ𝐸𝑄 𝑖 
+
+> ∞
+
+in (31) . First, the second term in the front scaling term can be expressed as fol-lows: 
+
+E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ (1 − 𝑐 𝑖 𝑡 )
+
+# # 
+
+= E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+− E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+𝑐 𝑖 𝑡 
+
+# # 
+
+= E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+− E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+= E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+− 𝛾 −1E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 +1   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+= E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+− 𝛾 −1E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"
+
+−𝛾 + 𝛾 +∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 +1   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+= E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # − 𝛾 −1E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"
+
+−𝛾 + 𝛾 +∑︁   
+
+> 𝑡 ′≥2
+
+𝛾 𝑡 ′   𝑡 ′ −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+(32) 
+
+= E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+− 𝛾 −1E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"
+
+−𝛾 +∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+(33) 
+
+= (1 − 𝛾 −1)E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
++ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+𝜌 𝑖 
+
+> 0
+
+ . (34) Here, (32) is obtained by defining the index 𝑡 ′ := 𝑡 +1. (33) is valid because Î0 
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 = 1 by definition. (34) is obtained by factoring the common term out. Summing the first term (1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) and the second term expressed as (34) in the front scaling term of Δ𝐸𝑄 𝑖 
+
+> ∞
+
+in (31) , we have the overall scaling term, given by 
+
+(1 − E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+]) + ( 1 − 𝛾 −1)E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
++ E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+𝜌 𝑖 
+
+> 0
+
+
+
+= 1 + ( 1 − 𝛾 −1)E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+"
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+# # 
+
+= 1 + ( 1 − 𝛾 −1)E𝑎 𝑖 
+
+> 0∼𝜇 𝑖
+
+
+
+𝜌 𝑖 
+
+> 0
+
+E𝝁 
+
+
+
+𝛾 
+
+> 0
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+|{z} 
+
+> =1
+
++ 𝛾 21Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 + 𝛾 32Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 + · · · 
+
+| {z }
+
+> ≥0
+
+
+
+(35) 
+
+≤ 1 + ( 1 − 𝛾 −1)𝛾 E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+] (36) 
+
+= 1 + ( 1 − 𝛾 −1)𝛾 (37) 
+
+= 𝛾 . 
+
+Here, (36) is valid because the term inside the expectation E𝝁 [·] in (35) is larger than or equal to 𝛾 , and the term (1 − 𝛾 −1) < 0 for 0 <
+
+𝛾 < 1. Eq. (37) is valid because we do not apply clipping to 𝜌 𝑖  
+
+> 0
+
+and hence E𝑎 𝑖  
+
+> 0∼𝜇 𝑖
+
+[𝜌 𝑖 
+
+> 0
+
+] = ∫ 𝜋 (𝑎 𝑖       
+
+> 0|𝑜 𝑖
+> 0)
+> 𝜇 𝑖 (𝑎 𝑖
+> 0|𝑜 𝑖
+> 0)
+
+𝜇 𝑖 (𝑎 𝑖  
+
+> 0
+
+|𝑜 𝑖 
+
+> 0
+
+)𝑑𝑎 𝑖  
+
+> 0
+
+= ∫ 𝜋 (𝑎 𝑖  
+
+> 0
+
+|𝑜 𝑖 
+
+> 0
+
+)𝑑𝑎 𝑖  
+
+> 0
+
+= 1.(Now, the reason why 𝜌 𝑖  
+
+> 0
+
+for the first action is not clipped is clear.) Therefore, R𝑖 is a 𝛾 -contraction. By the Banach fixed point theorem, 
+
+R𝑖 has a unique fixed point. 
+
+Part II: Analysis on the general off-policy fixed point 
+
+For the simplicity of the analysis, we assume that each agent well processes its historical data so that we can assume full-observability, i.e., 𝝅 (𝒂 |𝑠 ) = Î𝑁 𝑗 =1 𝜋 𝑗 (𝑎 𝑗 |𝑠 ), 𝝁 (𝒂 |𝑠 ) = Î𝑁 𝑗 =1 𝜇 𝑗 (𝑎 𝑗 |𝑠 ). In Agent 𝑖 ’s perspective, we regard ˜𝑦 𝑖 𝑡 +1 = (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) as an augmented state. Then we define a new transition function as follows: 
+
+P ( 𝑠 𝑡 +1 |𝑠 𝑡 , 𝒂 𝑡 )
+
+Ö
+
+> 𝑗 ≠𝑖
+
+𝜇 𝑗 (𝑎 𝑗 𝑡 +1 |𝑠 𝑡 +1) =: P𝑖 ( ˜𝑦 𝑖 𝑡 +1 | ˜𝑦 𝑖 𝑡 , 𝑎 𝑖 𝑡 ). (38) In Agent 𝑖 ’s perspective, it interacts with the environment with the following augmented MDP: < S × 𝐴 𝑁 −1, 𝐴, P𝑖 , 𝑟, 𝛾 >, where 𝐴 is agent-wise action space and 𝐴 𝑁 = A.Consider the following term at timestep 𝑡 ≥ 1:
+
+E𝝁 
+
+"
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1)− 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+𝑠 0: 𝑡 −1, 𝒂 0: 𝑡 −1
+
+#
+
+= 𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+∑︁ 
+
+> 𝑠 𝑡
+
+P ( 𝑠 𝑡 |𝑠 𝑡 −1, 𝒂 𝑡 −1)∑︁ 
+
+> 𝒂 𝑡
+> 𝑁
+
+Ö
+
+> 𝑗 =1
+
+𝜇 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )𝑐 𝑖 𝑡 ×
+
+
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾 ∑︁  
+
+> 𝑠 𝑡 +1
+
+P ( 𝑠 𝑡 +1 |𝑠 𝑡 , 𝒂 𝑡 )  ∑︁  
+
+> 𝒂 −𝑖 𝑡 +1
+
+Ö
+
+> 𝑗 ≠𝑖
+
+𝜇 𝑗 (𝑎 𝑗 𝑡 +1 |𝑠 𝑡 +1)· 𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) − 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+= 𝛾 𝑡   𝑡 −1Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+∑︁ 
+
+> ˜𝑦 𝑖 𝑡
+
+P𝑖 ( ˜𝑦 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 −1, 𝑎 𝑖 𝑡 −1)𝜆𝐶 𝑖 ( ˜𝑦 𝑖 𝑡 )∑︁ 
+
+> 𝑎 𝑖 𝑡
+
+𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 )× 
+
+©«
+
+𝑟 ( ˜𝑦 𝑖 𝑡 , 𝑎 𝑖 𝑡 ) + 𝛾 ∑︁  
+
+> ˜𝑦 𝑖 𝑡 +1
+
+P𝑖 ( ˜𝑦 𝑖 𝑡 +1 | ˜𝑦 𝑖 𝑡 , 𝑎 𝑖 𝑡 )𝐸𝑄 𝑖 ( ˜𝑦 𝑖 𝑡 +1) − 𝐸𝑄 𝑖 ( ˜𝑦 𝑖 𝑡 )ª®®¬
+
+. (39) Here we insert 𝑐 𝑖 𝑡 = 𝜆 min  1, 𝜋 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 )    
+
+> 𝜇 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 )
+
+min (1, Î𝑗 ≠𝑖 𝜋 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )     
+
+> 𝜇 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )
+
+)
+
+and define 
+
+𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 ) = 𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 |𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+:=
+
+𝜇 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 ) min  1, 𝜋 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 )    
+
+> 𝜇 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 )
+
+min (1, Î𝑗 ≠𝑖 𝜋 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )     
+
+> 𝜇 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )
+
+)Í𝑎 ′ 𝜇 𝑖 (𝑎 ′ |𝑠 𝑡 ) min  1, 𝜋 𝑖 (𝑎 ′ |𝑠 𝑡 )    
+
+> 𝜇 𝑖 (𝑎 ′|𝑠 𝑡 )
+
+min (1, Î𝑗 ≠𝑖 𝜋 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )     
+
+> 𝜇 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )
+
+)
+
+(40) for 𝑡 ≥ 1 and 𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖  
+
+> 0
+
+| ˜𝑦 𝑖 
+
+> 0
+
+) = 𝜇 𝑖 (𝑎 𝑖  
+
+> 0
+
+|𝑠 0). Plus, we denote the denomina-tor as 𝐶 𝑖 ( ˜𝑦 𝑖 𝑡 ) = 𝐶 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) > 0. Note that 𝜆 (> 0) does not appear in 𝜋 𝑖 
+
+> ∗
+
+.By the definition of the Bellman equation for value function, the term ∑︁ 
+
+> 𝑎 𝑖 𝑡
+
+𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 ) × 𝑟 ( ˜𝑦 𝑖 𝑡 , 𝑎 𝑖 𝑡 ) + 𝛾 ∑︁  
+
+> ˜𝑦 𝑖 𝑡 +1
+
+P𝑖 ( ˜𝑦 𝑖 𝑡 +1 | ˜𝑦 𝑖 𝑡 , 𝑎 𝑖 𝑡 )𝐸𝑄 𝑖 ( ˜𝑦 𝑖 𝑡 +1)− 𝐸𝑄 𝑖 ( ˜𝑦 𝑖 𝑡 )
+
+!
+
+(41) becomes zero if 𝐸𝑄 𝑖 ( ˜𝑦 𝑖 𝑡 ) is the value function of 𝜋 𝑖  
+
+> ∗
+
+in the Agent 𝑖 ’s augmented MDP: < S × 𝐴 𝑁 −1, 𝐴, P𝑖 , 𝑟, 𝛾 >. Let the value function be 𝜙 𝜋 𝑖  
+
+> ∗
+
+. Then 
+
+R𝑖 𝐸𝑄 𝜋 𝑖  
+
+> ∗
+
+= 𝐸𝑄 𝜋 𝑖  
+
+> ∗
+
+, (42) so 𝐸𝑄 𝜋 𝑖  
+
+> ∗
+
+is the unique fixed point of R𝑖 . □Remark: Now we discuss the interpretation of 𝜙 𝜋 𝑖  
+
+> ∗
+
+. Recall that 
+
+𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 ) = 𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 |𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) (43) 
+
+= min  𝜇 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 ), 𝜋 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 ) min (1, 𝝆 −𝑖 𝑡 (𝒂 −𝑖 𝑡 )) Í𝑎 ′ min  𝜇 𝑖 (𝑎 ′ |𝑠 𝑡 ), 𝜋 𝑖 (𝑎 ′ |𝑠 𝑡 ) min (1, 𝝆 −𝑖 𝑡 (𝒂 −𝑖 𝑡 ))  (44) If 𝝆 −𝑖 𝑡 (𝒂 −𝑖 𝑡 ) ≥ 1, 𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 ) = min 
+
+ 𝜇 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 ),𝜋 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 )
+
+ 
+
+> Í𝑎 ′min
+
+ 𝜇 𝑖 (𝑎 ′ |𝑠 𝑡 ),𝜋 𝑖 (𝑎 ′ |𝑠 𝑡 )
+
+ , which is a conservative combination of 𝜋 𝑖 and 𝜇 𝑖 . If 𝝆 −𝑖 𝑡 (𝒂 −𝑖 𝑡 ) → 0, 𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 )→ 𝜋 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 ). In short, 𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 ) is an approximation of Agent 𝑖 ’s current policy. Roughly speaking, the fixed point represents the average qual-ity of the approximated target policy from Agent 𝑖 ’s perspective, considering all the other agents as part of the environment and fol-lowing behavior policy 𝜇 𝑗 , 𝑗 ≠ 𝑖 . Then, 𝛿 𝑖, GPAE  
+
+> 𝑡
+
+= 𝑟 𝑡 +𝛾𝐸𝑄 𝑖 𝑡 +1 − 𝐸𝑄 𝑖 𝑡 ,using the fixed point, measures the contribution of 𝑎 𝑖 𝑡 in this MDP. If we control the behavior policy 𝝁 so that it does not devi-ate much from the current 𝝅 , the off-policy fixed point does not deviate significantly from E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] . Then, ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+ap-proximates GAE( 𝜆 ) with an estimation of Agent 𝑖 ’s per-agent state value function. Note that 𝜆 does not affect the characteristic of the fixed point, but influences the per-agent advantage estimation. In the on-policy case, 𝜋 𝑖  
+
+> ∗
+
+(𝑎 𝑖 𝑡 | ˜𝑦 𝑖 𝑡 ) = 𝜋 𝑖 (𝑎 𝑖 𝑡 |𝑠 𝑡 ), and the other agents take the current policy 𝜋 𝑗 , 𝑗 ≠ 𝑖 . If we set 𝑄 = 𝑄 𝝅 in 𝐸𝑄 𝑖 , we have 
+
+E𝝁 
+
+"
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) − 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+𝑠 0: 𝑡 −1, 𝒂 0: 𝑡 −1
+
+#
+
+= (𝛾𝜆 )𝑡 ∑︁ 
+
+> 𝑠 𝑡
+
+P ( 𝑠 𝑡 |𝑠 𝑡 −1, 𝒂 𝑡 −1)∑︁ 
+
+> 𝒂 𝑡
+> 𝑁
+
+Ö
+
+> 𝑗 =1
+
+𝜋 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )× 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾 ∑︁  
+
+> 𝑠 𝑡 +1
+
+P ( 𝑠 𝑡 +1 |𝑠 𝑡 , 𝒂 𝑡 )  ∑︁  
+
+> 𝒂 −𝑖 𝑡 +1
+
+Ö
+
+> 𝑗 ≠𝑖
+
+𝜋 𝑗 (𝑎 𝑗 𝑡 +1 |𝑠 𝑡 +1)· 𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) − 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+!
+
+= (𝛾𝜆 )𝑡 ∑︁ 
+
+> 𝑠 𝑡
+
+P ( 𝑠 𝑡 |𝑠 𝑡 −1, 𝒂 𝑡 −1)∑︁ 
+
+> 𝒂 𝑡
+> 𝑁
+
+Ö
+
+> 𝑗 =1
+
+𝜋 𝑗 (𝑎 𝑗 𝑡 |𝑠 𝑡 )× 
+
+ 𝑄 𝝅 (𝑠 𝑡 , 𝒂 𝑡 ) − E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠 𝑡 , 𝑎 𝑖 , 𝒂 −𝑖 𝑡 )] 
+
+= (𝛾𝜆 )𝑡 ∑︁ 
+
+> 𝑠 𝑡
+
+P ( 𝑠 𝑡 |𝑠 𝑡 −1, 𝒂 𝑡 −1)( 𝑉 𝝅 (𝑠 𝑡 ) − 𝑉 𝝅 (𝑠 𝑡 )) = 0. (45) Therefore, the fixed point of R𝑖 is 𝐸𝑄 𝜋 𝑖  
+
+> ∗
+
+(𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+= E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 𝝅 (𝑠 𝑡 , 𝑎 𝑖 , 𝒂 −𝑖 𝑡 )] , and 𝐸𝑄 𝑖 is an estimation of the unique fixed point of R𝑖 , the Agent 𝑖 ’s per-agent state value function. 
+
+Part III: Showing Policy Invariance of ˆ𝐴 𝑖, GPAE 
+
+> 𝑡
+
+Now, consider the general off-policy case with the trace. In this case, we have the following: 
+
+E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) − 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 −
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 +
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+ 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 )+ 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) − 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(46) 
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+ 𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1)−𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+!
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(47) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 −
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+ 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1)− 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(48) 
+
+= E𝜏 ∼𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1) − 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(49) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 −
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+ 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝛾𝐸𝑄 𝑖 (𝑠 𝑡 +1, 𝒂 −𝑖 𝑡 +1)− 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+
+
+𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(50) 
+
+= 𝑄 𝝅 (𝑠 0, 𝒂 0) − E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖  
+
+> 0
+
+)] (51) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 −
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(=: 𝐵 1)
+
+(52) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) (1 − 𝑐 𝑖 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+− ( 1 − 𝝆 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(=: 𝐵 2) (53) 
+
+− ( 1 − 1)𝐸𝑄 𝑖 (𝑠 0, 𝒂 −𝑖  
+
+> 0
+
+) (54) 
+
+= 𝑄 𝝅 (𝑠 0, 𝒂 0) − E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠 0, 𝑎 𝑖 
+
+> 0
+
+, 𝒂 −𝑖  
+
+> 0
+
+)] + 𝐵 1 + 𝐵 2
+
+| {z }
+
+> =:𝐵
+
+. (55) Here, (46) is obtained by subtracting and adding the same term 
+
+Î𝑡 𝑗 =1 𝝆 𝑗 , where 𝝆 𝑗 is the unclipped original importance sampling ratio. (47) and (48) are obtained by separating (46) into two terms. (49) is valid because E𝜏 ∼𝝁 [Í𝑡 (Î𝑡 𝑗 =1 𝝆 𝑗 )(·)] with unclipped trace is equivalent to E𝜏 ∼𝝅 [Í𝑡 (·)] [26 ]. Derivation of (51) from (49) is already done in the on-policy case. Two bias terms (52) and (53) are obtained by rearranging (50) . (54) is due to Î0 
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 = Î0 
+
+> 𝑗 =1
+
+𝝆 𝑗 = 1
+
+by definition. Now consider the bias terms 𝐵 1 and 𝐵 2. Both terms reduces to zero if 𝑐 𝑖 𝑗 = 𝝆 , thus ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+guarantees policy invariance, which means ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+is an unbiased advantage estimator. □
+
+Part IV: Analysis on bias term of ˆ𝐴 𝑖, GPAE 
+
+> 𝑡
+
+The boundedness of 𝐵 1 can be shown as follows: 
+
+𝐵 1 = E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 −
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+− E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+− E𝜏 ∼𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(56) 
+
+≤ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡   𝑡 Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+ (𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝑀 𝑟 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+− E𝜏 ∼𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(57) 
+
+≤ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 (𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) + 𝑀 𝑟 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+− E𝜏 ∼𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(58) 
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
++ 𝑀 𝑟 
+
+1 − 𝛾 
+
+− E𝜏 ∼𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑟 (𝑠 𝑡 , 𝒂 𝑡 ) 𝑠 0 = 𝑠, 𝒂 0 = 𝒂 
+
+#
+
+(59) 
+
+= 𝑄 𝝁 (𝑠, 𝒂 ) − 𝑄 𝝅 (𝑠, 𝒂 ) + 𝑀 𝑟 
+
+1 − 𝛾 (60) 
+
+< ∞.
+
+Here, (56) is valid because E𝜏 ∼𝝁 [Í𝑡 (Î𝑡 𝑗 =1 𝝆 𝑗 )(·)] = E𝜏 ∼𝝅 [Í𝑡 (·)] 
+
+[ 26 ]. (57) is valid because the reward function is bounded, i.e., 
+
+−𝑀 𝑟 ≤ 𝑟 (𝑠, 𝑎 ) ≤ 𝑀 𝑟 , ∀𝑠, 𝑎 . (58) is valid because the clipped trace has 
+
+0 ≤ 𝑐 𝑖 𝑗 ≤ 1. Note that when 𝑟 (𝑠, 𝑎 ) ≥ 0, ∀𝑠, 𝑎 , we do not have the term 𝑀 𝑟 /( 1 − 𝛾 ) in (59) and (60). The boundedness of 𝐵 2 with finite 𝑄 -function can be shown as follows: 
+
+𝐵 2 = E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) (1 − 𝑐 𝑖 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 − ( 1 − 𝝆 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) (1 − 𝑐 𝑖 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+!# 
+
+− E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) (1 − 𝝆 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(61) 
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) (1 − 𝑐 𝑖 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+!# 
+
+(62) 
+
+− E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) 𝝆 𝑡 𝑡 −1Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(63) 
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) (1 − 𝑐 𝑖 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝑐 𝑖 𝑗 
+
+!# 
+
+(64) 
+
+− E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 ) 
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝐸𝑄 𝑖 (𝑠 𝑡 , 𝒂 −𝑖 𝑡 )
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(65) 
+
+≤ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+#
+
+(66) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾  
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(67) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(68) 
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+#
+
+(69) 
+
++ 𝛾 E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 −1 𝑀 𝑟 
+
+1 − 𝛾  
+
+> 𝑡 −1
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(70) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(71) 
+
+= E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥1
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+#
+
+(72) 
+
++ 𝛾 E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+> 𝑡
+
+Ö
+
+> 𝑗 =1
+
+𝝆 𝑗 
+
+!# 
+
+(73) 
+
++ E𝜏 ∼𝝁 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+> 𝑡
+
+Ö
+
+> 𝑗 =0
+
+𝝆 𝑗 
+
+!# 
+
+− 𝑀 𝑟 
+
+1 − 𝛾 (74) 
+
+= 𝑀 𝑟 𝛾 
+
+(1 − 𝛾 )2 + 𝛾 E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+#
+
++ E𝝅 
+
+"∑︁  
+
+> 𝑡 ≥0
+
+𝛾 𝑡 𝑀 𝑟 
+
+1 − 𝛾 
+
+#
+
+− 𝑀 𝑟 
+
+1 − 𝛾 
+
+(75) 
+
+= 𝑀 𝑟 𝛾 
+
+(1 − 𝛾 )2 + 𝑀 𝑟 𝛾 
+
+(1 − 𝛾 )2 + 𝑀 𝑟 
+
+(1 − 𝛾 )2 − 𝑀 𝑟 
+
+1 − 𝛾 < ∞.
+
+Here, (65) is obtained by combining 𝝆 𝑡 with Î𝑡 −1 
+
+> 𝑗 =1
+
+𝝆 𝑗 in (63) . (66) is obtained from (64) because 0 ≤ 𝑐 𝑖 𝑗 ≤ 1 and |𝐸𝑄 𝑖 (𝑠, 𝒂 −𝑖 )| ≤ 𝑀 𝑟  
+
+> 1−𝛾
+
+.Note that since the reward function is bounded, i.e., |𝑟 (𝑠, 𝑎 )| ≤ 
+
+𝑀 𝑟 , ∀𝑠, 𝑎 , any value, i.e., a discounted sum of rewards is bounded as − 𝑀 𝑟  
+
+> 1−𝛾
+
+= − Í𝑡 ≥0 𝛾 𝑡 𝑀 𝑟 ≤ Í𝑡 ≥0 𝛾 𝑡 𝑟 𝑡 ≤ Í𝑡 ≥0 𝛾 𝑡 𝑀 𝑟 = 𝑀 𝑟  
+
+> 1−𝛾
+
+. Hence, 𝐸𝑄 𝑖 (𝑠, 𝒂 −𝑖 ) = E𝑎 𝑖 ∼𝜋 𝑖 [𝑄 (𝑠, 𝑎 𝑖 , 𝒂 −𝑖 )] is bounded by 𝑀 𝑟  
+
+> 1−𝛾
+
+. (70) is ob-tained from (67) . (73) and (74) are the rearrangement of the sum indices of (70) and (71) , respectively. (75) is obtained by using 
+
+E𝜏 ∼𝝁 [Í𝑡 (Î𝑡 𝑗 =1 𝝆 𝑗 )(·)] = E𝜏 ∼𝝅 [Í𝑡 (·)] [26]. B ADDITIONAL EXPLANATION FOR THE MOTIVATION EXPERIMENT 
+
+This section provides a more detailed quantitative interpretation of the advantage gap metric introduced in Section 3.1. The analysis clarifies how the SMAX environment’s reward structure and dynam-ics permit an approximate theoretical reference for Δ𝐴 under the controlled perturbation setting used in the motivation experiment. 
+
+Environment and perturbation setup. In the SMAX-3m task, the team reward consists of two parts: (1) a cumulative damage reward 
+
+proportional to the total reduction in enemy HP, and (2) a binary 
+
+win reward of 1.0 obtained when all opponents are defeated. To create a controlled perturbation, one of the three agents is forced to execute a stop action with probability 0.05 at random timesteps, interrupting its attack and consequently lowering both its damage contribution and the team’s win probability. 
+
+(1) Loss in cumulative damage reward due to abnormal action. 
+
+Each marine has 45 HP and inflicts 9 HP of damage per attack, with a firing rate of approximately 0.82 attacks per timestep. Since the total enemy HP pool is 135 = 45 × 3, each marine contributes an expected reward of 
+
+9135 × 0.82 ≈ 0.0547 
+
+per timestep under normal attacking behavior. It takes approxi-mately 135 /9 = 15 attacks to eliminate all enemies, and with three marines attacking in parallel at a rate of 0.82 , the expected num-ber of timesteps required is 15 /3/0.82 ≈ 6.1. Given that an aver-age episode lasts about 30 timesteps, each agent spends roughly 
+
+6.1/30 ≈ 0.203 of its episode performing active attacks. Therefore, if a stop action replaces an attack during this period, the expected damage reward loss is approximately 0.203 × 0.0547 ≈ 0.011 .For a normal action 𝑎 , the empirical advantage can be expressed as 
+
+𝐴 (𝑠, 𝑎 ) = 𝑄 (𝑠, 𝑎 ) − 𝑉 (𝑠 ) = 𝑟 1 (𝑠, 𝑎 ) + 𝛾𝑟 2 +𝛾 2𝑟 3 + · · · + 𝛾 𝑇 𝑟 𝑇 +1 −𝑉 (𝑠 ).
+
+When an abnormal action ˜𝑎 is executed, the immediate reward 
+
+𝑟 1 (𝑠, ˜𝑎 ) is smaller by about 0.011 , while the subsequent rewards 
+
+𝑟 2, 𝑟 3, . . . remain statistically similar. Hence, the value gap from the damage component is roughly 0.011 .
+
+(2) Loss in win-reward value due to abnormal action. Empiri-cally, the baseline win rate in 3m is approximately 60% . Under the perturbation with a 5% anomaly probability, the win rate drops by about 10% , meaning that one in ten episodes that would have succeeded now fails due to the anomaly. Since the win reward of 
+
+1.0 is only given upon victory, we can model the expected value difference as 
+
+𝛾 15 × 0.6 × ( 1 − 0.9) = 0.052 ,
+
+where 𝛾 = 0.99 and we assume the abnormal action occurs around 
+
+𝑡 = 15 , the middle of a typical 30-step episode. 
+
+(3) Theoretical reference and empirical comparison. Summing both components, the approximate theoretical advantage gap be-comes 
+
+Δ𝐴 theory ≈ 0.063 = 0.052 + 0.011 .
+
+In our experiments, GPAE-off produced an empirical Δ𝐴 ≈ 0.013 ,which, while smaller than the theoretical upper bound, is substan-tially closer to the ideal value than those of other estimators (GAE: 
+
+0.000 , DAE: 0.0014 , COMA: 0.0016 ). Moreover, GPAE yields near-zero Δ𝐴 in trajectories without anomalies, confirming that it does not introduce artificial variance. 
+
+Discussion. This analysis provides a quantitative grounding for the diagnostic experiment in Section 3. The controlled perturba-tion allows a tractable approximation of an “ideal” per-agent value gap derived from the environment’s reward mechanics. The close alignment of GPAE with this theoretical reference supports that the estimator accurately captures credit differences caused by anoma-lous actions rather than introducing spurious variance or bias. 
+
+## C MORE EXPLANATION ON DT-ISR 
+
+This section provides a more detailed explanation of the proposed double-truncated importance sampling ratio (DT-ISR) weight, which is introduced to address the variance explosion problem in multi-agent off-policy learning. We first discuss the key elements that define the DT-ISR, including the individual and joint importance sampling ratios, and then explore the effects of the truncation mech-anisms on agent learning. The DT-ISR weight at time step 𝑡 for agent 𝑖 is formulated as: 
+
+𝑐 𝑖, DT  
+
+> 𝑡
+
+= 𝜆 min  1, 𝜌 𝑖 𝑡 min (𝜂, 𝝆 −𝑖 𝑡 )
+
+Here, 𝜌 𝑖 𝑡 is the individual ISR for agent 𝑖 , 𝝆 −𝑖 𝑡 is the joint ISR excluding agent 𝑖 , and 𝜂 is a constant that limits the impact of other agents’ policies. 
+
+## Function of 𝑐 𝑖, DT  
+
+> 𝑡
+
+## as a function of 𝜌 𝑖 and 𝝆 −𝑖 
+
+The weight 𝑐 𝑖, DT  
+
+> 𝑡
+
+is designed to adapt based on two components: (1) Individual ISR 𝜌 𝑖 𝑡 : This component captures the relative behavior of agent 𝑖 with respect to its own policy and behav-ior distribution. It is defined as the ratio of the policy 𝜋 𝑖 𝑡 of agent 𝑖 over the behavior policy 𝜇 𝑖 𝑡 , i.e., 
+
+𝜌 𝑖 𝑡 = 𝜋 𝑖 𝑡 
+
+𝜇 𝑖 𝑡 
+
+The term 𝜌 𝑖 𝑡 reflects how well agent 𝑖 is following its own policy relative to the distribution of the observed behavior. When 𝜌 𝑖 𝑡 > 1, the agent is acting more greedily (relative to its behavior policy), while 𝜌 𝑖 𝑡 < 1 indicates suboptimal or exploratory behavior. (2) Joint ISR excluding agent 𝑖 , 𝝆 −𝑖 𝑡 : This term considers the collective behavior of all agents except 𝑖 , capturing how other agents’ actions influence the environment. The joint ISR 𝝆 𝑡 
+
+is computed as the product of all agents’ individual ISRs, i.e., 
+
+𝝆 𝑡 =
+
+Ö 
+
+> 𝑗 ∈ N
+
+𝜋 𝑗 𝑡 
+
+𝜇 𝑗 𝑡 
+
+The exclusion of agent 𝑖 in 𝝆 −𝑖 𝑡 ensures that the effect of other agents’ policies is considered without overemphasizing their contribution in the truncation mechanism. The DT-ISR weight balances these two components by truncat-ing the joint ISR at a factor 𝜂 , which serves to prevent the joint dynamics from interfering too strongly with agent 𝑖 ’s contribution. The function min (𝜂, 𝝆 −𝑖 𝑡 ) ensures that the impact of other agents is moderated while maintaining the individual ISR’s importance. Figure 5: Brief overview of GPAE framework 
+
+This enables the agent to focus more effectively on its own actions without being overwhelmed by the collective behavior of other agents. 
+
+## Impact on Learning 
+
+• When 𝜌 𝑖 𝑡 is large (close to 1 or greater) : As 𝜌 𝑖 𝑡 increases, the term 𝜆 min (1, 𝜌 𝑖 𝑡 ) becomes more significant, giving greater weight to agent 𝑖 ’s own actions. This increases the agent’s control over its learning process, making the learning more sensitive to its policy rather than the behavior of other agents. However, as the agent becomes too focused on its own policy, it might fail to generalize well to changes in other agents’ policies, leading to suboptimal learning in dynamic multi-agent settings. 
+
+• When 𝝆 −𝑖 𝑡 is large : If the joint ISR (excluding agent 𝑖 ) is large, it indicates that the actions of other agents are heavily influencing the environment. The min (𝜂, 𝝆 −𝑖 𝑡 ) term helps mitigate the effect of large ISR values from other agents by truncating them to 𝜂 , thus ensuring that the agent’s updates remain focused on its own policy rather than on the joint dynamics of all agents. This helps stabilize learning in en-vironments where other agents’ behavior may be changing rapidly, thus improving robustness and reducing variance. The introduction of the constant 𝜂 plays a crucial role in prevent-ing large fluctuations in the weight due to other agents’ policies. By limiting 𝝆 −𝑖 𝑡 ) to a value less than or equal to 𝜂 , the DT-ISR prevents instability caused by sudden shifts in other agents’ behaviors while still allowing for the preservation of agent 𝑖 ’s policy dynamics. 
+
+## D IMPLEMENTATION DETAILS 
+
+This section involves three key components of our implemen-tation: value estimation, policy learning, and off-policy sample reuse. Each component is designed to leverage the theoretical ad-vantages of the R𝑖 operator and GPAE. A brief flow structure can be found in the Fig. 5. The code for GPAE is available at 
+
+https://github.com/kim-seongmin/GPAE .
+
+## D.1 Value Estimation 
+
+The value network takes three inputs: the state 𝑠 , joint action of other agent 𝒂 −𝑖 , and the action probabilities from the policy 𝜋 𝜃 
+
+and observation 𝑜 𝑖 . Importantly, instead of directly learning the state-action value function 𝑄 (𝑠, 𝒂 ), the network indirectly estimates it by substituting the action 𝑎 𝑖 with 𝜋 𝜃 (·| 𝑜 𝑖 ). This design choice is underpinned by the contraction property guaranteed by the R𝑖 
+
+operator. We construct separate hidden layers for each pair of state and marginalized action dimensions. These layers are concatenated in the hidden dimension to produce the final output. The first layer 
+
+𝜓 1 represents a linear network layer with latent for state as output, 
+
+𝜓 2 is a layer for marginalized action, and 𝜓 3 exports 𝐸𝑄 𝑖 𝜓 as the final output through GRU, with concatenation of the previous two features. To ensure a fair comparison, the hidden layer size for each state-action pair is halved, so that after concatenation, the total hidden layer size matches the original configuration. The value function is optimized using the following loss function: 
+
+𝐿 (𝜓 ) =∑︁  
+
+> 𝜏 ∈ B
+
+(E𝜋 𝑖 [𝐸𝑄 𝑖 𝜓 ] − 𝐸𝑄 𝑖 𝑡𝑎𝑟𝑔 )2, (76) where B represents the replay buffer, and the target value 𝐸𝑄 𝑖 𝑡𝑎𝑟𝑔 
+
+is explicitly given by 
+
+𝐸𝑄 𝑖 𝑡𝑎𝑟𝑔 = E𝜋 𝑖 [𝐸𝑄 𝑖 𝜓 ] + 𝜌 𝑖 𝑡 ˆ𝐴 𝑖,𝐺𝑃𝐴𝐸 𝑡 , (77) where 𝜌 𝑖 𝑡 = min (1, 𝜌 𝑖 𝑡 ) is a bounded individual ISR for stable learning. 
+
+## D.2 Off-policy Sample Reuse and Policy Learning 
+
+Although our framework can be extended to general MAPG meth-ods, we configured the policy learning structure identical to MAPPO for consistency and fair comparison. The policy optimization pro-cess employs a clipped surrogate objective from MAPPO [ 42 ], while using ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+for the advantage function. To maximize sample efficiency, the proposed framework incor-porates off-policy sample reuse strategies. This approach aligns closely with methods employed in several single-agent off-policy PPO frameworks[ 11 , 20 , 27 ]. For off-policy sample reuse, we con-sider the behavioral old policy 𝜋 old and current target policy 𝜋 curr 
+
+separately. We use the following off-policy policy learning loss: 
+
+𝐿 𝜃 = E𝜏 ∼B 
+
+
+
+min 
+
+
+
+𝜌 𝑖 𝑡 ˆ𝐴 𝑖, GPAE  
+
+> 𝑡
+
+, clip (𝜌 𝑖 𝑡 , 𝜌 𝑖 𝑡, old (1 − 𝜖 ),𝜌 𝑖 𝑡, old (1 + 𝜖 )) ˆ𝐴 𝑖, GPAE 
+
+> 𝑡
+
+ 
+
+, (78) where 𝜌 𝑖 𝑡 = 𝜋 𝑖 𝜃 /𝜋 𝑖  
+
+> old
+
+represents the ISR between the updating policy and the old policy, and 𝜌 𝑖 𝑡, old = 𝜋 𝑖 
+
+> curr
+
+/𝜋 𝑖  
+
+> old
+
+denotes the ratio between the current policy and the old policy. E ENVIRONMENT DETAILS E.1 SMAX 
+
+SMAX is a JAX-based, hardware-accelerated reimplementation of the StarCraft Multi-Agent Challenge (SMAC) that removes the dependency on the StarCraft II engine. Unlike SMAC, which is bound to CPU-based simulation with limited parallelism, SMAX supports efficient GPU acceleration, significantly improving simu-lation speed and scalability. The environment consists of multiple cooperative agents engag-ing in combat against an adversarial team, where the goal is to eliminate all opponents. Agents operate under partial observability, receiving local observations of nearby units within a predefined sight range. These observations include ally/enemy health, posi-tions, actions, and unit types. SMAX supports a discrete action space with movement and attack actions, similar to SMAC, but features more configurable dy-namics and a flexible scenario design. Notably, the built-in heuristic AI for adversaries is decentralized and reactive, agents pursue visi-ble enemies and maintain consistent targeting behavior across steps. This contrasts with SMAC’s globally conditioned or static scripted agents, making SMAX more suitable for self-play and adversarial robustness studies. The reward structure in SMAX is also rebalanced: 50% of the total return is given for damaging enemies, and 50% is awarded for winning the match, making performance metrics more interpretable and stable across different scenarios. Table 5 summarizes the available scenarios, including direct ports of SMAC(v1) maps and several stochastic setups inspired by SMACv2. 
+
+Table 5: Evaluated tasks in SMAX. These scenarios involve discrete actions and cooperative combat against adversarial teams. Task Name Ally Units Enemy Units 
+
+2s3z 2 Stalkers, 3 Zealots 2 Stalkers, 3 Zealots 3s5z 3 Stalkers, 5 Zealots 3 Stalkers, 5 Zealots 5m_vs_6m 5 Marines 6 Marines 10m_vs_11m 10 Marines 11 Marines 3s5z_vs_3s6z 3 Stalkers, 5 Zealots 3 Stalkers, 6 Zealots 6h_vs_8z 6 Hydralisks 8 Zealots smacv2_5_units 5 Random Units 5 Random Units smacv2_10_units 10 Random Units 10 Random Units 
+
+## E.2 MABrax 
+
+MABrax is a continuous control multi-agent environment built on top of Brax [ 9], extending the concept of Multi-Agent MuJoCo [ 25 ] to fully leverage JAX’s acceleration capabilities. Each agent controls an individual joint of a shared robot (e.g., Ant, HalfCheetah, Humanoid), and they must coordinate their actions to complete locomotion tasks efficiently. The continuous action space requires fine-grained control and synchronization between agents, highlighting the challenge of ac-curate credit assignment. The centralized value function is crucial here to guide each agent’s learning toward coherent joint behav-iors. Partial observability is implemented by restricting each agent’s perception to its own joint state and neighboring components, en-couraging policies that rely on decentralized coordination. Unlike single-agent Brax environments, MABrax introduces multi-agent learning dynamics where poor credit assignment can easily destabilize training. Thus, it serves as an ideal testbed for eval-uating credit assignment techniques under continuous, partially observable settings. 
+
+## F ADDITIONAL EXPERIMENTAL RESULTS F.1 Task-wise Learning Curve 
+
+Fig. 6 presents the learning curves for each task in the main results. 
+
+## F.2 Additional Ablations 
+
+To complement the main ablation results on GPAE, we further examine the effect of different truncation strategies when applied to other advantage estimators, namely GAE [ 31 ] and DAE [ 18 ]. All variants are trained with the same off-policy sample reuse protocol used in Section 5, ensuring a consistent comparison. Table 6 summarizes the results on SMAX-5m_vs_6m . With off-policy corrections, both GAE and DAE show moderate improve-ments in stability compared to their on-policy counterparts. How-ever, their behaviors under different truncation schemes reveal clear contrasts. The consistent advantage of DT-ISR across GAE, DAE, and GPAE demonstrates that applying bounded and credit-sensitive off-policy weights is a general solution for stable multi-agent policy optimiza-tion. In all cases, DT-ISR enables off-policy reuse without sacrificing convergence or credit assignment quality. 
+
+Table 6: Ablation study on DT-ISR. 
+
+method GPAE GAE DAE 
+
+DT-ISR 93.7 35.1 29.4 ST-ISR 44.4 10.9 9.7 IT-ISR 58.6 9.6 14.5 No Correction 34.5 10.6 10.8 G HYPERPARAMETER SETTINGS OF THE EXPERIMENTS 
+
+Table 7: Hyperparameter settings of PPO and Off-Policy PPO in the SMAX and MABrax environment Parameter SMAX MABrax # training timesteps 1 × 10 7 1 × 10 7
+
+# parallel environments 128 64 
+
+# rollout steps 128 128 
+
+Adam learning rate 5 × 10 −4 1 × 10 −3
+
+Anneal learning rate True True Update epochs 5 5
+
+Clip range 0.2 0.2
+
+𝛾 0.99 0.99 
+
+𝜆 0.95 0.95 
+
+𝜂 (GPAE) 1.05 1.05 
+
+𝛽 (DAE) 0.5 0.5
+
+Entropy coefficient 0.01 0.01 
+
+Activation relu relu # reuse batches (off-policy) 4 4
+
+# hidden layers 2 2
+
+layer width 128 128 
+
+Table 8: Hyperparameter settings of QMIX and VDN in the SMAX environment Parameter SMAX # training timesteps 1 × 10 7
+
+# parallel environments 16 
+
+# rollout steps 128 
+
+Adam learning rate 5 × 10 −5
+
+Anneal learning rate True Buffer size 5 × 10 3
+
+Buffer batch size 32 
+
+𝛾 0.99 
+
+𝜖 (start-decay-finish) 1.0-0.1-0.05 
+
+Hidden size 128 
+
+Update epochs 8
+
+QMIX specific 
+
+Mixed embedding width 64 
+
+Mixer hypernet width 256 
+
+Mixer initial scale 1 × 10 −3GPAE (off-policy) GPAE (on-policy) MAPPO DAE COMA QMIX VDN 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0.0 
+
+0.5 
+
+1.0 
+
+> Eval Win Rate
+> ×10 7
+
+2s3z 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0.0 
+
+0.5 
+
+1.0 
+
+> Eval Win Rate
+> ×10 7
+
+3s5z 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+> 0.00
+> 0.25
+> 0.50
+> 0.75
+> Eval Win Rate
+> ×10 7
+
+3s5z_vs_3s6z 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0.0 
+
+0.5 
+
+> Eval Win Rate
+> ×10 7
+
+5m_vs_6m 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0.0 
+
+0.5 
+
+1.0 
+
+> Eval Win Rate
+> ×10 7
+
+10m_vs_11m 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0.0 
+
+0.5 
+
+1.0 
+
+> Eval Win Rate
+> ×10 7
+
+6h_vs_8z 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+> 0.00
+> 0.25
+> 0.50
+> 0.75
+> Eval Win Rate
+> ×10 7
+
+smacv2_5_units 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+> 0.00
+> 0.25
+> 0.50
+> 0.75
+> Eval Win Rate
+> ×10 7
+
+smacv2_10_units 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0
+
+2000 
+
+> Episode Return
+> ×10 7
+
+halfcheetah_6x1 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0
+
+2000 
+
+> Episode Return
+> ×10 7
+
+ant_8x1 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0
+
+2000 
+
+> Episode Return
+> ×10 7
+
+ant_4x2 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+250 
+
+500 
+
+750 
+
+> Episode Return
+> ×10 7
+
+walker2d_6x1 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+0
+
+500 
+
+1000 
+
+1500 
+
+> Episode Return
+> ×10 7
+
+hopper_3x1 0 0.2 0.4 0.6 0.8 1.0 
+
+Environment Steps 
+
+100 
+
+200 
+
+300 
+
+400 
+
+> Episode Return
+> ×10 7
+
+humanoid_9|8 Figure 6: Figures represent the learning curve of the average win rate performance for 6 tasks on SMAX, and the learning curve of the average episode return performance for 6 tasks on MABrax.

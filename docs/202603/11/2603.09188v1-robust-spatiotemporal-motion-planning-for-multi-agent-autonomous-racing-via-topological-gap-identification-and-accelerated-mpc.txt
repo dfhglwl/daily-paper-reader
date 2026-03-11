@@ -1,0 +1,557 @@
+Title: Robust Spatiotemporal Motion Planning for Multi-Agent Autonomous Racing via Topological Gap Identification and Accelerated MPC
+
+URL Source: https://arxiv.org/pdf/2603.09188v1
+
+Published Time: Wed, 11 Mar 2026 00:34:16 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Robust Spatiotemporal Motion Planning for Multi-Agent Autonomous Racing via Topological Gap Identification and Accelerated MPC 
+
+Mingyi Zhang 1∗, Cheng Hu 1∗, Yiqin Wang 1∗, Haotong Qin 2†, Hongye Su 1† and Lei Xie 1†
+
+Fig. 1: Framework of the proposed Topological Gap Identification Planner(Topo-Gap) : The method first employs parallel Sparse Gaussian Processs (SGPs) to predict multi-opponent spatiotemporal corridors. Based on these dynamic predictions, a topology-aware module identifies the optimal overtaking gap, while a PTC-accelerated Model Predictive Control (MPC) optimizes the trajectory to ensure strict kinematic feasibility and safety at high speeds. 
+
+Abstract — High-speed multi-agent autonomous racing de-mands robust spatiotemporal planning and precise control under strict computational limits. Current methods often over-simplify interactions or abandon strict kinematic constraints. We resolve this by proposing a Topological Gap Identification and Accelerated MPC framework. By predicting opponent behaviors via SGPs, our method constructs dynamic occupancy corridors to robustly select optimal overtaking gaps. We ensure strict kinematic feasibility using a Linear Time-Varying MPC powered by a customized Pseudo-Transient Continuation (PTC) solver for high-frequency execution. Experimental results on the F1TENTH platform show that our method significantly out-performs state-of-the-art baselines: it reduces total maneuver time by 51.6% in sequential scenarios, consistently maintains an overtaking success rate exceeding 81% in dense bottlenecks, and lowers average computational latency by 20.3%, pushing the boundaries of safe and high-speed autonomous racing. 
+
+I. I NTRODUCTION 
+
+Autonomous racing serves as a high-intensity proving ground for advancing autonomous driving technologies, pushing algorithms to their operational limits under extreme dynamic conditions. [1], [2]. In head-to-head competitions, ranging from scaled plat-forms such as F1TENTH [3] to full-scale events like the A2RL [4] challenge, vehicles face the critical challenge of executing dynamic and complex overtaking maneuvers. When navigating against multiple dynamic opponents, au-tonomous agents must rapidly exploit fleeting, spatiotempo-rally shifting gaps. This demands generating optimal control      
+
+> ∗Equal contribution .
+> 1Authors are associated with the Department of Control Science and Engineering, Zhejiang University.
+> 2Authors are associated with the Center for Project-Based Learning, D-ITET, ETH Zurich.
+> †Corresponding Authors
+
+haotong.qin@pbl.ee.ethz.ch, lxie@iipc.zju.edu.cn .
+
+sequences within milliseconds at the absolute limits of tire friction, forcing the planner to concurrently manage discrete topological decisions and strict kinematic feasibility under intense computational pressure. In such edge-case scenarios, even marginal inaccuracies in kinematic planning or slight computational delays can precipitate catastrophic loss of control [4]. The methods for planning overtaking trajectories can be primarily divided into end-to-end direct trajectory genera-tion and traditional hierarchical planning. Although end-to-end methods based on reinforcement learning have shown promise in certain scenarios [5], the diverse strategies of real-world opponents make it difficult for these models to rapidly acquire interaction data and adapt online. Consequently, hierarchical planning remains the prevailing option due to its rigorous safety guaranties [6]. Within this paradigm, single-opponent overtaking algorithms have matured significantly, successfully integrating data-driven predictions [7] (e.g., GP) to handle adversary uncertainty. However, while robust for one-on-one engagements, extending these predictive founda-tions to multi-vehicle head-to-head racing introduces entirely new dimensionalities of complexity. 1) Dynamic and Complex Overtaking Windows: Facing multiple opponents with diverse racing lines and speeds, overtaking gaps appear briefly and unpredictably. The plan-ner must rapidly and accurately predict opponent behavior and seize these fleeting opportunities amid complex inter-actions; 2) Kinematic Feasibility at the Limit: Planned maneuvers must remain strictly within the bounds of vehicle dynamics; even minor violations at high speeds risk catas-trophic instability, requiring robust kinematic constraints throughout the planning process. 3) Strict Real-Time Con-straints: Millisecond-level response is essential, as compu-
+
+> arXiv:2603.09188v1 [cs.RO] 10 Mar 2026
+
+tational delays directly erode viable overtaking opportunities in these high-speed, highly dynamic scenarios. To tackle these challenges, this paper proposes a novel Topological Gap (Topo-Gap) overtaking framework with a fast QP-based MPC solver (Fig. 1). Given SGP-predicted op-ponent trajectories, our framework automatically constructs spatiotemporal overtaking corridors, identifies overtaking windows, generates adaptive trajectories, and leverages an accelerated MPC to optimize the control sequence for robust and accurate tracking. The main contributions of this paper are summarized as follows: I SGPR-Based Dynamic Corridor Prediction: Alightweight, probabilistic prediction framework based on parallel SGPs is proposed to generate dynamic, uncertainty-aware occupancy corridors for multiple op-ponents. These corridors enable robust identification of spatiotemporal overtaking windows and support adap-tive trajectory planning. II Topology-Aware, Hysteresis-Based Gap Selection: Atopology-driven hysteresis-augmented method is pro-posed to identify complex and rapidly changing over-taking gaps. Within this framework, the incorporation of a hysteresis cost function guarantees the stable selec-tion of optimal safe gaps, thereby entirely suppressing decision oscillations during aggressive multi-agent com-petition. III Robust PTC-Accelerated MPC: PTC is employed to accelerate quadratic problem solving in MPC. To the best of our knowledge, this is the first time PTC has been applied to the domain of overtaking trajectory optimization. Combined with numerical stabilization via Tikhonov regularization and LDLT decomposition, our custom QP solver achieves consistently faster and more robust performance on dense QP problems than general-purpose solvers like OSQP, significantly reducing con-trol latency and enhancing safety in highly dynamic conditions. IV Open Source: The proposed planner is validated against state-of-the-art baselines in official F1TENTH simu-lation environment. The full codebase will be open-sourced upon the acceptance of this paper [8]. II. R ELATED WORK 
+
+A. Multi-Agent Spatiotemporal Prediction 
+
+Existing overtaking planners can be broadly classified into reactive and predictive approaches. Reactive methods, such as Follow-The-Gap (FTG) [9]and sampling-based Frenet planners [10], rely heavily on static assumptions, making them short-sighted in highly dynamic environments. To provide proactive collision awareness, recent State-of-the-Art (SOTA) methods integrate Gaussian Process Regres-sion (GPR). M-PSpliner [11] successfully predicts multiple opponents using standard GPs; however, bounded by the 
+
+O(N 3) complexity, it computes the Region of Collision (RoC) exclusively for the single closest opponent. This drastic simplification blinds the planner to the complex gaps formed by multiple interacting vehicles. Conversely, FSDP [12] mitigates the computational bottleneck via SGP, yet its framework is strictly confined to single-opponent scenarios. Our planner addresses these limitations by deploying par-allel SGPR models across all tracked opponents to maintain high-frequency global awareness. Based on this, we intro-duce a novel topological gap identification mechanism to proactively evaluate dynamic safety corridors and generate adaptive initial trajectories. Consequently, this framework empowers the ego vehicle to seize fleeting multi-agent gaps and execute highly complex overtaking maneuvers, effec-tively resolving the myopic constraints of current SOTA methods. 
+
+B. Optimization-Based Planning and Control 
+
+Recent predictive planners, ranging from Predictive Spliner [13] to its multi-agent extension M-PSpliner [11], excel at computing proactive spatial evasion paths. However, because their trajectory generation relies purely on geometric optimization without considering vehicle kinematics, the resulting paths often exhibit poor executability at the absolute limits of handling. Conversely, if a full vehicle dynamics model is directly embedded into the planning stage to ensure physical feasibility, it introduces prohibitive computational overhead and redundant calculations, severely violating the strict real-time constraints of high-speed racing. Consequently, adopting a kinematic model within a MPC framework emerges as a highly effective compromise, bridg-ing the gap between physical feasibility and real-time effi-ciency. Although frameworks like FSDP [12] successfully adopt this kinematic MPC paradigm, they typically rely on generic ADMM-based quadratic programming(QP) solvers like OSQP. When subjected to the ill-conditioned matrices inherent to dense multi-agent constraints, these solvers suffer from slow tail convergence, which inevitably starves the high-frequency control loop. To resolve this bottleneck and robustly support the highly dynamic trajectories generated by our topology-aware frame-work, we introduce an engineered PTC [14] solver into the racing LTV-MPC. By fortifying the standard PTC algorithm with practical enhancements like Tikhonov regularization and LDLT decomposition, our tailored solver efficiently han-dles near-singular matrices. This adaptation significantly re-duces computation time and ensures the deterministic, high-frequency execution required for aggressive multi-vehicle maneuvers. 
+
+C. Summary of Existing Overtaking Algorithms 
+
+Table I summarizes the comparison between the method proposed in this paper and SOTA methods. III. M ETHODOLOGY 
+
+In this section, we provide a detailed illustration of how the proposed multi-vehicle overtaking planner operates. First, we utilize parallel SGP models to predict the behaviors of multiple opponents and construct variance-inflated dynamic Algorithm Multi-Opp. Kine. Feas. Robust Solver Topo. Gap                     
+
+> Frenet Yes No No No FTG Yes No No No M-PSpliner Yes No No No FSDP No Yes No No
+> Proposed (ours) Yes Yes Yes Yes
+
+TABLE I: Comparison of overtaking strategies. Multi-Opp. :Multiple opponent handling; Kine. Feas. :Strict kine-matic restriction; Robust Solver :High-frequency acceler-ated solver; Topo. Gap :Dynamic gap identification. Ours uniquely satisfies all requirements. corridors. Next, we demonstrate how to use our topology-aware gap selection mechanism to identify the optimal overtaking channel, and generate an initial kinematically adaptive trajectory through polynomial fitting and differential flatness techniques. Finally, an engineered PTC accelerated LTV-MPC enforces strict safety and kinematic feasibility at high speeds. Figure 1 shows the hierarchical structure of the planner. 
+
+A. Spatiotemporal Prediction and Dynamic Corridors 1) Multi-Opponent Sparse GP Prediction: To efficiently model opponent behaviors in the Frenet frame, we employ SGPs with M inducing points ( M ≪ N ). As depicted in Fig. 2, extracting these sparse inducing points from dense raw detections significantly reduces computational overhead while preserving dynamic spatial bounds. For opponent 
+
+i ∈ { 1, ..., N opp }, independent models predict the lateral deviation d and velocity v over arc-length s:
+
+di(s) ∼ N (μid(s), σ i2 
+
+> d
+
+(s)) , (1) 
+
+vi(s) ∼ N (μiv (s), σ i2 
+
+> v
+
+(s)) . (2) These parallel O(N M 2) SGP instances ensure efficient and continuous uncertainty quantification for real-time inference. 
+
+2) Spatiotemporal Forward Simulation for Multi-Opponent SOC: Existing single-opponent methods typically output a single collision interval [cstart , c end ] with a constant 
+
+lateral bound. Even in multi-opponent extensions, this often collapses to evaluating only the closest adversary. We instead compute a continuous, trajectory-following representation for every tracked opponent. This spatiotemporal corridor is parameterized by the ego vehicle’s future arc-length 
+
+s, explicitly mapping the opponent’s predicted lateral occupancy to the exact instant the ego vehicle traverses s.For each opponent i ∈ { 1, . . . , N opp }, we perform a time-domain forward integration over a horizon Thor with step ∆t.The longitudinal states of the ego vehicle and the opponent evolve as: 
+
+sego (t+∆ t) = sego (t) + vego (t)∆ t + 12 a(t)∆ t2,si
+
+> opp
+
+(t+∆ t) = si
+
+> opp
+
+(t) + μiv
+
+ si
+
+> opp
+
+(t)∆t, (3) where the ego acceleration a(t) is scaled linearly between 
+
+amin and amax based on the current velocity, and μiv is the opponent’s SGP-predicted mean velocity. 
+
+Fig. 2: Qualitative visualization of the multi-opponent be-havior prediction via parallel SGPs. The models accurately infer the continuous lateral deviation and velocity profiles, generating variance-inflated spatial bounds to support the downstream dynamic corridor construction. The Spatiotemporal Occupancy Corridor (SOC) spans a longitudinal interaction window, denoted as Zi = [ ci
+
+> start
+
+, c i
+
+> end
+
+],which corresponds to the red hatched areas illustrated in Fig3. It is defined as the ego s-interval where the signed longitudinal distance si 
+
+> opp
+
+− sego strictly falls within 
+
+(−Lrear , L front ). During this interaction window, the central data structure is the occupancy profile Pi, recorded at each time step tj :
+
+Pi =
+
+n 
+
+sego (tj ), μ id
+
+ si
+
+> opp
+
+(tj ), σ i 2
+
+> d
+
+ si
+
+> opp
+
+(tj )o Nsoc 
+
+> j=1
+
+. (4) Consequently, Pi forms an ego-s-parameterized sequence mapping the opponent’s precise lateral mean and variance to the ego vehicle’s arrival coordinate. Instead of aggregating into two endpoints, this full profile drives the subsequent cor-ridor construction, avoiding the over-conservative abstraction of static bounding boxes. 
+
+3) Variance-Inflated Corridor Construction: Leveraging 
+
+Pi, we define the dynamic corridor Ci with spatially varying lateral boundaries. At each sampled coordinate sk in the profile, the effective width intelligently incorporates the GP predictive variance to ensure a probabilistic safety margin: 
+
+Weff (sk) = min 
+
+
+
+Wcar + Wmargin 
+
++ kσ
+
+q
+
+σi 2 
+
+> d
+
+(sk), W max 
+
+
+
+,
+
+(5) where Wcar is the vehicle width, Wmargin is the base evasion clearance, kσ controls the confidence interval (e.g., kσ =2 for 
+
+≈95% confidence), and Wmax caps the extreme width. The nominal lateral boundaries are thus defined as: 
+
+diL(sk) = μid(sk) + 12 Weff (sk),diR(sk) = μid(sk) − 12 Weff (sk). (6) To ensure the reliability of the subsequent topological gap identification, we must eliminate artificial geometric pinch points (i.e., transient narrowings) caused by high-frequency variance jitter in the SGP predictions. We apply a 1D spatial morphological dilation over a longitudinal window ∆sw,enforcing a monotonically safe and smooth envelope: 
+
+˜diL(sk) = max  
+
+> sj∈
+
+[sk − ∆sw     
+
+> 2, s k+∆sw
+> 2
+
+] diL(sj ),
+
+˜diR(sk) = min  
+
+> sj∈
+
+[sk − ∆sw     
+
+> 2, s k+∆sw
+> 2
+
+] diR(sj ). (7) Furthermore, when an opponent executes a rapid lane change, the standard variance inflation combined with the lateral displacement projects an overly conservative diagonal barrier across the track. To mitigate this, we extract the op-ponent’s average lateral velocity over the interaction window 
+
+∆tsoc = tNsoc − t1:
+
+¯vid = μid
+
+ si
+
+> opp
+
+(tNsoc ) − μid
+
+ si
+
+> opp
+
+(t1)
+
+∆tsoc 
+
+. (8) If the maneuver is classified as crossing ( |¯vid| > v d, thresh ), the probabilistic inflation in (5) is bypassed. Instead, a determin-istic tight bound W cross eff = Wcar + ηW margin (with η ∈ (0 , 1) )is enforced. This adaptive mechanism prevents transient lane-changes from projecting artificial wal that invalidate laterally adjacent, physically feasible overtaking gaps. 
+
+B. Topology-Aware Gap Identification and Selection 
+
+The construction of the dynamic corridors C =
+
+{C 1, . . . , CNopp } inherently partitions the drivable track into a finite set of topologically distinct free-space channels. Unlike reactive single-opponent planners that rely on simple heuristics to choose a binary overtaking side (e.g.,left or right), our framework systematically evaluates the complete free-space topology defined by C to identify the optimal passing channel. This is achieved through a systematic three-stage process: (1) spatial enumeration of all topologically valid gaps along the occupancy profile; (2) cost-based op-timal channel selection fortified by decision hysteresis; and (3) generation of a kinematically feasible initial trajectory localized within the selected gap. 
+
+1) Multi-Point Gap Sampling and Classification: To en-sure continuous passability amidst opponents’ lateral mo-tions, we uniformly sample Ns longitudinal coordinates sk ∈
+
+[smin  
+
+> soc
+
+, s max  
+
+> soc
+
+] across the union of all interaction windows. At each sk, the dynamic corridor boundaries are queried, and obstacles are laterally sorted in ascending order to form an ordered set O(sk) = {O1, . . . , O Nopp }.The available free space is systematically classified into Left, Right, and Middle gaps , with their respective widths computed as: 
+
+WL(sk) = dtrack  
+
+> L
+
+(sk) − ˜dNopp  
+
+> L
+
+(sk) − ϵside ,WR(sk) = ˜d1
+
+> R
+
+(sk) − dtrack  
+
+> R
+
+(sk) − ϵside ,WM,j (sk) = ˜dj+1  
+
+> R
+
+(sk) − ˜djL(sk) − 2ϵmid .
+
+(9) A candidate gap g is declared passable if and only if its minimum width across all sampled points strictly exceeds a safe clearance threshold Wmin :
+
+min  
+
+> k∈{ 1,...,N s}
+
+Wg (sk) > W min . (10) This strict multi-point criterion inherently filters out channels that are transiently wide but dynamically close as the ego vehicle approaches. 
+
+2) Cost-Based Gap Selection with Hysteresis: To suppress high-frequency decision oscillation inherent to greedy multi-agent planners, passable gaps g ∈ G are evaluated using a hysteresis-augmented cost function: 
+
+J(g) = ws
+
+min k Wg (sk) + wr dcenter (g) − draceline 
+
++ wc Cswitch (g). (11) This formulation optimally balances the bottleneck clearance of the gap ( min k Wg (sk)) and the raceline tracking error against a discrete switching penalty Cswitch :
+
+Cswitch (g) = 
+
+
+
+0, if g = gprev ,C0, if same side as gprev ,C0 + C1, if opposite side .
+
+(12) Here, the heavy penalty C1 explicitly discourages hazardous cross-corridor maneuvers at high speeds. To ensure strict temporal consistency, the active target gap 
+
+g∗ is updated to a new candidate gnew only if it yields a decisive cost reduction: 
+
+J(gnew ) < (1 − α) J(g∗), (13) where α ∈ (0 , 1) is the hysteresis margin. Moreover, this condition is gated by a discrete dwell timer that enforces a minimum holding period between consecutive switches, strictly guaranteeing the kinematic stability of the down-stream framework. 
+
+Fig. 3: Illustration of the topology-aware gap selection and adaptive trajectory generation. The ego vehicle (blue) nav-igates a continuous safe corridor (green) to cleanly bypass the opponents’ Spatiotemporal Occupancy Corridors (SOCs, red hatched areas) utilizing a three-phase geometric path. 3) Adaptive Initial Trajectory Generation: Once the op-timal target gap g∗ and its lateral offset dtarget are identified (highlighted in green in Fig. 3), we synthesize a piecewise-smooth geometric path dref (s) strictly confined within the safe corridor. This path provides a kinematically favorable initialization for the downstream solver through three distinct phases:  
+
+> •
+
+Entry Phase: A cubic B´ ezier curve steers the vehicle from d0 to dtarget . To prevent hazardous late cut-ins, the control points ( γ1≈0.35 , γ 2≈0.88 ) are heavily biased to enforce an early lateral commitment before reaching the opponents’ SOCs.  
+
+> •
+
+Passing Phase: The trajectory maintains a constant offset dtarget , cleanly traversing the longitudinal span of the interaction window.  
+
+> •
+
+Exit Phase: A C2-continuous cosine blend, defined as d(s) = dtarget cos   π
+
+> 2
+> s−send
+> sfinal −send
+
+, smoothly merges the vehicle back to the optimal raceline once clear of the final SOC. Finally, dref (s) is clamped within the physical track bound-aries. The complete topology-aware planning pipeline is summarized in Algorithm 1. 
+
+Algorithm 1 Topology-Aware Gap Selection & Reference Generation  
+
+> 1:
+
+Input: {SGP i}, ∂D, (s0, d 0), g∗
+
+> prev
+
+, Tdwell Out: dref (s), g∗
+
+Corridor Construction:  
+
+> 2:
+
+for i = 1 → Nopp do  
+
+> 3:
+
+Integrate (3) ⇒ P i, Zi=[ cis, c ie] 
+
+> 4:
+
+(kσ , W m) ←
+
+(
+
+(0 , ηW mg ) |¯vid| > v thr 
+
+(kσ , W mg ) else  
+
+> 5:
+
+Weff (sk ) ← min( Wcar +Wm+kσ σid, W max ) ▷ (5)  
+
+> 6:
+
+˜diL/R ← Dilate( μid± 12 Weff , ∆sw ) ▷ (6),(7)  
+
+> 7:
+
+end for Gap Identification:  
+
+> 8:
+
+Sample {sk }Ns ; compute {WL, W R, W M,j } via (9)  
+
+> 9:
+
+G ← { g | min k Wg (sk ) > W min }
+
+Gap Selection:  
+
+> 10:
+
+gnew ← arg min g∈G 
+
+ ws  
+
+> min kWg
+
++ wr |dg −drl | + wcCsw 
+
+ ▷ (11)  
+
+> 11:
+
+if J(gnew )<(1 −α)J(g∗) and Tel >T dwell then ▷ (13)  
+
+> 12:
+
+g∗ ← gnew  
+
+> 13:
+
+else g∗ ← g∗ 
+
+> prev
+> 14:
+
+end if Reference Synthesis:  
+
+> 15:
+
+dref (s) ←
+
+
+
+B´ ezier (d0 → dg∗ ), s ∈ [s0, c start  
+
+> g∗
+
+]
+
+dg∗ , s ∈ [cstart  
+
+> g∗
+
+, c end  
+
+> g∗
+
+]
+
+dg∗ cos 
+
+ π
+
+2
+
+s − cend 
+
+> g∗
+
+sfinal − cend 
+
+> g∗
+
+
+
+, s ∈ [cend  
+
+> g∗
+
+, s final ] 
+
+> 16:
+
+dref ← clip  dref , ∂ D ▷ enforce track boundaries   
+
+> Note: ∂Ddenotes the boundaries of the race track.
+
+C. Polynomial Fitting and Reference State Extraction 
+
+To provide a kinematically feasible initial state for the downstream LTV-Model Predictive Control (MPC), the adap-tive geometric path dref (s) generated in the previous stage is fitted to a time-parameterized quintic polynomial. Following the bi-level paradigm established in FSDP [12], this poly-nomial is converted to Cartesian coordinates. By exploiting the differential flatness property of the kinematic bicycle model with flat outputs z = [x, y ]⊤, the full reference state trajectory Xref and control inputs Uref are analytically recovered. These directly serve as the exact linearization points for the subsequent optimization. 
+
+D. Robust LTV-MPC via PTC-Accelerated QP Solver 
+
+To guarantee strict kinematic feasibility and safety at extreme speeds, the initial reference trajectory is refined via a MPC formulated in the Frenet frame. The vehicle dynamics are described by the kinematic bicycle model with state vector x = [ s, d, ∆θ]⊤ and input vector u = [ v, δ ]⊤, where 
+
+s is the arc length, d is the lateral deviation, and ∆θ is the heading error. To formulate a computationally tractable optimization problem, the highly nonlinear vehicle dynamics are dis-cretized and linearized around the reference states Xref and inputs Uref extracted from the preceding differential flatness module. This yields a Linear Time-Varying (LTV) system 
+
+xk+1 = Akxk + Bkuk.The MPC objective minimizes the quadratic tracking de-viation P(∥xk − xk, ref ∥2 
+
+> Q
+
++ ∥uk − uk, ref ∥2
+
+> R
+
+), subject to the vehicle’s actuation limits. Crucially, the multi-opponent spatiotemporal corridors generated in the topology-aware layer are interpolated as strict spatial bounds on the predicted lateral deviation, enforcing dmin (sk) ≤ dk ≤ dmax (sk) at each prediction step. By condensing the state sequence through the linear dynamics, we analytically eliminate the state variables and reduce the optimization to a dense Quadratic Program (QP) strictly over the control input sequence z:
+
+min  
+
+> z
+> 12
+
+z⊤Pz + q⊤z s.t. l ≤ Acz ≤ u. (14) At racing speeds, near-singular P caused by tightly packed corridors renders standard solvers (e.g., OSQP) prohibitively slow. We are the first to deploy PTC [14] in a multi-opponent overtaking context, exploiting its KKT-to-dynamics reformulation for guaranteed real-time performance. 
+
+PTC Core. Partitioning Ac into equalities (C, p) and in-equalities (D, qineq ), the KKT optimality conditions reduce analytically to a single equation in the dual inequality multiplier λ ≥ 0:
+
+F (λ) ≜ Gλ + h − φ Gλ + h = 0, (15) where φ(x) = min( x, qineq ) (component-wise), and the reduced matrices are: 
+
+G′ = P−1 − P−1C⊤(CP −1C⊤)−1CP −1,
+
+h′ = P−1 C⊤(CP −1C⊤)−1(CP −1q + p) − q,
+
+G = DG ′D⊤, h = Dh′.
+
+(16) PTC solves (15) by integrating ˙λ = −βF (λ), whose equilib-rium λ∗ is proven globally asymptotically stable (GAS) via Lyapunov theory [14]. The primal solution is then recovered in closed form as z∗ = G′D⊤λ∗ + h′.
+
+Engineering Adaptations. 1) Dual-Level Tikhonov Reg-ularization. Racing corridors cause near-singular P and ill-conditioned Schur complements, destabilizing the LDLT 
+
+factorizations in (16). We inject regularization at both levels: 
+
+Preg = P + ϵ1I and CP −1 
+
+> reg
+
+C⊤ + ϵ2I, preserving solution quality while ensuring numerical stability. 
+
+2) Fixed-Budget Integration & Safe Fallback. The dynam-ics are discretized via explicit Euler: 
+
+λ(k+1) = λ(k) − hβ F  λ(k), (17) hard-capped at Kmax = 200 iterations to guarantee O(1) 
+
+timing. If extreme constraint tightness drives λ to NaN , the solver immediately resets λ ← 0 and exits, ensuring the chassis always executes an unconstrained-optimal command rather than failing. IV. E XPERIMENTAL RESULTS 
+
+This section evaluates the proposed Topo-Gap method against state-of-the-art baselines across three dimensions: multi-opponent overtaking robustness, trajectory kinematic quality, and solver efficiency. 
+
+A. Experimental Setup 
+
+For a rigorous and fair comparison, all evaluations are conducted within a unified 1:10 scaled F1TENTH simulation environment, where every planner utilizes identical track maps and a standard Pure Pursuit [15]trajectory tracking controller.Computational benchmarking is performed on an Intel Core Ultra 9 275HX processor (3.1 GHz). 
+
+1) Multi-Opponent Scenario Definitions: To systemati-cally stress-test multi-agent planning capabilities, we de-signed four distinct traffic layouts of increasing topological complexity: a) Sequential Mixed-Path (SMP): Opponents follow the centerline and shortest path with a 20 m longitudinal gap, establishing a baseline for consecutive, independent overtakes. b) Dense Same-Lane (DSL): Two opponents travel on the optimal racing line with a tight 3 m headway, testing the planner’s capacity to bypass continuous platoon block-ages. c) Tight Staggered Overlap (TSO): Opponents drive al-most side-by-side ( 1 m gap) across the racing line and centerline, forming a severe parallel bottleneck. d) Offset Needle Thread (ONT): Opponents are diago-nally staggered , evaluating the algorithm’s robustness in threading dynamic narrow gaps without decision oscilla-tion. 
+
+2) Evaluation Metrics: Each trial is evaluated until 5 successful overtakes are achieved. The metrics target distinct aspects of overtaking quality:  
+
+> •
+
+Rot /c[%] : Overtaking success rate (collision-free com-pletions vs. total attempts).  
+
+> •
+
+Smax [%] : Maximum feasible speed scaler, defined as the unobstructed lap time ratio Tego /Topp (where Tego and 
+
+Topp are the baseline lap times of the ego and opponent, respectively). This metric is evaluated by progressively increasing the opponent’s speed to determine the upper 
+
+Fig. 4: Overtaking maneuvers demonstrated in the F1TENTH RViz simulation environment across scenarios (b), (c), and (d). By utilizing the proposed TopoGap planner, the ego vehicle efficiently identifies navigable gaps (indicated by long rectangles) among the opponents’ SOCs(denoted by short rectangles) and generates an optimal, smooth trajectory to safely execute the overtakes. limit at which the ego can still consistently execute stable overtakes without losing control.  
+
+> •
+
+ΣT [s] : Total maneuver time. This is strictly defined as the continuous duration from the moment the ego vehicle initiates tracking of the first opponent until it completely clears the final opponent and safely merges back onto the global optimal racing line.  
+
+> •
+
+¯˙a, ¯˙δ: Mean absolute jerk [m /s3] and steering rate 
+
+[rad /s] , quantifying kinematic smoothness. 
+
+3) GP Computational Overhead Analysis : We compare the prediction efficiency of Topo-Gap and M-PSpliner by en-forcing a unified execution framework. To ensure an unbiased evaluation, both planners share the exact same trigger rules, binning parameters, waypoint configurations, and prediction policies. Workloads are handled by dispatching one asyn-chronous task per tracked opponent into a multiprocessing pool of size 2.The reported benchmarks specifically evaluate the mean computational times dedicated to both GP training and inference across all valid updates. 
+
+4) Solver Benchmarking Protocol: To rigorously isolate and compare pure optimization efficiency, we employ a 
+
+shadow mode execution. At each control step, both our PTC-accelerated solver and the baseline OSQP solver receive and process the exact same QP problem formulated by the MPC. However, only the PTC commands are published to the vehicle chassis. This guarantees perfectly synchronized dy-namic states, enabling a direct, head-to-head comparison of Fig. 5: Qualitative overview of the proposed Topo-Gap framework executing a multi-opponent overtaking maneuver under the SMP scenario. (a) At t1, the ego vehicle (magenta) trails Opponent 1 (gray) and evaluates the spatial gap for an outside overtake. (b) At t2, the ego vehicle successfully clears the first opponent at the curve apex. (c) At t3, it approaches Opponent 2 (teal) while continuously projecting spatiotemporal occupancy corridors. (d) At t4, a safe and smooth inside overtake is completed. The generated trajectories strictly maintain kinematic feasibility without decision oscillation during the highly dynamic multi-agent interactions. computation latency without compounding state divergence. 
+
+B. Simulation Results 1) Multi-Opponent Overtaking Performance: As detailed in Table II, both planners are evaluated across the four multi-agent topologies. In the SMP layout (Scenario A), both methods successfully complete the overtakes. While M-PSpliner achieves a comparable maximum speed scaler (Smax of 70 .2% vs. 68 .6% ), Topo-Gap completes the ma-neuver more efficiently, reducing the total maneuver time 
+
+ΣT from 35 .75 s to 17 .32 s . A qualitative overview of our planner executing this highly dynamic multi-agent interaction is visually demonstrated in Fig. 5. In more tightly coupled topologies, differences in obsta-cle handling strategies become apparent. The baseline M-PSpliner, which formulates the Region of Collision based on the single closest opponent, encounters challenges in the DSL platoon (Scenario B), yielding a success rate ( Rot /c)of only 45 .5% . In contrast, Topo-Gap evaluates the extended multi-opponent corridor(as demonstrated in Fig. 4b), achiev-ing a 93 .8% success rate in 16 .33 s .In the TSO bottleneck (Scenario C), the baseline exhibits decision oscillation, leading to an extended total maneuver time of 88 .0 s . As visually demonstrated by the simulation results in Fig. 4c, Topo-Gap leverages simultaneous Spa-tiotemporal Occupancy Corridors to decisively resolve the topological gap, safely executing the maneuver in just 8.30 s .Furthermore, in the ONT layout (Scenario D), M-PSpliner struggles to find a feasible path, whereas Topo-Gap suc-cessfully navigates the dynamic narrow corridor(illustrated in Fig. 4d in 24 .20 s with an 83 .3% success rate. 
+
+2) Kinematic Feasibility and Trajectory Quality: The kinematic quality of the generated trajectories is evaluated using mean absolute jerk ( ¯˙a) and steering rate ( ¯˙δ). The baseline’s sequential geometric splicing results in severe variations in control commands, peaking at an average jerk of 72 .7 m /s3 (Scenario D) and a steering rate of 1.05 rad /s
+
+TABLE II: Quantitative Overtaking Performance Across Multi-Opponent Scenarios                                           
+
+> Scen. Planner Rot /c[%]ΣT[s] ¯˙a[m /s3]¯˙δ[rad /s]
+> SMP M-PSpliner 71.4 35.75 39.60 0.76
+> Ours 81.3 17.32 22.70 0.72 DSL M-PSpliner 45.5 24.12 62.80 1.05
+> Ours 93.8 16.33 32.20 0.62 TSO M-PSpliner 42.9 88.00 57.10 0.64
+> Ours 81.8 8.30 40.74 0.55 ONT M-PSpliner –Fail 72.70 0.91
+> Ours 83.3 24.20 51.80 0.76
+
+(Scenario B). These rapid changes pose significant tracking challenges for low-level controllers at extreme speeds. By integrating a kinematic MPC, Topo-Gap explicitly bounds the jerk (e.g., restricted to 22 .7 m /s3 in Scenario A) and maintains a smoother steering profile, thereby guaranteeing stable trackability during highly dynamic interactions. 
+
+3) Algorithm-Level GP Efficiency: Evaluated under the standardized framework, Topo-Gap significantly outperforms M-PSpliner in execution speed (Fig. 6). By leveraging the sparse design, our method yields 3.80 × and 2.24 × speedups in the GP training and prediction phases, respectively. This validates its fundamental efficiency advantage prior to full-system dynamic evaluations. 
+
+4) Computational Efficiency and Solver Robustness: 
+
+Based on the shadow mode protocol defined in Sec. IV-A, the quantitative timing performance of our custom MPC solver against the baseline FSDP MPC solver is summarized in Table III. Both solvers process the exact same dense spatial constraints, and our solver achieves the same level of optimization accuracy as the FSDP MPC solver in terms of objective cost. However, their temporal distributions differ significantly. The baseline FSDP MPC solver suffers from structural Fig. 6: GP latency comparison: Topo-Gap achieves signifi-cant speedups over M-PSpliner in model training (left) and prediction (right). update inefficiencies and heavy initialization overheads when handling highly constrained multi-agent corridors. This re-sults in a pronounced long-tail latency, with its maximum MPC solve time spiking to 95 .52 ms . Such transient com-putational delays inevitably cause control starvation in the high-frequency autonomous racing loop. In contrast, our custom MPC solver is specifically de-signed to handle near-singular conditions and minimizes matrix setup overheads naturally. It reduces the average solve time to 19 .48 ms and tightly bounds the worst-case maximum latency to 67 .18 ms . This deterministic temporal performance explicitly guarantees that the autonomous agent can con-tinuously generate safe maneuvers without computational breakdown under extreme topological stress. TABLE III: MPC Solve Time Benchmark (ms) 
+
+Solver Mean ( μt) Std ( σt) 99th Pct. ∗ Max 
+
+FSDP MPC Solver 24.44 14.46 75.96 95.52 
+
+Our MPC Solver 19.48 10.90 53.90 67.18 
+
+> ∗
+
+99th Pct. denotes the 99th percentile of the solve time, indicating that 99% of the optimizations are completed within this duration. 
+
+V. C ONCLUSION 
+
+In this paper, we propose Topo-Gap, a robust spatiotem-poral motion planning framework tailored for the extreme dynamic conditions of unrestricted multi-agent autonomous racing. By generating opponents’ SOC via parallel Sparse Gaussian Processes, our topology-aware gap identification proactively seizes overtaking windows while successfully suppressing decision oscillations. The trajectory is subse-quently optimized by a custom PTC accelerated LTV-MPC to ensure strict kinematic feasibility. Experimental results in the F1TENTH environment demonstrate the significant superiority of our approach. In baseline sequential overtaking scenarios, Topo-Gap reduces the total maneuver time by 51 .6% compared to SOTA predictive planners. Crucially, as topological complexity intensifies into dense platoons and tight bottlenecks, our framework consistently maintains a high overtaking success rate ( > 81% ) where baseline methods severely degrade or completely fail. Furthermore, our custom MPC solver reduces the average computational latency by 20 .3% and tightly bounds the worst-case delays, effectively eliminating control starvation at extreme racing speeds. Future work will explore the integration of game-theoretic interaction models to anticipate and safely navigate against active defensive maneuvers. REFERENCES [1] A. Wischnewski, M. Geisslinger, J. Betz, T. Betz, F. Fent, A. Heilmeier, L. Hermansdorfer, T. Herrmann, S. Huch, P. Karle 
+
+et al. , “Indy autonomous challenge-autonomous race cars at the handling limits,” in 12th International Munich Chassis Symposium 2021: chassis. tech plus . Springer, 2022, pp. 163–182. [2] J. Betz, H. Zheng, A. Liniger, U. Rosolia, P. Karle, M. Behl, V. Krovi, and R. Mangharam, “Autonomous vehicles on the edge: A survey on autonomous vehicle racing,” IEEE Open Journal of Intelligent Transportation Systems , vol. 3, pp. 458–488, 2022. [3] B. D. Evans, R. Trumpp, M. Caccamo, F. Jahncke, J. Betz, H. W. Jordaan, and H. A. Engelbrecht, “Unifying f1tenth autonomous racing: Survey, methods and benchmarks,” 2024. [Online]. Available: https://arxiv.org/abs/2402.18558 [4] S. Hoffmann, S. Sagmeister, T. Betz, J. Bongard, S. B¨ uttner, D. Ebner, D. Esser, G. Jank, S. Goblirsch, A. Langmann, M. Leitenstern, L. ¨ Ogretmen, P. Pitschi, A.-K. Schwehn, C. Schr¨ oder, M. Weinmann, F. Werner, B. Lohmann, J. Betz, and M. Lienkamp, “Head-to-head autonomous racing at the limits of handling in the a2rl challenge,” 2026. [Online]. Available: https://arxiv.org/abs/2602.08571 [5] E. Steiner, D. van der Spuy, F. Zhou, A. Pama, M. Liarokapis, and H. Williams, “Accelerating real-world overtaking in f1tenth racing employing reinforcement learning methods,” 2025. [Online]. Available: https://arxiv.org/abs/2510.26040 [6] R. Trauth, K. Moller, G. W¨ ursching, and J. Betz, “Frenetix: A high-performance and modular motion planning framework for autonomous driving,” IEEE Access , vol. 12, p. 127426–127439, 2024. [Online]. Available: http://dx.doi.org/10.1109/ACCESS.2024.3436835 [7] Y. Kebbati, A. Rauh, N. Ait-Oufroukh, D. Ichalal, and V. Vigneron, “Learning-based model predictive control with moving horizon state estimation for autonomous racing,” International Journal of Control ,vol. 98, no. 7, p. 1542–1552, Sep. 2024. [Online]. Available: http://dx.doi.org/10.1080/00207179.2024.2409305 [8] N. Baumann, E. Ghignone, J. K¨ uhne, N. Bastuck, J. Becker, N. Imholz, T. Kr¨ anzlin, T. Y. Lim, M. L¨ otscher, L. Schwarzenbach et al. ,“Forzaeth race stack—scaled autonomous head-to-head racing on fully commercial off-the-shelf hardware,” Journal of Field Robotics , 2024. [9] V. Sezer and M. Gokasan, “A novel obstacle avoidance algorithm: “follow the gap method”,” Robotics and Autonomous Systems ,vol. 60, no. 9, pp. 1123–1134, 2012. [Online]. Available: https: //www.sciencedirect.com/science/article/pii/S0921889012000838 [10] M. Werling, J. Ziegler, S. Kammel, and S. Thrun, “Optimal trajectory generation for dynamic street scenarios in a frenet frame,” in 2010 IEEE International Conference on Robotics and Automation . IEEE, 2010, pp. 987–993. [11] N. Imholz, M. Brunner, N. Baumann, E. Ghignone, and M. Magno, “M-predictive spliner: Enabling spatiotemporal multi-opponent overtaking for autonomous racing,” 2025. [Online]. Available: https://arxiv.org/abs/2506.16301 [12] C. Hu, J. Huang, W. Mao, Y. Fu, X. Chi, H. Qin, N. Baumann, Z. Liu, M. Magno, and L. Xie, “Fsdp: Fast and safe data-driven overtaking trajectory planning for head-to-head autonomous racing competitions,” in 2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2025, pp. 5824–5831. [13] N. Baumann, E. Ghignone, C. Hu, B. Hildisch, T. H¨ ammerle, A. Bet-toni, A. Carron, L. Xie, and M. Magno, “Predictive spliner: Data-driven overtaking in autonomous racing using opponent trajectory prediction,” IEEE Robotics and Automation Letters , vol. 10, no. 2, pp. 1816–1823, 2024. [14] L. Calogero, M. Pagone, and A. Rizzo, “Enhanced quadratic pro-gramming via pseudo-transient continuation: An application to model predictive control,” IEEE Control Systems Letters , vol. 8, pp. 1661– 1666, 2024. [15] J. Becker, N. Imholz, L. Schwarzenbach, E. Ghignone, N. Baumann, and M. Magno, “Model- and acceleration-based pursuit controller for high-performance autonomous racing,” in 2023 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, May 2023, p. 5276–5283. [Online]. Available: http://dx.doi.org/10.1109/ ICRA48891.2023.10161472

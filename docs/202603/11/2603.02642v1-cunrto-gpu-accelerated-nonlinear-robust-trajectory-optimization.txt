@@ -1,0 +1,1862 @@
+Title: cuNRTO: GPU-Accelerated Nonlinear Robust Trajectory Optimization
+
+URL Source: https://arxiv.org/pdf/2603.02642v1
+
+Published Time: Wed, 04 Mar 2026 01:42:30 GMT
+
+Number of Pages: 15
+
+Markdown Content:
+# cuNRTO: GPU-Accelerated Nonlinear Robust Trajectory Optimization 
+
+Jiawei Wang †§ , Arshiya Taj Abdul ∗§ , Evangelos A. Theodorou ∗∗Georgia Institute of Technology, Atlanta †University of California, San Diego ‡Deemos Corporation 
+
+§Equal Contribution 
+
+Abstract —Robust trajectory optimization enables autonomous systems to operate safely under uncertainty by computing control policies that satisfy the constraints for all bounded disturbances. However, these problems often lead to large Second Order Conic Programming (SOCP) constraints, which are computa-tionally expensive. In this work, we propose the CUDA Nonlin-ear Robust Trajectory Optimization (cuNRTO) framework by introducing two dynamic optimization architectures that have direct application to robust decision-making and are implemented on CUDA. The first architecture, NRTO-DR, leverages the Douglas-Rachford (DR) splitting method to solve the SOCP inner subproblems of NRTO, thereby significantly reducing the computational burden through parallel SOCP projections and sparse direct solves. The second architecture, NRTO-FullADMM, is a novel variant that further exploits the problem structure to improve scalability using the Alternating Direction Method of Multipliers (ADMM). Finally, we provide GPU implementation of the proposed methodologies using custom CUDA kernels for SOC projection steps and cuBLAS GEMM chains for feedback gain updates. We validate the performance of cuNRTO through simulated experiments on unicycle, quadcopter, and Franka manipulator models, demonstrating speedup up to 139.6 ×.
+
+I. I NTRODUCTION 
+
+Trajectory optimization has become a foundational tool for motion planning and control of robotic systems, enabling robots to compute dynamically feasible paths that minimize objective cost while satisfying constraints [1, 2]. Applications span from manipulation and legged locomotion to aerial vehicles and autonomous driving [3, 4, 5]. However, real-world robotic systems inevitably face uncertainty. When con-straints encode safety-critical requirements—such as obstacle avoidance or actuator limits—failing to account for these uncertainties can lead to catastrophic consequences [6]. Handling uncertainty is critical for real-world deployment. One common approach is to model uncertainty as a stochastic disturbance characterized by a probability distribution. Exist-ing methods, ranging from chance-constrained optimization [6, 7] to covariance steering [8, 9], provide probabilistic guar-antees on constraint satisfaction. However, stochastic models may not capture all uncertainty types; modeling inaccuracies or exogenous disturbances are often better represented as deterministic uncertainty, referring to disturbances assumed to lie within a bounded set. In many safety-critical applications, a guarantee is required for all possible realizations of such uncertainty. This work addresses trajectory optimization in the presence of these deterministic disturbances. Standard approaches to address deterministic uncertainty involve providing worst-case guarantees over bounded un-Host (CPU)  
+
+> Device (GPU)
+> Successive
+> Linearization
+> cuNRTO
+
+Fig. 1: cuNRTO on a 7-DoF Franka manipulator: cuNRTO involves an outer successive linearization (SL) loop run on the host CPU, with an inner loop executed on the GPU. Compared to NRTO, cuNRTO achieves a 25.9 × wall-clock speedup on this setting with 100% constraint satisfaction. The three small boxes show the final state under Monte Carlo rollouts. certainty sets, a concept originating from the field of ro-bust control [10]. This idea has been adapted for trajectory optimization in several forms, ranging from Tube-based and Robust Model Predictive Control (MPC) to min-max methods. Tube-based MPC computes a nominal trajectory and feedback gains to maintain the system within a safe tube; however, it can be overly conservative due to the decoupling between the nominal control and the feedback gains [11]. Robust MPC typically considers linear systems. Alternatively, Min-Max DDP [12, 13] frame the problem as a game against an adversarial disturbance to optimize a robust policy, yet these methods often struggle with nonlinear state constraints. To ef-fectively handle both nonlinear dynamics and state constraints, recent research has shifted toward Robust Optimization (RO) [14, 15]. Some frameworks [16, 17] in this category address nonlinear constraints but are limited to linear dynamical sys-tems. Conversely, recent work [18] introduced the Nonlinear Robust Trajectory Optimization (NRTO) framework, a trajec-tory optimization framework that accounts for nonlinearity in 
+
+> arXiv:2603.02642v1 [cs.RO] 3 Mar 2026
+
+both the dynamics and the constraints. The NRTO framework comprises three core elements: suc-cessive linearization, robust constraint reformulation, and the resolution of linearized subproblem infeasibility via operator-splitting techniques [18]. Since the framework enforces robust constraints that must be satisfied for every possible realization of uncertainty within a bounded set, the problem is intractable in its original form due to the infinite number of constraints. To overcome this, the NRTO framework employs robust con-straint reformulation, converting the problem into a tractable form that yields Second-Order Conic Programming (SOCP) constraints. Despite the effectiveness of this framework, the computational cost of the existing implementation based on Interior Point (IP) methods for solving the SOCP subproblems remains a primary barrier to its widespread adoption for high-dimensional systems with numerous constraints. Leveraging GPU acceleration offers a powerful solution to overcome these computational barriers. As single-core CPU performance has largely plateaued, the robotics community has increasingly turned to massively parallel architectures to accelerate complex motion planning tasks. Early research in this domain focused primarily on parallelizing rigid body dynamics and their corresponding gradients [19, 20]. More re-cently, GPU acceleration has been pushed into the optimization loop itself. For example, MPCGPU [21] achieves real-time nonlinear MPC by accelerating the dominant sparse Newton solve (PCG) on the GPU. Similar GPU-parallelism has also been explored in constrained sampling-based planning [22]. Beyond nonlinear MPC, GPU implementations of first-order splitting methods for convex programs, particularly ADMM-based QP solvers such as OSQP [23, 24], achieve high throughput by mapping the repeated linear algebra and projection steps to GPU kernels while keeping iterates on-device. However, the NRTO framework in its current form is not inherently amenable to parallelization. This paper presents cuNRTO: a GPU-accelerated nonlinear robust optimization framework by introducing two novel ex-tensions to the original NRTO formulation. This enables effi-cient parallel execution. Fig. 1 provides a high-level overview of the cuNRTO execution flow. Specifically, the contributions of this paper are three-fold: i) First, we introduce NRTO-DR , a methodology to solve the computationally expensive sub-problems of the NRTO framework [18] using Douglas-Rachford splitting (DR) [25]. The proposed methodology improves the performance over Interior Point (IP) Methods through parallel SOC projections and sparse direct solves that reduce matrix operations. ii) Second, we propose NRTO-FullADMM , a novel vari-ant of the NRTO framework to further enhance the performance, by reformulating the update blocks and steps within the inner Alternating Direction Method of Multipliers (ADMM) loop of NRTO. iii) Third, we develop cuNRTO , which constitutes GPU im-plementation of the NRTO-DR and NRTO-FullADMM. Our approach utilizes cuBLAS GEMM chains for the feedback gain update and custom CUDA kernels for SOC projections. We validate our approach on unicycle, quadcopter, and Franka manipulator trajectory optimiza-tion, demonstrating a speedup of up to 139.60 ×.
+
+A. Notations 
+
+The space of symmetric positive definite (semi-definite) matrices with dimension n is denoted as S++  
+
+> n
+
+(S+ 
+
+> n
+
+). The 2-norm of a vector x is denoted with ∥x∥2, while the Frobenius norm of a matrix X is given by ∥X∥F . Further, a weighted 2-norm of a vector x defined for a Q ∈ S+ 
+
+> n
+
+as pxTQx is denoted by ∥x∥Q. The indicator function of a set X, IX is defined as I(x) = {0 if x ∈ X or +∞ if x /∈ X}. With 
+
+Ja, b K, we denote the integer set {[a, b ] ∩ Z}.
+
+B. Organization of the paper 
+
+The remainder of this paper is organized as follows. Section II presents the problem statement and a detailed overview of the Nonlinear Robust Trajectory Optimization (NRTO) frame-work [18]. In Sections III and IV, we introduce our core ar-chitectural contributions: NRTO-DR and NRTO-FullADMM, respectively. Section V demonstrates the computational per-formance of these proposed frameworks through a series of simulation experiments involving unicycle, quadcopter, and Franka Emika manipulator models. Finally, Section VI pro-vides concluding remarks and discusses future work. II. N ONLINEAR ROBUST TRAJECTORY OPTIMIZATION 
+
+FRAMEWORK 
+
+In this section, we outline the nonlinear robust trajectory optimization framework (NRTO) [18] considered in this work. We start by presenting the problem statement followed by framework details. 
+
+A. Problem Statement 
+
+Consider the following discrete-time nonlinear dynamics 
+
+xk+1 = f (xk, uk) + dk, k ∈ J0, T − 1K, (1) 
+
+x0 = ¯ x0 + ¯d0, (2) where xk ∈ Rnx is the state, uk ∈ Rnu is the control input, 
+
+f : Rnx × Rnu → Rnx is the known dynamics function and T is the time horizon. The initial state x0 consists of a known part ¯x0, as well as an uncertain part ¯d0. The terms 
+
+¯d0, dk ∈ Rnx represent unknown disturbances . Considering 
+
+ζ = [ ¯d0; d0; . . . ; dT −1] ∈ R(T +1) nx , the uncertainty vector ζ
+
+is characterized to lie inside a bounded ellipsoidal set defined as follows 
+
+U [τ ] = {ζ| ∃ (z ∈ Rnz ,τ ∈ R+) : 
+
+ζ = Γz, zTSz ≤ τ }, (3) where Γ ∈ R(T +1) nx×nz , and S ∈ S++  
+
+> nz
+
+. Further, the proposed methodology can be extended for other common types of uncertainty sets such as ellitopes, polytopes, etc. [14]. Consider affine control policies of the following form 
+
+uk = ¯ uk + Kkdk−1 (4) where ¯uk ∈ Rnu is feed-forward control and Kk ∈ Rnu×nx
+
+are feedback gain. By convention, we set d−1 = ¯d0.The system is subject to robust state and control constraints that should be satisfied for all possible disturbance realizations 
+
+ζ within the uncertainty set U [τ ], which are defined as 
+
+g(x; ζ) ≤ 0, ∀ζ ∈ U [τ ], (5) 
+
+h(u; ζ) ≤ 0, ∀ζ ∈ U [τ ], (6) where x = [ x0; x1; . . . ; xT ], u = [ u0; u1; . . . ; uT −1], g :
+
+R(T +1) nx → Rng , h : RT n u → Rnh . Further, gi is concave or linear, and hi is linear. Subsequently, the nonlinear robust trajectory optimization problem addressed in this work is presented. 
+
+Problem 1 (Robust Trajectory Optimization Problem) . Find the optimal control policy { ¯uk, Kk}T −1 
+
+> k=0
+
+such that 
+
+min      
+
+> {¯uk,Kk}T−1
+> k=0
+> T−1
+
+X
+
+> k=0
+
+¯uT 
+
+> k
+
+Rku ¯uk + ∥RkK Kk∥2
+
+> F
+
+s.t. xk+1 = f (xk, uk) + dk, x0 = ¯ x0 + ¯d0,
+
+g(x; ζ) ≤ 0, h(u; ζ) ≤ 0, ∀ζ ∈ U [τ ].
+
+B. NRTO Algorithm 
+
+In this section, we provide an outline of the NRTO frame-work [18], which integrates successive linearization, robust constraint reformulation, and Alternating Direction Method of Multipliers (ADMM) [23]. For the simplicity of analysis, we present the problem in terms of the variable kv ∈ RT n unx de-fined as kv = [ kv, 0; kv, 1; . . . ; kv,T −1] with kv,k = vec (Kk).NRTO is a bi-level algorithm as shown in Fig. 2. In the outer loop of the algorithm, the problem is linearized around a nominal trajectory ˆu, ˆx and converted into a tractable form. This results in Second Order Conic Programming (SOCP) constraints as shown below. 
+
+Problem 2 (Tractable Linearized Problem) . Find the optimal decision variables δ ˆu, kv , p such that 
+
+min    
+
+> δˆu,kv,p
+
+Qˆu(δ ˆu) + ˜Q(kv )
+
+s.t. glin ,1(δ ˆu, p) ≤ 0,
+
+∥ ˆAj kv + ˆbj ∥2 ≤ pj j ∈ J1, n g K,
+
+∥Fuδ ˆu∥2 ≤ rtrust .
+
+where the functions Qˆu(δ ˆu), ˜Q(kv ), glin ,1(δ ˆu, p), the matri-ces ˆAj ∈ Rnz ×T n unx , ˆbj ∈ Rnz , Fu ∈ R(T +1) nx×T n u are defined in the Section VII of Supplementary Material (SM). Further, rtrust ∈ R is the trust region radius. 
+
+This linearized problem can be infeasible due to lineariza-tion, especially during the initial iterations of the algorithm. Thus, the problem is solved indirectly using ADMM in the inner loop (refer to Algorithm 1 of [18] for details). For which, Problem 2 is converted to the following form solvable using ADMM, by introducing a slack variable ˜p,Inner ADMM Loop : Solve Tractable Linearized Problem                             
+
+> Initialization (Outer iteration 𝒍 𝒐𝒖𝒕 )
+> Initial guess of nominal trajectory (ො𝑥 ,ො𝑢 )
+> Successive Linearization
+> Linearize the dynamics 𝑓 𝑥 ,𝑢 and the constraints
+> around the nominal trajectory (ො𝑥 ,ො𝑢 )
+> Block -1 update for 𝑘 𝑣 ෤𝑝
+> Solve (Eq.7a)
+> Block -2 update for 𝛿 ො𝑢 ,𝑝
+> Solve (Eq.7b)
+> Dual update (Eq. 7c) for λ
+> Update nominal trajectory
+> ො𝑢 =𝛿 ො𝑢 +ො𝑢
+> Is ADMM
+> converged?
+> Is Outer loop
+> Converged?
+> Output control parameters ෝ𝐮 ,𝐊
+
+Fig. 2: Overview of NRTO Framework: A bi-level structure involving an outer successive linearization (SL) loop to gen-erate tractable linearized problem, and an inner ADMM loop to solve the resulting linearized problem. 
+
+Problem 3 (Tractable Linearized Problem - ADMM form) .
+
+Find the optimal decision variables δ ˆu, kv , p, ˜p such that 
+
+min    
+
+> δˆu,K,p,˜p
+
+Hp(δ ˆu, p) + H˜p(kv , ˜p)
+
+s.t. p = ˜ p
+
+where Hp(δ ˆu, p), H˜p(kv , ˜p) can be referred from [18]. 
+
+The above problem is solved using ADMM by considering the variables {kv , ˜p} as the first block, and {δ ˆu, p} as the sec-ond block of ADMM. Each iteration of the ADMM (indexed by lin ) involves sequential minimization of the Augmented Lagrangian (AL) of the problem with respect to each block variables, followed by a dual update [23], given as follows -
+
+{kv , ˜p}lin = argmin   
+
+> kv,˜p
+
+Lρ({δ ˆu, p}lin −1, kv , ˜p; λlin −1) (7a) 
+
+{δ ˆu, p}lin = argmin  
+
+> δˆu,p
+
+Lρ(δ ˆu, p, {kv , ˜p}lin ; λlin −1) (7b) 
+
+λlin = λlin −1 + ρ(plin −1 − ˜plin −1) (7c) where the AL of the problem Lρ(δ ˆu, p, kv , ˜p; λ) =
+
+Hp(δ ˆu, p)+ H˜p(kv , ˜p)+ λT(p− ˜p)+ ρ 
+
+> 2
+
+∥p− ˜p∥22, with λ ∈ Rng
+
+being the dual variable for the constraint p = ˜ p and ρ > 0 as the penalty parameter. For the complete details of the NRTO algorithm, the reader is referred to [18]. 
+
+C. NRTO-LE Algorithm 
+
+This section outlines NRTO-LE [18], an extension of the NRTO framework developed to address linearization error. While the standard NRTO algorithm ensures that a linearized trajectory satisfies all the constraints, it may not guarantee the safety of the actual trajectory when the linearization error is significant. To address this, NRTO-LE models the linearization error at each time step as a bounded uncertainty lying inside an ellipsoidal set. For the comprehensive derivation of the modification, the reader is referred to [18]. III. NRTO-DR F RAMEWORK 
+
+In this section, we introduce a framework for accelerating the solving of the sub-problem (7a) which is the most com-putationally expensive update in the inner loop of the NRTO. Subsequently, we provide a GPU version of the framework that could further enhance the computational speed. We begin by explicitly writing the ADMM update step (7a) as follows 
+
+min   
+
+> kv,˜p
+
+˜Q(kv ) + ρ 
+
+> 2
+
+˜p − plin −1 − λlin −1/ρ 22
+
+s.t. ∥ ˆAj kv + ˆbj ∥2 ≤ ˜pj , j ∈ J1, n g K
+
+(8) 
+
+A. Framework 
+
+We introduce a framework leveraging Douglas-Rachford Splitting [26, 25] (DR) to reduce the computational complexity of solving the above problem. To achieve this, the problem needs to be transformed to a form solvable by DR method. Let us define χ = [ kv ; ˜ p] and a slack variable s such that (8) can be equivalently given as follows -
+
+min  
+
+> χ,s
+> 12
+
+χTPχ + qTχ
+
+s.t. Aχ + s = b, s ∈ K,
+
+(9) with P = blkdiag( Qv , ρ I) and a product of SOCs K = K1 ×· · · × Kng . We provide the explicit construction of A, b and 
+
+Ki in the Section VIII of SM. The above problem can be rewritten in a form solvable by the DR method as follows -
+
+min  
+
+> χ,s
+
+J (χ, s) + ˆJ (s) (10) where J (χ, s) = (1 /2) χTPχ + qTχ + IAχ+s=b(χ, s) and 
+
+ˆJ (s) = IK(s).For simplicity, let us also define ξ = [ χ; s]. The update steps in each iteration of relaxed DR method (indexed as ldr )to solve the above problem can be given as follows [26, 25] 
+
+ξldr = Prox J ( ˜ξldr −1) (11a) 
+
+ξldr  
+
+> ref
+
+= 2 ξldr − ˜ξldr −1 (11b) 
+
+˜ξldr = ˜ξldr −1 + α(Prox ˆJ (ξldr 
+
+> ref
+
+) − ξldr ) (11c) where α ∈ (0 , 1) is the relaxation parameter. We will now sim-plify the above update steps. The update (11a) is a quadratic 
+
+Fig. 3: Three cases of projecting a point (ˆ t, ˆy) (red) onto a SOC, illustrated in the (t, ∥y∥2) plane. Left: if ∥ ˆy∥2 ≤ ˆt,the point is already feasible and remains unchanged after projection (green). Middle: if ∥ ˆy∥2 > |ˆt|, the point lies outside the cone and is projected onto the cone boundary, preserving the direction of ˆy. Right: if ∥ ˆy∥2 ≤ − ˆt, the point lies in the opposite cone and the projection collapses to the origin. programming (QP) problem, which can be solved by solving the KKT conditions. This involves solving the following 
+
+χldr 
+
+yldr 
+
+
+
+= ( LL T)−1
+
+Rχ ˜χldr −1 − q
+
+b − ˜sldr −1
+
+
+
+(12a) 
+
+sldr = ˜ sldr −1 − R−1 
+
+> s
+
+yldr (12b) where Rχ, Rs ≻ 0 are fixed proximal scalings, L is obtained from Cholesky decomposition of KKKT . The matrix 
+
+KKKT and the derivation of the above update are provided in Section VIII of the SM. Since KKKT is constant within each iteration of the inner ADMM loop, we factor it once and reuse triangular solves throughout DR. Now, the update (11c) involves 
+
+˜χldr = ˜ χldr −1 + α(χldr  
+
+> ref
+
+− χldr ) (13a) 
+
+˜sldr  
+
+> j
+
+= ˜ sldr −1 
+
+> j
+
++ α(Π Kj (sldr  
+
+> ref ,j
+
+) − sldr ) ∀j ∈ J1, n g K (13b) where the projection step ΠKj (sldr  
+
+> ref ,j
+
+) is defined in Section VIII of SM, a visual interpretation is provided in Fig. 3. The DR iterations are terminated when the fixed-point residual (rdr ), defined as rldr  
+
+> dr
+
+:= ∥˜sldr − ˜sldr −1∥2, is below a specified threshold εdr or when the maximum iteration count 
+
+Lmax is reached. 
+
+B. GPU implementation 
+
+The GPU implementation of NRTO-DR (Fig. 4) follows the relaxed DR updates (11a)-(11c). The affine set proximal step (11a) reduces to solving a fixed sparse KKT system with coefficient matrix KKKT , so we factor KKKT once and reuse triangular solves across DR iterations. The details are as follows: i) The one-time sparse factorization of KKKT and per-iteration triangular solves are performed by cuDSS. ii) SOC projections are computed by a CUDA kernel. The cone-projection case logic is adapted from the open-source SCS implementation [27]. Device (GPU)          
+
+> Affine Evaluation
+> Reflection
+> Parallel Cone Projections
+> Shared Memory & L1 Cache
+> Shared Memory & L1 Cache
+> Warp Scheduler
+> Relaxation
+> Affine -set projection
+> Solve sparse KKT
+> Reflection (AXPY)
+> warp ⟷constraint 𝑗
+> Relaxed merge
+> CUDA cores
+> CUDA cores Warp Scheduler
+> warp ⟷constraint 𝑗
+
+Fig. 4: GPU execution of one relaxed DR iteration: Each iteration involves an affine-set projection (11a), a reflection step (11b), and massively parallel second-order cone projec-tions (11c) that are separable across constraints. The right panel illustrates the GPU mapping: each SOCP constraint block is handled by one warp, the warp scheduler dispatches these warps across streaming multiprocessors, and the grey blocks depict the execution lanes (CUDA cores) that run the warp instructions, with shared memory cache supporting fast projection and vector updates. iii) All vector operations, such as reflection, updates, and residuals, are handled via cuBLAS and kept on-device. IV. NRTO-F ULL ADMM F RAMEWORK 
+
+In this section, we present a framework that accelerates the solving of Problem 2. Specifically, we propose a novel architecture by modifying the inner ADMM loop of the NRTO framework. We start by rewriting Problem 2 by introducing a slack variable ν, as follows 
+
+min     
+
+> δˆu,kv,ν,p,˜p
+
+Qˆu(δ ˆu) + ˜Q(kv )
+
+s.t. glin ,1(δ ˆu, p) ≤ 0, ∥Fuδ ˆu∥2 ≤ rtrust (14a) 
+
+∥νj ∥2 ≤ ˜pj j ∈ J1, n g K, (14b) 
+
+p = ˜ p, ˆAj kv + ˆbj = νj , j ∈ J1, n g K (14c) 
+
+A. Framework 
+
+We propose a framework to solve the above problem using a scaled form of ADMM [23]. The variables (ν, ˜p) are considered as the first block, and (δ ˆu, p, kv ) are as the second block of the inner ADMM loop, with (14c) being the coupling constraints. The AL of the above problem is disclosed in Section III of SM, with the penalty parameters as ρp, ρ ν , and 
+
+ρpλp, ρ ν λν as the dual variables. Subsequently, we present the update steps in the (lth  
+
+> in
+
+) iteration, with the detailed derivation disclosed in Section IX of SM. 
+
+a) Block-1 update: This update can be decoupled with respect to the variables {νj , ˜pj }ng
+
+> j=1
+
+, and is given as follows 
+
+(νlin  
+
+> j
+
+, ˜plin  
+
+> j
+
+)= Π SOC ( ˆAj klin −1 
+
+> v
+
++ ˆbj + λlin −1 
+
+> ν,j
+
+, p lin −1 
+
+> j
+
++ λlin −1 
+
+> p,j
+
+) (15) 
+
+Algorithm 1 Inner ADMM Loop - NRTO-FullADMM 
+
+Require: { ˆAj , ˆbj }ng
+
+> j=1
+
+, tol ε, max iters Lmax 
+
+1: Form q, M, { ¯Mj }ng
+
+> j=1
+
+2: Initialize λ0
+
+> p
+
+, λ0 
+
+> ν
+
+, k0 
+
+> v
+
+, p0 ← 0
+
+3: for lin = 0 to Lmax do 
+
+4: Sequentially run (15), (16), (17) 
+
+5: if (rp ≤ εp and rd ≤ εd) then break 
+
+6: end for 
+
+7: 8: return (δ ˆu, kv , ν, p, ˜p)
+
+where ΠSOC ( ˆ y, ˆt) represents projection of ( ˆ y, ˆt) onto the cone 
+
+∥y∥2 ≤ t (shown in Fig. 3) . This projection step is similar to the projection involved in (13b) of NRTO-DR framework. 
+
+b) Block-2 update: The variables (δ ˆu, p) and kv are decoupled, with the ADMM update steps given as 
+
+(δ ˆulin , plin ) = argmin  
+
+> δˆu,p
+
+Qˆu(δ ˆu) + ρp
+
+2 ∥p − ˜plin + λlin −1 
+
+> p
+
+∥22
+
+s.t. (14a) (16a) 
+
+klin  
+
+> v
+
+= q + Mklin −1 
+
+> v
+
++ ¯Mνlin (16b) where q, M, ¯M, disclosed in Section IX of SM, remain constant throughout the inner ADMM loop. The update (16a) is similar to the update step (7b) of NRTO. 
+
+c) Dual update: The update of the regularized dual variables is given as 
+
+λlin  
+
+> p
+
+= λlin −1 
+
+> p
+
++ ( plin − ˜plin ) (17a) 
+
+λlin  
+
+> ν,j
+
+= λlin −1 
+
+> ν,j
+
++ ( ˆAj klin  
+
+> v
+
++ ˆbj − νlin  
+
+> j
+
+) (17b) The inner ADMM loop is terminated when the primal residual 
+
+rp := ∥plin − ˜plin ∥2 and the dual residual rd := ρ∥˜plin −
+
+˜plin −1∥2 fall below their respective thresholds, εp and εd, or when max iterations Lmax are reached. 
+
+B. GPU Implementation 
+
+An overview of the end-to-end on-device inner ADMM loop pipeline for NRTO-FullADMM is shown in Fig. 5. The details are as follows 
+
+1) On-device data layout: We store ν ∈ Rng ×nz and 
+
+λν ∈ Rng ×nz as contiguous row-major blocks with each row corresponding to one constraint j, and p, ˜p, λp ∈ Rng
+
+as contiguous vectors. All constant matrices { ˆAj , ˆbj }ng 
+
+> j=1
+
+as well as q, M, ¯M are uploaded once per outer iteration. 
+
+2) Block-1: The Block-1 update requires projecting 
+
+( ˆ yj , ˆαj ) = ( ˆAj kv + ˆbj +λν,j , p j +λp,j ) onto ∥νj ∥2 ≤ ˜pj .
+
+We implement this in two GPU steps. First, affine evalua-tion. We compute all ˆyj via a sequence of cuBLAS GEMM calls that exploit the structured factorization of ˆAj through M,
+
+Uk, and Bk, avoiding explicit dense matrix formation. Second, SOC projection. We launch a CUDA kernel that performs the SOC projection for each constraint block in parallel. The projection routine follows the standard SOC projection cases Host (CPU) 
+
+Device (GPU) 
+
+Outer Successive Linearization  Pack Constraints  Termination Check 
+
+Upload Constraints  Precompute Operators  Inner -loop Termination Check 
+
+Affine Evaluation  Parallel SOC Projection  Linear Step 
+
+GPU Accelerated Hot Path / Inner Loop 
+
+Vector Updates                                                                          
+
+> Shaded Blocks :GPU hot path .(i) upload once per SCP iteration, (ii) FullADMM inner
+> loop runs fully on -device, (iii) SOC projections parallelize over 𝑛 𝑔 constraints .
+> Linearize around (ො𝑥 ,ො𝑢 );form subproblem Pack {መ𝐴 𝑗 ,෠𝑏 𝑗 }𝑗 =1
+> 𝑛 𝑔 ; QP Data (𝑔 𝑙𝑖𝑛 ,1,𝐹 𝑢 ,𝑟 𝑡𝑟𝑢𝑠𝑡 )
+> from constraints (Eq. 16b)
+> Update nominal trajectory; check SCP convergence
+> Upload {መ𝐴 𝑗 ,෠𝑏 𝑗 }𝑗 =1
+> 𝑛 𝑔 ; QP Data (𝑔 𝑙𝑖𝑛 ,1,𝐹 𝑢 ,𝑟 𝑡𝑟𝑢𝑠𝑡 );
+> constraints (𝑞 ,Μ,Μ)
+> Set up batched GEMM + SOC kernel
+> + reusable QP workspace
+> Stop when consensus residuals are below tolerance
+> Compute SOC inputs for all 𝑗 One warp per constraint 𝑗
+> (Eq. 15) Update 𝛿 ො𝑢 ,𝑝 via QP (Eq. 16a);
+> update 𝑘 𝑣 (Eq. 16b) with PCG
+> Dual updates + residuals (Eq. 18)
+
+Fig. 5: cuNRTO pipeline for NRTO-FullADMM: Each outer SL iteration on the host CPU linearizes the problem, packs the SOCP and QP data, and uploads constants to the GPU once. The FullADMM inner loop runs entirely on-device: (i) batched affine evaluation forms per-constraint inputs, (ii) SOC projections are computed in parallel over j, (iii) Block-2 updates solve the QP and update kv using prepacked operators, and (iv) dual updates and residual checks determine termination. and is adapted from the SCS reference implementation [27], with modifications for warp-level execution and our batched memory layout. This step is bandwidth-bound and scales linearly with ng , it achieves near-ideal parallel efficiency. 
+
+3) Block-2: The update (16a) is a convex QP with fixed quadratic term and fixed constraints (14a). We solve it us-ing preconditioned conjugate gradient (PCG) with a Jacobi preconditioner. Crucially, its linear algebra is reusable across inner iterations, so any preconditioner is computed once per outer iteration and reused thereafter. The kv update (16b) is solved via PCG with matrix-free Hessian-vector products, avoiding explicit formation of the dense Hessian matrix. 
+
+4) Dual updates: Dual updates are vector axpy-style oper-ations. We compute the primal residual rp and dual residual rd
+
+on the GPU and terminate when both fall below the tolerance. 
+
+Remark 1. NRTO-FullADMM scales effectively over NRTO and NRTO-DR through two key innovations. First, it replaces the nested structure of NRTO-DR by directly integrating the parallel SOCP block projections into the inner ADMM up-dates. Second, it eliminates CPU-GPU data transfer bottle-necks by executing the entire inner ADMM loop on the GPU. 
+
+V. S IMULATION 
+
+We evaluate cuNRTO, a suite comprising the GPU-accelerated versions of NRTO-DR and NRTO-FullADMM, on unicycle, quadcopter, and Franka manipulator tasks. We provide a comprehensive analysis of the impact of key system parameters, such as time horizon ( T ), uncertainty level ( τ ), and the number of obstacles, on both constraint satisfaction and wall-clock time in comparison to the baseline NRTO. Furthermore, we highlight the effectiveness of the proposed ar-chitectures in addressing complex dynamical systems through a high-dimensional Franka manipulator task. 
+
+A. Methodology 
+
+Results were collected on a high-performance workstation with a 3.06 GHz 60-core Intel Xeon W-3500 CPU and an NVIDIA A100 80GB GPU, running Ubuntu 22.04 and CUDA 12.9. Code was compiled with g++ 11.4.0. We use the same outer-loop parameters for all methods. The baseline NRTO solves subproblems using MOSEK [28] interior-point optimizer with multi-threading enabled. Solver-specific hyper-parameters were tuned independently for best performance, and its complete list is provided in Section X of SM. The performance is evaluated based on the following:  
+
+> •
+
+Constraint satisfaction: Constraint satisfaction was ver-ified using Monte Carlo sampling with 1,000 i.i.d. dis-turbance drawn uniformly from the interior of the un-certainty set, combined with 1,000 reproducible edge cases that probe the boundary of the uncertainty set via convex combinations of worst-case constraint directions. We set fixed seed to ensure the consistency of the sampling across all experiments. The reported satisfaction probability is the fraction of successful rollouts.  
+
+> •
+
+Wall-clock time: We report the wall-clock time re-quired for each solver to converge to a feasi-ble solution.. Runtimes were measured using C++ std::chrono::high_resolution_clock .0 1 2 3 4 5 6 7
+
+> X Position (m)
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> Y Position (m)
+> Edge Case
+> Random Case
+> Combined
+> Start
+> Target Region
+> Obstacle
+> Nominal Trajectory
+> MC Trajectory
+
+(a) NRTO 0 1 2 3 4 5 6 7 
+
+> X Position (m)
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> Y Position (m)
+> Edge Case
+> Random Case
+> Combined
+> Start
+> Target Region
+> Obstacle
+> Nominal Trajectory
+> MC Trajectory
+
+(b) NRTO-DR 0 1 2 3 4 5 6 7 
+
+> X Position (m)
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> Y Position (m)
+> Edge Case
+> Random Case
+> Combined
+> Start
+> Target Region
+> Obstacle
+> Nominal Trajectory
+> MC Trajectory
+
+(c) NRTO-FullADMM 
+
+Fig. 6: Performance comparison on Unicycle model with five obstacles: We compare (a) the baseline NRTO solver, (b) NRTO-DR, and (c) NRTO-FullADMM. All produce collision-free trajectories that satisfy the robust constraints for 2,000 disturbance realizations. The right insets represent the distribution of terminal state realizations for random, edge, and combined rollouts, demonstrating robustness. 0  
+
+> 1
+> 2
+> 3
+> 4
+> X Position (m)
+> 0
+> 1
+> 2
+> 3
+> 4
+> Y Position (m)
+> 1
+> 2
+> 3
+> 4
+> 5
+> Collision-Free View
+> Edge Case Random Case Combined
+> Start
+> Target Region
+> Obstacle
+> Nominal Trajectory
+> MC Trajectory
+
+(a) NRTO-DR 0   
+
+> 1
+> 2
+> 3
+> 4
+> X Position (m)
+> 0
+> 1
+> 2
+> 3
+> 4
+> Y Position (m)
+> 1
+> 2
+> 3
+> 4
+> 5
+> Collision-Free View
+> Edge Case Random Case Combined
+> Start
+> Target Region
+> Obstacle
+> Nominal Trajectory
+> MC Trajectory
+
+(b) NRTO-FullADMM 
+
+Fig. 7: Performance comparison on Quadcopter model with five obstacles: We compare (a) NRTO-DR and (b) NRTO-FullADMM; both produce collision-free trajectories for 2,000 disturbance realizations. Insets report the distribution of terminal state realizations under random Monte Carlo, boundary edge-case, and combined disturbances. 
+
+B. Performance Evaluation 
+
+Trajectory comparisons between the proposed frameworks and the baseline NRTO for the unicycle and quadcopter models are presented in Fig. 6 and Fig. 7, respectively. Further, the computational efficiency is demonstrated in Table I. We report three sweep studies over horizon length T , uncertainty level τ ,and the number of obstacles for both unicycle and quadcopter. We denote the nominal setting as (T0, τ 0, O 0) = (30 , 0.05 , 0) 
+
+and vary one parameter at a time. 
+
+1) Horizon Sweep ( T ): At the nominal horizon T0 = 30 ,NRTO-FullADMM reduces solve time from 32.137 s to 6.231 s for the unicycle, which is 5.16 × faster, and from 1327.390 s to 98.585 s for the quadcopter, which is 13.46 ×
+
+faster. At T = 45 , NRTO-FullADMM reaches 6.387 s for the unicycle and 132.484 s for the quadcopter, corresponding to 6.94 × and 13.21 × speedups over NRTO, respectively. 
+
+2) Obstacle Sweep ( Obs ): As the number of obstacles increases, the number of robust constraints and associated SOC projections grow, and the GPU implementations benefit from the resulting parallelism. At Obs = 5 , NRTO-FullADMM reduces solve time from 30423.523 s to 217.932 s for the unicycle, which is 139.60 × faster, and from 13374.375 s to 199.935 s for the quadcopter, which is 66.89 × faster. 
+
+3) Uncertainty sweep ( τ ): As τ increases, the NRTO suc-cess rate decreases, reflecting the increased conservativeness and difficulty of the robust constraints. In contrast, when accounting for linearization error using NRTO-LE [18], we observe 100% constraint satisfaction across all reported τ val-ues for both dynamics. Across the sweep, NRTO-FullADMM consistently yields the lowest wall-clock times among the compared methods. 
+
+C. Franka Manipulator Experiment 
+
+We evaluate our framework on a 7-DOF Franka Emika Panda manipulator, a high-dimensional system with nx = 14 
+
+joint positions and velocities and nu = 7 joint torques, as shown in Fig. 8. The task is to drive the end-effector from a nominal configuration to a goal region while satisfying joint position limits, joint velocity limits, torque bounds, and collision avoidance constraints with respect to spherical obstacles in the workspace. The feedback gain variables scale as O(T n unx), yielding Kk ∈ R7×14 per timestep, and obstacle avoidance constraints are enforced at every knot Unicycle Quadcopter Sweep Setting Controls Framework NRTO Succ. (%) NRTO LE Succ. (%) Time (s) NRTO Succ. (%) NRTO LE Succ. (%) Time (s) 
+
+Horizon TT = 15 τ = τ0
+
+Obs = O0
+
+NRTO 100 100 12.013 100 100 952.603 NRTO-DR 100 100 5.324 100 100 197.171 NRTO-FullADMM 99 100 5.983 99 100 43.543 
+
+T = 30 τ = τ0
+
+Obs = O0
+
+NRTO 91 100 32.137 98 100 1327.390 NRTO-DR 91 100 7.328 98 100 218.259 NRTO-FullADMM 90 100 6.231 99 100 98.585 
+
+T = 45 τ = τ0
+
+Obs = O0
+
+NRTO 82 100 44.324 97.5 100 1749.458 NRTO-DR 82 100 7.847 97 100 238.313 NRTO-FullADMM 84 100 6.387 98 100 132.484 
+
+Uncertainty ττ = 0 .01 T = T0
+
+Obs = O0
+
+NRTO 100 100 29.843 100 100 1132.324 NRTO-DR 100 100 7.671 99 100 65.454 NRTO-FullADMM 100 100 6.988 99 100 19.452 
+
+τ = 0 .05 T = T0
+
+Obs = O0
+
+NRTO 91 100 31.543 99 100 1332.384 NRTO-DR 91 100 8.031 98 100 248.473 NRTO-FullADMM 90 100 6.593 98 100 97.482 
+
+τ = 0 .075 T = T0
+
+Obs = O0
+
+NRTO 82 100 33.314 81 100 1371.342 NRTO-DR 82 100 7.623 81 100 739.546 NRTO-FullADMM 81 100 7.013 82 100 211.483 
+
+Obstacles 
+
+Obs = 0 T = T0
+
+τ = τ0
+
+NRTO 91 100 31.153 99 100 1320.487 NRTO-DR 91 100 8.352 98 100 213.384 NRTO-FullADMM 90 100 6.324 98 100 98.345 
+
+Obs = 3 T = T0
+
+τ = τ0
+
+NRTO 90 100 898.342 77 100 9142.582 NRTO-DR 87 100 45.532 77.5 100 6384.378 NRTO-FullADMM 87 100 43.483 77 100 121.392 
+
+Obs = 5 T = T0
+
+τ = τ0
+
+NRTO 90 100 30423.523 74 100 13374.375 NRTO-DR 85 100 1934.314 72 100 9836.486 NRTO-FullADMM 85 100 217.932 69 100 199.935 
+
+TABLE I: Unicycle and quadcopter dynamics. Three independent sweeps vary one factor while holding the others fixed at 
+
+(T0, τ 0, O 0). Bold : best; Underline: second-best. 
+
+Fig. 8: NRTO-FullADMM on Franka Manipulator Task: 
+
+Left: end-effector trajectory with disturbance rollouts (green) toward the goal region (cyan) while avoiding obstacles (gray). Right: qualitative visualization of the motion in Isaac Sim [29]. point via the end-effector position obtained from forward kinematics. We report experiments across fixed horizon length 
+
+T = 30 , number of obstacles nobs = 1 , and robustness level 
+
+τ = 0 .01 . As shown in Table II, NRTO-FullADMM achieves a 25.9 × wall-clock speedup over NRTO on this Franka setting,            
+
+> Framework NRTO Succ. (%) NRTO-LE Succ. (%) Time (s)
+> NRTO 96 100 3948.523 NRTO-DR 96 100 1342.455 NRTO-FullADMM 95 100 152.384
+
+TABLE II: Franka manipulator dynamics with fixed setting 
+
+(T, τ, Obs) = (30 , 0.01 , 1) . Bold : best; second-best. indicating the scalability of NRTO-FullADMM. VI. C ONCLUSION 
+
+We introduced cuNRTO, a GPU-accelerated implementation of nonlinear robust trajectory optimization (NRTO) [18]. By exposing fine-grained parallelism in second-order cone (SOC) projections and reusing constant linear operators across inner iterations, cuNRTO enables two accelerated inner solvers, NRTO-DR and NRTO-FullADMM. Across unicycle, quad-copter, and Franka manipulator tasks, the proposed methods achieve substantial wall-clock speedups up to 139.6 × over the baseline while maintaining robust constraint satisfaction. In future work, we will extend cuNRTO to contact-rich manipulation and locomotion settings involving larger conic programs. We aim to further enhance computational speed by leveraging learning-to-optimize frameworks [30, 31], ranging from learning-to-warmstart architectures [32, 33, 34] to deep-unfolding techniques [35, 36, 37]. Another promising direction is to extend the framework’s applicability to multi-agent swarms and to address heterogeneous forms of uncertainty [17, 16]. ACKNOWLEDGMENTS 
+
+Arshiya Taj Abdul and Evangelos A. Theodorou are sup-ported by the ARO Award #W911NF2010151. REFERENCES 
+
+[1] T. A. Howell, B. E. Jackson, and Z. Manchester, “Altro: A fast solver for constrained trajectory optimization,” in 
+
+2019 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , 2019, pp. 7674–7679. [2] C. Mastalli, R. Budhiraja, W. Merkt, G. Saurel, B. Ham-moud, M. Naveau, J. Carpentier, L. Righetti, S. Vijayaku-mar, and N. Mansard, “Crocoddyl: An efficient and versatile framework for multi-contact optimal control,” in 2020 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2020, pp. 2536–2542. [3] R. Bonalli, A. Cauligi, A. Bylard, and M. Pavone, “Gusto: Guaranteed sequential trajectory optimization via sequential convex programming,” in 2019 Interna-tional Conference on Robotics and Automation (ICRA) ,2019, pp. 6741–6747. [4] H. Oleynikova, M. Burri, Z. Taylor, J. Nieto, R. Siegwart, and E. Galceran, “Continuous-time trajectory optimiza-tion for online UAV replanning,” in 2016 IEEE/RSJ In-ternational Conference on Intelligent Robots and Systems (IROS) . IEEE, 2016, pp. 5332–5339. [5] A. D. Saravanos, Y. Aoyama, H. Zhu, and E. A. Theodorou, “Distributed differential dynamic program-ming architectures for large-scale multiagent control,” 
+
+IEEE Transactions on Robotics , vol. 39, no. 6, pp. 4387– 4407, 2023. [6] T. Lew, R. Bonalli, and M. Pavone, “Chance-constrained sequential convex programming for robust trajectory optimization,” in 2020 European Control Conference (ECC) , 2020, pp. 1871–1878. [7] Y. K. Nakka and S.-J. Chung, “Trajectory optimization of chance-constrained nonlinear stochastic systems for motion planning under uncertainty,” IEEE Transactions on Robotics , vol. 39, no. 1, pp. 203–222, 2023. [8] A. Tsolovikos and E. Bakolas, “Cautious nonlinear co-variance steering using variational gaussian process pre-dictive models,” IFAC-PapersOnLine , vol. 54, no. 20, pp. 59–64, 2021, modeling, Estimation and Control Confer-ence MECC 2021. [9] A. Ratheesh, V. Pacelli, A. D. Saravanos, and E. A. Theodorou, “Operator splitting covariance steering for safe stochastic nonlinear control,” in 2025 IEEE 64th Conference on Decision and Control (CDC) . IEEE, 2025, pp. 3552–3559. [10] M. G. Safonov, “Origins of robust control: Early history and future speculations,” IFAC Proceedings Volumes ,vol. 45, no. 13, pp. 1–8, 2012. [11] D. Q. Mayne, E. C. Kerrigan, and P. Falugi, “Robust model predictive control: Advantages and disadvantages of tube-based methods,” IFAC Proceedings Volumes ,vol. 44, no. 1, pp. 191–196, 2011. [12] W. Sun, Y. Pan, J. Lim, E. Theodorou, and P. Tsiotras, “Min-max differential dynamic programming: Continu-ous and discrete time formulations,” vol. 41, 11 2018, pp. 1–13. [13] W. Sun, Y. Pan, J. Lim, E. A. Theodorou, and P. Tsiotras, “Min-max differential dynamic programming: Continu-ous and discrete time formulations,” Journal of Guid-ance, Control, and Dynamics , vol. 41, no. 12, pp. 2568– 2580, 2018. [14] A. Ben-Tal, L. Ghaoui, and A. Nemirovski, Robust Optimization , 08 2009. [15] D. Bertsimas, D. B. Brown, and C. Caramanis, “Theory and applications of robust optimization,” SIAM Review ,vol. 53, no. 3, pp. 464–501, 2011. [16] A. T. Abdul, A. D. Saravanos, and E. A. Theodorou, “Scalable robust optimization for safe multi-agent con-trol under unknown deterministic uncertainty,” in 2025 American Control Conference (ACC) , 2025, pp. 3666– 3673. [17] G. Kotsalis, G. Lan, and A. S. Nemirovski, “Convex optimization for finite-horizon robust covariance control of linear stochastic systems,” SIAM Journal on Control and Optimization , vol. 59, no. 1, pp. 296–319, 2021. [18] A. T. Abdul, A. D. Saravanos, and E. A. Theodorou, “Nonlinear robust optimization for planning and control,” in 2025 IEEE 64th Conference on Decision and Control (CDC) , 2025, pp. 3383–3390. [19] B. Plancher, S. M. Neuman, R. Ghosal, S. Kuindersma, and V. J. Reddi, “Grid: Gpu-accelerated rigid body dy-namics with analytical gradients,” in 2022 International Conference on Robotics and Automation (ICRA) , 2022, pp. 6253–6260. [20] B. Plancher, S. M. Neuman, T. Bourgeat, S. Kuindersma, S. Devadas, and V. J. Reddi, “Accelerating robot dynam-ics gradients on a cpu, gpu, and fpga,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 2335–2342, 2021. [21] E. Adabag, M. Atal, W. Gerard, and B. Plancher, “MPCGPU: Real-time nonlinear model predictive control through preconditioned conjugate gradient on the gpu,” in 2024 IEEE International Conference on Robotics and Automation (ICRA) , 2024, pp. 9787–9794. [22] J. Hu, J. Wang, and H. Christensen, “cpRRTC: GPU-Parallel RRT-Connect for constrained motion planning,” in 2025 RSS Workshop on Fast Motion Planning and Control in the Era of Parallelism .[23] S. Boyd, N. Parikh, E. Chu, B. Peleato, and J. Eckstein, “Distributed optimization and statistical learning via the alternating direction method of multipliers,” Found. Trends Mach. Learn. , vol. 3, no. 1, p. 1–122, Jan. 2011. [24] B. Stellato, G. Banjac, P. Goulart, A. Bemporad, and S. Boyd, “Osqp: An operator splitting solver for quadratic programs,” pp. 339–339, 2018. [25] J. Eckstein and D. P. Bertsekas, “On the douglas-rachford splitting method and the proximal point algorithm for maximal monotone operators,” Math. Program. , vol. 55, no. 3, p. 293–318, Jun. 1992. [26] P. L. Lions and B. Mercier, “Splitting algorithms for the sum of two nonlinear operators,” vol. 16, no. 6, p. 964–979, Dec. 1979. [27] B. O’Donoghue, E. Chu, N. Parikh, and S. Boyd, “Conic optimization via operator splitting and homogeneous self-dual embedding,” Journal of Optimization Theory and Applications , vol. 169, no. 3, pp. 1042–1068, June 2016. [28] M. ApS, The MOSEK optimization toolbox for MATLAB manual. Version 9.0. , 2019. [29] NVIDIA, “Isaac Sim.” [30] T. Chen, X. Chen, W. Chen, H. Heaton, J. Liu, Z. Wang, and W. Yin, “Learning to optimize: A primer and a benchmark,” Journal of Machine Learning Research ,vol. 23, no. 189, pp. 1–59, 2022. [31] K. Tang and X. Yao, “Learn to optimize—a brief overview,” National Science Review , vol. 11, no. 8, p. nwae132, 2024. [32] S. Banerjee, T. Lew, R. Bonalli, A. Alfaadhel, I. A. Alomar, H. M. Shageer, and M. Pavone, “Learning-based warm-starting for fast sequential convex programming and trajectory optimization,” in 2020 IEEE Aerospace Conference . IEEE, 2020, pp. 1–8. [33] D. Celestini, D. Gammelli, T. Guffanti, S. D’Amico, E. Capello, and M. Pavone, “Transformer-based model predictive control: Trajectory optimization via sequence modeling,” IEEE Robotics and Automation Letters , 2024. [34] V. Zinage, A. Khalil, and E. Bakolas, “Transformermpc: Accelerating model predictive control via transformers,” in 2025 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2025, pp. 9221–9227. [35] A. D. Saravanos, H. Kuperman, A. Oshin, A. T. Abdul, V. Pacelli, and E. A. Theodorou, “Deep distributed opti-mization for large-scale quadratic programming,” arXiv preprint arXiv:2412.12156 , 2024. [36] J. Timan´ a, S. Merino, A. Basarab, R. J. G. Van Sloun, and R. Lavarello, “Acs-net: A deep unfolded admm framework for ultrasound attenuation imaging,” in 2025 IEEE International Ultrasonics Symposium (IUS) , 2025, pp. 1–4. [37] A. Oshin, R. V. Ghosh, A. D. Saravanos, and E. A. Theodorou, “Deep flexqp: Accelerated nonlin-ear programming via deep unfolding,” arXiv preprint arXiv:2512.01565 , 2025. SUPPLEMENTARY MATERIAL 
+
+VII. D ETAILS RELATED TO NRTO FRAMEWORK 
+
+A. Tractable Linearized Problem 
+
+The cost functions are given as 
+
+Qˆu(δ ˆu) =  
+
+> T−1
+
+X
+
+> k=0
+
+( ˆ uk + δ ˆuk)⊤ Rku ( ˆ uk + δ ˆuk), (18) 
+
+˜Q(kv ) =  
+
+> T−1
+
+X
+
+> k=0
+
+∥RkK Kk∥2 
+
+> F
+
+= 12 k⊤ 
+
+> v
+
+Qv kv , (19) 
+
+Qv := 2 blkdiag  Qv, 0, . . . , Qv,T −1
+
+, (20) 
+
+Qv,k := Inx ⊗ (RkK )⊤RkK . (21) The function Fu and the corresponding matrices involved can be referred from [18]. In this work, the constraint gtrac  
+
+> j
+
+(K, p) ≤
+
+0 from Problem 3 of [18] is rewritten in the form of ∥ ˆAj kv +ˆbj ∥2 ≤ pj . Since S ≻ 0, there exists Ψ ≻ 0 such that ΨTΨ = 
+
+S−1. The matrices ˆAj and ˆbj can be given as follows Let bj := FT 
+
+> u
+
+∇xgj ( ˆ x) ∈ RT n u , (22) 
+
+bj = [ bj, 0; . . . ; bj,T −1], bj,k ∈ Rnu , (23) 
+
+¯Aj,k := Inx ⊗ bT
+
+> j,k
+
+, ∀k ∈ J0, T − 1K, (24) 
+
+¯Aj := blkdiag   ¯Aj, 0, . . . , ¯Aj,T −1
+
+, (25) 
+
+ˆAj = √τ Ψ ΓT
+
+ ¯Aj
+
+0nx×(T n unx)
+
+
+
+, (26) 
+
+ˆbj = √τ Ψ ΓTFT 
+
+> ζ
+
+∇xgj ( ˆ x). (27) We used KT 
+
+> k
+
+bj,k = ( Inx ⊗ bT
+
+> j,k
+
+)vec( Kk) for column-wise vectorization. VIII. P ROOFS RELATED TO FRAMEWORK -1 
+
+A. Standard conic form 
+
+Define χ := [ kv ; ˜ p] ∈ RT n unx+ng . The quadratic objective in (7a) can be written as 12 χTPχ + qTχ where 
+
+P = blkdiag( Qv , ρ Ing ), q =
+
+ 0
+
+−ρ(plin −1 + λlin −1/ρ )
+
+
+
+.
+
+For each SOC constraint j, introduce a slack block sj =(tj , ηj ) ∈ R × Rnz and a conic block Kj given as 
+
+Kj := {(t, η) : ∥η∥2 ≤ t} (28) Impose the affine relations 
+
+tj = ˜ pj , ηj = ˆAj kv + ˆbj , j ∈ J1, n g K, (29) and stack s = [ s1; . . . ; sng ] ∈ Rm with m = ng (1 + nz ).Then (29) can be written as a single linear constraint 
+
+Aχ + s = b, s ∈ K, (30) where K := K1 × · · · × Kng , and the matrices A and b are formed by stacking per-constraint blocks 
+
+Aj := 
+
+01×(T n unx) −eT
+
+> j
+
+− ˆAj 0nz ×ng
+
+
+
+, bj := 
+
+ 0ˆbj
+
+
+
+,
+
+A =
+
+
+
+A1
+
+...
+
+Ang
+
+ , b = [ b1; . . . ; bng ].
+
+(31) and ej is the j-th standard basis vector in Rng .
+
+B. Affine-set projection KKT system 
+
+The DR update (11a) involves projection onto affine-set and can be explicitly given as follows 
+
+min  
+
+> χ,s
+> 12
+
+χTPχ + qTχ + 12 ∥χ − ˜χldr −1∥2 
+
+> Rχ
+
++ 12 ∥s − ˜sldr −1∥2
+
+> Rs
+
+s.t. Aχ + s = b.
+
+with Rχ, Rs ≻ 0. Introducing a multiplier y and eliminating 
+
+s via optimality gives 
+
+P + Rχ AT
+
+A −R−1
+
+> s
+
+| {z }
+
+> KKKT
+
+χldr 
+
+yldr 
+
+
+
+=
+
+Rχ ˜χldr −1 − q
+
+b − ˜sldr −1
+
+
+
+,
+
+sldr = ˜ sldr −1 − R−1 
+
+> s
+
+yldr 
+
+Within one SL iteration, KKKT is constant, and only the RHS changes, enabling factorization reuse. 
+
+C. Closed-form SOC projection 
+
+The DR update (11c) involves Prox ˆJ (ξldr 
+
+> ref
+
+). Since ˆJ (s) = 
+
+IK(s) depends only on s, we use the Euclidean proximal metric for the cone step: 
+
+min  
+
+> ˆχ,ˆs
+> 12
+
+∥ ˆχ − χldr 
+
+> ref
+
+∥22 + 12 ∥ˆs − sldr 
+
+> ref
+
+∥22
+
+s.t. ˆs ∈ K.
+
+(32) Therefore, Prox ˆJ (ξldr 
+
+> ref
+
+) = 
+
+ χldr 
+
+> ref
+
+ΠK(sldr 
+
+> ref
+
+)
+
+
+
+. (33) where ΠK is projection onto the conic set K. Since K =
+
+K1 × · · · × Kng is a product cone, ΠK applies (34) in-dependently to each block sj . Thus, we get ΠK(sldr 
+
+> ref
+
+) =[Π K1 (sldr 
+
+> ref ,1
+
+); Π K2 (sldr 
+
+> ref ,2
+
+); . . . ΠKng (sldr  
+
+> ref ,n g
+
+)] . For each Ksoc =
+
+{(t, η) : ∥η∥2 ≤ t} and input r = ( rt, rη ) with a = ∥rη ∥2,the Euclidean projection is 
+
+ΠKsoc (rt, rη ) = 
+
+
+
+(rt, rη ), a ≤ rt,
+
+(0 , 0), a ≤ − rt, rt + a
+
+2 , rt + a
+
+2a rη
+
+
+
+, otherwise. (34) IX. P ROOFS RELATED TO FRAMEWORK -2 
+
+A. AL of Problem (12): 
+
+The Augmented Lagrangian of the problem (12) is given as 
+
+Lρ(δ ˆu, kv , ν, p, ˜p; λ)= Hp(δ ˆu, p) + ˜Q(kv ) + IK(ν, ˜p) + ρ
+
+2 ∥p − ˜p + λp∥22
+
++
+
+> ng
+
+X
+
+> j=1
+
+ρ
+
+2 ∥ ˆAj kv + ˆbj − νj + λν ∥22
+
+(35) where Hp(δ ˆu, p) = Qˆu(δ ˆu) + IP (δ ˆu, p), and P and K
+
+correspond to the constraints (12a) and (12b) respectively. The penalty parameter is ρ; and ρλp, ρ λν are the dual variables. 
+
+B. Derivation of ADMM update 
+
+Considering (ν, ˜p) are the first block, and (δ ˆu, p, kv ) as the second block of the ADMM, we have the block update steps given as follows 
+
+{ν, ˜p}lin 
+
+= argmin  
+
+> ν,˜p
+
+Lρ(δ ˆulin −1, klin −1 
+
+> v
+
+, ν, plin −1, ˜p; λlin −1)
+
+{δ ˆu, p, kv }lin 
+
+= argmin  
+
+> δˆu,p,kv
+
+Lρ(δ ˆu, kv , νlin , p, ˜plin ; λlin −1)
+
+and the dual update steps as 
+
+λlin  
+
+> p
+
+= λlin −1 
+
+> p
+
++ ( plin − ˜plin )
+
+λlin  
+
+> ν
+
+= λlin −1 
+
+> ν
+
++ ( ˆAj klin  
+
+> v
+
++ ˆbj − νlin  
+
+> j
+
+)
+
+Let us now simplify the block update steps. 
+
+1) Derivation of Block-1 update (13): This involves solving the following 
+
+min  
+
+> ν,˜p
+> ng
+
+X
+
+> j=1
+
+ρ
+
+2 ∥ ˆAj klin −1 
+
+> v
+
++ ˆbj − νj + λlin −1 
+
+> ν,j
+
+∥22
+
++ ρ
+
+2 ∥plin −1 − ˜p + λlin −1 
+
+> p
+
+∥22
+
+s.t. ∥νj ∥2 ≤ ˜pj j ∈ J1, n g K (36) Note that the above update can be decoupled with respect to the variables {νj , ˜pj }ng
+
+> j=1
+
+. Therefore, we can update the variables in parallel as follows 
+
+(νlin  
+
+> j
+
+, ˜plin  
+
+> j
+
+) = argmin   
+
+> νj,˜pj
+
+∥ ˆAj klin −1 
+
+> v
+
++ ˆbj − νj + λlin −1 
+
+> ν,j
+
+∥22
+
++ ∥plin −1 
+
+> j
+
+− ˜pj + λlin −1 
+
+> p,j
+
+∥22
+
+s.t. ∥νj ∥2 ≤ ˜pj j ∈ J1, n g K (37) The above update has a closed form solution and can be given as in (13). 
+
+2) Derivation of Block-2 updates ((14) and (15)): This update involves solving the following 
+
+min  
+
+> δˆu,p,kv
+
+Qˆu(δ ˆu) + ˜Q(kv ) + ρ
+
+2 ∥p − ˜plin + λlin −1 
+
+> p
+
+∥22
+
++
+
+> ng
+
+X
+
+> j=1
+
+ρ
+
+2 ∥ ˆAj kv + ˆbj − νlin  
+
+> j
+
++ λlin −1 
+
+> ν
+
+∥22
+
+s.t. (12 a) (38) The above update can be decoupled with respect to the variables (δ ˆu, p) and kv as follows 
+
+(δ ˆulin , plin ) = argmin  
+
+> δˆu,p
+
+Qˆu(δ ˆu) + ρ
+
+2 ∥p − ˜plin + λlin −1 
+
+> p
+
+∥22
+
+s.t. (12 a) (39) 
+
+klin  
+
+> v
+
+= argmin 
+
+> kv
+> ng
+
+X
+
+> j=1
+
+ρ
+
+2 ∥ ˆAj kv + ˆbj − νlin  
+
+> j
+
++ λlin −1 
+
+> ν
+
+∥22
+
++ 12 kT 
+
+> v
+
+Qv kv (40) A closed form solution can be obtained for the kv update. Let us start by writing the first order optimality conditions as follows 
+
+> ng
+
+X
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+( ˆAj klin  
+
+> v
+
++ ˆbj − νlin  
+
+> j
+
++ λlin −1 
+
+> ν
+
+) + Qv klin  
+
+> v
+
+= 0 
+
+using the dual update (17), we get the following 
+
+> ng
+
+X
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+( ˆAj klin  
+
+> v
+
++ ˆbj − νlin  
+
+> j
+
++ λlin −1 
+
+> ν
+
+) + Qv klin  
+
+> v
+
+= 0 =⇒
+
+> ng
+
+X
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+(λlin  
+
+> ν
+
+) + Qv klin  
+
+> v
+
+= 0 (41) Assuming we choose λ0 
+
+> ν
+
+, k0 
+
+> v
+
+such that Png 
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+(λ0 
+
+> ν
+
+) + 
+
+Qv k0 
+
+> v
+
+= 0 , we get the following from the above two equations 
+
+> ng
+
+X
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+( ˆAj klin  
+
+> v
+
++ ˆbj − νlin  
+
+> j
+
+) + Qv (klin  
+
+> v
+
+− klin −1 
+
+> v
+
+) = 0 =⇒
+
+
+
+Qv +
+
+> ng
+
+X
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+ˆAj
+
+
+
+klin 
+
+> v
+
+= Qv klin −1 
+
+> v
+
++
+
+> ng
+
+X
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+(νlin  
+
+> j
+
+− bj ) (42) Since Qv ≻ 0, we can write 
+
+klin  
+
+> v
+
+= q + Mklin −1 
+
+> v
+
++ ¯Mνlin (43) where 
+
+M =
+
+
+
+Qv +
+
+> ng
+
+X
+
+> j=1
+
+ρ ˆAT 
+
+> j
+
+ˆAj
+
+−1
+
+,
+
+q = −
+
+> ng
+
+X
+
+> j=1
+
+ρM ˆAT 
+
+> j
+
+ˆbj , M = MQ v , (44) 
+
+¯M =  ¯M1 ¯M2 . . . ¯Mng
+
+ , ¯Mj = ρM ˆAT
+
+> j
+
+X. S IMULATION DATA 
+
+A. Dynamical Models a) Unicycle Model: We use a planar unicycle with state 
+
+xk = [ xk, yk, θk]⊤ and control uk = [ vk, ωk]⊤. With forward-Euler discretization, 
+
+xk+1 = xk + vk cos( θk)∆ t, (45) 
+
+yk+1 = yk + vk sin( θk)∆ t, (46) 
+
+θk+1 = θk + ωk∆t, (47) Fig. 9: Real-world Robotarium rollout with NRTO disturbance-feedback. Four snapshots over time show the executed trajectory using the affine disturbance-feedback policy. The feedback gain significantly reduces accumulated tracking error and steers the robot into the target region despite real-world disturbances and actuation imperfections. 
+
+Fig. 10: Real-world Robotarium rollout with nominal control only. Using only the nominal sequence leads to substantial drift from the planned path. The resulting tracking error accumulates over time, and the robot fails to reliably satisfy constraints. with element-wise input saturation |vk| ≤ vmax and |ωk| ≤ 
+
+ωmax .
+
+b) Quadcopter Model: We use a 12D rigid-body quad-copter model with state xk = [ p⊤ 
+
+> k
+
+, v⊤ 
+
+> k
+
+, ϕ k, θ k, ψ k, ω⊤ 
+
+> k
+
+]⊤,where p = [ x, y, z ]⊤, v = [ vx, v y , v z ]⊤, (ϕ, θ, ψ ) are roll– pitch–yaw angles, and ω = [ p, q, r ]⊤ are body rates. The control is uk = [ fk, τ ⊤ 
+
+> k
+
+]⊤, where f is total thrust along the body +z axis and τ = [ τx, τ y , τ z ]⊤ are body torques. The continuous-time dynamics are 
+
+˙p = v, (48) 
+
+˙v = −ge3 + fm R(ϕ, θ, ψ )e3, (49) 
+
+˙ω = J−1(τ − ω × (Jω)) , (50) 
+
+
+
+˙ϕ
+
+˙θ
+
+˙ψ
+
+ = T (ϕ, θ )ω, (51) where e3 = [0 , 0, 1] ⊤, R(ϕ, θ, ψ ) = Rz (ψ)Ry (θ)Rx(ϕ), and 
+
+T (ϕ, θ ) = 
+
+1 sin ϕ tan θ cos ϕ tan θ
+
+0 cos ϕ − sin ϕ
+
+0 sin ϕ/ cos θ cos ϕ/ cos θ
+
+ . (52) We discretize with forward Euler as xk+1 = xk + ∆ t ˙xk.Inputs are saturated element-wise to f ∈ [fmin , f max ] and τ ∈
+
+[τmin , τmax ].
+
+c) Franka Manipulator Model: We use a 7-DOF Franka Emika Panda joint-space model with state xk =[q⊤ 
+
+> k
+
+, dq ⊤ 
+
+> k
+
+]⊤ ∈ R14 and control uk = τk ∈ R7, where 
+
+dq = ˙ q. The dynamics are 
+
+˙q = dq , (53) 
+
+¨qi = τi − di dq i
+
+Ii
+
+, i = 1 , . . . , 7, (54) with diagonal damping di and inertia Ii. The discrete-time update uses forward Euler with post-update clamping: 
+
+dq k+1 = clip( dq k + ¨ qk∆t, −dq max , dq max ) , (55) 
+
+qk+1 = clip  qk + dq k+1 ∆t, qmin , qmax 
+
+ , (56) and torque saturation |τi| ≤ τi, max . End-effector position, orientation constraints, and obstacle distances are evaluated using forward kinematics. 
+
+B. Experiment and Solver Parameters 
+
+All numeric values and hyperparameters are shown in Tables III– ?? .XI. R EAL -W ORLD ROBOTARIUM EXPERIMENT 
+
+A. Platform and timing 
+
+We consider a single Robotarium unicycle robot with state 
+
+x = [ px, p y , θ ]⊤ and control u = [ v, ω ]⊤. The Robotarium simulator runs at a fixed internal timestep of ∆trobot ≈
+
+0.033 s. To keep the trajectory optimization tractable, we solve NTO/NRTO at a coarser timestep ∆tsolver = 0 .33 s. During deployment, we consider each solver command is held for 
+
+M = round(∆ tsolver /∆trobot ) Robotarium steps. 
+
+B. Open-loop data collection (NTO) 
+
+To estimate real-world disturbances without conflating them with a tracking controller, we first deploy an open-loop nominal trajectory produced by NTO. At every Robotarium timestep, we log the measured robot pose xmeas  
+
+> i
+
+and the applied control uapplied  
+
+> i
+
+. We also record the commanded start pose xcmd 
+
+> 0
+
+and the measured start pose xmeas  
+
+> 0
+
+for each rollout. Dynamics (nx, n u) Parameters and limits 
+
+Unicycle (3 , 2) State x = [ x, y, θ ]⊤, control u = [ v, ω ]⊤.
+
+(vmax , ω max ) ∈ { (3 .0, 1.5) , (5 , 3) }.Quadcopter (12 , 4) 
+
+State x = [ p⊤, v⊤, ϕ, θ, ψ, ω⊤]⊤, control u = [ f, τ ⊤]⊤.
+
+m = 1 .0, g = 9 .81 , J = diag(0 .02 , 0.02 , 0.04) .
+
+f ∈ [0 , 15] , τ ∈ [−0.5, 0.5] 3.Franka (14 , 7) 
+
+State x = [ q⊤, ˙q⊤]⊤, control u = τ .
+
+qmin = [ −2.9007 , −1.8361 , −2.9007 , −3.0770 , −2.8763 , 0.4398 , −3.0508] ⊤.
+
+qmax = [2 .9007 , 1.8361 , 2.9007 , −0.1169 , 2.8763 , 4.6216 , 3.0508] ⊤.
+
+˙qmax = [2 .62 , 2.62 , 2.62 , 2.62 , 5.26 , 4.18 , 5.26] ⊤, τmax = [87 , 87 , 87 , 87 , 12 , 12 , 12] ⊤.
+
+d = [0 .5, . . . , 0.5] ⊤, I = [1 , . . . , 1] ⊤.
+
+TABLE III: Dynamics dimensions and model parameters. 
+
+Method Outer loop 
+
+NRTO 
+
+Outer Loop: NOuter Loop = 200 
+
+Trust region: r0 ∈ { 1.5, 2}, rmin = 0 .001 
+
+Penalty: ρ0 = 40 , ρmax ∈ { 80 , 180 }
+
+Acceptance: (α, β, η 1, η 2) = ( {0.8, 0.9}, {1.15 , 1.5}, 5, 4) 
+
+Termination: (ϵu, ϵ p) = ( {0.001 , 0.075 }, {10 −4, 0.01 })
+
+Weights: wp ∈ { 1, 10 }
+
+ADMM: iters = 40 , cϵ = 0 .01 
+
+NRTO-DR same as NRTO NRTO-FullADMM 
+
+Outer Loop: NOuter Loop = 200 
+
+Trust region: r0 ∈ { 1.5, 2}, rmin = 0 .001 
+
+Penalty: ρ0 = 40 , ρmax ∈ { 180 , 240 , 340 }
+
+Acceptance: (α, β, η 1, η 2) = ( {0.8, 0.9}, {1.15 , 1.5}, 5, 4) 
+
+Termination: (ϵu, ϵ p) = ( {0.001 , 0.075 }, {10 −4, 0.05 })
+
+Weights: wp ∈ { 1, 100 , 500 }
+
+ADMM: iters = 40 , cϵ = 0 .01 
+
+TABLE IV: Unicycle: outer-loop hyperparameters. 
+
+Method Solver-specific hyperparameters 
+
+NRTO MOSEK, CPU. NRTO-DR (ϵres ) = (10 −4)
+
+max iters: 100 , warm start: true. NRTO-FullADMM 
+
+FullADMM: ρ = 10 ; iters = 40 ;
+
+ϵp ∈ { 0.001 , 0.005 }
+
+KV: pcg; iters ∈ { 100 , 1000 }; tol ∈ { 0.01 , 0.05 }.
+
+TABLE V: Unicycle: solver-specific hyperparameters. 
+
+C. Additive disturbance residuals 
+
+We model the closed-loop rollout as the nominal dynamics plus an additive disturbance, 
+
+xk+1 = f (xk, u k, ∆tsolver ) + dk+1 , (57) On the solver grid we define: 
+
+d0 := xmeas 
+
+0 − xcmd 
+
+0 , (58) 
+
+dk+1 := xmeas 
+
+k+1 − f (xmeas 
+
+k , u applied 
+
+k , ∆tsolver ), k = 0 , . . . , T − 1,
+
+(59) where xmeas 
+
+k and uapplied 
+
+k are obtained by downsampling the 30 Hz log at the solver boundaries. Angle residuals are wrapped to [−π, π ]. uapplied is the post-threshold control actu-ally used by Robotarium, so the resulting residual dk captures true model mismatch, actuation, and sensing imperfections between the solver and the real system. 
+
+Method Outer loop 
+
+NRTO 
+
+Outer Loop: NOuter Loop = 200 
+
+Trust region: r0 ∈ { 1.5, 2.5}, rmin = 0 .001 
+
+Penalty: ρ0 = 40 , ρmax = 180 
+
+Acceptance: (α, β, η 1, η 2) = (0 .8, 1.5, 5, 4) 
+
+Termination: (ϵu, ϵ p) = (0 .01 , 0.05) 
+
+Weights: wp = 10 
+
+ADMM: iters = 40 , cϵ = 0 .01 
+
+NRTO-DR 
+
+Outer Loop: NOuter Loop = 200 
+
+Trust region: r0 ∈ { 1.5, 2.5}, rmin = 0 .001 
+
+Acceptance: (α, β, η 1, η 2) = (0 .8, 1.5, 5, 4) 
+
+Termination: (ϵu, ϵ p) = ( {0.01 , 0.05 }, 0.01) 
+
+Weights: wp ∈ { 10 , 100 }
+
+ADMM: iters = 40 , cϵ = 0 .01 
+
+NRTO-FullADMM 
+
+Outer Loop: NOuter Loop = 200 
+
+Trust region: r0 ∈ { 1.5, 2.5}, rmin = 0 .001 
+
+Penalty: ρ0 = 40 , ρmax ∈ { 180 , 320 }
+
+Acceptance: (α, β, η 1, η 2) = (0 .8, 1.5, 5, 4) 
+
+Termination: (ϵu, ϵ p) = ( {0.01 , 0.05 }, {0.01 , 0.05 })
+
+Weights: wp ∈ { 10 , 100 }
+
+ADMM: iters = 40 , cϵ = 0 .01 
+
+TABLE VI: Quadcopter: outer-loop hyperparameters. 
+
+Method Solver-specific hyperparameters 
+
+NRTO MOSEK, CPU NRTO-DR (ϵrel ) = (10 −4)
+
+max iters: 100 , warm start: true. NRTO-FullADMM FullADMM: ρ = 10 ; iters = 40 ; ϵp = 0 .001 
+
+KV: pcg; iters = 100 ; tol = 0 .05 
+
+TABLE VII: Quadcopter: solver-specific hyperparameters. 
+
+D. Ellipsoidal set fitting for NRTO 
+
+NRTO uses an ellipsoidal uncertainty set for the stacked disturbance vector 
+
+ζ := [ d⊤
+
+0 , d ⊤
+
+1 , . . . , d ⊤
+
+T ]⊤ ∈ R(T +1) nx . (60) In our implementation, the uncertainty is represented as 
+
+ζ ∈ { Γz : z⊤Sz ≤ τ }, (61) with S ≻ 0 and scalar radius τ > 0. From repeated open-loop rollouts, we estimate the start-offset statistics for d0 and the per-step process statistics for dk> 0. We set Γ = I and build 
+
+S as a block-diagonal matrix: 
+
+S = blkdiag( S0, S d, . . . , S d), (62) where S0 ≈ Σ−10 and Sd ≈ Σ−1
+
+d are the inverses of the empirical covariances of d0 and dk> 0, respectively. Finally, Category Hyperparameters                                
+
+> Outer
+> Outer Loop: NOuter Loop = 80
+> Trust region: r0= 2 ,rmin = 0 .001
+> Penalty: ρ0= 40 ,ρmax = 80
+> Acceptance: (α, β, η 1, η 2) = (0 .8,1.5,5,4)
+> Termination: (ϵu, ϵ p) = (0 .0015 ,0.005)
+> Weights: wp= 250
+> ADMM: iters = 80 ,cϵ= 0 .01
+> Solver-specific FullADMM: (ρs, ρ p) = (10 ,10) ; iters = 50 ;ϵp= 0 .001
+> KV: pcg; iters = 100 ; tol = 0 .05
+
+TABLE VIII: Franka: outer-loop and solver-specific hyperpa-rameters. we choose τ so that the ellipsoid covers the observed rollouts with a safety margin. For each rollout r, we compute the Mahalanobis energy 
+
+er := ζ⊤ 
+
+> r
+
+S ζ r , (63) and set τ to a conservative value such as τ = max r er .
+
+E. Real-world deployment with NRTO feedback 
+
+Solving the NRTO problem with the estimated (Γ , S, τ )
+
+yields a nominal control sequence ¯uk and a disturbance-feedback gain sequence Kk. During execution, we apply the affine disturbance-feedback policy: 
+
+uk = clamp  ¯uk + Kk dk
+
+, (64) where dk is estimated online from consecutive pose measure-ments using the same residual definition above, and clamp( ·)
+
+enforces Robotarium velocity limits and wheel-speed thresh-olding. The real-world qualitative results are shown in Fig. 9– 10. Compared to nominal open-loop execution (Fig. 10), which exhibits large accumulated tracking error and does not reli-ably reach the target region, the NRTO disturbance-feedback policy (Fig. 9) compensates for real-world disturbances and successfully drives the robot into the goal region. The real-world experiment is also shown in the supplementary video.

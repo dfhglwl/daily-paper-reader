@@ -1,0 +1,356 @@
+Title: 3D UAV Trajectory Estimation and Classification from Internet Videos via Language Model
+
+URL Source: https://arxiv.org/pdf/2603.09070v1
+
+Published Time: Wed, 11 Mar 2026 00:22:49 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# 3D UAV Trajectory Estimation and Classification from Internet Videos via Language Model 
+
+Haoxiang Lei, Daotong Wang, Shenghai Yuan, Jianbo Su* 
+
+Abstract —Reliable 3D trajectory estimation of unmanned aerial vehicles (UAVs) is a fundamental requirement for anti-UAV systems, yet the acquisition of large-scale and accurately annotated trajectory data remains prohibitively expensive. In this work, we present a novel framework that derives UAV 3D trajectories and category information directly from Internet-scale UAV videos, without relying on manual annotations. First, language-driven data acquisition is employed to autonomously discover and collect UAV-related videos, while vision-language reasoning progressively filters task-relevant segments. Second, a training-free cross-modal label generation module is introduced to infer 3D trajectory hypotheses and UAV type cues. Third, a physics-informed refinement process is designed to impose tem-poral smoothness and kinematic consistency on the estimated trajectories. The resulting video clips and trajectory annotations can be readily utilized for downstream anti-UAV tasks. To assess effectiveness and generalization, we conduct zero-shot transfer experiments on a public, well-annotated 3D UAV benchmark. Results reveal a clear data scaling behavior: as the amount of online video data increases, zero-shot transfer performance on the target dataset improves consistently, without any target-domain training. The proposed method closely approaches the current state-of-the-art, highlighting its robustness and applica-bility to real-world anti-UAV scenarios. Code and datasets will be released upon acceptance. 
+
+Index Terms —Anti-UAV, Language-driven, Trajectory Esti-mation, UAV Classification, Zero-shot transfer, VLMs. 
+
+I. I NTRODUCTION 
+
+Unmanned aerial vehicles (UAVs) have become increas-ingly prevalent across civilian and commercial domains, which in turn has intensified concerns regarding airspace safety and counter-UAV defense. A fundamental capability for such systems is the accurate estimation of UAV trajectory in 3D space, as reliable 3D trajectory information is essential for interception planning, and risk-aware decision-making [1], [2]. Despite sustained research interest, progress in 3D UAV trajectory estimation remains constrained by the limited availability of large-scale, high-quality annotated 3D UAV data. Most existing approaches for UAV trajectory estimation and classification rely heavily on large amounts of well-annotated data [1]–[4], whose collection is expensive, time-consuming, and inherently difficult to scale. Although multi-ple public datasets support 2D UAV trajectory analysis [5]– [7], the absence of depth information significantly constrains their applicability in practical counter-UAV deployments. In contrast, datasets providing full 3D UAV trajectories are exceedingly limited. Among the few available resources, MMAUD [8] offers high-quality and precise 3D annotations. 
+
+Fig. 1: The comparison between the acquisition of existing Anti-UAV datasets, and our proposed methods for anti-UAV datasets acquisition. Nevertheless, its construction depends on costly sensors, such as high-precision LiDAR systems, together with extensive manual annotation efforts, which collectively impose sub-stantial obstacles to the large-scale development of 3D UAV trajectory datasets. The challenge stems from two fundamental factors. First, UAV videos collected from online platforms are highly noisy, frequently including first-person recordings or severe camera motion, which obscures reliable observation of UAV dy-namics. Second, acquiring accurate 3D trajectory annotations remains prohibitively expensive. For example, the MMAUD dataset [8] achieves high-precision labeling through Leica MS60 surveying equipment and multi-sensor systems; how-ever, such configurations require costly hardware, meticulous calibration, and substantial manual effort, rendering them inherently unsuitable for large-scale deployment. Together, these constraints highlight the need for a new approach capa-ble of converting Internet videos into reliable 3D trajectory resources without relying on specialized sensors or human annotation. To address these challenges, a novel framework that converts raw Internet-scale UAV videos into accurate 3D trajectories and UAV type labels, without manual anno-tations or sensing hardware , is proposed. The framework is guided by three key principles. First, language-driven data acquisition , in which an agentic large language model (LLM) autonomously discovers UAV-related videos and cooperates with vision-language models (VLMs) to pro-gressively remove irrelevant or noisy content. Second, a 
+
+training-free cross-modal label generation integrates vi-
+
+> arXiv:2603.09070v1 [cs.RO] 10 Mar 2026
+
+sion–language reasoning with geometric constraints to infer zero-shot 3D trajectory hypotheses and category information. Third, physics-informed refinement is employed to impose temporal consistency and kinematic feasibility through se-quential estimation. The resulting video clips and trajectory annotations can be readily utilized for downstream anti-UAV tasks. We validate the framework via zero-shot transfer on the 3D MMAUD benchmark [8], which closely approaches the current state-of-the-art. Importantly, the proposed framework demonstrates a clear scaling behavior : as the amount of on-line video data increases, zero-shot transfer performance on the target dataset improves consistently, without any target-domain training. Our main contributions are summarized as follows: 1) A scalable framework that derives UAV 3D trajec-tories and category labels directly from Internet-scale videos without manual annotation or costly sensors is proposed, and reveals a clear data scaling behavior. 2) A language-driven data acquisition is designed, in which an agentic LLM works in conjunction with vision–language models to automatically retrieve and refine task-relevant UAV video content. 3) A training-free cross-modal label generation and physics-informed refinement pipeline is introduced that integrates vision–language cues with sequential estimation to ensure temporal coherence and kinematic plausibility. 4) We conduct a comprehensive zero-shot evaluation on the 3D MMAUD benchmark, achieving competitive performance, closely approaching the current state-of-the-art, while establishing a reproducible and scalable paradigm for anti-UAV perception. II. R ELATED WORKS 
+
+A. Annotated Datasets for Anti-UAV Research 
+
+Several datasets have been developed for anti-UAV re-search, including the Anti-UAV benchmarks [5], [6], [9] and DUT Anti-UAV [10], which provide large-scale annotated videos for UAV tracking. However, these datasets rely on labor-intensive frame-level labeling and are limited to 2D tracking in RGB or thermal imagery, restricting their appli-cability to real-world 3D trajectory estimation. To enable 3D annotation, Zheng et al. [11] proposed a multi-camera UAV dataset using synchronized and calibrated RGB cameras. While this approach supports 3D recon-struction, it incurs high hardware and calibration costs and has not been publicly released, limiting reproducibility. The MMAUD dataset [8] offers a high-quality 3D benchmark by employing high-precision Leica MS60 ground truth together with LiDAR, stereo cameras, and a microphone array. Nev-ertheless, its construction depends on expensive multi-sensor systems and meticulous calibration. In summary, existing anti-UAV datasets either focus on 2D tracking with costly manual annotation or rely on complex sensing infrastructures for 3D labeling, posing major chal-lenges for scalable 3D UAV trajectory estimation. 
+
+B. Dataset-Driven Trajectory Estimation Approaches 
+
+Recent studies on anti-UAV trajectory estimation have largely relied on high-quality, well-annotated datasets or sensor-rich acquisition systems. For example, YOLO-RAW [12] improves UAV detection robustness in adverse weather scenarios, while AV-DTEC [3] and AV-FDTI [2] exploit LiDAR-generated pseudo labels to train audio–visual or audio-only models for UAV detection and trajectory in-ference. Similarly, AAUTE [1] estimates UAV 3D trajecto-ries from audio signals using LiDAR-based supervision and smoothing techniques, achieving strong performance on the MMAUD dataset. Despite these advances, existing approaches fundamen-tally depend on curated datasets with precise annotations or sophisticated sensing infrastructures. To the best of our knowledge, none of them address the problem of extracting 3D UAV trajectories directly from unlabeled Internet-scale videos, leaving scalability and real-world deployment largely unexplored. III. P ROPOSED FRAMEWORK 
+
+The proposed framework for extracting UAV trajecto-ries and category labels from web-scale video data con-sists of three key principles: language-driven data acquisi-tion, training-free cross-modal label generation, and physics-informed refinement, as shown in Fig. 2. 
+
+A. Language-driven Data Acquisition 
+
+To construct a large-scale data foundation, our frame-work begins with a language-guided agentic crawler. An au-tonomous large language model (LLM) retrieves UAV-related videos from multiple open platforms using generic textual queries (e.g., “UAV flying”), forming an unlabeled corpus 
+
+Dweb = {vi | vi ∈ { YouTube , TikTok , Bilibili , . . . }} , vi =
+
+{It}Ti
+
+> t=1
+
+, It ∈ RH×W ×3. Here, Ti denotes the number of frames and each It is an RGB image. Although this strategy enables diverse UAV scenarios to be collected at scale, the raw corpus contains substantial noise, including first-person onboard footage and irrelevant instructional content. To overcome this challenge, the LLM coordinates with vision-language reasoning to perform fine-grained filtering. Specifically, the filtering process is conducted in a progres-sive manner as shown in upper part of Fig. 2. For each video clip, the VLM is first applied to sampled frames to assess UAV visibility by computing frame–prompt relevance scores. Clips with insufficient relevance are discarded at this stage. For the remaining candidates, the same model is further used to evaluate viewpoint characteristics by contrasting static-view and dynamic-view prompts. Frame-level scores are aggregated at the video level to obtain both relevance and viewpoint confidence statistics. The LLM then operates on a Fig. 2: The overall framework consists of three main parts, the one on the top is the Language-driven Data Acquisition module for high-quality anti-UAV data. The others on the bottom are training-free cross-modal label generation for 3D UAV trajectory and classification, and the physics-informed refinement. The final output is the 3D trajectory of the UAV, and the LiDAR point cloud is used for visualization only, not for processing. structured summary composed of textual metadata together with these aggregated VLM scores, and outputs a discrete decision in a predefined format (accept or reject). This staged design enables fully autonomous filtering while explicitly enforcing the progressive language-driven data priors. First, UAV visibility is evaluated using a set of visibility-specific language prompts Pvis = {pj }Mj=1 , where each prompt explicitly describes the presence or absence of a visible UAV in the scene. A vision–language model (VLM) is formulated as a mapping fVLM : RH×W ×3 × S → R,
+
+which computes a relevance score between an image frame 
+
+It and a prompt pj using cosine similarity. For each frame, the maximum score over all visibility prompts is taken as the UAV visibility score, while the margin between the highest and lowest scores is used as a relative confidence measure, reflecting the ambiguity of UAV presence. If the margin is less than threshold τ , the frame will be discarded. Second, beyond visibility assessment, the same VLM is used to evaluate viewpoint characteristics. We define a set of viewpoint-specific prompts Pview = {psta , p dyn }, where 
+
+psta corresponds to static-view recording and pdyn denotes dynamic-view filming. Applying fVLM (It, Pview ) allows the framework to distinguish static-view sequences. Only clips with both a high UAV relevance score and a high static-view confidence are retained. The static-view sequences denote that UAV motion is observable against a stable background, from dynamic-view sequences dominated by camera motion. Frame-level visibility and viewpoint scores are aggregated at the video level and jointly provided to the LLM, which produces a discrete accept–reject decision. This progressive filtering strategy retains only UAV-relevant and static-view segments for downstream trajectory estimation and clas-sification. Further implementation details are provided in Section IV. 
+
+B. Training-free Cross-modal Label Generation 
+
+The second component of the framework is training-free cross-modal label generation , which exploits vision– language reasoning to extract geometric and categorical cues from video frames. We employ a mixture-of-experts strategy consisting of K
+
+heterogeneous detection functions 
+
+{g(k) 
+
+> det
+
+}Kk=1 , g(k) 
+
+> det
+
+: RH×W ×3 → R4,
+
+each mapping a frame It to a candidate bounding box 
+
+b(k) 
+
+> t
+
+= ( x(k) 
+
+> t
+
+, y (k) 
+
+> t
+
+, w (k) 
+
+> t
+
+, h (k) 
+
+> t
+
+)⊤. The experts may include open-vocabulary grounding models and lightweight UAV detectors, such as [10], [13]–[15]. For each frame, candidate boxes {b(k) 
+
+> t
+
+} are clustered according to Intersection-over-Union (IoU) using a threshold 
+
+τ ′. Formally, two boxes belong to the same cluster if their IoU exceeds τ ′. Let C(j) 
+
+> t
+
+denote the j-th IoU cluster at frame t, and let C(j) 
+
+> t
+
+be the number of supporting experts. A cluster is retained only if it is supported by at least two experts as C(j) 
+
+> t
+
+≥ 2. If multiple clusters satisfy this condition, we select the one with the highest aggregated confidence score as j∗ = arg max j s(j) 
+
+> t
+
+, where the cluster confidence s(j) 
+
+> t
+
+is computed as the average confidence of the supporting expert predictions within the cluster, 
+
+s(j) 
+
+> t
+
+= 1
+
+C(j)
+
+> t
+
+X
+
+> (k)∈I (j)
+> t
+
+c(k) 
+
+> t
+
+.Here, I(j) 
+
+> t
+
+denotes the index set of experts whose boxes belong to cluster C(j) 
+
+> t
+
+, and c(k) 
+
+> t
+
+is the confidence score reported by the k-th expert.For the selected cluster C(j∗) 
+
+> t
+
+,the fused bounding box is obtained by averaging: 
+
+bt = 1
+
+C(j∗)
+
+> t
+
+X
+
+> b∈C (j∗)
+> t
+
+b. (1) In parallel, UAV classification is performed on the cropped region defined by bt. At each frame, a vision–language classifier outputs a categorical prediction together with a self-reported confidence score, {ˆyt, c t} = gcls VLM 
+
+ It[bt], ˆyt ∈{1, . . . , C }, ct ∈ [0 , 1] , where C is the number of UAV categories. Frame-level predictions are temporally aggregated to obtain a clip-level label. Majority voting determines the dominant category ˆy, while a consistency rule is applied: if the dominant label maintains an agreement ratio above a threshold ρ over N consecutive frames, its confidence is reinforced; otherwise, the result is marked as uncertain. This strategy combines self-reported confidence with temporal consistency to suppress spurious predictions. Furthermore, besides category inference, we query the same VLM to estimate the physical size prior from the cropped region, Hreal = gsize VLM 
+
+ ˆy, H real ∈ R+. Given Hreal 
+
+and the bounding-box height ht, a coarse monocular depth cue is estimated as ˆzt = ( fy Hreal )/h t, ˆzt ∈ R, where fy
+
+denotes the vertical focal length of the camera, which is estimated by the deep-learning-based single-image camera calibration DeepCalib [16]. The coarse depth estimate is further refined through a physics-informed refinement process. By combining the 2D trajectory {pt} with the estimated depths {ˆzt}, the framework generates zero-shot 3D pseudo-labels ˆPt =(ut, v t, ˆzt)⊤ ∈ R3. Here, (ut, v t) are image-plane coordinates and ˆzt represents a coarse geometric depth, such that ˆPt
+
+forms a mixed pixel–depth representation rather than a full camera-coordinate position. These pseudo-labels serve as weak observations for subsequent refinement, enabling trajec-tory reconstruction and UAV type inference without human annotation. Further implementation details are provided in Section IV. 
+
+C. Physics-informed Refinement 
+
+The final component of the proposed framework is a physics-informed refinement module, whose goal is to en-force temporal smoothness and kinematic plausibility in the recovered UAV 2D trajectories and coarse depth estimation. Rather than treating frame-wise geometric estimates inde-pendently, we formulate trajectory refinement as a sequential state estimation problem that combines simple motion dy-namics with noisy per-frame observations. The latent state at time t is defined as xt =[ Xt, Y t, Z t, V x,t , V y,t , V z,t ]⊤ ∈ R6, which jointly repre-sents the 3D position and velocity of the UAV. The corre-sponding observation vector is zt = [ ut, v t, h t ]⊤ ∈ R3,
+
+where (ut, v t) denote the image-plane center of the detected bounding box and ht its pixel height. The relationship between the latent state and image mea-surements is described by a perspective projection model: 
+
+h(xt) = 
+
+
+
+cx + fx Xt
+
+> Zt
+
+cy + fy Yt
+
+> Zt
+
+Hreal fy
+
+> Zt
+
+ ,
+
+Ht = ∂h
+
+∂x xt
+
+,
+
+(2) where h : R6 → R3 and Ht ∈ R3×6 is the associated Jacobian. Note that the observation function depends only on the position components, while velocity affects the estimation through temporal propagation. For temporal evolution, we adopt a near-constant velocity assumption over the frame interval ∆t, leading to the pre-diction step 
+
+xt+1 |t =
+
+I3 ∆t I3
+
+0 I3
+
+
+
+xt, (3) where F ∈ R6×6 encodes kinematic continuity. This assump-tion is sufficient for short inter-frame intervals in video data, where the effect of acceleration on projected image measure-ments is dominated by measurement noise and geometric uncertainty, and any unmodeled higher-order dynamics are implicitly captured by the process noise. At each time step, a coarse depth cue ˆzt+1 is obtained from the (fy Hreal )/h t+1 , which is consistent with the third component of the observation model. The state estimate is then corrected via 
+
+xt+1 = xt+1 |t + Kt+1 
+
+ zt+1 − h(xt+1 |t), (4) where the adaptive gain Kt+1 is determined by the process noise Q and measurement noise R.Through recursive prediction and correction, the physics-informed module fuses generated pseudo-observations { ˆPt}
+
+with motion priors. The position components of the refined state yield the final 3D trajectory Pt = ( Xt, Y t, Z t)⊤ ∈ R3
+
+in the camera coordinate system. In this way, noisy frame-level pseudo-trajectories are transformed into temporally con-sistent and physically feasible trajectories that respect both camera geometry and UAV motion characteristics. IV. E XPERIMENTS AND PERFORMANCE 
+
+A. Implementation Details 
+
+While our framework is general and can integrate diverse LLMs, VLMs, and physics-informed refinement strategies, in practice, we adopt representative off-the-shelf models to demonstrate feasibility and reproducibility. 
+
+Language-driven Data Acquisition: We implement the LLM-based acquisition using GPT-4o (realtime-preview-2025-06-03) in an agentic setting to issue search queries and collect candidate online videos. For weak semantic guidance Fig. 3: The red bounding boxes represent the output of the benchmark solution from Anti-UAV [15], blue boxes represent the Grounded SAM output [14], and the yellow boxes represent the lightweight UAV detector output [17]. and task-aware distillation, we apply CLIP (ViT-B/32) [18] to video frames sampled at 2 Hz with contrasting prompts (e.g., “a small drone hovering in the sky” versus “clear sky without a visible drone”). Both frames and prompts are embedded by CLIP, and cosine similarity is computed. The maximum similarity score is used as the UAV relevance score, while the margin between the highest and lowest scores serves as a confidence indicator. Frames aligned with “no drone in view” are removed first, followed by frames with low confidence (margin < τ = 0 .3), which filters out ambiguous or irrelevant content. CLIP is further employed with static– dynamic viewpoint prompts to distinguish static-view record-ings from sequences dominated by camera motion. Only clips satisfying both UAV relevance ( ≥ 0.7) and static-view confidence ( ≥ 0.3) are retained, yielding a curated dataset for downstream trajectory estimation and classification. Overall, this process produces approximately 200,000 seconds of video across 2,245 sequences. 
+
+Training-free cross-modal label generation: For 2D trajectory estimation, we instantiate the cross-modal label generation using a mixture of three ( K = 3 ) expert mod-els: Grounding SAM [14], a lightweight pretrained Drone detector [17], and the benchmark method from the Anti-UAV dataset [15], as shown in Fig. 3. For each frame, candidate bounding boxes from the K = 3 experts are clustered according to Intersection-over-Union (IoU) with a threshold τ ′ = 0 .5. Clusters supported by at least two experts are retained; we select the one with the highest aggregated confidence score as the final cluster. For the retained cluster, the fused bounding box is obtained by averaging the boxes within that cluster. The barycenters of the fused boxes are then extracted to form discrete 2D trajectory hypotheses. To mitigate detection jitter, the barycenters of selected boxes are smoothed using cubic B-splines with order θ = 3 and a uniform knot spacing of 5 frames ( η=5), yielding continuous 2D trajectories. For UAV classification, cropped bounding-box regions are queried by GPT-4o (realtime-preview-2025-06-03) at 0.1 Hz, and clip-level labels are obtained via majority voting with a window size of N = 5 and threshold ρ = 0 .9.
+
+Physics-Informed Refinement: To enforce temporal co-herence and suppress depth noise, we implement the physics-informed refinement module using an Extended Kalman Fil-ter (EKF). The EKF integrates per-frame geometric cues with a near-constant velocity motion model, producing smooth and physically plausible 3D trajectories. While EKF serves as a practical instantiation in this work, the framework readily accommodates more advanced sequential estimation techniques. 
+
+B. Zero-shot Transfer on the well-annotated dataset 
+
+Based on our training-free method for online UAV video 3D trajectory generalization, we choose the only public 3D anti-UAV dataset–MMAUD [8] to evaluate our 3D Trajectory estimation and classification method. Using the cross-modal label generation together with the physics-informed refinement, we obtain temporally consistent 3D trajectories in the camera coordinate system, Pt =(Xt, Y t, Z t)⊤ ∈ R3. To maintain consistency with the web-scale setting, we estimate intrinsics by DeepCalib [16] rather than using the provided calibration for trajectory in-ference; only the provided RGB–Leica extrinsics are applied to transform the estimated trajectories into the MMAUD world frame, enabling direct comparison with the ground-truth trajectories PGT  
+
+> t
+
+. This transformation is used solely 
+
+for benchmark-level comparison as shown in Table I. The proposed web-scale framework itself does not require camera extrinsics and operates entirely in the camera coordinate system. Trajectory accuracy is measured by the mean squared error over the full sequence: e3D = 1
+
+> T
+
+PTt=1 Pt − PGT  
+
+> t
+> 22
+
+.
+
+C. Performance on the MMAUD dataset 
+
+We evaluate our method on the MMAUD dataset against seven representative baselines, as summarized in Table I. For YOLO-based approaches, including YOLOv12 [22] and YOLO26 [23], the corresponding networks are used as fea-ture extractors and augmented with a 3D position regression head to perform trajectory estimation. To evaluate zero-shot classification performance, each UAV sequence is divided into fixed-length clips of 30 consec-utive frames, and clip-level labels are obtained via majority voting. Classification accuracy is computed as the ratio of TABLE I: The comparison of performance on MMAUD dataset [8] in m. 
+
+Methods Year Category Modal Position Estimation Classification FPS (Training) (Inference) Dx Dy Dz e3D Accuracy TAME [19] 2023 Supervised Audio-Only 0.11 0.30 0.34 0.55 0.960 29.72 
+
+AV-PED [20] 2023 Self-Supervised Audio+Image 0.31 0.43 0.52 0.87 0.896 12.54 
+
+AV-FDTI [2] 2024 Supervised Audio+Image 0.13 0.23 0.36 0.53 0.920 11.57 
+
+YOLOv10 [21] 2024 Supervised Image-Only 0.23 0.43 0.46 0.72 0.650 18.34 
+
+AV-DTEC [3] 2024 Self-Supervised Audio+Image 0.33 0.25 0.27 0.58 0.993 13.66 
+
+AAUTE [1] 2025 Self-Supervised Audio-Only 0.14 0.26 0.25 0.48 0.747 59.08 YOLOv12 [22] 2025 Supervised Image-Only 0.21 0.52 0.33 0.54 0.620 20.11 
+
+YOLO26 [23] 2026 Supervised Image-Only 0.24 0.37 0.43 0.59 0.720 24.43 
+
+Lei et al. [4] 2026 Self-Supervised Audio+Image 0.15 0.16 0.19 0.29 0.560 17.80 
+
+Ours - Zero-shot Image-Only 0.17 0.15 0.44 0.30 0.960 23.50  
+
+> Best results are highlighted in bold , and second best in underline. We utilize the zero-shot transfer on the MMAUD to evaluate the accuracy of the trajectory generation process for web videos. This convention is consistently followed throughout the paper. FPS is reported for trajectory estimation modules only.
+
+Fig. 4: Visualization of the comparison results of the DJI Pham4 sequence in MMAUD. correctly predicted clips to the total number of clips for each UAV type, as shown in the Table. I. Table I reports the quantitative comparison of 3D trajectory estimation. Our method achieves near-SOTA performance under a training-free zero-shot setting, with axis-wise errors (Dx, Dy , Dz ) provided for detailed analysis. Fig. 4 presents a qualitative comparison on the DJI Pham4 sequence, including ground truth, our results before and after refinement, and open-sourced representative baselines. The proposed method aligns more closely with the ground truth, and EKF re-finement notably improves performance along the Z axis (Depth), reducing the error from 0.67 m to 0.44 m. 
+
+D. Generalization and Ablation Study 
+
+To quantitatively examine the generalization of the frame-work, we construct a controlled set of 200 manually curated video clips, including 50 “good” sequences satisfying both TABLE II: Generalization of VLM-based video filtering across alternative backbones. Values denote the number of clips retained from the audited test set after each filtering criterion.             
+
+> Model Criterion Visible UAV Static Viewpoint
+> OpenCLIP (ViT-B/32) 60 21 SigLIP (ViT-B/32) 63 23 EVA-CLIP (ViT-B/32) 67 27 MetaCLIP (ViT-B/32) 64 26
+> CLIP (ViT-B/32) 65 25
+
+visibility and static-view requirements and 150 “bad” se-quences violating at least one criterion. Manual annotation indicates that 130 clips remain after the visibility filter and 50 after further enforcing the static-view constraint. Applying CLIP to implement the proposed language-driven priors pro-duces retained counts closely aligned with these ground-truth numbers. Replacing CLIP with alternative vision–language models yields comparable results across both filtering stages As summarized in Table II, different backbones yield compa-rable retained counts after each filtering stage, indicating that the proposed language-driven priors are not tied to a specific VLM. Similarly, for the classification module in cross-modal label generation, substituting GPT-4o with Qwen2.5-VL-7B and LLaMA-3-8B-Instruct results in classification accuracies of 0.88 and 0.85, respectively. The consistent performance across models further demonstrates that the framework is largely model-agnostic. Table III presents the ablation study on the trajectory generation component within the cross-modal label gener-ation stage. Using a single expert model leads to relatively large 3D errors (e.g., 0.76 m for Grounding DINO and 0.65 m for Grounded SAM), indicating that individual detectors are insufficient for stable trajectory recovery under zero-shot Fig. 5: Scaling behavior of zero-shot transfer performance. transfer. Combining multiple experts significantly improves performance. The error decreases to 0.54 m when two com-plementary experts are fused, demonstrating the effectiveness of cross-expert agreement. With three experts, the error is re-duced to 0.30 m, representing a substantial improvement over individual models. Incorporating additional experts ( K = 4 
+
+or K = 5 ) yields only marginal gains, suggesting diminishing returns as more models are added. Therefore, we adopt 
+
+K = 3 as the default configuration, which achieves near-optimal performance while maintaining model simplicity. TABLE III: Ablation Study on Trajectory Generation in Cross-modal Label Generation Process. We utilize the open-vocabulary model Grounding Dino [13], Grounded SAM [14], and benchmark solutions from [15] and DUT-AntiUAV [10], and a lightweight UAV detector [17]. The evaluation is on the zero-shot transfer on the MMAUD dataset.                                         
+
+> [13] [14] [15] [10] [17] Error(m)
+> ✓----0.76 -✓---0.65 -✓✓--0.54 -✓-✓-0.59 -✓✓-✓0.30
+> -✓✓✓✓0.29
+> ✓✓✓✓✓0.29
+
+Fig. 6: Heatmap for Parameter Sensitivity analysis of Physics-informed refinement process 
+
+E. Data Scaling behavior 
+
+Our framework exhibits a clear data scaling behavior in zero-shot transfer. As the amount of web-scale video data increases, we recalibrate several hyperparameters in the filtering and refinement stages (e.g., majority-voting thresh-old ρ, IoU threshold τ ′, B-spline knot spacings η) based on the accumulated data statistics, the hyperparameters are calibrated solely on the web-scale data. As shown in Fig. 5, increasing the training corpus to 200,000 seconds reduces the 3D trajectory error to 0.30 m and improves classification accuracy to 96%, with zero-shot evaluation on MMAUD, highlighting the scalability and practical potential of the proposed approach. 
+
+F. Parameter Sensitivity Analysis 
+
+Parameter sensitivity is critical for achieving stable and robust performance. To examine the influence of noise param-eterization in the EKF-based physics-informed refinement module, we introduce two scaling factors to regulate the contribution of depth-related uncertainties. Specifically, the process noise and measurement noise are parameterized as follows: 
+
+Q(γQ,z ) = diag 
+
+
+
+0.01 2, 0.01 2, γ 2 
+
+> Q,z
+
+· 0.05 2,
+
+0.10 2, 0.10 2, γ 2 
+
+> Q,z
+
+· 0.50 2
+
+,
+
+(5) 
+
+R(γR,h ) = diag 
+
+
+
+0.52, 0.52, γ 2 
+
+> R,h
+
+· 5.02
+
+. (6) Here, γQ,z scales the process noise of the depth states 
+
+(Z, V z ), while γR,h scales the measurement noise associated with the bounding-box height h.Fig. 6 illustrates the sensitivity of the scaling factors γQ,z 
+
+(horizontal axis) and γR,h (vertical axis) via a heatmap, where red regions indicate lower depth errors and blue regions indicate larger errors. The best performance occurs when both parameters are set to 1. Moreover, depth estima-tion remains stable within the range [0 .8, 1.5] , demonstrating the robustness of the EKF-based refinement and highlighting the importance of balancing process and measurement noise in the depth dimension. V. C ONCLUSION 
+
+This work introduced a scalable framework for deriving 3D UAV trajectories and type labels from Internet-scale videos without manual annotation. The framework integrated three key components: language-driven acquisition with task-aware filtering, training-free cross-modal label generation combining vision–language reasoning and geometric cues, and physics-informed sequential refinement to ensure tem-poral consistency and kinematic plausibility. Our results demonstrated favorable data-scaling behavior, showing that freely available web videos can be transformed into reliable image–trajectory pairs for anti-UAV applications. Evaluated via zero-shot transfer on the 3D MMAUD benchmark, the proposed approach achieves competitive performance, closely approaching the current state-of-the-art, highlighting its robustness and practical applicability. ACKNOWLEDGMENTS 
+
+The authors acknowledge the use of large language models (e.g., ChatGPT by OpenAI) for assisting in prototype code generation, partial methodology modules, and improving the clarity of the manuscript. All technical contributions and interpretations remain the responsibility of the authors. REFERENCES [1] A. Lei, T. Deng, H. Wang, J. Yang, and S. Yuan, “Audio Array-Based 3D UAV Trajectory Estimation with LiDAR Pseudo-Labeling,” in Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP) . IEEE, 2025. [2] Y. Yang, S. Yuan, J. Yang, T. H. Nguyen, M. Cao, T.-M. Nguyen, H. Wang, and L. Xie, “AV-FDTI: Audio-visual fusion for drone threat identification,” Journal of Automation and Intelligence , vol. 3, no. 3, pp. 144–151, 2024. [3] Z. Xiao, Y. Yang, G. Xu, X. Zeng, and S. Yuan, “Av-dtec: Self-supervised audio-visual fusion for drone trajectory estimation and classification,” 2024. [Online]. Available: https: //arxiv.org/abs/2412.16928 [4] H. Lei and J. Su, “Robust uav trajectory prediction under diverse disturbances via teacher-student framework,” Expert Systems with Applications , vol. 308, p. 131185, 2026. [Online]. Available: https://www.sciencedirect.com/science/article/pii/S0957417426000990 [5] N. Jiang, K. Wang, X. Peng, X. Yu, Q. Wang, J. Xing, G. Li, G. Guo, Q. Ye, J. Jiao, J. Zhao, and Z. Han, “Anti-uav: A large-scale benchmark for vision-based uav tracking,” IEEE Transactions on Multimedia ,vol. 25, pp. 486–500, 2023. [6] J. Zhao, J. Li, L. Jin, J. Chu, Z. Zhang, J. Wang, J. Xia, K. Wang, Y. Liu, S. Gulshad, J. Zhao, T. Xu, X. Zhu, S. Liu, Z. Zhu, G. Zhu, Z. Li, Z. Wang, B. Sun, Y. Guo, S. ichi Satoh, J. Xing, and J. S. Shengmei, “The 3rd anti-uav workshop and challenge: Methods and results,” pp. 486–500, 2023. [7] Y. Wang, Z. Chu, I. Ku, E. C. Smith, and E. T. Matson, “A large-scale uav audio dataset and audio-based uav classification using cnn,” in 2022 Sixth IEEE International Conference on Robotic Computing (IRC) , 2022, pp. 186–189. [8] S. Yuan, Y. Yang, T. H. Nguyen, T.-M. Nguyen, J. Yang, F. Liu, J. Li, H. Wang, and L. Xie, “Mmaud: A comprehensive multi-modal anti-uav dataset for modern miniature drone threats,” in 2024 IEEE International Conference on Robotics and Automation (ICRA) , 2024, pp. 2745–2751. [9] J. Zhao, G. Wang, J. Li, L. Jin, N. Fan, M. Wang, X. Wang, T. Yong, Y. Deng, Y. Guo et al. , “The 2nd anti-uav workshop & challenge: Methods and results,” arXiv preprint arXiv:2108.09909 , 2021. [10] J. Zhao, J. Zhang, D. Li, and D. Wang, “Vision-based anti-uav de-tection and tracking,” IEEE Transactions on Intelligent Transportation Systems , vol. 23, no. 12, pp. 25 323–25 334, 2022. [11] Y. Zheng, C. Zheng, X. Zhang, F. Chen, Z. Chen, and S. Zhao, “Detection, localization, and tracking of multiple mavs with panoramic stereo camera networks,” IEEE Transactions on Automation Science and Engineering , vol. 20, no. 2, pp. 1226–1243, 2023. [12] A. Munir, A. J. Siddiqui, M. S. Hossain, and A. El-Maleh, “Yolo-raw: Advancing uav detection with robustness to adverse weather conditions,” IEEE Transactions on Intelligent Transportation Systems ,vol. 26, no. 6, pp. 7857–7873, 2025. [13] S. Liu, Z. Zeng, T. Ren, F. Li, H. Zhang, J. Yang, Q. Jiang, C. Li, J. Yang, H. Su, J. Zhu, and L. Zhang, “Grounding dino: Marrying dino with nbsp,” in Computer Vision – ECCV 2024: 18th European Conference, Milan, Italy, September 29–October 4, 2024, Proceedings, Part XLVII .[14] T. Ren, S. Liu, A. Zeng, J. Lin, K. Li, H. Cao, J. Chen, X. Huang, Y. Chen, F. Yan, Z. Zeng, H. Zhang, F. Li, J. Yang, H. Li, Q. Jiang, and L. Zhang, “Grounded sam: Assembling open-world models for diverse visual tasks,” 2024. [15] N. Jiang, K. Wang, X. Peng, X. Yu, Q. Wang, J. Xing, G. Li, G. Guo, Q. Ye, J. Jiao, J. Zhao, and Z. Han, “Anti-uav: A large-scale benchmark for vision-based uav tracking,” IEEE Transactions on Multimedia ,vol. 25, pp. 486–500, 2023. [16] O. Bogdan, V. Eckstein, F. Rameau, and J.-C. Bazin, “Deepcalib: a deep learning approach for automatic intrinsic calibration of wide field-of-view cameras,” in Proceedings of the 15th ACM SIGGRAPH European Conference on Visual Media Production , 2018. [17] Doguilmak, “Drone detection yolov8x,” https://github.com/doguilmak/ Drone-Detection-YOLOv8x, 2023. [18] A. Radford, J. W. Kim, C. Hallacy, A. Ramesh, G. Goh, S. Agarwal, G. Sastry, A. Askell, P. Mishkin, J. Clark, G. Krueger, and I. Sutskever, in Proceedings of the 38th International Conference on Machine Learning, ICML 2021, 18-24 July 2021, Virtual Event , M. Meila and T. Zhang, Eds., vol. 139, 2021, pp. 8748–8763. [19] Z. Xiao, H. Hu, G. Xu, and J. He, “Tame: Temporal audio-based mamba for enhanced drone trajectory estimation and classification,” in ICASSP 2025 - 2025 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) , 2025, pp. 1–5. [20] Y. Yang, S. Yuan, M. Cao, J. Yang, and L. Xie, “AV-PedAware: Self-Supervised Audio-Visual Fusion for Dynamic Pedestrian Awareness,” in 2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2023, pp. 1871–1877. [21] A. Wang, H. Chen, L. Liu, K. CHEN, Z. Lin, J. Han, and G. Ding, “YOLOv10: Real-time end-to-end object detection,” in The Thirty-eighth Annual Conference on Neural Information Processing Systems , 2024. [Online]. Available: https://openreview.net/forum?id= tz83Nyb71l [22] Y. Tian, Q. Ye, and D. Doermann, “YOLOv12: Attention-centric real-time object detectors,” in The Thirty-ninth Annual Conference on Neural Information Processing Systems , 2025. [Online]. Available: https://openreview.net/forum?id=gCvByDI4FN [23] R. Sapkota, R. H. Cheppally, A. Sharda, and M. Karkee, “Yolo26: Key architectural enhancements and performance benchmarking for real-time object detection,” 2026. [Online]. Available: https: //arxiv.org/abs/2509.25164

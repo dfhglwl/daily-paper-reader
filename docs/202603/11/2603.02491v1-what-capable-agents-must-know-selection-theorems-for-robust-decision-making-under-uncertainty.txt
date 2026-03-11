@@ -1,0 +1,1534 @@
+Title: What Capable Agents Must Know: Selection Theorems for Robust Decision-Making under Uncertainty
+
+URL Source: https://arxiv.org/pdf/2603.02491v1
+
+Published Time: Wed, 04 Mar 2026 01:20:02 GMT
+
+Number of Pages: 18
+
+Markdown Content:
+# What Capable Agents Must Know: Selection Theorems for Robust Decision-Making under Uncertainty 
+
+Aran Nayebi 11Machine Learning Department and Neuroscience & Robotics Institutes, Carnegie Mellon University, Pittsburgh, Pennsylvania, USA 
+
+## Abstract 
+
+As artificial agents become increasingly capable, what internal structure is necessary for an agent to act competently under uncertainty? Classical results show that optimal control can be imple-mented using belief states or world models, but not that such representations are required. We prove quantitative “selection theorems” showing that low average-case regret on structured families of action-conditioned prediction tasks forces an agent to implement a predictive, structured internal state. Our results cover stochastic policies, partial observability, and evaluation under task distribu-tions, without assuming optimality, determinism, or access to an explicit model. Technically, we re-duce predictive modeling to binary “betting” deci-sions and show that regret bounds limit probability mass on suboptimal bets, enforcing the predictive distinctions needed to separate high-margin out-comes. In fully observed settings, this yields ap-proximate recovery of the interventional transition kernel; under partial observability, it implies ne-cessity of belief-like memory and predictive state, addressing an open question in prior world-model recovery work. 
+
+## 1 INTRODUCTION 
+
+What internal structure is necessary for an agent to robustly act competently under uncertainty? Classical results in control and reinforcement learning show that optimal behavior can be implemented using belief states or world models [Sondik, 1971, Kaelbling et al., 1998]. These results are constructive: they show that an optimal controller can be expressed as a function of a sufficient statistic. They do not establish that predictive internal state is required . An architecture might be capable of belief-based control without being forced to implement predictive struc-ture by the demands of its task distribution. Our aim is to close this gap, in the sense of “selection-style” arguments articulated by Wentworth [2021]. Across decision theory, control, and learning theory, broad performance requirements often imply structural constraints. Representation theorems show that agents satisfying ra-tionality axioms behave as if maximizing expected utility [Von Neumann and Morgenstern, 1947, Savage, 1954]. The Good Regulator Theorem asserts that regulation requires modeling the system [Conant and Ross Ashby, 1970], a re-quirement formalized in linear control by the Internal Model Principle [Francis and Wonham, 1976]. No-regret guaran-tees constrain the information needed to avoid systematic loss [Blackwell, 1956, Foster and Vohra, 1997]. However, these approaches either rely on strong axioms, target special-ized and exactly optimal regulation settings, or stop short of representation-level necessity conclusions. 
+
+Our contribution. We prove quantitative selection theorems showing that low average-case regret on structured families of action-conditioned prediction tasks forces an agent to implement predictive, structured internal state. Our technical approach reduces predictive modeling to bi-nary “betting” goals. A regret decomposition shows that average normalized regret bounds directly control the proba-bility mass assigned to suboptimal bets. When the evaluation distribution places nontrivial mass on large-margin tests, this forces the agent’s internal memory to refine the predictive partition induced by those tests (Theorems 1–3). In fully observed environments, this yields approximate recovery of the interventional transition kernel (Corollary 1); in partially observed environments, it yields quantitative no-aliasing bounds for belief-like memory, addressing an open question posed by Richens et al. [2025]. We also show that Pearl [2009] Level 2 interventions are recoverable, but Level 3 counterfactuals are not (Corollary 2). Our results differ from recent world-model recovery work [Richens and Everitt, 2024, Richens et al., 2025] in 
+
+> arXiv:2603.02491v1 [cs.LG] 3 Mar 2026
+
+three key respects: (i) we assume only average-case regret rather than worst-case optimality; (ii) our results hold under stochastic policies, which have both had a long history in reinforcement learning [Witten, 1977, Williams, 1992, Sut-ton et al., 1998] and are commonly used in modern deep learning algorithms, such as the Dreamer family [Hafner et al., 2019, 2020, 2023, 2025], PPO [Schulman et al., 2017], along with many others (e.g. [Hansen et al., 2023, Wang et al., 2024] to name a few); and (iii) we derive necessity results under partial observability rather than focusing solely on explicit recovery in fully observed settings, directly ad-dressing an open question raised by Richens et al. [2025]. 
+
+Structure from task families. Beyond predictive model-ing and memory, we also show that structured evaluation distributions impose further constraints. Block-structured tests select for informational modularity (Corollary 3); mix-tures of regimes select for regime-sensitive internal state (Corollary 4); and under minimality assumptions, any two vanishing-regret agents must agree on decision-relevant par-titions up to invertible recoding (Corollary 5). Taken together, these results formalize a simple principle: Robust generalization under uncertainty selects for predictive internal structure. They separate representation necessity from representation 
+
+recovery and provide a regret-based route from empirically meaningful competence guarantees to concrete constraints on internal organization. 
+
+## 2 RELATED WORK 
+
+Our results are framed in the standard POMDP setting, where posterior belief is a sufficient statistic for optimal con-trol [Sondik, 1971, Kaelbling et al., 1998]. However, these classical results are constructive: they show that optimal behavior can be expressed in terms of belief, not that predic-tive state is required . Our notion of tests follows predictive-state representations (PSRs) [Littman et al., 2001, Singh et al., 2004, Boots et al., 2011], which represent state via predictions of action-conditioned futures rather than latent variables. Unlike the PSR literature, which treats predic-tive state as sufficient for control, we derive it as necessary :low average-case regret on action-conditioned prediction tasks forces an agent to compute the predictive distinctions needed to separate high-margin outcomes. Technically, our core inequality instantiates a standard margin-style regret decomposition [Bartlett et al., 2006], but uses it to derive representation-theoretic constraints rather than supervised generalization guarantees. The betting-goal reduction is re-lated to elicitation and proper scoring rules [Savage, 1971, Gneiting and Raftery, 2007], though we do not assume truth-ful probability reporting, and our argument applies directly to stochastic policies. Our work is complementary to Richens and Everitt [2024], Richens et al. [2025], who show that under strong com-petence assumptions in fully observed environments one can recover a transition model from an agent’s policy. We instead study stochastic policies, partial observability, and 
+
+average-case regret over a distribution of prediction tasks, and derive necessity results rather than recovery proce-dures. In particular, we extend our selection argument to par-tially observed environments, giving quantitative no-aliasing bounds for belief-like memory—addressing an open ques-tion raised by Richens et al. [2025]. Instead of requiring explicit recovery of a full generative model under partial observability, we establish general selection theorems that avoid worst-case assumptions and characterize the necessity of predictive modeling and memory independently of any specific recovery algorithm. 
+
+## 3 NOTATION AND CONSTANTS 
+
+Consider a one-step decision between two actions L and R
+
+with success probabilities uL, u R ∈ [0 , 1] . Let a (possibly stochastic) policy choose L with probability q ∈ [0 , 1] and R
+
+with probability 1−q. Then the achieved success probability is 
+
+V = Pr( success | L) Pr( L) + Pr( success | R) Pr( R)= q u L + (1 − q) uR.
+
+(1) Let the optimal success probability be denoted as V ⋆ := max q∈[0 ,1] V .Define the normalized regret as 
+
+δ := 1 − VV ⋆ , (2) assuming V ⋆ > 0 (this is without loss of generality, as a 
+
+V ⋆ = 0 will imply that the goal is trivially unsatisfiable). For any γ ∈ (0 , 12 ], define the following constants, which will be used throughout: 
+
+c(γ) := 4γ
+
+1 + 2 γ , tγ := 
+
+r 1 + 2 γ
+
+1 − 2γ ≥ 1. (3) 
+
+## 4 WORLD MODEL RECOVERY IN FULLY OBSERVED ENVIRONMENTS 
+
+Let E = ( S, A, P, μ 0) be an environment with finite state space S and action space A, with |A| ≥ 2, where P (s′ |
+
+s, a ) denotes the one-step transition probabilities and μ0
+
+the initial-state distribution. We assume the environment is fully observed (the agent observes s, s ′ exactly), stationary (transition probabilities do not drift over time), and that actions influence transitions (i.e., there exist s, a, a ′, s ′ such that P (s′ | s, a )̸ = P (s′ | s, a ′)). Additionally, we assume the environment is communicating, meaning that for any 
+
+s, s ′ ∈ S there exists a finite action sequence that reaches s′
+
+from s with positive probability, ensuring the agent can in principle carry out the diagnostic goals from any start state, thereby ruling out environments with permanently isolated regions (rather than realistic control problems). We now can define the goal family we define our bets over the agent’s successful completion of it: 
+
+Definition 1 (Composite goal family G(n)
+
+> s,a,s ′,k
+
+). Fix s, s ′ ∈S, an action to be tested a ∈ A , an integer n ≥ 1, and a threshold k ∈ { 0, 1, . . . , n }. Pick any two initial marker 
+
+actions L, R ∈ A (used only to select a branch at t = 0 ). For an infinite trajectory τ = ( S0, A 0, S 1, A 1, . . . ) define the attempt times 
+
+T1(τ ) := inf {t ≥ 1 : St = s, A t = a},Ti+1 (τ ) := inf {t > T i(τ ) : St = s, A t = a},
+
+with the convention inf ∅ = ∞. Thus, Ti is the i-th occur-rence of (St = s, A t = a) along τ , if it occurs; otherwise, 
+
+Ti = ∞.Define success indicators 
+
+Xi(τ ) := 1{Ti(τ ) < ∞ ∧ STi(τ )+1 = s′},Nn(τ ) := 
+
+> n
+
+X
+
+> i=1
+
+Xi(τ ).
+
+Thus, Xi is the indicator that the ith execution of (s, a ) tran-sitions to s′, and Nn is the total number of such successful transitions to s′ across the first n attempts. (We omit the de-pendence on s, a, s ′, k just to keep the notation from being overloaded.) The composite goal G(n) 
+
+> s,a,s ′,k
+
+is the event: 
+
+
+
+A0 = L ∧ Ti(τ ) < ∞ ∀ i ≤ n ∧ Nn(τ ) ≤ k
+
+_  
+
+A0 = R ∧ Ti(τ ) < ∞ ∀ i ≤ n ∧ Nn(τ ) > k 
+
+
+
+.
+
+(4) For convenience, we will write G(n) 
+
+> s,a,s ′,k
+
+= G(n, 1)  
+
+> s,a,s ′,k
+
+∨
+
+G(n, 2) 
+
+> s,a,s ′,k
+
+, where G(n, 1)  
+
+> s,a,s ′,k
+
+and G(n, 2)  
+
+> s,a,s ′,k
+
+are the first and sec-ond disjuncts, respectively. 
+
+Interpretation: The goal G(n) 
+
+> s,a,s ′,k
+
+forces a one-shot binary commitment at time t = 0 : choosing A0 = L commits to the branch “at most k successes”, while choosing A0 =
+
+R commits to the branch “more than k successes”. After this commitment, the agent must generate n attempts to execute (St = s, A t = a); the ith such attempt occurs at time Ti. Each attempt counts as a success if it transitions to s′ on the next step, i.e. STi+1 = s′, and Nn counts the number of successes in n attempts. Thus G(n) 
+
+> s,a,s ′,k
+
+is an either-or test about whether the transition (s, a ) → s′
+
+happens “rarely” ( ≤ k times) or “often” ( > k times) across 
+
+n attempts. Equivalently, at t = 0 the agent chooses between two incompatible branches: (i) “≤ k successes in n attempts of (s, a ) → s′” (signaled by A0 = L) or (ii) “> k successes in n attempts” (signaled by A0 = R). Next, we deal with the fact that under a stochastic policy, taking either action L or R is actually a mixture of the two. 
+
+Lemma 1 (Binary-decision regret controls wrong-action mass) . Define the wrong-action mass 
+
+w := 
+
+(
+
+1 − q, if uL ≥ uR (L is optimal ),q, if uR > u L (R is optimal ).
+
+Then the normalized regret δ is equivalent to: 
+
+δ = w · |uL − uR|
+
+max {uL, u R} . (5) 
+
+In the special betting case where uL and uR are com-plementary, namely uR := 1 − uL, defining the margin 
+
+m := |uL − 12 |, we obtain 
+
+δ = w · 4m
+
+1 + 2 m . (6) 
+
+Consequently, on the event m ≥ γ ∈ (0 , 12 ],
+
+w ≤ δc(γ) . (7) 
+
+Theorem 1 (Fully observed: stochastic policies + aver-age regret ⇒ approximate transition model) . For each 
+
+(s, a, s ′) ∈ S × A × S and each k ∈ { 0, 1, . . . , n }, let 
+
+G(n) 
+
+> s,a,s ′,k
+
+denote the composite goal family from Definition 1, which induces a binary choice between two mutually ex-clusive branches G(n, 1)  
+
+> s,a,s ′,k
+
+and G(n, 2)  
+
+> s,a,s ′,k
+
+corresponding to the events {X ≤ k} and {X > k } respectively, where 
+
+X ∼ Bin( n, p ) counts the number of transitions (s, a ) → s′
+
+within n trials, with p := Pss ′ (a).Let π be a (possibly stochastic) goal-conditioned policy. For each (s, a, s ′, k ), define 
+
+qs,a,s ′,k := π
+
+
+
+choose disjunct G(n, 1)  
+
+> s,a,s ′,k
+
+| s0, G (n)
+
+> s,a,s ′,k
+
+
+
+∈ [0 , 1] .
+
+Thus, let the goal satisfaction probabilities by the given policy and optimal policy be given by 
+
+V π (s0; G(n)
+
+> s,a,s ′,k
+
+) := Pr  
+
+> π
+
+(G(n) 
+
+> s,a,s ′,k
+
+| s0),V ⋆(s0; G(n)
+
+> s,a,s ′,k
+
+) := max  
+
+> π′
+
+V π′
+
+(s0; G(n)
+
+> s,a,s ′,k
+
+),
+
+and define the normalized regret, as in (2) , by 
+
+δs,a,s ′,k (π; s0) := 1 − V π (s0; G(n)
+
+> s,a,s ′,k
+
+)
+
+V ⋆(s0; G(n)
+
+> s,a,s ′,k
+
+) ∈ [0 , 1] .Assume an average regret bound: 
+
+E(s,a,s ′,k )∼Unif( S×A×S×{ 0,...,n })
+
+δs,a,s ′,k (π; s0) ≤ ¯δ. 
+
+(8) 
+
+Define the following (soft) estimator of the transition proba-bilities from π:
+
+bPss ′ (a) := 1
+
+n
+
+ nX
+
+> k=0
+
+(1 − qs,a,s ′,k ) − 12
+
+
+
+. (9) 
+
+Then for any fixed margin threshold γ ∈ (0 , 12 ], the mean absolute transition error obeys 
+
+E(s,a,s ′)
+
+h bPss ′ (a) − Pss ′ (a)
+
+i
+
+≤ 2tγ E(s,a,s ′)
+
+hq Pss ′ (a)(1 −Pss ′ (a)) 
+
+> n
+
+i
+
++ ¯δc(γ) + O
+
+ 1
+
+n
+
+
+
+.
+
+(10) 
+
+In particular, since pp(1 − p) ≤ 12 , one always has the cruder bound 
+
+E(s,a,s ′)
+
+| bPss ′ (a) − Pss ′ (a)| ≤ tγ
+
+√n + ¯δc(γ) + O
+
+ 1
+
+n
+
+
+
+.
+
+Remark 1 (Independence from goal family size) . Richens et al. [2025] state a more restricted version of Theorem 1 under a (worst-case) competence assumption over all goals, but note that their proof only needs an explicit diagnostic subset of O(n|A||S| 2) simple composite goals. By contrast, our Theorem 1 does not depend on the goal family size because it relaxes the worst-case regret assumption by the average normalized regret assumption (8) on that diagnostic family. Notably, the error bound (10) of Theorem 1 tightens as the goal depth n increases, reflecting the fact that longer-horizon goal competence forces the agent to estimate transi-tion dynamics with increasing precision. In contrast, when 
+
+n = 1 (purely myopic goals), accurate world modeling is not required—explicating the classic pitfall behind the Good Regulator Theorem [Conant and Ross Ashby, 1970] that trivial or constant policies can suffice for immediate control, but fail once multi-step coordination is demanded. A natural question to ask next is under what conditions can we recover a causal world model, and of what type is the represented causality? 
+
+Corollary 1 (Causal content: approximately recovered inter-ventional kernel) . Assume the setting and hypotheses of The-orem 1. Assume additionally that the controlled Markov pro-cess admits an εcMP -approximate causal Markov-process (cMP) interpretation in which choosing At = a corresponds to the intervention do( At = a) and, for all s, a, s ′,
+
+Pss ′ (a) − P do  
+
+> ss ′
+
+(a) ≤ εcMP ,P do  
+
+> ss ′
+
+(a) := P (St+1 = s′ | St = s, do( At = a)) . (11) 
+
+Then the estimator bP defined from π via (9) satisfies the same average error bound as in Theorem 1, up to the mis-match εcMP : for any fixed γ ∈ (0 , 12 ],
+
+E(s,a,s ′)
+
+ | bPss ′ (a) − P do  
+
+> ss ′
+
+(a)| 
+
+≤ 2tγ E(s,a,s ′)
+
+hq Pss ′ (a)(1 −Pss ′ (a)) 
+
+> n
+
+i
+
++ ¯δc(γ)+ εcMP + O
+
+ 1
+
+n
+
+
+
+.
+
+(12) 
+
+In particular, low average regret on the diagnostic goal family forces π to implicitly approximate Level 2 interven-tional queries, in the sense of Pearl [2009], of the form 
+
+P (St+1 = s′ | St = s, do( At = a)) up to εcMP .Proof. By the εcMP -approximate causal Markov-process assumption (11) , for each (s, a, s ′) we have |Pss ′ (a) −
+
+P do  
+
+> ss ′
+
+(a)| ≤ εcMP . Thus, by the triangle inequality, 
+
+| bPss ′ (a) − P do  
+
+> ss ′
+
+(a)| ≤ | bPss ′ (a) − Pss ′ (a)| + |Pss ′ (a) − P do  
+
+> ss ′
+
+(a)|≤ | bPss ′ (a) − Pss ′ (a)| + εcMP .
+
+Taking expectations over (s, a, s ′) ∼ Unif( S × A × S ), the bound follows immediately from Theorem 1 by substitution. Note that Corollary 1 does not, in general, identify causal relations between concurrent components of the state vector (e.g. between Xt and Yt when St = ( Xt, Y t)), since such relations can be non-identifiable from the transition function alone. It is worth noting that unless the transition function P
+
+is a point-mass, namely St+1 = f (St, A t), whereby learn-ing the interventional kernel is exactly equivalent to learning the transition function f , then Pearl [2009] Level 2 of in-terventions, rather than counterfactuals, is the maximum level of recovery we can guarantee. This is the same level that Richens and Everitt [2024, Theorems 1-3] reach, but they do it under a much stronger maximum (rather than average) regret assumption under deterministic (rather than stochastic) policies. In fact, we can show that despite generalizing to stochastic policies under average regret, why Pearl [2009] Level 3 (counterfactuals) is out of reach without additional assump-tions: 
+
+Corollary 2 (No generic Level 3 recovery from the interven-tional kernel) . Even if bP recovers the interventional kernel 
+
+P do  
+
+> ss ′
+
+(a) exactly (in particular, even if π is optimal on all the diagnostic goals), the resulting information does not, in gen-eral, identify Level 3 counterfactual queries involving Sat+1 
+
+and Sa′ 
+
+> t+1
+
+simultaneously, where Sat+1 denotes the potential next state under do( At = a).Proof. Two structural causal models can share the same interventional kernel P (St+1 | St = s, do( At = a)) for all 
+
+(s, a ) while differing in counterfactual couplings. Fix a single state s, binary actions {0, 1}, and binary next state. Let U ∼ Bernoulli(1 /2) . Model (I): St+1 = U .Model (II): St+1 = At ⊕ U .Both satisfy P (St+1 = 1 | St = s, do( At = a)) = 1 /2 for 
+
+a ∈ { 0, 1}, so their interventional kernels coincide. How-ever, conditioning on At = 0 and St+1 = 1 (hence U = 1 ), the counterfactual under At = 1 gives S1 
+
+> t+1
+
+= 1 in Model (I) but S1 
+
+> t+1
+
+= 0 in Model (II). Thus Level 3 counterfactuals are not identified by the interventional kernel. Therefore, recovering Pearl [2009] Level 3 counterfactuals requires an explicit structural causal model specifying the exogenous noise and its cross-action coupling, not merely the interventional transition kernel P do (s′ | s, a ).
+
+## 5 SELECTION THEOREMS UNDER PARTIAL OBSERVABILITY 
+
+Our betting reduction (Lemma 1) also enables selection theorems under partial observability, addressing an open question of Richens et al. [2025]. The reason this is open, is because under partial observability, we cannot guarantee that the agent’s action choices isolate a single underlying transi-tion probability in the way they do in the fully observed case. When the agent observes only an observation ot rather than the true state st, the success probabilities of the diagnostic branches become mixtures over latent states consistent with 
+
+ot, and different latent dynamics can induce identical ob-servable behavior on all composite goals of bounded depth. Consequently, low regret does not imply recovery of the un-derlying transition kernel without additional structure. This breaks the direct reduction used in Theorem 1 and requires more careful selection of diagnostic goals defined at the level of predictive beliefs rather than physical states. We achieve this by combining our betting reduction from §4 with predictive-state representations (PSRs). 
+
+5.1 SETUP AND NOTATION (PARTIAL OBSERVABILITY) POMDP. A finite partially observed Markov decision pro-cess (POMDP) is a tuple 
+
+E = ( X , A, O, T, Z, μ 0),
+
+where X is a finite latent state space, A is a finite action space with |A| ≥ 2, O is a finite observation space, T (x′ |
+
+x, a ) is the transition kernel, Z(o | x) is the observation kernel, and μ0 ∈ ∆( X ) is the initial latent-state distribution. A history at time t is 
+
+ht := ( o0, a 0, o 1, . . . , a t−1, o t).
+
+For any history ht and any prescribed future action sequence 
+
+At:t+k−1 = α ∈ A k, the POMDP induces a well-defined conditional distribution over future observations Ot+1: t+k.For convenience, we will drop the subscript t and refer to histories as h := ht.
+
+Agent interface (report bit). As in the fully observed case, we reduce prediction to a one-shot binary decision. We allow the agent to emit a report bit Bt ∈ { L, R } that does not affect environment dynamics. Formally, the agent outputs 
+
+(Bt, A t) ∈ { L, R } × A , while the environment transition ignores Bt. This device is without loss of generality for necessity results: any agent can internally commit to one of two incompatible plans before acting, without changing the induced environment process. All prediction is expressed through the report bit; the environment-action channel is used only to execute prescribed action sequences. 
+
+Tests (predictive-state style). A test is a pair 
+
+T = ( α, W ),
+
+where α ∈ A k is a finite action sequence and W ⊆ O k
+
+is an event over the resulting observation sequence. For a history h, define the test success probability 
+
+pT (h) := Pr  Ot+1: t+k ∈ W h, A t:t+k−1 = α,
+
+and the associated margin 
+
+mT (h) := pT (h) − 12 .
+
+Behavioral distinguishability. Two histories h, h ′ are be-haviorally distinguishable if there exists a test T with 
+
+pT (h)̸ = pT (h′). They are γ-distinguishable if |pT (h) −
+
+pT (h′)| ≥ γ for some test T . A POMDP is non-trivially partially observable if there exist histories with the same last observation that are behaviorally distinguishable. 
+
+Betting goals induced by tests. Each test T = ( α, W ) in-duces a one-shot betting goal gT : at history h, the agent outputs a report bit Bt; the environment then executes 
+
+At:t+k−1 = α; the episode succeeds iff Bt = L and 
+
+Ot+1: t+k ∈ W , or Bt = R and Ot+1: t+k /∈ W . Thus, 
+
+gT is a binary bet on whether W occurs under α.
+
+Policies, value, and regret. A (possibly stochastic) goal-conditioned policy specifies π(b | h, g T ) for b ∈ { L, R }.Let qT (h) := π(L | h, g T ). The success probability under 
+
+π is 
+
+V π (h; gT ) = qT (h) pT (h)+(1 −qT (h))(1 −pT (h)) , (13) while the optimal success probability is 
+
+V ⋆(h; gT ) = max {pT (h), 1 − pT (h)} = 12 + mT (h).
+
+(14) Define the normalized regret 
+
+δT (π; h) := 1 − V π (h; gT )
+
+V ⋆(h; gT ) ∈ [0 , 1] .Evaluation distribution. Let H be a distribution over his-tories and let D be a distribution over tests. We assume a global average regret bound 
+
+Eh∼H ET ∼D
+
+δT (π; h) ≤ ¯δ. (15) 
+
+Wrong-action mass and margins. For a test T and history 
+
+h, define the probability mass assigned to the suboptimal bet 
+
+wT (h) := 
+
+(
+
+1 − qT (h), pT (h) ≥ 12 ,qT (h), pT (h) < 12 .
+
+For γ ∈ (0 , 12 ], let 
+
+Eγ := {(h, T ) : mT (h) ≥ γ}
+
+qγ := Pr  
+
+> h∼H , T ∼D
+
+ (h, T ) ∈ Eγ
+
+.
+
+Non-degenerate evaluation. Our selection results are in-formative only if the evaluation distribution places nontriv-ial mass on informative tests. We assume that for some 
+
+γ ∈ (0 , 12 ] there exist constants η, η ′ > 0 such that 
+
+qγ ≥ η, Pr  pT (h) ≥ 12 + γ ≥ η′,
+
+Pr  pT (h) ≤ 12 − γ ≥ η′.
+
+These conditions rule out degenerate evaluations where all bets are near coin flips or where one outcome is almost always correct (to avoid the case where a constant policy that always reports L can have very low regret without representing any nontrivial predictive distinctions, which is a pitfall of the original Good Regulator Theorem [Conant and Ross Ashby, 1970]). 
+
+5.2 WORLD MODELS AND MEMORY (PREDICTIVE-STATE VIEW) Predictive world model. In a POMDP, what matters for decision-making is the ability to predict future observations under candidate action sequences. Accordingly, we use pre-dictive world model to mean any internal mechanism suf-ficient to determine (or approximate) the test probabilities 
+
+{pT (h)}. In the language of predictive-state representations (PSRs), the vector 
+
+ηT (h) :=  pT (h) 
+
+> T∈T
+
+is the predictive state . For sufficiently rich T , ηT (h) is decision-sufficient; in finite POMDPs, the belief state is one 
+
+such representation [Kaelbling et al., 1998]. 
+
+Memory (representation of history). We model the agent’s internal memory abstractly as a representation M = f (h)
+
+through which the policy factors: 
+
+π(· | h, g T ) = π(· | M (h), g T ). (16) We say that M is decision-sufficient for a test family if 
+
+M (h) determines the optimal bet for all tests in that fam-ily, and accordingly that π is M-based , since π depends on h only through M (h) for all betting goals gT . Our se-lection theorems show that achieving low average regret on separating betting goals forces the agent’s memory to refine the predictive-state partition induced by ηT ; repre-sentations that alias histories with distinct predictive states incur unavoidable regret. 
+
+5.3 PREDICTIVE MODELING NECESSITY UNDER PARTIAL OBSERVABILITY Theorem 2 (Predictive modeling necessity) . Fix γ ∈ (0 , 12 ].Assume the global average regret bound (15) . Then 
+
+Eh∼H ET ∼D
+
+h
+
+wT (h) 1{mT (h) ≥ γ}
+
+i
+
+≤ ¯δc(γ) . (17) 
+
+Equivalently, if qγ > 0 then 
+
+E
+
+h
+
+wT (h) mT (h) ≥ γ
+
+i
+
+≤ ¯δqγ c(γ) . (18) In other words, if a policy has small global average regret on betting goals, then on tests that are not near a coin-flip (mT (h) ≥ γ), it must place only small probability mass on the suboptimal bet. Thus, robust goal performance selects for an internal predictive mechanism sufficient to decide many action-conditioned future-observation tests—a mini-mal, decision-relevant notion of a predictive world model. 
+
+5.4 MEMORY NECESSITY A general “no-aliasing” setup. Let M = f (h) be any can-didate memory statistic, as in (16) . Let P be a distribution over paired histories (h, h ′) such that h, h ′ have the same last observation (e.g. draw h ∼ H , then draw h′ ∼ H con-ditioned on last( h′) = last( h)). Define the aliasing event 
+
+for M :
+
+Alias M := {(h, h ′) : M (h) = M (h′)}.
+
+Theorem 3 (Memory necessity) . Fix γ ∈ (0 , 12 ], a pair distribution P over (h, h ′) with equal last observation, and a test distribution D. Assume there exists a measurable set of tests Sγ (h, h ′) such that whenever T ∈ Sγ (h, h ′),
+
+pT (h) ≥ 12 + γ and pT (h′) ≤ 12 − γ. 
+
+Let 
+
+qAlias  
+
+> γ
+
+(M ) := Pr  
+
+> (h,h ′)∼P , T ∼D
+
+
+
+(h, h ′) ∈ Alias M ∧ T ∈ Sγ (h, h ′)
+
+
+
+.
+
+Define the pair-averaged regret: 
+
+¯δP (π) := E(h,h ′)∼P 
+
+12
+
+
+
+ET ∼D[δT (π; h)] + ET ∼D[δT (π; h′)] 
+
+
+
+.Then any M -based policy π satisfies the lower bound 
+
+¯δP (π) ≥ qAlias  
+
+> γ
+
+(M ) · c(γ)2 . (19) 
+
+Consequently, if an agent achieves ¯δP (π) <qAlias  
+
+> γ
+
+(M ) c(γ)/2 for some evaluation P, D , it can-not be M -based: it must avoid aliasing histories that induce opposite large-margin bets. 
+
+In other words, if a policy treats two histories the same while the correct bet differs with high confidence, then it must make errors on at least one of them. Therefore, low re-gret rules out memory states that collapse histories needing different confident predictions. 
+
+## 6 STRUCTURED TASK FAMILIES: MODULARITY, TRADEOFFS, AND REPRESENTATIONAL MATCH 
+
+So far for world modeling and memory necessity, we have not introduced major assumptions to the task families we expect the agent to be competent at. But it turns out that average-case competence under different task families, we get interesting properties that have to do with the necessity of modularity, tracking internal drives, and inner represen-tational match between agents. These can be derived very cleanly as corollaries of our previous Theorems 2 and 3, leveraging the same underlying machinery of average-case betting and PSR. Throughout, we work in the POMDP bet-ting setup of §5, with γ ∈ (0 , 12 ].
+
+Convention (vanishing regret). In what follows, the con-vention ¯δP → 0 means there exists a sequence of admissible policies (πk) under (P, D ) with ¯δP (πk) → 0; equivalently, for every ε > 0 there exists admissible π with ¯δP (π) ≤ ε.
+
+Corollary 3 (Informational modularity from block-struc-tured tests) . Assume supp( D) = FKi=1 Ti and let pi := 
+
+D(Ti) > 0 and Di := D(· | T ∈ T i). For each i, assume the hypotheses of Theorem 3 hold with test distribution Di
+
+(i.e. there exist witness sets Sγ,i (h, h ′) ⊆ T i). Define 
+
+qAlias  
+
+> γ,i
+
+(M ):= Pr  
+
+> (h,h ′)∼P , T ∼Di
+
+
+
+M (h) = M (h′) ∧ T ∈ Sγ,i (h, h ′)
+
+
+
+.
+
+If π is M -based, then 
+
+qAlias  
+
+> γ,i
+
+(M ) ≤ 2 ¯δP (π)
+
+pi c(γ) .
+
+In particular, as ¯δP (π) → 0, aliasing of γ-separable pairs vanishes within every block i.
+
+Thus, having a modular task distribution to be competent at 
+
+necessitates informational modularity in terms of what the agent needs to be able to distinguish. 
+
+Corollary 4 (Tradeoff/regime tracking from shifting mix-tures) . Let the evaluation protocol draw a (latent) regime index I ∼ Λ on {1, . . . , K }, then draw a test T ∼ DI ,where Di is a distribution over tests. Unlike in Corol-lary 3, we are not assuming the supports are disjoint. Let 
+
+D := PKi=1 Λ( i) Di be the marginal test distribution. Let P be a distribution over paired histories (h, h ′) with the same last observation, equipped with a (possibly un-observed) regime label pair (I(h), I (h′)) ∈ { 1, . . . , K }2
+
+such that Pr( I(h)̸ = I(h′)) > 0. Assume there exists a measurable witness set Sγ (h, h ′) such that whenever 
+
+T ∈ Sγ (h, h ′),
+
+pT (h) ≥ 12 + γ and pT (h′) ≤ 12 − γ, 
+
+and moreover assume Sγ (h, h ′) is supported on regime-mismatched pairs (i.e. T ∈ Sγ (h, h ′) implies I(h)̸ =
+
+I(h′)). Then any M -based policy π satisfies 
+
+Pr  
+
+> (h,h ′)∼P , T ∼D
+
+ Eγ (h, h ′, T ) ≤ 2 ¯δP (π)
+
+c(γ) .
+
+where the aliasing event Eγ (h, h ′, T ) := {M (h) =
+
+M (h′) ∧ I(h)̸ = I(h′) ∧ T ∈ Sγ (h, h ′)} is the event that memory treats two different-regime histories as the same on a test that distinguishes them. In particular, as ¯δP (π) → 0, the memory state M cannot be insensitive to regime changes whenever those changes flip a γ-margin optimal bet for the same queried test. 
+
+Thus, if two regimes can occur under the same last observa-tion and they induce opposite γ-margin optimal bets for the 
+
+same queried test on nontrivial mass, then low pair-regret on the same distribution forces M (h) to distinguish the regime whenever it matters. More generally, Corollary 4 im-plies that competence under mixtures of task distributions provides a normative pressure for maintaining persistent, internal variables that track latent evaluative conditions; in embodied settings, such variables can be viewed as anal-ogous to affective or homeostatic modulators studied in affective neuroscience that globally influence policy, atten-tion, and learning across tasks [Ekman, 1992, Barrett, 2017]. Importantly, this is a structural claim about functional or-ganization—global, task-general modulation of behavior under uncertainty—rather than a commitment to any partic-ular theory of emotion or phenomenology. 
+
+Corollary 5 (Representational match under γ-minimality (up to invertible recoding)) . Fix D and γ ∈ (0 , 12 ]. Define the γ-coarsened decision profile on supp( D) by 
+
+ℓγT (h) := 
+
+
+
+L, pT (h) ≥ 12 + γ, R, pT (h) ≤ 12 − γ, 
+
+⊥, otherwise ,ℓγD (h) := ( ℓγT (h)) T ∈supp( D).Let M1 = f1(h) and M2 = f2(h) be two memory rep-resentations with Mj -based policies πj . Assume for each 
+
+j ∈ { 1, 2}:(i) the hypotheses of Theorem 3 hold for the same (P, D )
+
+and γ, and ¯δP (πj ) → 0;(ii) (γ-minimality) Mj (h) = Mj (h′) whenever ℓγD (h) = 
+
+ℓγD (h′);(iii) (γ-completeness) For P almost everywhere on (h, h ′), if 
+
+ℓγD (h)̸ = ℓγD (h′) then D(Sγ (h, h ′)) > 0.Then M1 and M2 are equivalent up to invertible recoding on the support of P: there exist measurable maps φ, ψ such that (almost surely) 
+
+M1 = φ(M2), M2 = ψ(M1).
+
+Therefore, under the same evaluation family, low pair-regret forces any sufficient memory representation to preserve ex-actly the γ-margin decision-relevant distinctions between histories; if two agents are also γ-minimal (no extra splitting beyond those distinctions), then their internal memory states must agree up to a relabeling (invertible recoding) on the evaluation support. 
+
+## 7 DISCUSSION 
+
+This work develops a general method for deriving representation-theoretic conclusions from performance guar-antees, known as “selection theorems” [Wentworth, 2021]. Across fully observed and partially observed settings, we showed that low average-case regret on structured families of action-conditioned prediction tasks selects for predic-tive internal structure. In fully observed environments, this yields quantitative recovery of the interventional kernel un-der stochastic policies and average regret. In partially ob-served environments, it yields no-aliasing results forcing belief-like, decision-sufficient memory. Further corollaries show that structured task families induce additional internal organization: block-structured tests select for informational modularity, shifting mixtures select for regime-tracking state, and minimal low-regret representations converge (up to invertible recoding) to the same decision-relevant parti-tion. To our knowledge, these are the first quantitative selection theorems linking average-case regret over structured task families to necessary predictive-state and memory struc-ture under partial observability. While prior work [Sondik, 1971, Kaelbling et al., 1998] establishes sufficiency of belief representations for optimal control, and related literatures derive structural consequences from rationality axioms or specialized regulation settings, our results show that regret-bounded competence alone—without worst-case optimality or determinism—imposes concrete internal constraints. A unifying perspective is that robust competence under un-certainty compresses the space of admissible internal repre-sentations. When the evaluation distribution places nontriv-ial mass on large-margin predictive distinctions, any policy that aliases those distinctions incurs constant regret. Thus, performance pressure shapes internal structure: predictive state, memory, modular decomposition, and regime-tracking variables are not merely architectural assumptions but con-sequences of task demands. These results resonate with empirical trends in representa-tion learning and NeuroAI. Increasingly general task de-mands correlate with increasingly aligned representations across architectures and modalities, including alignment between artificial and biological systems in visual [Yamins et al., Khaligh-Razavi and Kriegeskorte, 2014, Cadena et al., 2019, Nayebi* et al., 2018, Zhuang et al., 2021, Nayebi* et al., 2023, Nayebi et al., 2022], auditory [Kell* et al., 2018, Feather et al.], motor [Sussillo et al., Michaels et al.], memory [Banino et al., 2018, Nayebi et al., 2021, Sorscher et al., 2023], world-modeling [Bear et al., 2021, Nayebi et al., 2023], and language [Schrimpf et al., 2021] brain areas. In fact, these observations are not restricted to sin-gle brain areas either, recent work [Keller et al., 2025] has found strong correspondences between autonomous agents 
+
+and whole-brain data in animals such as larval zebrafish, which are accessible by modern tools. The Contravariance Principle in NeuroAI [Cao and Yamins, 2024] and the Pla-tonic Representation Hypothesis in AI [Huh et al., 2024], both hypothesize that sufficiently general learning pressures drive convergence toward a shared statistical model of real-ity. Our selection-theoretic results provide a complementary formal lens: when agents must succeed across sufficiently rich uncertainty-sensitive tasks, their internal states must encode the predictive structure that separates those tasks. This offers a principled account of why task-general systems often exhibit convergent, brain-like representational struc-ture: convergence need not be accidental, but can arise from 
+
+shared competence constraints, and are in fact reversibly 
+
+mappable to one another, as we show in Corollary 5. As AI systems become increasingly robust and adaptive, our results suggest that certain organizational regularities should emerge across architectures: global information in-tegration, modular specialization under task factorization, and belief-like predictive state representations under par-tial observability. These regularities closely mirror themes from cognitive architecture and theories of consciousness (e.g. global broadcast and modular processing [Baars, 1997, 2019, Blum and Blum, 2022, 2024]), not as metaphysical commitments, but as structural consequences of decision-theoretic pressures. In other words, rather than viewing robust agency as dis-tinct from such considerations, our results suggest overall that competent decision-making under uncertainty directly 
+
+implies many of these core features shared across cognitive theories. More empirical evidence is needed from the brain sciences as to the necessary and sufficient observables to support such theories [Consortium et al., 2025], so we make no such claims here—it could very well be that how these components of world modeling, memory, and modularity are combined that matters for subjective experience (not merely having them, as we have demonstrated here 1). Therefore, these structural results are relevant to emerging discussions about increasingly agentic AI systems [Long et al., 2024]. If strong task-general performance selects for persistent internal state, regime-tracking variables that resemble modulation mechanisms studied in affective neuro-science [Ekman, 1992, Barrett, 2017], and unified predictive representations, then advancing capability will tend to pro-duce systems with increasingly rich internal organization. Understanding the structural signatures that accompany ro-bust agency may therefore inform ongoing empirical and philosophical analysis of advanced AI systems. In sum, selection theorems provide a bridge between capa-bility and structure. They show how robust generalization under uncertainty constrains internal organization, offering a formal normative framework for understanding the sys-tematic emergence of world models, memory, modularity, and representational convergence in increasingly capable artificial agents. 
+
+Acknowledgements 
+
+We thank Lenore Blum, Manuel Blum, Dylan Hadfield-Menell, and Daniel Yamins for helpful discussions, as well as Leo Kozachkov, Reece Keller, and Noushin Quazi for helpful feedback on a draft of this manuscript. We acknowl-edge the Burroughs Wellcome Fund and Protocol Labs for funding. 
+
+References 
+
+Bernard J Baars. In the theater of consciousness: The workspace of the mind . Oxford University Press, USA, 1997. BJ Baars. On consciousness: Science & subjectivity ààà updated works on global workspace theory, 2019. Andrea Banino, Caswell Barry, Benigno Uria, Charles Blundell, Timothy Lillicrap, Piotr Mirowski, Alexander Pritzel, Martin J Chadwick, Thomas Degris, Joseph Mo-dayil, et al. Vector-based navigation using grid-like rep-resentations in artificial agents. Nature , 557(7705):429– 433, 2018. 
+
+> 1It is worth noting though that individual differences across brains leading to similar behavior [Feather* et al., 2025] make this possibility unlikely, but not ruled out.
+
+Lisa Feldman Barrett. The theory of constructed emotion: an active inference account of interoception and catego-rization. Social cognitive and affective neuroscience , 12 (1):1–23, 2017. Peter L. Bartlett, Michael I. Jordan, and Jon D. McAuliffe. Convexity, classification, and risk bounds. Journal of the American Statistical Association , 101(473):138–156, 2006. Daniel M Bear, Elias Wang, Damian Mrowca, Felix J Binder, Hsiao-Yu Fish Tung, RT Pramod, Cameron Holdaway, Sirui Tao, Kevin Smith, Fan-Yun Sun, et al. Physion: Evaluating physical prediction from vision in humans and machines. arXiv preprint arXiv:2106.08261 , 2021. David Blackwell. An analog of the minimax theorem for vector payoffs. 1956. Lenore Blum and Manuel Blum. A theory of consciousness from a theoretical computer science perspective: Insights from the conscious turing machine. Proceedings of the National Academy of Sciences , 119(21):e2115934119, 2022. Lenore Blum and Manuel Blum. Ai consciousness is inevitable: a theoretical computer science perspective. 
+
+arXiv preprint arXiv:2403.17101 , 2024. Byron Boots, Sajid M. Siddiqi, and Geoffrey J. Gordon. Closing the learning-planning loop with predictive state representations. The International Journal of Robotics Research , 30(8):954–966, 2011. Santiago A Cadena, George H Denfield, Edgar Y Walker, Leon A Gatys, Andreas S Tolias, Matthias Bethge, and Alexander S Ecker. Deep convolutional models improve predictions of macaque v1 responses to natural images. 
+
+PLoS computational biology , 15(4):e1006897, 2019. Rosa Cao and Daniel Yamins. Explanatory models in neu-roscience, part 2: Functional intelligibility and the con-travariance principle. Cognitive Systems Research , 85: 101200, 2024. Roger C Conant and W Ross Ashby. Every good regulator of a system must be a model of that system. International journal of systems science , 1(2):89–97, 1970. Cogitate Consortium, Oscar Ferrante, Urszula Gorska-Klimowska, Simon Henin, Rony Hirschhorn, Aya Khalaf, Alex Lepauvre, Ling Liu, David Richter, Yamil Vidal, et al. Adversarial testing of global neuronal workspace and integrated information theories of consciousness. Na-ture , pages 1–10, 2025. Paul Ekman. An argument for basic emotions. Cognition & emotion , 6(3-4):169–200, 1992. Jenelle Feather, Alex Durango, Ray Gonzalez, and Josh Mc-Dermott. Metamers of neural networks reveal divergence from human perceptual systems. In Advances in Neural Information Processing Systems , pages 10078–10089. Jenelle Feather*, Meenakshi Khosla*, N Murty*, and Aran Nayebi*. Brain-model evaluations need the neuroai turing test. arXiv preprint arXiv:2502.16238 , 2025. Dean P Foster and Rakesh V Vohra. Calibrated learning and correlated equilibrium. Games and Economic Behavior ,21(589):40–55, 1997. Bruce A Francis and Walter Murray Wonham. The internal model principle of control theory. Automatica , 12(5): 457–465, 1976. Tilmann Gneiting and Adrian E. Raftery. Strictly proper scoring rules, prediction, and estimation. Journal of the American Statistical Association , 102(477):359–378, 2007. Danijar Hafner, Timothy Lillicrap, Jimmy Ba, and Moham-mad Norouzi. Dream to control: Learning behaviors by latent imagination. arXiv preprint arXiv:1912.01603 ,2019. Danijar Hafner, Timothy Lillicrap, Mohammad Norouzi, and Jimmy Ba. Mastering atari with discrete world mod-els. arXiv preprint arXiv:2010.02193 , 2020. Danijar Hafner, Jurgis Pasukonis, Jimmy Ba, and Timo-thy Lillicrap. Mastering diverse domains through world models. arXiv preprint arXiv:2301.04104 , 2023. Danijar Hafner, Wilson Yan, and Timothy Lillicrap. Train-ing agents inside of scalable world models. arXiv preprint arXiv:2509.24527 , 2025. Nicklas Hansen, Hao Su, and Xiaolong Wang. Td-mpc2: Scalable, robust world models for continuous control. 
+
+arXiv preprint arXiv:2310.16828 , 2023. Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola. The platonic representation hypothesis. arXiv preprint arXiv:2405.07987 , 2024. Leslie Pack Kaelbling, Michael L. Littman, and Anthony R. Cassandra. Planning and acting in partially observable stochastic domains. Artificial Intelligence , 101(1–2):99– 134, 1998. Alexander JE Kell*, Daniel LK Yamins*, Erica N Shook, Sam V Norman-Haignere, and Josh H McDermott. A task-optimized neural network replicates human auditory behavior, predicts brain responses, and reveals a cortical processing hierarchy. Neuron , 98(3):630–644, 2018. Reece Keller, Alyn Kirsch, Felix Pei, Xaq Pitkow, Leo Kozachkov, and Aran Nayebi. Intrinsic goals for au-tonomous agents: Model-based exploration in virtual ze-brafish predicts ethological behavior and whole-brain dynamics. In The Thirty-ninth Annual Conference on Neural Information Processing Systems , 2025. Seyed-Mahdi Khaligh-Razavi and Nikolaus Kriegeskorte. Deep supervised, but not unsupervised, models may ex-plain it cortical representation. PLoS computational biol-ogy , 10(11):e1003915, 2014. Michael L. Littman, Richard S. Sutton, and Satinder P. Singh. Predictive representations of state. In Advances in Neural Information Processing Systems , volume 14, 2001. Robert Long, Jeff Sebo, Patrick Butlin, Kathleen Finlinson, Kyle Fish, Jacqueline Harding, Jacob Pfau, Toni Sims, Jonathan Birch, and David Chalmers. Taking ai welfare seriously. arXiv preprint arXiv:2411.00986 , 2024. Jonathan A Michaels, Stefan Schaffelhofer, Andres Agudelo-Toro, and Hansjörg Scherberger. A goal-driven modular neural network predicts parietofrontal neural dynamics during grasping. 117(50):32124–32135. Aran Nayebi*, Daniel Bear*, Jonas Kubilius*, Kohitij Kar, Surya Ganguli, David Sussillo, James J DiCarlo, and Daniel L Yamins. Task-driven convolutional recurrent models of the visual system. In S. Bengio, H. Wallach, H. Larochelle, K. Grauman, N. Cesa-Bianchi, and R. Gar-nett, editors, Advances in Neural Information Processing Systems , volume 31. Curran Associates, Inc., 2018. Aran Nayebi, Alexander Attinger, Malcolm Campbell, Kiah Hardcastle, Isabel Low, Caitlin Mallory, Gabriel Mel, Ben Sorscher, Alex Williams, Surya Ganguli, Lisa M Giocomo, and Daniel LK Yamins. Explaining heterogene-ity in medial entorhinal cortex with task-driven neural networks. Advances in Neural Information Processing Systems , 34, 2021. Aran Nayebi, Javier Sagastuy-Brena, Daniel M Bear, Ko-hitij Kar, Jonas Kubilius, Surya Ganguli, David Sussillo, James J DiCarlo, and Daniel LK Yamins. Recurrent con-nections in the primate ventral visual stream mediate a tradeoff between task performance and network size dur-ing core object recognition. Neural Computation , 34: 1652–1675, 2022. Aran Nayebi*, Nathan CL Kong*, Chengxu Zhuang, Justin L Gardner, Anthony M Norcia, and Daniel LK Yamins. Mouse visual cortex as a limited resource system that self-learns an ecologically-general representation. 
+
+PLOS Computational Biology , 19, 2023. Aran Nayebi, Rishi Rajalingham, Mehrdad Jazayeri, and Guangyu Robert Yang. Neural foundations of mental simulation: Future prediction of latent representations on dynamic scenes. Advances in Neural Information Processing Systems , 36, 2023. Judea Pearl. Causality . Cambridge university press, 2009. Jonathan Richens and Tom Everitt. Robust agents learn causal world models. arXiv preprint arXiv:2402.10877 ,2024. Jonathan Richens, David Abel, Alexis Bellot, and Tom Everitt. General agents contain world models. In Pro-ceedings of the 42nd International Conference on Ma-chine Learning (ICML) , volume 267 of Proceedings of Machine Learning Research , 2025. Also available as arXiv:2506.01622. Leonard J Savage. The foundations of statistics . Courier Corporation, 1954. Leonard J. Savage. Elicitation of personal probabilities and expectations. Journal of the American Statistical Association , 66(336):783–801, 1971. Martin Schrimpf, Idan Asher Blank, Greta Tuckute, Carina Kauf, Eghbal A Hosseini, Nancy Kanwisher, Joshua B Tenenbaum, and Evelina Fedorenko. The neural architec-ture of language: Integrative modeling converges on pre-dictive processing. Proceedings of the National Academy of Sciences , 118(45):e2105646118, 2021. John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Rad-ford, and Oleg Klimov. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347 , 2017. Satinder Singh, Michael R. James, and Matthew R. Rudary. Predictive state representations: A new theory for model-ing dynamical systems. In Proceedings of the 20th Con-ference on Uncertainty in Artificial Intelligence (UAI) ,2004. Edward J. Sondik. The Optimal Control of Partially Observ-able Markov Processes . PhD thesis, Stanford University, 1971. Ben Sorscher, Gabriel C Mel, Samuel A Ocko, Lisa M Gio-como, and Surya Ganguli. A unified theory for the com-putational and mechanistic origins of grid cells. Neuron ,111(1):121–137, 2023. David Sussillo, Mark M Churchland, Matthew T Kaufman, and Krishna V Shenoy. A neural network that finds a naturalistic solution for the production of muscle activity. 18(7):1025–1033. Richard S Sutton, Andrew G Barto, et al. Reinforcement learning: An introduction , volume 1. MIT press Cam-bridge, 1998. John Von Neumann and Oskar Morgenstern. Theory of games and economic behavior, 2nd rev. 1947. Shengjie Wang, Shaohuai Liu, Weirui Ye, Jiacheng You, and Yang Gao. Efficientzero v2: Mastering discrete and continuous control with limited data. arXiv preprint arXiv:2403.00564 , 2024. John Wentworth. Selection theorems: A program for under-standing agents, 2021. URL https://www.lesswr ong.com/posts/G2Lne2Fi7Qra5Lbuf/sele ction-theorems-a-program-for-underst anding-agents . LessWrong / AI Alignment Forum (online post). Ronald J Williams. Simple statistical gradient-following algorithms for connectionist reinforcement learning. Ma-chine learning , 8(3):229–256, 1992. Ian H Witten. An adaptive optimal controller for discrete-time markov environments. Information and control , 34 (4):286–295, 1977. Daniel LK Yamins, Ha Hong, Charles F Cadieu, Ethan A Solomon, Darren Seibert, and James J DiCarlo. Performance-optimized hierarchical models predict neu-ral responses in higher visual cortex. 111(23):8619–8624. Chengxu Zhuang, Siming Yan, Aran Nayebi, Martin Schrimpf, Michael C Frank, James J DiCarlo, and Daniel LK Yamins. Unsupervised neural network models of the ventral visual stream. Proceedings of the National Academy of Sciences , 118(3), 2021. What Capable Agents Must Know: Selection Theorems for Robust Decision-Making under Uncertainty (Supplementary Material) 
+
+Aran Nayebi 11Machine Learning Department and Neuroscience & Robotics Institutes, Carnegie Mellon University, Pittsburgh, Pennsylvania, USA 
+
+## A PROOF OF LEMMA 1 
+
+Proof. Observe that the success probability defined in (1) can be rewritten as 
+
+V = uR + q(uL − uR),
+
+which is linear in q. Thus, the optimal success probability is achieved at the endpoints, V ⋆ := max q∈[0 ,1] V =max {V (0) , V (1) } = max {uL, u R}.Assume wlog uL ≥ uR. Then V ⋆ = uL, w = 1 − q, and V = (1 − w) uL + w u R = uL − w (uL − uR). Therefore, 
+
+δ = 1 − uL − w (uL − uR)
+
+uL
+
+= w uL − uR
+
+uL
+
+.
+
+The other case is symmetric. In the special case that uR = 1 − uL, then we have that 
+
+V ⋆ = max {uL, u R} = max {uL, 1 − uL} = 12 + m. 
+
+Indeed, since m := uL − 12 , we can write uL = 12 + m or uL = 12 − m. In the first case, 1 − uL = 12 − m, and in the second case 1 − uL = 12 + m. In either case, since m ≥ 0,
+
+max {uL, 1 − uL} = 12 + m. 
+
+Moreover, in both cases, 
+
+|uL − uR| = |uL − (1 − uL)| = |2uL − 1| = 2 m. 
+
+Substituting these expressions into (5), yields 
+
+δ = w · |uL − uR|
+
+V ⋆ = w · 2m 
+
+> 12
+
++ m = w · 4m
+
+1 + 2 m , (20) which proves the stated identity. Now suppose that m ≥ γ > 0. Since the function 
+
+f (m) := 4m
+
+1 + 2 m
+
+is increasing for m ≥ 0, since f ′(m) = 4 /(1 + 2 m)2 > 0, then we have 
+
+4m
+
+1 + 2 m ≥ 4γ
+
+1 + 2 γ =: c(γ). (21) Combining (21) with (20) gives 
+
+δ ≥ w c (γ),
+
+and hence gives us (7). B PROOF OF THEOREM 1 
+
+Proof. Fix a quadruple (s, a, s ′, k ) and let X ∼ Bin( n, p ) with p := Pss ′ (a), and define 
+
+F (k) := Pr[ X ≤ k].
+
+1. Pointwise regret lower-bounds wrong-branch mass at margin mk. By Richens et al. [2025, Lemma 6], the two disjuncts G(n, 1)  
+
+> s,a,s ′,k
+
+and G(n, 2)  
+
+> s,a,s ′,k
+
+of the composite goal G(n) 
+
+> s,a,s ′,k
+
+have optimal satisfaction probabilities F (k) and 1 − F (k),respectively: 
+
+V ⋆(s0; G(n,i )
+
+> s,a,s ′,k
+
+) := max  
+
+> π′
+
+Pr  
+
+> π′
+
+(G(n,i ) 
+
+> s,a,s ′,k
+
+| s0), i ∈ { 1, 2},V ⋆(s0; G(n, 1) 
+
+> s,a,s ′,k
+
+) = F (k),V ⋆(s0; G(n, 2) 
+
+> s,a,s ′,k
+
+) = 1 − F (k).
+
+(22) Hence, by Lemma 1, the optimal satisfaction probability of the overall disjunction in (4) therefore is 
+
+V ⋆(s0; G(n)
+
+> s,a,s ′,k
+
+) = max {F (k), 1 − F (k)} = 12 + mk
+
+mk := F (k) − 12 ,
+
+Let wk denote the probability that π selects the suboptimal branch at threshold k:
+
+wk := 
+
+(
+
+1 − qs,a,s ′,k , if V ⋆(s0; G(n, 1) 
+
+> s,a,s ′,k
+
+) ≥ V ⋆(s0; G(n, 2) 
+
+> s,a,s ′,k
+
+),qs,a,s ′,k , otherwise ,
+
+and let Bk denote the event that π selects the disjunct with larger optimal satisfaction probability at threshold k. Then 
+
+Pr  
+
+> π
+
+(Bk) = 1 − wk and Pr  
+
+> π
+
+(Bck) = wk,
+
+since wk is the probability that π selects the suboptimal disjunct. By the law of total probability, 
+
+V π (s0; G(n)
+
+> s,a,s ′,k
+
+)= Pr 
+
+> π
+
+ G(n) 
+
+> s,a,s ′,k
+
+| Bk
+
+ Pr  
+
+> π
+
+(Bk) + Pr 
+
+> π
+
+ G(n) 
+
+> s,a,s ′,k
+
+| Bck
+
+ Pr  
+
+> π
+
+(Bck)= (1 − wk) Pr 
+
+> π
+
+ G(n) 
+
+> s,a,s ′,k
+
+| Bk
+
+ + wk Pr 
+
+> π
+
+ G(n) 
+
+> s,a,s ′,k
+
+| Bck
+
+.
+
+Moreover, conditional on Bk (resp. Bck), π selects the disjunct with larger (resp. smaller) optimal satisfaction probability, so the corresponding success probability under π is at most the optimal success probability of that selected disjunct. Hence, 
+
+V π (s0; G(n)
+
+> s,a,s ′,k
+
+)
+
+≤ (1 − wk) max 
+
+n
+
+V ⋆(s0; G(n, 1) 
+
+> s,a,s ′,k
+
+), V ⋆(s0; G(n, 2) 
+
+> s,a,s ′,k
+
+)
+
+o
+
++ wk min 
+
+n
+
+V ⋆(s0; G(n, 1) 
+
+> s,a,s ′,k
+
+), V ⋆(s0; G(n, 2) 
+
+> s,a,s ′,k
+
+)
+
+o
+
+= (1 − wk)  12 + mk
+
+ + wk
+
+  12 − mk
+
+.
+
+Applying Lemma 1 with the identification 
+
+uL = F (k), uR = 1 − F (k),m = mk, w = wk,
+
+we obtain 
+
+δs,a,s ′,k (π; s0) := 1 − V π
+
+V ⋆ ≥ wk
+
+4mk
+
+1 + 2 mk
+
+.
+
+In particular, on the event {mk ≥ γ},
+
+wk ≤ δs,a,s ′,k (π; s0)
+
+c(γ) . (23) 2. Estimating the binomial median from the policy’s disjunct probabilities. Let kmed be the (lower) median index of X,i.e. 
+
+kmed := min {k : F (k) ≥ 12 }.
+
+By definition of kmed , the disjunct with larger optimal satisfaction probability is G(n, 2)  
+
+> s,a,s ′,k
+
+for k < k med , and G(n, 1)  
+
+> s,a,s ′,k
+
+for 
+
+k ≥ kmed . Define 
+
+bkmed := 
+
+> n
+
+X
+
+> k=0
+
+(1 − qs,a,s ′,k ), (24) which is the expected number of thresholds at which the policy π selects the disjunct G(n, 2) 
+
+> s,a,s ′,k
+
+, by definition of qs,a,s ′,k . If π
+
+were optimal on these binary choices, (1 − qs,a,s ′,k ) would equal 1{k < k med }, hence bkmed = kmed since n ≥ kmed .In general, 
+
+bkmed − kmed =
+
+> n
+
+X
+
+> k=0
+
+
+
+(1 − qs,a,s ′,k ) − 1{k < k med }
+
+
+
+≤
+
+> n
+
+X
+
+> k=0
+
+wk.
+
+Split {0, . . . , n } into Kγ := {k : mk < γ } and its complement Kcγ := {k : mk ≥ γ}. Using the trivial bound wk ≤ 1 on 
+
+Kγ , where mk < γ and the disjuncts become indistinguishable as mk → 0, so regret cannot constrain the policy’s choice, and the regret-based bound (23) on Kcγ ,
+
+bkmed − kmed ≤ | Kγ | + 1
+
+c(γ)
+
+X
+
+> k / ∈Kγ
+
+δs,a,s ′,k (π; s0)
+
+≤ | Kγ | + 1
+
+c(γ)
+
+> n
+
+X
+
+> k=0
+
+δs,a,s ′,k (π; s0).
+
+(25) 
+
+3. Controlling |Kγ |. Let μ := E[X] = np and σ2 := Var( X) = np (1 − p). For any t > 0, if k ≥ μ + tσ , then by the one-sided Chebyshev inequality, 
+
+Pr[ X ≥ k] = Pr[ X − μ ≥ tσ ] ≤ 11 + t2 ,
+
+and hence 
+
+F (k) = Pr[ X ≤ k] ≥ 1 − 11 + t2 = t2
+
+1 + t2 .
+
+If t ≥ 1, then F (k) ≥ 12 in this regime. Thus, it follows that 
+
+mk = F (k) − 12 ≥ t2
+
+1 + t2 − 12 = t2 − 12(1 + t2) . (26) Choosing 
+
+tγ := 
+
+r 1 + 2 γ
+
+1 − 2γ ≥ 1,
+
+since γ > 0, makes the right-hand side equal of (26) to γ, so mk ≥ γ whenever k ≥ μ + tγ σ.By symmetry, applying the same argument to −X yields that mk ≥ γ whenever k ≤ μ−tγ σ. Equivalently, by contraposition, 
+
+k ∈ Kγ = {k : mk < γ } =⇒ |k − μ| < t γ σ. 
+
+Therefore, 
+
+Kγ ⊆ (μ − tγ σ, μ + tγ σ),
+
+and since k ranges over integers, the number of such indices is bounded by 
+
+|Kγ | ≤ 2tγ σ + 1 
+
+≤ 2tγ σ + 2 = 2 tγ
+
+pnp (1 − p) + 2 .
+
+(27) 4. From median error to transition-probability error. Define bp := bPss ′ (a) as in (9) , i.e. bp = 1 
+
+> n
+
+(bkmed − 12 ) by definition (24) . A standard binomial fact is that the median differs from the mean by at most 1: |kmed − np | ≤ 1; equivalently, 
+
+kmed ∈ {⌊ np ⌋, ⌈np ⌉} . Hence, 
+
+|bp − p| ≤ bp − kmed 
+
+n + kmed 
+
+n − p
+
+≤ |bkmed − kmed | + 12
+
+n + 1
+
+n
+
+≤ |bkmed − kmed |
+
+n + O
+
+ 1
+
+n
+
+
+
+.
+
+Combining (25) and (27) gives, for this fixed (s, a, s ′),
+
+|bp − p| ≤ 2tγ
+
+r p(1 − p)
+
+n + 1
+
+nc (γ)
+
+> n
+
+X
+
+> k=0
+
+δs,a,s ′,k (π; s0)+ O
+
+ 1
+
+n
+
+
+
+.
+
+Finally, average over (s, a, s ′) ∼ Unif( S × A × S ) and use the global assumption (8) to bound 
+
+E(s,a,s ′)
+
+h 1
+
+n
+
+> n
+
+X
+
+> k=0
+
+δs,a,s ′,k (π; s0)
+
+i
+
+= n + 1 
+
+n E(s,a,s ′,k )[δs,a,s ′,k (π; s0)] 
+
+≤ n + 1 
+
+n ¯δ, 
+
+which yields (10). 
+
+## C PROOF OF THEOREM 2 
+
+Proof. Fix (h, T ) and write p := pT (h), m := mT (h), q := qT (h). If p ≥ 12 then p = 12 + m and the suboptimal mass is 
+
+wT (h) = 1 − q. Using (13)-(14): 
+
+V π (h; gT ) = q( 12 + m) + (1 − q)( 12 − m) = 12 − m + 2 mq, V ⋆(h; gT ) = 12 + m. 
+
+Thus 
+
+δT (π; h) = 1 − 
+
+> 12
+
+− m + 2 mq  
+
+> 12
+
++ m = 2m(1 − q) 
+
+> 12
+
++ m
+
+= wT (h) 4m
+
+1 + 2 m .
+
+(28) If p < 12 , the symmetric calculation yields the same identity δT (π; h) = wT (h) · 4m 
+
+> 1+2 m
+
+(now wT (h) = q). Therefore, on the event {m ≥ γ} we have 
+
+δT (π; h) ≥ wT (h) · 4γ
+
+1 + 2 γ = wT (h) c(γ).
+
+Taking expectations over h ∼ H and T ∼ D and using (15): 
+
+¯δ ≥ E[δT (π; h)] ≥ E[δT (π; h) 1{mT (h) ≥ γ}]
+
+≥ c(γ) E[wT (h) 1{mT (h) ≥ γ}],
+
+which proves (17). The conditional bound (18) follows by dividing by qγ = Pr( mT (H) ≥ γ).D PROOF OF THEOREM 3 
+
+Proof. Fix any M -based policy π. Consider any pair (h, h ′) with (h, h ′) ∈ Alias M . Because π is M -based and M (h) = 
+
+M (h′), for every test T we have identical bet distributions: qT (h) = qT (h′) =: qT .Now fix a test T ∈ Sγ (h, h ′). By assumption, pT (h) ≥ 12 + γ so the optimal bet at h is L and thus wT (h) = 1 − qT ; while 
+
+pT (h′) ≤ 12 − γ so the optimal bet at h′ is R and thus wT (h′) = qT . Therefore, 
+
+12
+
+ wT (h) + wT (h′) = 12 .
+
+By the pointwise identity (28) from the proof of Theorem 2, when mT (·) ≥ γ we have δT (π; ·) ≥ c(γ) wT (·). Hence for 
+
+T ∈ Sγ (h, h ′),
+
+12
+
+ δT (π; h) + δT (π; h′)
+
+≥ 12 c(γ) wT (h) + wT (h′) = c(γ)2 .
+
+Taking expectations over (h, h ′) ∼ P and T ∼ D and restricting to the event {(h, h ′) ∈ Alias M , T ∈ Sγ (h, h ′)} yields 
+
+¯δP (π) ≥ qAlias  
+
+> γ
+
+(M ) · c(γ)2 ,
+
+which proves (19). 
+
+## E PROOF OF COROLLARY 3 
+
+Proof. For each i, define the blockwise pair-averaged regret 
+
+¯δP,i (π) := E(h,h ′)∼P 
+
+12
+
+
+
+ET ∼Di [δT (π; h)] + ET ∼Di [δT (π; h′)] 
+
+
+
+.
+
+Applying Theorem 3 with test distribution Di yields 
+
+¯δP,i (π) ≥ qAlias  
+
+> γ,i
+
+(M ) c(γ)2 ,
+
+so 
+
+qAlias  
+
+> γ,i
+
+(M ) ≤ 2 ¯δP,i (π)
+
+c(γ) . (29) Now relate ¯δP (π) (under D) to the ¯δP,i (π). Because D = PKi=1 piDi, for any fixed history h we have 
+
+ET ∼D[δT (π; h)] = 
+
+> K
+
+X
+
+> i=1
+
+pi ET ∼Di [δT (π; h)] .
+
+Substituting this identity into the definition of ¯δP (π) and exchanging sums/expectations gives 
+
+¯δP (π) = 
+
+> K
+
+X
+
+> i=1
+
+pi ¯δP,i (π).
+
+Since all terms are nonnegative, ¯δP (π) ≥ pi ¯δP,i (π), hence 
+
+¯δP,i (π) ≤ ¯δP (π)
+
+pi
+
+. (30) Combining (29) and (30) yields 
+
+qAlias  
+
+> γ,i
+
+(M ) ≤ 2
+
+c(γ) · ¯δP (π)
+
+pi
+
+,
+
+as claimed. F PROOF OF COROLLARIES 4 AND 5 
+
+For the next two corollaries, it will be useful to have the following lemma: 
+
+Lemma 2 (Low pair-regret ⇒ small aliasing mass on γ-separations) . Work in the setting of Theorem 3 with (P, D, γ ) and witness sets Sγ (h, h ′). Let π be M -based. Then 
+
+Pr  
+
+> (h,h ′)∼P , T ∼D
+
+
+
+M (h) = M (h′) ∧ T ∈ Sγ (h, h ′)
+
+
+
+≤ 2 ¯δP (π)
+
+c(γ) .
+
+Equivalently, 
+
+E(h,h ′)∼P 
+
+h
+
+1{M (h) = M (h′)} · D(Sγ (h, h ′)) 
+
+i
+
+≤ 2 ¯δP (π)
+
+c(γ) .
+
+In particular, if ¯δP (π) = 0 then 1{M (h) = M (h′)} · D(Sγ (h, h ′)) = 0 for P almost everywhere on (h, h ′).Proof. Theorem 3 gives the lower bound 
+
+¯δP (π) ≥ qAlias  
+
+> γ
+
+(M ) · c(γ)2 ,
+
+where 
+
+qAlias  
+
+> γ
+
+(M )= Pr  
+
+> (h,h ′)∼P , T ∼D
+
+
+
+M (h) = M (h′) ∧ T ∈ Sγ (h, h ′)
+
+
+
+.
+
+Rearranging yields the first inequality. For the second display, note that 
+
+qAlias  
+
+> γ
+
+(M )= E(h,h ′)∼P 
+
+h
+
+1{M (h) = M (h′)} · D(Sγ (h, h ′)) 
+
+i
+
+,
+
+by the law of total expectation over T ∼ D. The final claim follows because a nonnegative random variable with zero expectation is zero almost surely. 
+
+F.1 PROOF OF COROLLARY 4 
+
+Proof. By assumption, the witness set is supported on regime-mismatched pairs in the sense that 
+
+T ∈ Sγ (h, h ′) = ⇒ I(h)̸ = I(h′).
+
+Therefore the event in the corollary simplifies: 
+
+{M (h) = M (h′) ∧ I(h)̸ = I(h′) ∧ T ∈ Sγ (h, h ′)}
+
+= {M (h) = M (h′) ∧ T ∈ Sγ (h, h ′)},
+
+since T ∈ Sγ (h, h ′) already implies I(h)̸ = I(h′). Taking probabilities under (h, h ′) ∼ P and T ∼ D yields 
+
+Pr  M (h) = M (h′) ∧ I(h)̸ = I(h′) ∧ T ∈ Sγ (h, h ′)
+
+= Pr  M (h) = M (h′) ∧ T ∈ Sγ (h, h ′).
+
+Now apply Lemma 2 with the same (P, D, γ, S γ ) to obtain 
+
+Pr  
+
+> (h,h ′)∼P , T ∼D
+
+
+
+M (h) = M (h′) ∧ T ∈ Sγ (h, h ′)
+
+
+
+≤ 2 ¯δP (π)
+
+c(γ) .F.2 PROOF OF COROLLARY 5 
+
+Proof. For convenience, write ℓ(h) := ℓγD (h).
+
+1. (ii) implies each Mj is a function of ℓ. Fix j ∈ { 1, 2}. Assumption (ii) says ℓ(h) = ℓ(h′) ⇒ Mj (h) = Mj (h′), so we may define a map aj on the range of ℓ by aj (ℓ(h)) := Mj (h); this is well-defined by (ii). Thus, 
+
+Mj (h) = aj (ℓ(h)) , (31) almost surely under the history distribution. 
+
+2. (i) vanishing pair-regret + (iii) implies ℓ is a function of each Mj . Fix j. By (i) and Lemma 2 applied to πj and Mj ,
+
+E(h,h ′)∼P 
+
+h
+
+1{Mj (h) = Mj (h′)} · D(Sγ (h, h ′)) 
+
+i
+
+≤ 2 ¯δP (πj )
+
+c(γ) → 0.
+
+Since the integrand is nonnegative, this implies 
+
+1{Mj (h) = Mj (h′)} · D(Sγ (h, h ′)) = 0 , (32) for P almost everywhere on (h, h ′). Now suppose (for P almost everywhere pairs) that Mj (h) = Mj (h′). Then (32) gives D(Sγ (h, h ′)) = 0 . By γ-completeness (iii), D(Sγ (h, h ′)) = 0 implies ℓ(h) = ℓ(h′) (contrapositive). Therefore, 
+
+Mj (h) = Mj (h′) ⇒ ℓ(h) = ℓ(h′) for P almost everywhere on (h, h ′), which means that ℓ is almost surely a function of 
+
+Mj . Concretely, we can define bj on the range of Mj by bj (Mj (h)) := ℓ(h); this is well-defined almost surely because 
+
+Mj (h) = Mj (h′) forces ℓ(h) = ℓ(h′). Hence 
+
+ℓ(h) = bj (Mj (h)) , (33) almost surely. 
+
+3. Composition to obtain mutual recodings. Using (31) for j = 1 and (33) for j = 2 ,
+
+M1(h) = a1(ℓ(h)) = a1(b2(M2(h))) := φ(M2(h)) ,
+
+where φ := a1 ◦ b2. Symmetrically, 
+
+M2(h) = a2(ℓ(h)) = a2(b1(M1(h))) := ψ(M1(h)) ,
+
+where ψ := a2 ◦ b1. This proves the claimed mutual recodability, almost surely on the support of P.

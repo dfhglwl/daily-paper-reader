@@ -1,0 +1,737 @@
+Title: Vector Field Augmented Differentiable Policy Learning for Vision-Based Drone Racing
+
+URL Source: https://arxiv.org/pdf/2603.08019v1
+
+Published Time: Tue, 10 Mar 2026 01:56:31 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+> IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED MARCH, 2026 1
+
+# Vector Field Augmented Differentiable Policy Learning for Vision-Based Drone Racing 
+
+Yang Su, Feng Yu, Yu Hu, Xinze Niu, Linzuo Zhang, Fangyu Sun, and Danping Zou 
+
+Abstract —Autonomous drone racing in complex environments requires agile, high-speed flight while maintaining reliable obsta-cle avoidance. Differentiable-physics-based policy learning has recently demonstrated high sample efficiency and remarkable performance across various tasks, including agile drone flight and quadruped locomotion. However, applying such methods to drone racing remains difficult, as key objectives like gate traversal are inherently hard to express as smooth, differentiable losses. To address these challenges, we propose DiffRacing, a novel vector field–augmented differentiable policy learning framework. DiffRacing integrates differentiable losses and vector fields into the training process to provide continuous and stable gradient signals, balancing obstacle avoidance and high-speed gate traversal. In addition, a differentiable Delta Action Model compensates for dynamics mismatch, enabling efficient sim-to-real transfer without explicit system identification. Extensive simulation and real-world experiments demonstrate that DiffRac-ing achieves superior sample efficiency, faster convergence, and robust flight performance, thereby demonstrating that vector fields can augment traditional gradient-based policy training with a task-specific geometric prior. 
+
+Index Terms —Collision Avoidance, Sensorimotor Learning, Reinforcement Learning 
+
+I. I NTRODUCTION 
+
+# AUTONOMOUS drone flight, particularly in tasks requir-ing agile and safe navigation through complex envi-ronments, remains a central challenge in robotics research. Among these tasks, drone racing exemplifies this challenge by demanding precise control to navigate through gates and avoid obstacles. Classical approaches [1], [2] typically employ a cascaded perception-planning-control pipeline, which, despite achieving impressive performance, suffers from significant computational overhead, error accumulation, and control la-tency, thereby limiting its practicality in real-world platforms. In recent years, inspired by the ability of human pilots to learn directly from visual perception, researchers have explored using reinforcement learning for drone racing control from pixels to actions [3], [4], [5]. The method proposed in [5] has addressed the challenge of drone racing in cluttered en-vironments by employing a two-phase reinforcement learning framework—consisting of soft-collision training followed by 
+
+Manuscript received: November 29, 2025; Revised: February 3, 2026; Accepted: March 3, 2026. This paper was recommended for publication by Editor Aniket Bera upon evaluation of the Associate Editor and Reviewers’ comments. This work was supported by National Key R&D Program of China (2022YFB3903802) and National Science Foundation of China (62073214). (Yang Su and Feng Yu contributed equally to this work.) (Corresponding author: Danping Zou.) 
+
+The authors are with the Shanghai Jiao Tong University, Shanghai 200240, China (e-mail: dpzou@sjtu.edu.cn). Digital Object Identifier (DOI): see top of this page. (a)  Loss based training 
+
+(b) Proposed       
+
+> Obs 1
+> Obs n
+> Policy
+> Network
+> ESDF
+> Obs 2
+> … Loss
+> Policy
+> Network
+> Loss
+> Vector Field
+> Vector Field
+> Augmentation
+> Obs 1
+> Obs n
+> Obs 2
+> …
+
+Fig. 1. Compared to typical differentiable-dynamics-based methods that rely solely on dense differentiable loss functions to provide gradients, our framework integrates Attractive Vector Fields as a geometric prior for gate traversal, alongside standard loss functions to ensure safety. 
+
+hard-collision refinement. While effective in achieving robust gate traversal, this approach entails an intricate multi-stage training pipeline and curriculum design, and it inherently suffers from the low sample efficiency characteristic of RL-based methods under sparse rewards. Alternatively, differentiable-dynamics-based methods have recently gained attention for their high sample-efficiency and remarkable real-world performance [6], [7], [8], [9]. Policies can be trained via backpropagation through time (BPTT) [10], directly propagating loss gradients through the simplified system dynamics. This approach provides more accurate an-alytic gradients and significantly improves sample efficiency. However, it relies heavily on dense differentiable loss func-tions defined over differentiable robot states—for example, penalizing proximity to obstacles to ensure safety, as illustrated in Fig. 1(a). Designing a fully differentiable loss for racing tasks is particularly challenging. For example, gate-passing performance is naturally defined as a binary success indica-tor—either the drone crosses the gate or it does not. Such an objective is inherently non-differentiable, and straightforward smooth approximations often lead to conflicting objectives between safety and racing goals. As a result, differentiable methods easily become trapped in local optima or exhibit overshooting behavior during optimization, especially at high speeds. Therefore, directly extending differentiable training pipelines to complex racing scenarios remains difficult. Inspired by the physical magnetic field, we leverage the intuition that a closed current-carrying loop can generate   
+
+> arXiv:2603.08019v1 [cs.RO] 9 Mar 2026 2IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED MARCH, 2026 Policy
+> Network
+> 𝝅 𝜽
+> Delta
+> Action
+> 𝒖 𝝓
+> 𝚫
+> Depth
+> Observation
+> State
+> Observation
+> Differetiable Dynamics
+
+𝑢 0  
+
+> 𝜋 𝑓 (𝑠 ,𝑢 )
+
+𝑠 0
+
+𝑢 1 
+
+> 𝑓 (𝑠 ,𝑢 )
+
+𝑠 1
+
+𝑢 2 
+
+> 𝑓 (𝑠 ,𝑢 )
+
+𝑠 2 𝑠 3   
+
+> 𝜋 𝜋
+> Air Drag
+> Control Response
+> Motor Parameters Physical Platform Responses
+> Attractive
+> Vector Field Task Loss
+> Residual State Loss
+> 𝚫 𝒖
+> 𝒖
+> Augment
+> grad
+> grad
+> train
+> Differe ntiable Dynamics
+
+𝑢 0  
+
+> 𝜋 𝑓 (𝑠 ,𝑢 )
+
+𝑠 0
+
+𝑢 1 
+
+> 𝑓 (𝑠 ,𝑢 )
+
+𝑠 1
+
+𝑢 2
+
+𝑠 2 𝑠 T  
+
+> 𝜋 𝜋
+
+···    
+
+> policy training forward policy training backward Delta Action training forward Delta Action training backward
+> Fig. 2. Overview of the DiffRacing Framework. The policy network ( π) takes depth and state observations as input. The core components are: the differentiable simulator, which allows loss gradients to back-propagate to the network; the Attractive Vector Field module, which augments policy gradients during training. The detailed augmentation mechanism is provided in Sec. III-C; and the Delta Action Model, which is trained to compensate for dynamics mismatch. Dashed lines indicate gradient flow. The orange lines represent the data flow during policy training, where the entire pipeline—including UAV dynamics rollout, image rendering, loss computation, and gradient backpropagation—is carried out fully within the simulator. The blue lines represent the data flow described in Sec. III-D, which includes data collection, Delta Action Model training, and subsequent policy fine-tuning.
+
+magnetic field lines that thread through the loop itself, yielding a strong geometric prior for “through-the-gate” traversal. We therefore construct Attractive Vector Fields (AVF) based on the analytic magnetic-field formulation. We further develop a novel framework which integrates Attractive Vector Fields (AVF) into the differentiable training pipeline, as shown in Fig. 1(b). Rather than directly commanding the drone’s ve-locity to follow the vector field, our approach constructs a composite vector field by combining gradients induced by differentiable loss functions with Attractive Vector Fields dur-ing training. Furthermore, to achieve agile and robust racing performance, we incorporate the Delta Action Model proposed in [11]—which surpasses conventional System Identification and Delta-Dynamics methods—into our differentiable learning framework. In contrast to [11], our approach trains the Delta Action Model using analytic gradients from the differentiable simulator rather than PPO [12], enabling faster convergence. We validate the effectiveness of our fully differentiable frame-work through extensive experiments in both simulation and real-world platforms. In a sim-to-sim comparison study with the state-of-the-art approach proposed in [5], which relies on a multi-phase training strategy and curriculum learning to handle cluttered environments, our method demonstrates that a streamlined, single-stage design can also elegantly solve the trade-off between racing speed and obstacle avoidance while achieving better performance. Our key contributions are summarized as follows:  
+
+> •
+
+We propose a novel differentiable training framework that integrates Attractive Vector Fields as a geometric prior 
+
+during training, enabling the learned policy to achieve more adaptive and dynamic maneuvers.  
+
+> •
+
+We incorporate the differentiable Delta Action Model into our sim-to-sim and sim-to-real transfer to compensate for dynamics mismatch and demonstrate its practicability in drone racing tasks.  
+
+> •
+
+We validate the proposed framework’s effectiveness, ro-bustness, and real-world applicability through extensive experiments in both high-fidelity simulations and real-world deployments. II. R ELATED WORK 
+
+In recent years, a series of autonomous drone racing com-petitions have emerged [13], [14], [15], significantly advanc-ing the capabilities of autonomous drone flight. Approaches have gradually evolved from traditional optimization-based methods [1], [2], [16] to end-to-end learning [3], [4], [17]. However, most current methods still focus on high-speed flight in open environments, with relatively few addressing complex and unknown scenarios. Penicka et al. [2] propose a sample-based method for navigating cluttered environments in minimum time, using incrementally complex quadrotor models to compute time-optimal trajectories. However, it lacks generalization to novel environments. To improve generaliz-ability, Yu et al. [5] introduced an RL-based framework for unknown racing tracks using a two-phase training scheme in-volving soft-collision and hard-collision refinement, integrated with curriculum learning for better stability. Nevertheless, the complexity of its training architecture and the low sample efficiency caused by sparse gate-crossing rewards remain significant limitations. The vector field method assigns a velocity or acceleration vector to each point in space, enabling robots to navigate by following the vector at their current position [18], [19]. Early research primarily aims to extend vector fields to three-dimensional environments and mitigate local optimum prob-lems in obstacle avoidance and path tracking [20], [21], [22], [23]. Building on these efforts, recent studies have introduced rotational or vortex components into artificial potential fields to explicitly break the conservative nature of gradient-based nav-igation. For instance, recent work [24] proposed an enhanced adaptive APF that integrates a 3D vortex force and terminal SU et al. : VECTOR FIELD AUGMENTED DIFFERENTIABLE POLICY LEARNING FOR VISION-BASED DRONE RACING 3
+
+acceleration, effectively mitigating local minima and oscilla-tions in dynamic environments. Szczepanski [25] proposed the Safe Artificial Potential Field (SAPF), which introduces a mechanism to smoothly switch between repulsive and vortex potentials, enabling the robot to bypass local minima, thus effectively mitigating oscillations in narrow corridors. While these advanced potential field methods demonstrate the effi-cacy of vortex-like structures in avoiding local optima, they are primarily deployed as run-time planners based on analytical force computations. In contrast, our DiffRacing framework leverages vector fields as a geometric prior to augment neural policy learning. Differentiable policy learning refers to the use of differen-tiable simulations to train robot control policies [26], [27], [7]. Zhang et al. [6] propose a CUDA-based point-mass model that is directly integrated into policy optimization, enabling neural network control policies to be trained with more accurate analytical gradients and, consequently, improving sample efficiency and convergence speed. Improving on [6], Lee et al. [28] incorporate a privileged global time-of-arrival (TOA) map, enabling supervision that facilitates more globally effective policy optimization. While the TOA map can be interpreted as a form of field, the resulting slow flight speeds further limit its effectiveness in drone racing scenarios. III. M ETHODOLOGY 
+
+A. Overview 
+
+The proposed framework leverages the high sample effi-ciency of differentiable training and employs vector fields to augment the standard gradient-based policy learning, thereby resolving conflicts between loop-passing and obstacle-avoidance optimization. As illustrated in Fig. 2, our framework comprises four main components: (1) a differentiable dynam-ics simulator (Sec. III-B) that allows gradients of differentiable states to back-propagate to the policy and Delta Action Model network; (2) a vector field augmentation module (Sec. III-C) that utilizes Attractive Vector Fields to augment policy learn-ing during training; (3) a Delta Action Model (Sec. III-D) that outputs a correction in the action space to compensate for dynamics mismatch and facilitates sim-to-real transfer; (4) a policy network (Sec. III-E) that takes depth observations and state observations as input and outputs acceleration commands. 
+
+B. Differentiable Dynamics 
+
+Differentiable dynamics-based methods formulate the drone control task as a Markov decision process, where system dynamics are modeled as sk+1 = f (sk, uk). Here sk denotes the system state at step k, including position, orientation, ve-locity, etc. The control command uk, representing the desired body frame acceleration, is generated by a deterministic policy 
+
+uk = πθ (ok), parameterized by θ and taking the system observation ok as input. 
+
+ok = [ bvk, r3,b pgate  
+
+> k
+
+, uk−1, Ik] (1) Here, bvk represents the velocity in the body frame, and r3
+
+denotes the transposed third column of the rotation matrix 
+
+R. bpgate  
+
+> k
+
+denotes the relative position of the gate in the body frame, and uk−1 is the previous control command. Ik
+
+represents the depth image with a resolution of 24 × 32 [6]. At each step, loss term lk is calculated using the correspond-ing differentiable loss function lk = l(sk, uk). The overall loss L over a finite horizon T is then defined as the average of these per-step losses: L = 1
+
+> T
+
+PTk=1 lk. Given that both the dynamic function f (sk, uk) and the loss function l(sk, uk)
+
+are differentiable, the gradient of L with respect to the policy parameters θ can be expressed as: 
+
+1
+
+T 
+
+> T−1
+
+X
+
+> k=0
+
+
+
+> k
+
+X
+
+> i=0
+
+∂l k
+
+∂skkY
+
+> j=i+1
+
+ ∂sj
+
+∂sj−1
+
+e−α∆t
+
+ ∂si
+
+∂θ + ∂l k
+
+∂uk
+
+∂uk
+
+∂θ 
+
+
+
+(2) where α is a gradient decay factor proposed in [6] to mitigate gradient accumulation. 
+
+C. Vector Field Augmented Differentiable Policy Learning 1) Motivation: Consider the differentiable avoidance loss 
+
+LC = Lclearance + Lcollide proposed by [6] as an example, where 
+
+Lclearance and Lcollide are functions of the position state p:
+
+Lclearance = 1
+
+T
+
+> T
+
+X
+
+> k=1
+
+β1 ln(1 + eβ2(|| dk ||− rq )) (3) 
+
+Lcollide = 1
+
+T
+
+> T
+
+X
+
+> k=1
+
+vck max(1 − (|| dk|| − rq ), 0) 2 (4) Here, dk = pnearest  
+
+> k
+
+− pk denotes the relative position of the closest obstacle, rq is the safety radius of the drone, and vck is the speed toward the closest obstacle. β1 and β2
+
+are weighting coefficients. Notably, vck is used to scale the loss function and is detached from the computation graph, making it gradient-free. By minimizing the loss function LC,the negative gradient −∇ pLC with respect to the position p
+
+is automatically calculated. This gradient can be interpreted as an induced vector field acting on the position state, which is back-propagated to the network parameters θ. Consequently, the policy is guided away from obstacles by following the direction of the induced vector field during training. While these differentiable loss functions are effective for simple obstacle avoidance, they tend to create local optima in drone racing scenarios. For example, when the gradient from the collision loss (repelling the drone from the gate frame) and the gate-passing loss (attracting it to the gate center) act in opposite directions, these conflicting gradients may cancel each other out or create a saddle point, resulting in a vanishing gradient that hinders effective navigation. Inspired by [29], the vortex-based vector field they proposed introduces rotational components into the guidance field, helping to mitigate the issue of local optima. Therefore, in addition to the irrotational (curl-free, ∇×∇ pLC = 0 ) vector fields induced by differentiable loss functions, we incorporate a novel rotational Attractive Vector Field uA (∇× uA̸ = 0 ) into the differentiable training framework. This field is combined with the previously 4 IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED MARCH, 2026 
+
+discussed gradient field −∇ pLC to form a composite guidance signal on the position state: 
+
+u = uA − ∇ pLC (5)   
+
+> (a) (b) Fig. 3. 3D Magnetic field visualization: (a) Top view of magnetic field; (b) Axonometric view of magnetic field.
+
+2) Attractive Vector Fields: Our Attractive Vector Field formulation leverages the intuition from physics: the magnetic field of a closed current-carrying loop forms field lines that thread the loop itself, providing a strong geometric prior for “through-the-gate” traversal. We first construct a three-dimensional magnetic vector field induced by the gate, where each gate is modeled as a rectangular current loop composed of four wire segments, as illustrated in Fig. 3. For a spatial point p, the magnetic field generated by the i-th segment is given by the simplified Biot–Savart law: 
+
+Bi(p) = CI · ˆli
+
+ ri1 − p
+
+∥ri1 − p∥ − ri2 − p
+
+∥ri2 − p∥
+
+ ˆli × di
+
+∥di∥2 (6) Here, ri1 and ri2 are the positions of the start and end points of the i-th wire segment, ˆli = ( ri2 − ri1)/∥ri2 − ri1∥ is its unit direction vector, and di is the shortest vector from the query point p to the wire segment. The constant CI controls the field strength and is set to 2 × 10 −5 during training, and 
+
+ˆli × di determines the direction of the field. The total gate-induced magnetic field is the superposition of the four wire contributions: 
+
+B(p) = 
+
+> 4
+
+X
+
+> i=1
+
+Bi(p) (7) This formulation yields a divergence-free (solenoidal) mag-netic field that forms an inward swirling flow, naturally guiding the drone toward and through the gate center. Finally, the Attractive Vector Field uA is defined as: 
+
+uA =
+
+
+
+1 − v · B(p)
+
+∥v∥∥ B(p)∥ + ϵ
+
+ B(p)
+
+∥B(p)∥λA , 0 < λ A < 1 (8) The parameter λA controls the rate of decay with distance and is set to 0.3 during training, and ϵ is set to 10 −5. This formulation ensures that uA decays when the agent is already aligned and moving in the desired direction or is far away from the gates. Consequently, it prevents the Attractive Vector Fields from exerting excessive influence on the agent, thereby enhancing training stability and overall safety. Although in this work uA is formulated based on the rectangular gate geometry, the underlying magnetic field calculation principle is easily generalizable to common non-rectangular gate shapes. For example, a circular gate can be approximated by discretizing its circumference into a polygon of straight segments. The total attractive field is then calculated by the superposition of the fields generated by these segments. 
+
+3) Integration into Differentiable Training: To effectively balance the conflicting objectives of obstacle avoidance and high-speed gate traversal, we augment the standard gradient-based policy learning with the proposed Attractive Vector Field. The overall loss is defined as a weighted sum of four terms: 
+
+L = λC LC + λaLa + λj Lj + λpLp (9) where LC , ( La, L j ), and Lp correspond to obstacle avoid-ance, control smoothness, and racing speed performance, respectively. The associated weighting coefficients are set to 
+
+λC = 3 .0, λ a = 10 −2, λ j = 10 −3, λ p = 0 .4.Specifically, the control smoothness loss terms La and Lj
+
+are defined as: 
+
+La = 1
+
+T
+
+> T
+
+X
+
+> k=1
+
+∥ak∥2, L j = 1
+
+T − 1 
+
+> T−1
+
+X
+
+> k=1
+
+ak+1 − ak
+
+∆t
+
+> 2
+
+(10) Here, ak denotes the acceleration. The racing speed perfor-mance loss Lp, which promotes high-speed gate traversal, is defined as: 
+
+Lp = − 1
+
+T
+
+> T
+
+X
+
+> k=1
+> b
+
+vk ·b pgate 
+
+> k
+
+∥bpgate  
+
+> k
+
+∥ (11) This term Lp explicitly promotes velocity aligned with the target gate direction, ensuring sustained forward progress during racing. Moreover, since the Attractive Vector Field 
+
+uA naturally attenuates at long distances, Lp provides the necessary long-range directional guidance. Together, they form a complementary guidance mechanism. Let s = [ p, sp] denote the complete set of differentiable state variables, consisting of differentiable positions p and all other differentiable state variables sp. Then, ∇pL denotes the gradient of the loss function L with respect to the position variable p and ∇sp L denotes the gradient of the loss function 
+
+L with respect to sp. During training, ∇pL and ∇sp L will be back-propagated to the policy parameters θ via differentiable dynamics, resulting in the following parameter update rule: 
+
+θ ← θ − α
+
+
+
+∇pL ∂p
+
+∂θ + ∇sp L ∂sp
+
+∂θ 
+
+
+
+(12) To incorporate Attractive Vector Fields into the training pipeline, we reformulate the above rule as in Eq. (5), with 
+
+uA defined in Eq. (8): 
+
+θ ← θ − α
+
+
+
+(∇pL − uA) ∂p
+
+∂θ + ∇sp L ∂sp
+
+∂θ 
+
+
+
+(13) Under this formulation, we augment the standard gradient-based policy learning with uA to provide an explicit geometric prior. Note that the update in Eq. (13) is not guaranteed to be the steepest descent direction of the original scalar loss 
+
+L; instead, we view it as a heuristic yet empirically effective SU et al. : VECTOR FIELD AUGMENTED DIFFERENTIABLE POLICY LEARNING FOR VISION-BASED DRONE RACING 5Process of Trajectory Self -Correction on the Top View   
+
+> Fig. 4. An Intuitive Illustration of Trajectory Self-Correction (Top View): From left to right, an overshooting trajectory is gradually refined under the continuous guidance of the Attractive Vector Fields.
+
+design, as experiments in Sec. IV demonstrate stable training and outstanding performance. 
+
+D. Delta Action Model Learning 
+
+In Section III-B, the system dynamics are modeled as a differentiable function sk+1 = f (sk, uk). However, achieving a high-fidelity representation of f is challenging in sim-to-real transfer due to real-world factors, such as aerodynamic disturbances and motor response delays. Precisely identifying the dynamics parameters often requires substantial manual effort. To mitigate these model-reality discrepancies and sim-plify system identification, and motivated by recent work [30], [11], we incorporate Delta Action Model learning into the differentiable learning framework. Following [11], we treat the residual dynamics as a Delta Action policy u∆ 
+
+> ϕ
+
+, which outputs corrections in the action space: 
+
+sk+1 = f (sk, uk + u∆ 
+
+> ϕ
+
+(sk, uk)) (14) The Delta Action policy u∆ 
+
+> ϕ
+
+, typically implemented as a neural network, is optimized by minimizing the discrepancy between the recorded real-world trajectory and the correspond-ing simulated state trajectory under dynamics model f :
+
+min  
+
+> ϕ
+
+L∆(ϕ) = min 
+
+> ϕ
+
+1
+
+T
+
+> T
+
+X
+
+> k=1
+
+∥ssim  
+
+> k
+
+(ϕ) − sreal  
+
+> k
+
+∥
+
+!
+
+(15) where ssim  
+
+> k
+
+(ϕ) is the simulated state, obtained by executing the total action ureal  
+
+> k−1
+
++ u∆ 
+
+> ϕ
+
+(ssim 
+
+> k−1
+
+, ureal 
+
+> k−1
+
+) in the simulator, sreal  
+
+> k
+
+and 
+
+ureal  
+
+> k
+
+are the recorded real-world state-action pair. The gradient of loss L∆(ϕ) is back-propagated through the differentiable dynamics model to efficiently update the parameters ϕ of the Delta Action policy. This approach effectively leverages the analytical benefits of differentiable simulation to capture dy-namics discrepancy, significantly improving sample efficiency and accelerating convergence during training. In practice, we employ a three-stage pipeline to train and leverage the Delta Action Model. First, an initial dataset of state–action pairs is collected in the target environment using a policy trained without the Delta Action Model. This collected dataset is then used to train the Delta Action Model by minimizing the loss function L∆(ϕ). Finally, the Delta Action Model’s parameters are frozen, and its predictions are added to the policy network outputs to form a mixed control action, after which the policy is fine-tuned using the adjusted dynamics. 
+
+E. Training Details 
+
+The policy adopts a compact CNN–RNN architecture to process visual and state information jointly. A CNN encoder extracts spatial features from a 24 × 32 depth image, while a small fully connected branch encodes the 12-dimensional state inputs from the first four terms in Eq. (1). The em-beddings are fused and passed through a GRU to capture temporal dependencies. The final cascaded linear layer outputs the acceleration command in the body frame. LeakyReLU (α = 0 .05 ) is used throughout, and the embedding dimension is set to 192. In contrast to the policy network, the Delta Action policy network excludes the CNN image encoder and is composed only of MLP and GRU modules, with both feature and hidden dimensions reduced to 32. It takes body velocity, orientation and current action as input, and outputs a 3-dimensional action compensation vector. IV. E XPERIMENTS 
+
+The experimental section validates the core contributions of the proposed DiffRacing framework across four aspects: (1) Ablation studies on the AVF confirm its crucial role in achieving high success rates and speeds. (2) Comparative anal-ysis against PPO and a scalar loss baseline, utilizing the same evaluation metrics, confirms the superior sample efficiency and enhanced robustness of the proposed training scheme. (3) Sim-to-sim evaluations demonstrate the effectiveness of the Delta Action model and its performance advantages over the state-of-the-art baseline. (4) Finally, real-world experiments on a physical drone validate agile and robust flight at speeds up to 6 m/s in unseen, obstacle-dense environments. 
+
+A. Ablation on Attractive Vector Fields 
+
+To quantitatively assess the contribution of the AVF, we conducted an ablation study with three training configurations. 6 IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED MARCH, 2026 
+
+Performance was evaluated using two metrics: Success Cross ,the percentage of trials in which the drone successfully tra-versed all four gates without collision, and Success Rate , the percentage of trials completed without any collision, regard-less of gate traversal. The three experimental configurations are as follows: (1) W AVF (Ours): The proposed method, performing optimization according to Eq. (13). (2) W/O AVF, W Lp: A baseline trained without the AVF, relying solely on scalar loss functions, especially using the standard progress loss Lp defined in Eq. (11). (3) W/O AVF, W Lnorm  
+
+> p
+
+: A baseline trained without the AVF, relying solely on scalar loss functions, especially using the normalized progress loss Lnorm 
+
+> p
+
+defined as 
+
+Lnorm  
+
+> p
+
+= − 1
+
+T
+
+> T
+
+X
+
+> k=1
+
+ bvk,b pgate 
+
+> k
+
+
+
+∥bvk∥∥ bpgate  
+
+> k
+
+∥ (16) which encourages correct heading toward the gate while ignoring speed optimization. As shown in Table I, the configuration with AVF signifi-cantly outperforms both baselines, achieving a 95% Success Cross and a 97% Success Rate. In contrast, the baselines struggle to balance speed and safety, either failing to traverse gates effectively (0.0 Success Cross for most configurations) or exhibiting low Success Rate when the progress loss is more heavily weighted to encourage speed. These results highlight the critical role of AVF in providing a continuous geometric prior, enabling the policy to achieve both agile gate traversal and robust obstacle avoidance.                               
+
+> TABLE I PERFORMANCE COMPARISON WITH AND WITHOUT AVF
+> Settings λp
+> Success Cross Success Rate Max Velocity
+> W AVF 0.4 0.95 0.97 6.5 W/O AVF, W Lp
+> 0.4 0.00 0.98 4.7 0.8 0.00 0.89 5.9 1.6 0.00 0.74 7.4 3.2 0.28 0.30 9.7 W/O AVF, W Lnorm
+> p
+> 1.6 0.00 0.95 5.0 3.2 0.00 0.84 6.1 6.4 0.58 0.58 6.3
+
+B. Comparative analysis 
+
+To quantitatively evaluate the performance of different train-ing schemes on the racing task, we compared three settings: (1) PPO [12]: a standard reinforcement learning baseline; (2) Ours: the proposed framework, leveraging a hybrid gradient derived from a loss function L and Attractive Vector Field 
+
+uA; and (3) Ours (w/o AVF): A variation of our differentiable policy learning framework where the vector field augmentation is removed. To ensure a fair comparison and prevent the policy from lacking directional guidance entirely, we explicitly added a projection loss term Lproj into the standard scalar loss function ( L + λproj Lproj ), this term serves as a scalar substitute for the AVF, encouraging the drone to align its heading with the gate: 
+
+Lproj = ∥pyz |gate  
+
+> k
+
+∥2 · e−β3dgate  
+
+> k
+
+(17)                                              
+
+> TABLE II COMPONENTS OF THE REWARD FUNCTION
+> Term Expression Weight ( λ)
+> rcollision
+> kλ1I(|| dk|| < r q)λ1=−30
+> ravoid
+> k
+> λ2ln (1 + eβ2(|| dk||− rq ))+λ3vckmax(1 − || dk|| +rq,0) 2λ2=−6, λ 3=−3
+> rsmooth
+> kλ4∥ak∥2+λ5
+> ak−ak−1∆t
+> 2
+> λ4=−10 −2, λ 5=−10 −3
+> rpass
+> kλ6I(∥bpgate
+> k∥< r th )λ6= 110
+> rprogress
+> kλ7
+> bvk ,bpgate
+> k
+> 
+> ∥bpgate
+> k∥λ7= 0 .4
+
+Here, pyz |gate  
+
+> k
+
+represents the position deviation projected onto the gate’s y − z plane, and dgate  
+
+> k
+
+denotes the distance to the gate. dgate  
+
+> k
+
+is detached from the computation graph and is gradient-free; it is utilized to decay the loss function when the quadrotor is sufficiently distant from the gate. The hyperparameters are set to β3 = 0 .5, λ proj = 3 .0. This loss term explicitly penalizes deviations from the gate’s normal vector, providing a scalar-based directional cue distinct from our vector field approach. We designed a uniform scalar reward function applied at each time step: 
+
+Rk = rcollision  
+
+> k
+
++ ravoid  
+
+> k
+
++ rsmooth  
+
+> k
+
++ rpass  
+
+> k
+
++ rprogress  
+
+> k
+
+(18) The detailed expressions of these components are listed in Table II. Specifically, rpass  
+
+> k
+
+is assigned a large positive constant when the quadrotor passes a gate, and remains zero otherwise. Similarly, the collision reward rcollision  
+
+> k
+
+is set to a negative constant when a collision occurs. The PPO-based method was trained directly using this reward function, while the setting (2) and (3) are evaluated with the same reward function. System dynamics were kept consistent across both methods. As shown in Fig. 5, our method (Ours) with AVF out-performs the PPO-based approach across all key metrics, including Reward, Maximum Speed, Success Rate, and Av-erage Gates Traversed per episode. Notably, our proposed method learned to cross gates effectively from the beginning of training, whereas the PPO-based method initially struggled, exhibiting sudden and unstable learning breakthroughs. This behavior was consistently observed in experiments using a sparse cross reward, where the unpredictable timing of such breakthroughs adversely affected overall training stability. The differentiable baseline (Ours w/o AVF) achieves a high Success Rate, but fails to effectively learn gate crossing ability. This indicates that without the directional guidance of the AVF, the optimization gets trapped in a local optimum where the policy prioritizes safety (avoiding collisions) over the racing objective. These results provide strong evidence that our approach achieves better sample efficiency and more robust optimization performance. 
+
+C. Sim-to-Sim Experiments 
+
+We conducted sim-to-sim experiments to evaluate the ef-fectiveness of the Delta Action Model and its performance advantages over the state-of-the-art baseline [5]. The target SU et al. : VECTOR FIELD AUGMENTED DIFFERENTIABLE POLICY LEARNING FOR VISION-BASED DRONE RACING 70 1000 2000 3000 4000 5000                  
+
+> Training Steps
+> −2
+> 0
+> 2
+> 4
+> Reward
+> Reward
+> 01000 2000 3000 4000 5000
+> Training Steps
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+> Success
+> Success
+> 01000 2000 3000 4000 5000
+> Training Steps
+> 0
+> 1
+> 2
+> 3
+> Avg Gates
+> Avg Gates
+> 01000 2000 3000 4000 5000
+> Training Steps
+> 2
+> 4
+> 6
+> Max Speed
+> Max Speed
+> PPO Ours Ours (w/o AVF)
+
+Fig. 5. Performance comparison between different training schemes. 
+
+evaluation platform was IsaacLab [31]. The policy was trained in a CUDA-accelerated simulator based on [6], which in-corporates differentiable dynamics, and subsequently trans-ferred to IsaacLab for testing. In contrast, the baseline policy in [5] was both trained and tested directly in IsaacLab. Differences in physics engines and controller implementa-tions—Testing in IsaacLab employs a total thrust and body rate (CBTR) controller, whereas training uses a point-mass control model—increase the risk of failure during transfer. To mitigate this, we integrated Delta Action Model learning into the sim-to-sim transfer process and assessed its impact on success rate and velocity performance. Policies were tested across various track geometries (Zigzag, Circular, and Ellipse) and terrain difficulties. The experimental results, summarized in Table III, demon-strate that DiffRacing with the Delta Action Model (DA) achieves superior flight speeds while maintaining success rates comparable to the baseline [5] in most settings. Notably, our method achieves peak velocities up to 7.1 m/s on lower difficulty terrains and sustains approximately 6 m/s in more complex scenarios, exhibiting superior agility compared to the 
+
+∼5 m/s maximum speed of [5]. Furthermore, DA significantly enhances robustness at higher difficulty levels, particularly by bridging the dynamics gap. 
+
+D. Real-world Experiments 
+
+To validate the effectiveness of our proposed DiffRacing framework, we conducted real-world experiments on zigzag (Fig. 7(a-c)) and circular tracks (Fig. 7(d)). Crucially, the explicit track layouts and obstacle distributions in these trials were unseen during training; the policy network received only the relative position of the next gate. The system is implemented on the Betaflight 1 flight controller and runs on the Radxa Zero3W 2 platform. State information, including position, orientation, and body velocity, was obtained from a motion capture system 3, while depth data was captured 
+
+> 1
+
+https://www.betaflight.com/ 
+
+> 2
+
+https://radxa.com/products/zeros/zero3w 
+
+> 3
+
+https://www.vicon.com/ TABLE III SIM -TO -SIM PERFORMANCE                                                                                                     
+
+> Method Difficulty Level Zigzag Circular Ellipse SR vmax SR vmax SR vmax
+> Ours w/ DA 010/10 7.1 10/10 6.4 10/10 7.1 310/10 7.0 10/10 6.2 10/10 6.4 610/10 6.1 10/10 5.8 9/10 6.3 97/10 6.1 9/10 5.6 7/10 5.9 Ours w/o DA 010/10 6.8 10/10 5.9 10/10 6.5 310/10 6.9 10/10 6.0 10/10 5.7 68/10 6.1 7/10 5.7 7/10 6.2 92/10 5.9 5/10 5.2 3/10 5.6 [5] 010/10 5.4 10/10 5.0 10/10 5.2 310/10 5.2 10/10 4.9 10/10 5.4 610/10 5.2 10/10 4.9 10/10 5.3 96/10 4.7 10/10 4.7 10/10 5.2
+> vmax denotes Maximum Velocity (m/s), SR denotes success rate, and DA denotes Delta Action Model. 012345
+> Time (s)
+> −6
+> −5
+> −4
+> −3
+> −2
+> −1
+> 0
+> Vx (m/s)
+> Vx
+> True
+> Predicted
+> 012345
+> Time (s)
+> −2
+> −1
+> 0
+> 1
+> 2
+> Vy (m/s)
+> Vy
+> True
+> Predicted
+> 012345
+> Time (s)
+> −1.0
+> −0.5
+> 0.0
+> 0.5
+> 1.0
+> Vz (m/s)
+> Vz
+> True
+> Predicted
+> 012345
+> Time (s)
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> |V| (m/s)
+> Velocity Magnitude
+> True
+> Predicted
+
+Fig. 6. Velocity components during real-world flight. The dashed line shows the velocity predicted by the simulation with Delta Action Model compensation, while the solid line represents the velocity measured by the motion capture system. 
+
+using an Intel D435i camera. Thanks to the computationally efficient policy, the network operates at 30 Hz, providing the low-latency responses necessary for adaptive navigation around unknown obstacles. To enhance sim-to-real transfer reliability, particularly in high-speed flight, we implemented the Delta Action Model in our real-world experiments. One of the resulting aligned trajectories is shown in Fig. 6. As obstacle density increased, the drone consistently exhibited agile flight, reaching a top speed of 6.4 m/s (Fig. 7(a-c)). Addition-ally, continuous two-lap flights through obstacles (Fig. 7(d)) demonstrate the robustness of our policy in maintaining safe and sustained flight under challenging real-world conditions. V. C ONCLUSION AND LIMITATIONS 
+
+In this paper, we presented DiffRacing, a novel vector field-augmented differentiable policy learning framework for vision-based autonomous drone racing, effectively balancing high-speed gate traversal with reliable obstacle avoidance. A differentiable Delta Action Model further compensates for model mismatch and enables efficient sim-to-real transfer. Extensive simulation and real-world experiments demonstrate 8 IEEE ROBOTICS AND AUTOMATION LETTERS. PREPRINT VERSION. ACCEPTED MARCH, 2026 
+
+Fig. 7. Real-world experiments. The policy is deployed on a physical drone navigating (a-c) zigzag and (d) circular tracks with complex, obstacle-dense layouts that were unseen during training. The maximum velocities recorded in (a), (b), and (c) are 5.9, 6.4, and 6.0 m/s, respectively. 
+
+that DiffRacing achieves superior agility and collision-free performance in complex racing environments. 
+
+Limitations : The current vector field is manually designed, which may limit generality. Moreover, the augmented gradient does not correspond to an explicit objective, making theoretical stability analysis nontrivial. REFERENCES [1] Z. Han, Z. Wang, N. Pan, Y. Lin, C. Xu, and F. Gao, “Fast-racing: An open-source strong baseline for se(3) planning in autonomous drone racing,” IEEE Robotics and Automation Letters , vol. 6, no. 4, pp. 8631– 8638, 2021. [2] R. Penicka and D. Scaramuzza, “Minimum-time quadrotor waypoint flight in cluttered environments,” IEEE Robotics and Automation Letters ,vol. 7, no. 2, pp. 5719–5726, 2022. [3] E. Kaufmann, L. Bauersfeld, A. Loquercio, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Champion-level drone racing using deep reinforcement learning,” Nature , vol. 620, no. 7976, pp. 982–987, 2023. [4] H. Wang, J. Xing, N. Messikommer, and D. Scaramuzza, “Environment as policy: Learning to race in unseen tracks,” in 2025 IEEE International Conference on Robotics and Automation (ICRA) , pp. 11333–11339, IEEE, 2025. [5] F. Yu, Y. Su, Y. Hu, Y. Deng, L. Zhang, and D. Zou, “Mastering diverse, unknown, and cluttered tracks for robust vision-based drone racing,” 
+
+IEEE Robotics and Automation Letters , vol. 11, no. 2, pp. 2090–2097, 2026. [6] Y. Zhang, Y. Hu, Y. Song, D. Zou, and W. Lin, “Learning vision-based agile flight via differentiable physics,” Nature Machine Intelligence ,pp. 1–13, 2025. [7] Y. Song, S. Kim, and D. Scaramuzza, “Learning quadruped locomotion using differentiable simulation,” in 8th Annual Conference on Robot Learning , 2024. [8] J. Heeg, Y. Song, and D. Scaramuzza, “Learning quadrotor control from visual features using differentiable simulation,” in 2025 IEEE Interna-tional Conference on Robotics and Automation (ICRA) , pp. 4033–4039, IEEE, 2025. [9] C. Schwarke, V. Klemm, J. Bagajo, J. P. Sleiman, I. Georgiev, J. T. Torres, and M. Hutter, “Learning deployable locomotion control via differentiable simulation,” in 9th Annual Conference on Robot Learning ,2025. [10] M. C. Mozer, “A focused backpropagation algorithm for temporal pattern recognition,” in Backpropagation , pp. 137–169, Psychology Press, 2013. [11] T. He, J. Gao, W. Xiao, et al. , “Asap: Aligning simulation and real-world physics for learning agile humanoid whole-body skills,” arXiv preprint arXiv:2502.01143 , 2025. [12] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, “Prox-imal policy optimization algorithms,” arXiv preprint arXiv:1707.06347 ,2017. [13] H. Moon, J. Martinez-Carranza, T. Cieslewski, et al. , “Challenges and implemented technologies used in autonomous drone racing,” Intelligent Service Robotics , vol. 12, no. 2, pp. 137–148, 2019. [14] P. Foehn, D. Brescianini, E. Kaufmann, T. Cieslewski, M. Gehrig, M. Muglikar, and D. Scaramuzza, “Alphapilot: Autonomous drone racing,” Autonomous Robots , vol. 46, no. 1, pp. 307–320, 2022. [15] R. Madaan, N. Gyde, S. Vemprala, et al. , “Airsim drone racing lab,” in Neurips 2019 competition and demonstration track , pp. 177–191, PMLR, 2020. [16] Q. Wang, D. Wang, C. Xu, A. Gao, and F. Gao, “Polynomial-based online planning for autonomous drone racing in dynamic environments,” in 2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pp. 1078–1085, IEEE, 2023. [17] Y. Song, A. Romero, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Reach-ing the limit in autonomous racing: Optimal control versus reinforcement learning,” Science Robotics , vol. 8, no. 82, p. eadg1462, 2023. [18] O. Khatib, “Real-time obstacle avoidance for manipulators and mo-bile robots,” in Proceedings. 1985 IEEE International Conference on Robotics and Automation , vol. 2, pp. 500–505, 1985. [19] D. R. Nelson, D. B. Barber, T. W. McLain, and R. W. Beard, “Vector field path following for miniature air vehicles,” IEEE Transactions on Robotics , vol. 23, no. 3, pp. 519–529, 2007. [20] C. Connolly, J. Burns, and R. Weiss, “Path planning using laplace’s equation,” in Proceedings., IEEE International Conference on Robotics and Automation , pp. 2102–2106 vol.3, 1990. [21] Y. Koren and J. Borenstein, “Potential field methods and their inherent limitations for mobile robot navigation,” in Proceedings. 1991 IEEE International Conference on Robotics and Automation , pp. 1398–1404 vol.2, 1991. [22] E. W. Frew, D. A. Lawrence, C. Dixon, J. Elston, and W. J. Pisano, “Lyapunov guidance vector fields for unmanned aircraft applications,” in 2007 American Control Conference , pp. 371–376, 2007. [23] V. M. Goncalves, L. C. A. Pimenta, C. A. Maia, B. C. O. Dutra, and G. A. S. Pereira, “Vector fields for robot navigation along time-varying curves in n -dimensions,” IEEE Transactions on Robotics , vol. 26, no. 4, pp. 647–659, 2010. [24] Y. Wang, H. Wu, X. Xu, Y. Sun, and X. Zeng, “Enhanced adaptive artificial potential field for uav navigation in dynamic 3d environments with lightweight spherical obstacle map,” IEEE Robotics and Automa-tion Letters , vol. 11, no. 1, pp. 682–689, 2026. [25] R. Szczepanski, “Safe artificial potential field - novel local path planning algorithm maintaining safe distance from obstacles,” IEEE Robotics and Automation Letters , vol. 8, no. 8, pp. 4823–4830, 2023. [26] J. Xu, V. Makoviychuk, Y. Narang, F. Ramos, W. Matusik, A. Garg, and M. Macklin, “Accelerated policy learning with parallel differentiable simulation,” in International Conference on Learning Representations ,2021. [27] E. Xing, V. Luk, and J. Oh, “Stabilizing reinforcement learning in differentiable multiphysics simulation,” International Conference on Learning Representations (ICLR) , 2025. [28] J. Lee, A. Rathod, K. Goel, J. Stecklein, and W. Tabib, “Quadrotor navigation using reinforcement learning with privileged information,” 
+
+arXiv preprint arXiv:2509.08177 , 2025. [29] D. Panagou, “Motion planning and collision avoidance using navigation vector fields,” in 2014 IEEE International Conference on Robotics and Automation (ICRA) , pp. 2513–2518, IEEE, 2014. [30] J. Pan, J. Xing, R. Reiter, Y. Zhai, E. Aljalbout, and D. Scaramuzza, “Learning on the fly: Rapid policy adaptation via differentiable simula-tion,” in IEEE Robotics and Automation Letters , 2026. [31] M. Mittal, P. Roth, J. Tigue, et al. , “Isaac lab: A gpu-accelerated simulation framework for multi-modal robot learning,” arXiv preprint arXiv:2511.04831 , 2025.
