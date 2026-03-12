@@ -1,0 +1,8444 @@
+Title: Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling
+
+URL Source: https://arxiv.org/pdf/2603.03759v1
+
+Published Time: Thu, 05 Mar 2026 01:39:38 GMT
+
+Number of Pages: 48
+
+Markdown Content:
+# Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Emile Anand 1 Ishani Karmarkar 2
+
+## Abstract 
+
+Many large-scale platforms and networked con-trol systems have a centralized decision maker interacting with a massive population of agents under strict observability constraints. Motivated by such applications, we study a cooperative Markov game with a global agent and n ho-mogeneous local agents in a communication-constrained regime, where the global agent only observes a subset of k local agent states per time step. We propose an alternating learning framework ( ALTERNATING-MARL ), where the global agent performs subsampled mean-field Q-learning against a fixed local policy, and local agents update by optimizing in an induced MDP. We prove that these approximate best-response dynamics converge to an ˜O(1 /√k)-approximate Nash Equilibrium, while yielding a separation in the sample complexities between the joint state space and action space. Finally, we validate our results in numerical simulations for multi-robot control and federated optimization. 
+
+## 1. Introduction 
+
+Large-scale platforms and networked control systems often feature a global decision maker interacting with a massive population of distributed local agents under strict commu-nication and observability constraints. Examples include online marketplaces where a platform sets pricing or match-ing rules for many users (Yang et al., 2025; Li et al., 2019; Jin et al., 2018; 2020; Chaudhari et al., 2025), networked control systems where a central coordinator intermittently communicates with distributed subsystems (Qu et al., 2021; Lin et al., 2020; 2022; 2023; 2024; Kiran et al., 2022; Shalev-Shwartz et al., 2016; DeWeese & Qu, 2024), and robotic swarms that coordinate via low-bandwidth signals 
+
+> 1
+
+School of Computer Science, GeorgiaTech, Atlanta, GA, USA 
+
+> 2
+
+Institute of Computational and Mathematical Engineering, Stan-ford University, CA, USA. Correspondence to: Emile Anand 
+
+<emile@gatech.edu >.
+
+Preprint. March 5, 2026. 
+
+(Hespanha et al., 2007; Oliehoek et al., 2016; Preiss et al., 2017; Lv et al., 2025; Aina & Ha, 2025; Chiun et al., 2025). Drawing on the success of reinforcement learning (RL) in tasks like the game of Go (Silver et al., 2016) and robotic control (Kober et al., 2013), multi-agent reinforcement learning (MARL) has emerged as a powerful framework for modeling such complex, large-scale networked systems, where the objective is to learn optimal policies that maxi-mize the collective reward for the system. However, in such settings, a fully centralized multi-agent RL approach is typi-cally infeasible as the space of joint policies grows exponen-tially with the population size. Moreover, the global agent typically cannot observe the full joint state of all local agents at each decision epoch due to communication constraints. Likewise, local agents may only observe their own local state and a limited global context due to communication or privacy constraints (Yang et al., 2023). These informational and computational limitations violate the assumptions underlying centralized MARL, where policies and value functions are defined over the joint state space of all agents. Motivated by this setting, we study a cooperative setting with one global agent and n homogeneous local agents. Note that naively, even in centralized MARL, the size of policy search space is exponential in n, which is intractable for moderate n (Daskalakis & Papadimitriou, 2007; Blondel & Tsitsiklis, 2000; Anand & Qu, 2024). Motivated by the practical importance of decentralized MARL, in this pa-per we consider an even more challenging communication-constrained setting. Concretely, we assume that the global agent can only observe (and hence, can only condition its policy on) its own state-action pair and the states of subset of k ≪ n local agents, and that each local agent can only ob-serve their own state and action, and the global agent’s state. In this communication-constrained setting, the agents do not have sufficient information to learn or deploy a globally opti-mal behavior policy, as one aims to do in centralized MARL. This is because, the globally optimal behavior policy would, in general, be a mapping over the full joint state space of all agents. In contrast, in the communication-constrained sce-nario, agents are unable to observe the full joint state space, and hence such policies are neither learnable nor deployable. Consequently, as in prior work (Jin et al., 2021; Bai et al., 1
+
+> arXiv:2603.03759v1 [cs.MA] 4 Mar 2026 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling
+
+2021; Xie et al., 2021; Gerstgrasser & Parkes, 2023), we must settle for a locally optimal behavior policy, or a Nash equilibrium (Definition 2.3). That is, we seek to find a behavior policy for the global agent πg (sg , s 1, ..., s k) (pa-rameterized by its own state and the states of k ≪ n local agents) and a behavior policy for the local agent πℓ(si, s g )
+
+(parameterized by its own state and the global state). Such a pair of policies (πg , π ℓ) is said to form a Nash equilibrium under the reward model if neither the global agent nor the local agent has any incentive to deviate from its policy. In this paper, we focus on computing an approximate Nash equilibrium for this system (Definition 2.4). 
+
+Contributions. We propose ALTERNATING-MARL , a framework that couples a subsampled mean-field Q-learning procedure for the global agent (Anand & Qu, 2024; Anand et al., 2025a) with a generic local-agent learning procedure that acts as an approximate best-response oracle in the induced local MDP. The framework alternates between updating the global agent’s policy (global update) and updating the local agents’ policy (local update) according to the best-response dynamics, where a global update fixes the local policy and learns a near-best-response global policy using only k sampled local agents, and a local update fixes the global policy and updates the shared local policy using any RL routine with a provable performance guarantee. We show this converges to an ˜O(1 /√k)-approximate Nash equilibrium with high probability. We also bound the sam-ple complexity of this process, removing the exponential dependence on the size of the action space from prior works: at k = O(log n), ALTERNATING-MARL achieves polylogarithmic sample complexity in n and decouples the prohibitive dependence on the size of the action space. While our primary focus is on providing a theoretical anal-ysis of the method, we provide numerical simulations and implementation details of ALTERNATING-MARL for a multi-robot control setting in Section G. It is our hope 
+
+ALTERNATING-MARL will provide a useful theoretical and modeling framework to further the exploration of se-quential subsampling in Markov games, and potentially inspire new practical MARL algorithms. 
+
+Markov games framework. Under our cooperative multi-agent framework, we show that the problem of finding a Nash equilibrium of the n-agent system can be reduced to finding the Nash equilibrium of a Markov potential game, which is a special class of two-player games where the players represent the global agent g and a “representative” local agent l (the details are deferred to Section 2) (Shapley, 1953; Littman, 1994). For this Markov potential game, we show that (approximate) best-response dynamics, in which we alternately optimize g and l’s strategy, holding the other player’s strategy fixed, monotonically improves a common potential (Chen et al., 2022a). We leverage this structure to show that these approximate best-response dynamics reach an ϵ-approximate Nash equilibrium, where the error 
+
+ϵ scales with the per-update approximation errors of the global and local learning routines. However, efficiently implementing these best-response dynamics remains non-trivial in our communication-constrained setting. At a high level, our approach leverages that, when the policy for 
+
+l is held fixed, g’s best response corresponds to optimizing a particular induced MDP (and vice versa). For the global agent, we extend prior work of Anand et al. (2025a) in mean-field sampling and value iteration to efficiently compute approximately optimal best-responses. For the local agents, we design a chained-episodic MDP reduction and apply techniques from Dann & Brunskill (2015). We discuss these details further in Section 3. 
+
+1.1. Related Work Markov games and equilibrium learning. Markov games generalize MDPs to multi-agent settings and admit equilibrium notions such as Nash equilibria and related refinements (Sutton et al., 1999). Its foundations trace back to stochastic games (Shapley, 1953) and Markov games in MARL (Littman, 1994). A major line of work studies sample-efficient learning in Markov games, including al-gorithmic and statistical guarantees under various structural assumptions (e.g., tabular or function approximation) (Jin et al., 2021; Bai et al., 2021; Golowich et al., 2022; Bichuch et al., 2024; Mondal et al., 2022). Our work aligns with this tradition, while focusing on a large-population cooperative structure with communication constraints. 
+
+Mean-field methods for large-population MARL. 
+
+Mean-field MARL and mean-field games address the curse of dimensionality by exploiting exchangeability and aggre-gation: agents interact with population-level statistics rather than full joint configurations (Lasry & Lions, 2018; Yang & Wang, 2019; Gu et al., 2025; 2021; Anand et al., 2025a). In cooperative MARL, mean-field style approximations replace dependence on all agents’ states/actions with depen-dence on an empirical distribution or mean action (Li et al., 2019; Cui & Koeppl, 2022; Carmona & Delarue, 2013; Sub-ramanian et al., 2022). Our work uses a complementary per-spective: rather than requiring access to the full population statistic, we analyze subsampled mean-field statistics and quantify the approximation error when sampling k agents. 
+
+Stackelberg and leader–follower learning. Many appli-cations motivating our model can also be viewed through a leader-follower lens, where a global entity commits to a policy and local agents respond (Bacchiocchi et al., 2024; Lauffer et al., 2024; Nie & Zhang, 2008; Br ¨uckner & Schef-fer, 2011; Yu et al., 2022). Recent works study Stackelberg equilibria in MARL and deep RL settings, as well as sample-efficient learning of Stackelberg equilibria in general-sum 2Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+games (Bai et al., 2021; Gerstgrasser & Parkes, 2023; Balcan et al., 2025; Gan et al., 2025). Our focus differs: we analyze a cooperative objective with partial observability and use potential-game structure to obtain convergence guar-antees for alternating (approximate) best-response updates. 
+
+Potential games and best-response dynamics. Potential games (Monderer & Shapley, 1996; Guo et al., 2025; Are-fizadeh et al., 2024) provide a powerful framework where unilateral improvements align with ascent in a shared poten-tial, implying convergence of best-response dynamics under suitable conditions and motivating a large literature on dy-namics and rates (Swenson et al., 2018; Chen et al., 2022a; Leonardos et al., 2025; Abernethy et al., 2021; Overman & Bayati, 2025; Chen et al., 2022b; Yang & Wang, 2019; Du et al., 2021; Giannou et al., 2021; Heinrich et al., 2023). We leverage a Markov potential structure induced by the addi-tive reward decomposition in our cooperative Markov game to establish finite-time convergence to approximate Nash equilibria under probabilistic approximate best responses. 
+
+## 2. Preliminaries 
+
+For z ∈ Rd, ∥z∥p is the ℓp norm of z. For s1, . . . , s n
+
+and ∆ ⊆ [n], we write s∆ = {si : i ∈ ∆}. For a dis-crete measurable space (S, F), the total variation distance between probability measures μ and μ′ is TV( μ, μ ′) := 
+
+> 12
+
+P 
+
+> s∈S
+
+|μ(s)−μ′(s)|. We use the shorthand x ∼ P (·) to denote that x is a random sample from distribution P , and 
+
+x ∼ U (Ω) to denote that x is a uniform random element from Ω. For k, n ∈ N,  [n]
+
+> k
+
+ := {S ⊂ [n] : |S| = k} where 
+
+[n] = {1, . . . , n }. For any finite set X , ∆X denotes the space of discrete distributions over the set X . ˜O(·) hides polylogarithmic factors in any problem parameters except n.Following the notation of Anand et al. (2025a), we study a discounted infinite-horizon cooperative multi-agent decision problem with one global agent g and n local 
+
+agents indexed by [n]. At time t, the joint state is 
+
+s(t) = ( sg (t), s 1(t), . . . , s n(t)) ∈ S := Sg × S nl , where 
+
+sg (t) is the global state and si(t) is the state of local agent i.The global agent selects an action ag (t) ∈ A g while each i-th local agent selects ai(t) ∈ A l, and we denote the joint ac-tion as a(t) = ( ag (t), a 1(t), . . . , a n(t)) ∈ A := Ag × A nl .Next, the system collects an immediate stage reward 
+
+r(s, a ) := rg (sg , a g )
+
+| {z }
+
+> global component
+
++ 1
+
+n
+
+X
+
+> i∈[n]
+
+rl(si, s g , a i)
+
+| {z }
+
+> local component
+
+(1) and then stochastically transitions to s(t + 1) , where 
+
+sg (t + 1) ∼ Pg (·| sg (t), a g (t)) , and (2) 
+
+si(t + 1) ∼ Pl(·| si(t), s g (t), a i(t)) , ∀i ∈ [n]. (3) Note that under this MDP formulation, the local agents are 
+
+homogeneous (i.e., the system is invariant to permutations of the local agents) because each local agent shares a state and action space, transition kernel, and reward function. 
+
+Information constraints and policy classes. We focus on a communication-constrained regime in which the global agent cannot condition on all local agent states. At each decision step it may only communicate with a subset of 
+
+k local agents (e.g., due to bandwidth or sensing limits). Likewise, local agents are unable to communicate (directly) with one another and may only communicate with the global agent. Concretely, we constrain the global agent’s policy 
+
+πg : Sg × S kl to depend on the global agent’s state and the observed states of at most k ≤ n other agents (we are inter-ested in the case of k ≪ n). Because the local agents are all homogeneous, as discussed above, we can assume without loss of generality that all local agents share a common policy πl : Sl × S g which depends on the local agent’s own state and the global agent’s state. In the remainder of the paper, we use the notation Πg := {πg : Sg × S kl → ∆Ag }
+
+and Πℓ := {πl : Sl × S g → ∆Al } to denote the set of feasible policies for the global and local agents, under the communication-constrained setting. For a fixed discount factor γ ∈ (0 , 1) , we denote the value of the joint policy π = ( πg , π l) by the expected infinite-horizon discounted reward 
+
+V π (s) = Ea(t)∼π(·| s)
+
+X
+
+> t≥0
+
+γtr(s(t), a (t)) s(0) = s
+
+. (4) 
+
+Challenges in learning the optimal policy. The cardinality of the discrete search space simplex for the optimal policy is |S g ||S l|n|A g ||A l|n, which is exponential in the number of agents. Noting that the local agents are all homogeneous, and therefore permutation-invariant with respect to the rewards of the system (the order of the other agents does not matter to any single decision-making agent), techniques from mean-field MARL restrict the cardinality of the search space simplex for the optimal policy to 
+
+|S g ||A g ||S l||A l|n|S l||A l|. That is, mean-field MARL reduces the exponential dependence on n to a polynomial dependence on n (Yang et al., 2018; Gu et al., 2021; Anand et al., 2025a). However, in practical systems, when 
+
+n is large, the poly( n) sample-complexity may still be computationally infeasible, as noted in Anand et al. (2025a). 
+
+Solution concept under communication constraints. 
+
+In a fully centralized setting, in which there are no communication constraints, one can directly optimize the joint policy to maximize the common discounted return 
+
+V π (s). This setting was previously studied in Anand et al. (2025a). However, under the observability/communication constraints encoded by the policy classes (Π g , Πℓ), agents choose policies from different restricted classes and the natural target of our alternating procedure is a fixed 3Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+point of unilateral improvements. Accordingly, we study approximate Nash equilibria of the restricted Markov game induced by (Π g , Πℓ), which can be viewed as a local optimum of the objective function: intuitively, policy pair is an ϵ-Nash equilibrium if neither the global policy nor a representative local policy can improve the value by more than ϵ via a unilateral deviation within its respective class. This is exactly the stationarity notion induced by the best-response dynamics in ALTERNATING-MARL .To efficiently learn an approximate Nash equilibria, we in-troduce the following standard assumptions and definitions: 
+
+Assumption 2.1 (Finite state/action spaces) . We assume that the state and action spaces of all the agents in the MARL game are finite: |S l|, |S g |, |A g |, |A l| < ∞.
+
+Assumption 2.2 (Positive Bounded rewards) . Each compo-nent of the reward function is positive and bounded. Specif-ically, ∥rg (·, ·)∥∞ ≤ ˜rg , and ∥rl(·, ·, ·)∥∞ ≤ ˜rl. Together, this implies that ∥r(·, ·)∥∞ ≤ ˜rg + ˜ rl := ˜ r.
+
+Definition 2.3 (Nash Equilibrium) . A Nash Equilibrium pol-icy tuple π⋆ = ( π⋆g , π ⋆ 
+
+> 1
+
+, . . . , π ⋆n) corresponds to a solution to a state of the game where all the players perform their best-response strategies against the other players so that no player unilaterally deviates from its current policy (Nash, 1950). Specifically, the policy tuple (π⋆g , π ⋆ 
+
+> 1
+
+, . . . , π ⋆n) satis-fies that for all πg , π 1, . . . , π n ∈ ∆(g) × ∆(1) × · · · × ∆(n),we have that V π⋆
+
+≥ V π⋆g ,π ⋆  
+
+> 1,...,π ⋆i−1,π i,π ⋆i+1 ,...,π ⋆n
+
+for all 
+
+i ∈ [n] and V π⋆
+
+≥ V πg ,π ⋆  
+
+> 1,...,π ⋆n
+
+.
+
+Definition 2.4 (ϵ-approximate Nash Equilibrium policy) . Apolicy tuple (ˆ πg , ˆπ[n]) is said to be an ϵ-approximate Nash Equilibrium if it corresponds to a solution to a state of the system where all the players perform their best-responses against the other players so that no player unilaterally de-viates from its current policy. Formally, it satisfies, that for all (πg , π [n]), that V ˆπg ,ˆπ[n] ≥ V πg ,ˆπ[n] − ϵ, and moreover, for all i ∈ [n], V ˆπg ,ˆπ[n] ≥ V ˆπg ,ˆπ1,..., ˆπi−1,π i,ˆπi+1 ,..., ˆπn − ϵ.
+
+Motivating examples. We give examples of two cooper-ative systems which are naturally modeled by our setting. We provide experimental results and code in Section G. 
+
+Example 2.5 (Communication-constrained control) . Given a networked system (i.e., a smart grid or a multi-robot team), a global agent oversees the system but due to bandwidth lim-its, it can only communicate with k out of n local agents at each timestep. Each local agent (robot, generator, etc.) can sense its state and the central command if given, but not oth-ers. Here, the global agent’s task is to maintain system stabil-ity or optimize a global performance metric (voltage stability in a grid, coverage in a surveillance task, etc.), while each local agent’s “objective” is to follow the central command but also a local goal (or maintaining its own stability). 
+
+Example 2.6 (Federated optimization with partial participa-tion) . A central server (global agent) coordinates n clients   
+
+> Figure 1. Robot Coordination. This figure illustrates how our communication-constrained framework can be applied for decen-tralized coordination of large teams of robots. We note that gener-ative AI was used to refine aesthetics of this figure.
+
+(local agents) to minimize a shared objective (e.g., valida-tion loss). Due to bandwidth constraints, at each round the server can only query a subset of k ≪ n clients for their lo-cal states (e.g., gradient statistics, client drift indicators) and then broadcasts a global update, where each client performs a local action (e.g., local SGD steps or a regularization choice) based on its own state and the broadcast. 
+
+Mild heterogeneity via finite types. While we present the model with homogeneous locals, our framework also sup-ports a finite type space E. However, as noted in (Anand et al., 2025a), using techniques of Mondal et al. (2022), one can augment each local state as si = ( ei, x i) ∈ E×X , allow-ing rewards and transitions to depend on ei. All results then scale with the effective local state space size |S ℓ| = |E||X | .
+
+## 3. Algorithmic Approach: Alternating MARL 
+
+At a high-level, our approach builds on that of Anand et al. (2025a). However, in order to extend their approach to the communication-constrained setting, we require several tech-nical adaptations to generalize their methods to a Markov game framework. While some of our approach and notation follow the convention of Anand et al. (2025a), the analysis techniques and sub-routines differ substantially. In partic-ular, while Algorithm 1 is perhaps similar to Anand et al. (2025a), our work introduces technical novelties in our im-plementation of Algorithms 2 and 3 as well as their analyses, and the theoretical guarantees of the overall method. 
+
+3.1. Overview of Approach 
+
+First, suppose that we fix the local agent’s policy πℓ ∈ Πℓ
+
+and optimize the global agent’s policy πg ∈ Πg . Then, letting ag ∼ πg (·| sg , s ∆), the transition dynamics are con-strained to s′ 
+
+> g
+
+∼ Pg (·| sg , a g ) and s′ 
+
+> i
+
+∼ ¯P πℓ 
+
+> l
+
+(·| sg , s i), where 
+
+¯P πℓ 
+
+> l
+
+(·| si, s g ) = Pl(·| si, s g , π ℓ(si, s g )) . (5) 4Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Then, optimizing πg under these constrained dynamics corresponds to approximately computing a best-response 
+
+to the pre-fixed policy πℓ. Next, we can repeat this procedure, holding πg fixed, and optimizing πℓ in the induced MDP. This alternating procedure forms a sequence of best-response dynamics . If the sequence converges, the resultant policy is a Nash equilibrium (by Theorem 2.3). 
+
+Offline Learning: First, in Algorithm 1 ( G-LEARN ), the global agent fixes the local agent’s policy πℓ. Next, follow-ing the techniques of Anand et al. (2025a), the algorithm randomly samples a subset of local agents ∆ ⊆ [n] such that |∆| = k: it runs value iteration (with m samples) to ap-proximate the Q-function ˆQest  
+
+> k,m
+
+and policy ˆπest  
+
+> k,m
+
+for its best-response to πℓ in the surrogate subsystem of k local agents. The surrogate reward of this system, under the fixed local policy πℓ, is denoted as ¯rπℓ 
+
+> l
+
+(si, s g ) = rl(si, s g , π ℓ(si, s g )) ,and the stage reward received by the global agent is denoted as ¯rπℓ 
+
+> ∆
+
+: S × A g → R, where 
+
+¯rπℓ 
+
+> ∆
+
+(s, a g ) = rg (sg , a g ) + 1
+
+|∆|
+
+X
+
+> i∈∆
+
+¯rπℓ 
+
+> l
+
+(si, s g ). (6) Next, in Theorem B.27, we prove an analog of Theorem E.3 of Anand et al. (2025a), which shows that ∥ ˆQest  
+
+> k,m
+
+− Q∗∥∞
+
+is Lipschitz continuous with respect to the TV-distance be-tween the states of the subsampled agents and the full set of agents, thereby decaying on the order of ˜O(1 /√k).Next, in Algorithm 2 ( L-LEARN ), a representative local agent fixes the global agent’s policy πg , and learns an approximate best-response in the policy class Πℓ consisting of policies of the form πℓ : Sg × S l → A l. However, since the global agent’s action depends on a sample of k local agents, the representative local agent’s environment is not Markovian in (sg , s i). We resolve this by constructing an episodic chained-MDP in Algorithm 8 and Algorithm 9 and then applying a standard PAC episodic RL method (UCFH, (Dann & Brunskill, 2015)) to extract the local agent’s policy. Finally, in Algorithm 3, ALTERNATING-MARL deploys algorithms G-LEARN and L-LEARN , where algorithm al-ternately learn a better policy through the induced best-response dynamics process until it converges. 
+
+Online Execution: Algorithm 4. To convert the optimal-ity of the global agent’s action in the k local-agent sub-system to an approximate optimality guarantee on the full 
+
+n-agent subsystem, we adapt the techniques of Anand et al. (2025a) and leverage a randomized policy πest  
+
+> k,m
+
+where the global agent samples ∆ ∈  [n]
+
+> k
+
+ at each time-step to de-rive an action ag ← ˆπest 
+
+> k,m
+
+(sg , s ∆). Synchronously, each local agent i ∈ [n] evaluates the shared πℓ to get an action 
+
+ai ∼ πℓ(·| si, s g ). We show in Theorem 4.8 that the resultant policy is a ˜O(1 /√k)-approximate Nash Equilibrium. 
+
+Algorithm 1 G-LEARN: Global-agent Q-learning 
+
+Require: Global agent transition function Pg , local agent policy-guided transition function ¯Plπℓ , subsampling pa-rameters k and m, and number of Bellman updates T .Let μk(Sl) := {v = {0, 1 
+
+> k
+
+, . . . , 1}|S l| : P 
+
+> i
+
+vi = 1 }.
+
+if |S l|k ≤ |S l|k|S l| then 
+
+/⋆ subsampled standard Q-learning 
+
+Set ˆQ0
+
+> k,m
+
+(sg , s ∆, a g ) = 0 , ∀(sg , s ∆, a g ) ∈ S g×S kl ×A g .
+
+for t = 0 , . . . , T − 1 do for sg , s ∆, a g ∈ S g × S kl × A g do 
+
+ˆQt+1 
+
+> k,m
+
+(sg , s ∆, a g ) = ˜T est  
+
+> k,m
+
+ˆQtk,m (sg , s ∆, a g )
+
+else 
+
+/⋆ subsampled mean-field Q-learning 
+
+Set ˆQ0
+
+> k,m
+
+(sg , F s∆ , a g ) = 0 
+
+for t = 0 , . . . , T − 1 do for sg , F s∆ , a g ∈ S g × μk(Sl) × A g do 
+
+ˆQt+1 
+
+> k,m
+
+(sg , F s∆ , a g ) = ˆT est  
+
+> k,m
+
+ˆQtk,m (sg , F s∆ , a g )
+
+Let ˆπTk,m (·, ·) = arg max ag ∈A g
+
+ˆQTk,m (·, ·, a g ).Let Vnew = APPROX-VALUE (ˆ πTk,m , ˆQTk,m ).
+
+return ˆπTk,m and Vnew .
+
+Function APPROX-VALUE (πg , ˆQk,m )
+
+if |S l|k ≤ |S l|k|S l|
+
+for s ∈ S g × S kl do 
+
+V πg 
+
+> k
+
+(s) = P 
+
+> a∈A g
+
+πg (ag |s)) ˆQk,m (s, a g )
+
+else for s ∈ S g × μk(Sl) do 
+
+V πg 
+
+> k
+
+(s) = P 
+
+> a∈A g
+
+πg (ag |s)) ˆQk,m (s, a g )
+
+Return V πg 
+
+> k
+
+.
+
+3.2. Algorithm Description 
+
+We first introduce the empirical distribution function. 
+
+Definition 3.1 (Empirical distribution function Fs∆ ). Let 
+
+μk(Sl) = {ν ∈ ∆( Sl) : ν(x) ∈ { 0, 1 
+
+> k
+
+, 2 
+
+> k
+
+, . . . , 1} be the (discrete simplex) space of |S l|-sized vectors. Then, for 
+
+∆ ∈  [n]
+
+> k
+
+, the empirical distribution function Fs∆ ∈ μk(Sl)
+
+is the proportion of sampled agents at each state, i.e., for 
+
+s ∈ S l, F s∆ (s) = 1
+
+> k
+
+P 
+
+> i∈∆
+
+1{si = s}.
+
+Offline Learning (I). We describe Algorithm 1 ( G-LEARN ). Let m ∈ N denote the sample size for the learning algo-rithm with parameter k ≤ n. When |S l|k ≤ |S l|k|S l|, the algorithm uses traditional value-iteration, and otherwise it uses mean-field value iteration. We formally describe the procedures for each regime below. In the regime where 
+
+|S l|k ≤ |S l|k|S l|, we fix the local agent policy πℓ and learn the best-response Q-function for a subsystem with k local agents, denoted by ˆQtk,m : Sg × S kl × A g → R, which is initialized to 0. At time t, we update 
+
+ˆQt+1 
+
+> k,m
+
+(sg , s ∆, a g ) = ˜Tk,m ˆQtk,m (sg , s ∆, a g ), (7) 5Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+where, as in Anand et al. (2025a), ˜Tk,m is the empirical adapted Bellman operator, which uses m random samples 
+
+sjg ∼ Pg (·| sg , a g ) and sji ∼ ¯Plπℓ (·| si, s g ) for each j ∈ [m].
+
+˜Tk,m ˆQtk,m (sg , s ∆, a g ) = ¯ rπℓ 
+
+> ∆
+
+(s, a g )+ γm
+
+X
+
+> j∈[m]
+
+max  
+
+> a′
+> g∈A g
+
+ˆQtk,m (sjg , s j
+
+> ∆
+
+, a ′ 
+
+> g
+
+).
+
+G-LEARN applies value iteration with ˜T until ˆQk,m con-verges to a fixed point satisfying ˜Tk,m ˆQest  
+
+> k,m
+
+= ˆQest  
+
+> k,m
+
+( ˜Tk,m 
+
+is γ-contractive), converging to a deterministic policy ˆπest 
+
+> k,m
+
+,
+
+ˆπest 
+
+> k,m
+
+(sg , s ∆) = arg max  
+
+> ag∈A g
+
+ˆQest 
+
+> k,m
+
+(sg , s ∆, a g ). (8) When |S l|k > |S l|k|S l|, the mean-field MARL transforma-tion is helpful in reducing complexity, and hence we learn the mean-field best-response Q-function, ˆQtk,m : Sg ×
+
+μk(Sl)×A g → R. Initializing at 0, we iteratively perform the update in the empirical distribution parameterization: 
+
+ˆQt+1 
+
+> k,m
+
+(sg , F s∆ , a g ) = ˆTk,m ˆQtk,m (sg , F s∆ , a g ), (9) where ˆTk,m is the empirical adapted mean-field Bellman operator in the mean-field parameterization: 
+
+ˆTk,m ˆQtk,m (sg , F s∆ , a g ) = ¯ rπℓ 
+
+> ∆
+
+(s, a g )+ γm
+
+X
+
+> j∈[m]
+
+max  
+
+> a′
+> g∈A g
+
+ˆQtk,m (sjg , F sj
+
+> ∆
+
+, a ′ 
+
+> g
+
+),
+
+which admits the same fixed point ˆQest  
+
+> k,m
+
+and policy ˆπest 
+
+> k,m
+
+.
+
+Offline Learning (II). For Algorithm 2 ( L-LEARN ), we fix the global agent’s policy πg . Then, a representative local agent faces an induced MDP with state space Sl ×S g , action space Al, transition kernel inherited from the game, and re-ward scaled by 1/n . Since the global agent’s action depends on a sample of k local agents, the representative local agent’s environment is not Markovian in (sg , s i). We resolve this by constructing an episodic chained-MDP in Algorithms 8 and 9. The difficulty here is that the global agent’s policy πg
+
+requires a k-tuple of local states whereas a single local agent only sees sg and si. Our reduction resolves this by explicitly maintaining a k-tuple of local states and serializing the k
+
+local decisions within each macro step such that where each agent uses the same policy which maps from Sl × S g → A l.Specifically, Algorithm 8 replaces each macro time step t by a chain of k micro steps τ = tk, tk + 1 , . . . , tk + ( k − 1) ,indexed by a stage pointer j ∈ { 1, . . . , k }. The state of the unfolded system at micro step τ is given by (j, s g , ¯sg , s 1: k),where s1: k are the local “replica” states, sg is the current global state, and ¯sg is a pending next global state. At the first micro node of each chain (where the stage j = 1 and 
+
+¯sg =⊥), we evaluate the global agent’s policy using the 
+
+Algorithm 2 L-LEARN : Local-agent Q-learning 
+
+Require: Transition kernels Pl, P g , fixed global-agent pol-icy πg , parameters k and γ, and failure probability. δℓ.Set H := 11−γ log ∥r∥∞ 
+
+> √k
+> 1−γ
+
+as the effective horizon. 
+
+/⋆ Form a proxy episodic MDP fMk(πg )
+
+if |S l|k ≤ |S l|k|S l|
+
+/⋆ standard parameterization 
+
+Use Algorithm 8 to construct the k-chained MDP fMk
+
+with horizon eH = H · k
+
+else 
+
+/⋆ mean-field parameterization 
+
+Use Algorithm 9 to construct the |S l|-chained mean-field MDP fMk with horizon eH = H · (|S l| + 1) .Run an episodic PAC RL solver (e.g., UCFH) on fMk(πg )
+
+with parameters ϵℓ = 1√k , δ ℓ to obtain induced policy πℓ.
+
+Return policy πℓ and value function estimate bV πℓ,π g .entire replica tuple and compute ag ∼ πg (·| sg , s 1: k), and sample a pending global next state ¯sg ∼ Pg (·| sg , a g ). This pending global transition is computed before updating any local replica, making it consistent with the original macro-step semantics. Along the chain of micro nodes, only one local replica is “active” at any time. At stage j, the learner selects the action for replica j, a ℓ ∈ A l. The environment updates that replica via s′ 
+
+> j
+
+∼ Pl(·| sj , s g , a ℓ), leaving the other local replica states unchanged, and increments j. At stage j = k, it commits the cached global transition, setting 
+
+sg ← ¯sg and resetting ¯Sg ←⊥ , completing one macro step. Similarly, in the mean-field parameterization in Algorithm 9, we maintain an empirical distribution on the number of agents at each state: if h(u) agents occupy state u ∈ S l, we apply the local action aℓ for state u to move the mass h(u)
+
+to next states via the multinomial induced by Pl(·| u, s g , a ℓ),accumulating these counts in a new histogram ¯F∆. Fi-nally, we run UCFH (Dann & Brunskill, 2015) which is an episodic PAC RL solver on the constructed MDP fMk(πg )
+
+to obtain an ϵℓ best-response induced policy πℓ.
+
+Offline Learning (III). ALTERNATING-MARL in Algo-rithm 3 orchestrates alternating best-responses of G-LEARN 
+
+and L-LEARN for Nsteps -many iterations: each algorithm proposes its best-response policy, and Algorithm 3 accepts the policy if it estimates that it has improved the joint value function, up to a tolerance radius of ˜O(1 /√k). To ensure that the potential drifts upward on every accepted update, we introduce function UPDATE in Algorithm 3, which rejects worse joint policies and terminates the algorithm earlier if a learned best-response policy is within the tolerance radius. 
+
+Online Execution: Algorithm 4 (Online execution). To convert the optimality of the global agent’s action in the k
+
+local-agent subsystem to an approximate optimality guaran-6Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Algorithm 3 ALTERNATING-MARL 
+
+Require: Transition functions Pg and Pℓ, initial uniform policies (π0 
+
+> g
+
+, π 0 
+
+> ℓ
+
+), steps Nsteps , failure probability δ, algo-rithms G-LEARN and L-LEARN , and sampling parame-ters k and m.Set δlearn = δ 
+
+> 4Nsteps
+
+and T = 21−γ log ˜r√k 
+
+> 1−γ
+
+.Set ˆVold = 0 .
+
+for t = 1 , . . . , N steps do 
+
+/⋆ Propose a policy update to πg
+
+Form ¯Pl := ¯P πt−1 
+
+> ℓ
+> l
+
+using Equation 5. 
+
+˜πg , ˆVnew ← G-LEARN (Pg , ¯Pℓ, k, m, T )
+
+πtg , NASH , ˆVold ← UPDATE (˜ πg , π t−1 
+
+> g
+
+, ˆVnew , ˆVold )
+
+if NASH = T RUE then return (πtg , π t−1 
+
+> ℓ
+
+)
+
+/⋆ Propose a policy update to πℓ
+
+˜πℓ, ˆVnew ← L-LEARN (Pg , P ℓ, π tg , k, δ learn ).
+
+πtℓ, NASH , ˆVold ← UPDATE (˜ πℓ, π t−1 
+
+> ℓ
+
+, ˆVnew , ˆVold )
+
+if NASH = T RUE then return (πtg , π tℓ)
+
+return (πNsteps  
+
+> g
+
+, π Nsteps  
+
+> ℓ
+
+)
+
+Function UPDATE (πnew , π old , ˆVnew , ˆVold )
+
+Let η = 2˜ r
+
+> (1 −γ)2
+
+q 12k ln(2 |S l||A g |√k) + 5√k
+
+
+
+.
+
+if ˆVnew > ˆVold + 2 η on all subsampled states then return (πnew , FALSE , ˆVnew ) /⋆ accept 
+
+else if ˆVnew < ˆVold − 2η on some state then return (πold , FALSE , ˆVold ) /⋆ reject 
+
+else return (πold , TRUE , ˆVold ) /⋆ terminate 
+
+tee on the full n-agent subsystem, we propose a randomized policy πest  
+
+> k,m
+
+where the global agent samples ∆ ∈  [n]
+
+> k
+
+
+
+at each time-step to derive an action ag ← ˆπest 
+
+> k,m
+
+(sg , s ∆).Synchronously, each local agent i ∈ [n] evaluates the shared 
+
+πℓ to get an action ai ∼ πℓ(·| si, s g ). Theorem 4.8 shows that the resultant policy is a ˜O(1 /√k)-approximate NE. 
+
+## 4. Theoretical Guarantees and Analysis 
+
+We begin by giving theoretical guarantees for G-LEARN. 
+
+Definition 4.1 (Bellman noise) . We first introduce the notion of Bellman noise. Note that ˆTk,m is an unbiased estimator of the adapted Bellman operator ˆTk,
+
+ˆTk ˆQk(sg , s ∆, a g ) := ¯ rπℓ 
+
+> ∆
+
+(s, a )+ γE(s′  
+
+> g,s ′
+> ∆)∼P k
+
+max  
+
+> a′
+> g∈A g
+
+ˆQk(s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, a ′ 
+
+> g
+
+)] ,
+
+where Pk := Pg ⊗ ( ¯P πℓ 
+
+> l
+
+)⊗k. Here, ˆQk is initialized to 0
+
+and at time t we update ˆQt+1  
+
+> k
+
+= ˆTk ˆQtk. Similarly, ˆTk is a 
+
+Algorithm 4 Online execution stage 
+
+Require: Policies πg and πℓ, and states sg (0) , s [n](0) ∼ s0.Let R ← 0
+
+for t = 0 , . . . , T − 1 do 
+
+Sample ∆ ⊆  [n]
+
+> k
+
+ uniformly at random Let ag (t) ∼ ˆπg,k (·| sg (t), s ∆(t)) 
+
+For all i ∈ [n], let ai(t) ∼ πℓ(·| si(t), s g (t)) 
+
+Collect a reward rt = rg (sg , a g )+ 1
+
+> n
+
+Pni=1 rl(si, s g , a i)
+
+Let R ← R + γtrt
+
+The agents transition to their next states 
+
+γ-contraction and admits a fixed point ˆQ∗
+
+> k
+
+. By the law of large numbers, as m → ∞ , ˆTk,m → ˆTk and ˆQ∗ 
+
+> k,m
+
+→ ˆQ∗
+
+> k
+
+.For finite m, ϵk,m := ∥ ˆQest  
+
+> k,m
+
+− ˆQ∗
+
+> k
+
+∥∞ is the Bellman noise. 
+
+Then, Theorem 4.2 provides a high-probability bound on the approximate best-response of the learned policy. 
+
+Theorem 4.2. For all s ∈ S g × S nl , if T ≥ 21−γ log ˜r√k
+
+> (1 −γ)
+
+in G-LEARN , then 
+
+V π∗
+
+(s)−V πest  
+
+> k,m
+
+(s) ≤ 2ϵk,m 
+
+1 − γ + 2˜ rk(1 − γ)2
+
++ 2˜ r
+
+(1 − γ)2
+
+r 12k ln 2 k|S l||A g |.
+
+We defer the proof of Theorem 4.2 to Section B, and gener-alize the result to stochastic rewards in Section F. To bound 
+
+ϵk,m , we specify the number of samples m required to con-trol the Bellman noise in Theorem 4.3. 
+
+Lemma 4.3 (Controlling the Bellman noise) . For k ∈ [n],let m1 ≥ ˜O( k2γ2 ˜r2|S l| 
+
+> (1 −γ)4
+
+) be the number of samples in the mean-field parameterization and m2 ≥ ˜O( ˜rk 2γ2 
+
+> (1 −γ)4
+
+) be the number of samples in the standard parameterization. Then, we have that with probability at least 1 − 1100 ek , ϵk,m ≤ 2√k .
+
+We defer the proof of Theorem 4.3 to Appendix B.36. Then, combining Theorem 4.2 and Theorem 4.3, we have 
+
+Theorem 4.4 (Global agent subsampling result) . Let m∗ be chosen as in Theorem 4.3, and set πest  
+
+> k
+
+:= πest  
+
+> k,m ∗
+
+. Then, for all s ∈ S , we have that with probability at least 1 − 1100 ek :
+
+V π∗
+
+(s) − V πest  
+
+> k
+
+(s)
+
+≤ O
+
+ ˜r
+
+√k(1 − γ)2
+
+q
+
+ln(2 |S l||A g |√k) + 2
+
+√k
+
+
+
+.
+
+The sample complexity of G-LEARN under standard pa-rameterizations is ˜O( k4γ2 ˜r2|S g ||S l|k |A g | 
+
+> (1 −γ)5
+
+), and in mean-field parameterization it is ˜O( k3+ |S l|γ2∥rl∥2   
+
+> ∞|S g||S l|2|A g|
+> (1 −γ)5
+
+).
+
+Remark 4.5. We also extend the formulation of G-LEARN 
+
+to off-policy Q-learning (Chen et al., 2021b; Chen & Magu-7Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+luri, 2022a), which replaces the generative oracle assump-tion with a stochastic approximation scheme that learns an approximately optimal policy using historical data. Sec-tion E provides theoretical guarantees with a similar decay-ing optimality gap as in Theorem B.16. 
+
+4.1. Convergence Guarantees on L-LEARN 
+
+Theorem 4.6 (Local agent best-response optimality and sample-complexity guarantees) . With probability at least 
+
+1 − δ, the local-agent’s learned policy is an ϵ best-response to the global agent’s fixed policy πg with sample complexity 
+
+˜O
+
+
+
+min 
+
+|S l|5|S g |2k2|S l||A l|
+
+ϵ2(1 − γ)2 ln 1
+
+δ , k5|S g |2|S l|k|A l|
+
+ϵ2(1 − γ)3 ln 1
+
+δ
+
+ 
+
+.
+
+We defer the proof of Theorem 4.6 to Appendix C.4, and use these results to analyze ALTERNATING-MARL .
+
+4.2. Convergence Guarantees on ALTERNATING-MARL 
+
+The dynamics of the meta-algorithm induces a Markov game (also called a stochastic game ), where the play proceeds by steps from position to position, according to transition probabilities controlled jointly by the agents. 
+
+Definition 4.7 (Markov Potential games) . Denote the global agent by index 0, and let the policy of agent 
+
+i ∈ { 0, . . . , n } be denoted by πi, and the joint policies of all the other agents be given by π−i. Then, a stochastic game M is a Markov Potential Game if there exists a potential function Φ : S × A → R such that for any agent 
+
+i ∈ { 0, . . . , n } and any pair of policies (πi, π −i), (π′
+
+> i
+
+, π −i)
+
+at any starting state s0, we have that 
+
+Eπ′
+
+> i,π −i
+
+ ∞X
+
+> t=0
+
+γtri(st, a t)|s0
+
+
+
+−Eπ
+
+ ∞X
+
+> t=0
+
+γtri(st, a t)|s0
+
+
+
+= Eπ′
+
+> i,π −i
+
+ ∞X
+
+> t=0
+
+γtΦ( st, a t)|s0
+
+
+
+−Eπ
+
+ ∞X
+
+> t=0
+
+γtΦ( st, a t)|s0
+
+
+
+,
+
+i.e., when agent i switches from policy πi to policy π′
+
+> i
+
+, ∆Φ 
+
+equals the change in the utility of that player’s policy. 
+
+We show that the Markov game in our setting is a Markov Potential game in Theorem D.4 and exploit a theorem of Shapley (1953) that best-response dynamics converge to pure Nash Equilibria in Markov potential games. However, unlike the continuous time dynamics which converges rapidly (Swenson et al., 2018), the worst-case bound in the discrete-time dynamics can converge exponentially slowly in the number of players (Durand & Gaujal, 2016). How-ever, under homogeneity, the (n + 1) -player game restricted to the policy class Πg and Πℓ is equivalent to a 2-player game between the global agent and a representative local agent, yielding a dimension-reduced dynamic that converges rapidly towards a Nash Equilibrium in Theorem 4.8. 
+
+Theorem 4.8 (The sample complexity of learning a 
+
+2η-approximate Nash Equilibrium) . Fix δ ∈ (0 , 1) , and let η = max {ϵg , ϵ l} be the maximum error incurred by Algorithms G-LEARN and L-LEARN . Then, we have 
+
+η = 2˜ r
+
+(1 −γ)2
+
+r 12k ln(2 |S l||A g |√k)+ 5
+
+√k
+
+!
+
+≤ ˜O
+
+ 1
+
+√k
+
+
+
+.
+
+Setting Nsteps = 2 |S g |2|A g ||A l| · min {|S l|2k|S g |, |S l|k+1 },
+
+ALTERNATING-MARL learns a 2η-approximate NE with probability at least 1 − δ, and sample complexity. 
+
+˜O
+
+
+
+min 
+
+ |S g |4|A g |2|A l|2|S l|8k3+3 |S l| ˜r
+
+(1 − γ)5 log 1
+
+δ ,
+
+|S g |4|S l|2k+1 |A g |2|A l|2k7 ˜r2
+
+(1 − γ)5 log 1
+
+δ
+
+ 
+
+,
+
+Remark 4.9 (Tradeoff in k and the Rewards of Subsam-pling) . In the mean-field parameterization, our bound in Theorem 4.8 dismantles the exponential dependence on the size of the action space of the local agents. In the standard parameterization, our bound removes the dependence on the size of the joint action space of the local agents that had existed in prior works (Yang et al., 2018; Li et al., 2021; Gu et al., 2021; 2025; Anand et al., 2025a). By Theorem 4.8, we observe that as k → n, the approximate Nash Equilibrium approaches a Nash Equilibrium, revealing a fundamental trade-off in the choice of k: increasing 
+
+k improves the performance of the policy, but increases the size of the ˆQk-function. Importantly, our sample complexity breaks the exponential dependence on the number of agents on the action space, while attaining only a logarithmic dependence on the agents in terms of the state space: if we set k = O(log n), we get a sample complexity of ˜O(|S g |4|A g |2|A l|2 · min {|S l|8(log n)|S l|, |S l|log n})
+
+with decaying optimality gap on the order of 1/√log n.
+
+Remark 4.10. The polynomial dependence on the effective horizon 11−γ in our work is likely loose. This is because we did not attempt to leverage more sophisticated variance-reduction techniques (Sidford et al., 2018a;b; Wainwright, 2019; Jin et al., 2024). While we believe our techniques can likely be combined with variance reduction to improve this dependence on 11−γ ; we omit this from this paper because our focus is on the reducing dependence on 
+
+n rather than the discount factor. 
+
+## 5. Conclusion and Future Work 
+
+We introduce a mean-field framework for communication-constrained multi-agent reinforcement learning by formulat-ing this problem as best-response dynamics under a Markov game. We propose ALTERNATING-MARL , which learns each agent’s best response to the mean effect of the local agents policies from k samples of the local agents. This 8Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+enables an exponential reduction in the sample complexity of approximating a solution to the MDP. We prove that the resultant policy is a ˜O( 1√k )-approximate Nash equilibrium. We extend our result to the off-policy learning setting with stochastic rewards, and validate our theory with numerical simulations in communication-constrained control settings. 
+
+Limitations and future work. We assume that the global and local agents cooperate to optimize a structured reward under a specific dynamic model which was studied in Anand et al. (2025a). A natural direction for future is to explore the extent to which our algorithms and analysis can be extended to weaker assumptions on the dynamics model or the reward structure. Second, our work is only able to incorporate mild heterogeneity among cooperative agents. It would be interesting to explore the extent to which we can capture a greater degree of heterogeneity (Hu et al., 2023; Cui & Koeppl, 2022; Anand et al., 2026; Wang et al., 2026). Finally, it would be exciting to generalize this work to the setting with infinite/continuous state spaces with general function approximation. This would require more technical algorithms using least-squares value iteration (Xu et al., 2023; Ayoub et al., 2020) or linearity assumptions on the underlying MDP (Golowich & Moitra, 2024a;b). 
+
+## Impact Statement 
+
+This paper contributes to the theoretical foundations of MARL, with the goal of developing mean-field tools that can apply to the control of networked systems. The work can potentially lead to algorithms to adaptively control of cyber-physical systems. Furthermore, any applications of the proposed algorithm in its current form should be consid-ered cautiously since the analysis here focuses on efficiency and stationarity, but does not consider issues of fairness in the vector-reward framework (Abernethy et al., 2011). 
+
+## Acknowledgements 
+
+We are deeply grateful to Guannan Qu, Zaiwei Chen, Sarah Liaw, Mirabel Reid, Jan van den Brand, Jacob Abernethy, and Jacob Platnick for sharing their helpful ideas and in-sightful discussions. Emile’s research is supported by NSF Grant CCF 2338816, and Ishani’s research is supported by NSF Grant CCF-1955039, and a PayPal research award. 
+
+## References 
+
+Abbasi-Yadkori, Y., P ´al, D., and Szepesv ´ari, C. Improved algorithms for linear stochastic bandits. Advances in neural information processing systems , 24, 2011. Abernethy, J., Bartlett, P. L., and Hazan, E. Blackwell Ap-proachability and No-Regret Learning are Equivalent. In Kakade, S. M. and von Luxburg, U. (eds.), Proceedings of the 24th Annual Conference on Learning Theory , vol-ume 19 of Proceedings of Machine Learning Research ,pp. 27–46, Budapest, Hungary, 09–11 Jun 2011. PMLR. Abernethy, J., Lai, K. A., and Wibisono, A. Fast con-vergence of fictitious play for diagonal payoff matri-ces. In Proceedings of the Thirty-Second Annual ACM-SIAM Symposium on Discrete Algorithms , SODA ’21, pp. 1387–1404, USA, 2021. Society for Industrial and Applied Mathematics. ISBN 9781611976465. Aina, K. O. and Ha, S. Deep Reinforcement Learning for Multi-Agent Coordination, 2025. Anand, E. and Qu, G. Efficient Reinforcement Learning for Global Decision Making in the Presence of Local Agents at Scale, 2024. Anand, E., van den Brand, J., Ghadiri, M., and Zhang, D. J. The Bit Complexity of Dynamic Algebraic Formu-las and Their Determinants. In Bringmann, K., Grohe, M., Puppis, G., and Svensson, O. (eds.), 51st Interna-tional Colloquium on Automata, Languages, and Pro-gramming (ICALP 2024) , volume 297 of Leibniz Inter-national Proceedings in Informatics (LIPIcs) , pp. 10:1– 10:20, Dagstuhl, Germany, 2024. Schloss Dagstuhl – Leibniz-Zentrum f ¨ur Informatik. ISBN 978-3-95977-322-5. doi: 10.4230/LIPIcs.ICALP.2024.10. Anand, E., Hoffmann, R., Liaw, S., and Wierman, A. Graphon Mean-Field Subsampling for Cooperative Het-erogeneous Multi-Agent Reinforcement Learning, 2026. Anand, E. T., Karmarkar, I., and Qu, G. Mean-Field Sam-pling for Cooperative Multi-Agent Reinforcement Learn-ing. In The Thirty-ninth Annual Conference on Neural Information Processing Systems , 2025a. Anand, E. T., van den Brand, J., and McCarty, R. The Struc-tural Complexity of Matrix-Vector Multiplication. In The Thirty-ninth Annual Conference on Neural Information Processing Systems , 2025b. Arefizadeh, S., Nedich, A., and Dasarathy, G. On Char-acterizations of Potential and Ordinal Potential Games, 2024. Ayoub, A., Jia, Z., Szepesvari, C., Wang, M., and Yang, L. Model-based reinforcement learning with value-targeted regression. In International Conference on Machine Learning , pp. 463–474. PMLR, 2020. Bacchiocchi, F., Bollini, M., Castiglioni, M., Marchesi, A., and Gatti, N. The Sample Complexity of Stackelberg Games, 2024. Bai, Y., Jin, C., Wang, H., and Xiong, C. Sample-efficient learning of Stackelberg equilibria in general-sum games. 9Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+In Proceedings of the 35th International Conference on Neural Information Processing Systems , NIPS ’21, Red Hook, NY, USA, 2021. Curran Associates Inc. ISBN 9781713845393. Balcan, M.-F., Fragkia, K., and Harris, K. Learning in Structured Stackelberg Games, 2025. Banach, S. Sur les op ´erations dans les ensembles abstraits et leur application aux ´equations int ´egrales. Fundamenta Mathematicae , 3(1):133–181, 1922. Bichuch, M., Dayanıklı, G., and Lauriere, M. A Stackel-berg Mean Field Game for Green Regulator with a Large Number of Prosumers. Available at SSRN 4985557 , 2024. Blondel, V. D. and Tsitsiklis, J. N. A Survey of Com-putational Complexity Results in Systems and Control. 
+
+Automatica , 36(9):1249–1274, 2000. ISSN 0005-1098. doi: https://doi.org/10.1016/S0005-1098(00)00050-9. Br ¨uckner, M. and Scheffer, T. Stackelberg games for adver-sarial prediction problems. In Proceedings of the 17th ACM SIGKDD international conference on Knowledge discovery and data mining , pp. 547–555, 2011. Carmona, R. and Delarue, F. Probabilistic analysis of mean-field games. SIAM Journal on Control and Optimization ,51(4):2705–2734, 2013. Chaudhari, S., Pranav, S., Anand, E., and Moura, J. M. Peer-to-peer learning dynamics of wide neural networks. In 
+
+ICASSP 2025-2025 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) , pp. 1–5. IEEE, 2025. Chen, D., Zhang, Q., and Doan, T. T. Convergence and Price of Anarchy Guarantees of the Softmax Policy Gradient in Markov Potential Games, 2022a. Chen, Z. and Maguluri, S. T. Sample complexity of policy-based methods under off-policy sampling and linear func-tion approximation. In International Conference on Artifi-cial Intelligence and Statistics , pp. 11195–11214. PMLR, 2022a. Chen, Z. and Maguluri, S. T. Sample complexity of policy-based methods under off-policy sampling and linear func-tion approximation. In Camps-Valls, G., Ruiz, F. J. R., and Valera, I. (eds.), Proceedings of The 25th Interna-tional Conference on Artificial Intelligence and Statis-tics , volume 151 of Proceedings of Machine Learning Research , pp. 11195–11214. PMLR, 28–30 Mar 2022b. Chen, Z., Maguluri, S. T., Shakkottai, S., and Shanmugam, K. Finite-sample analysis of off-policy TD-learning via generalized bellman operators. Advances in Neural Infor-mation Processing Systems , 34:21440–21452, 2021a. Chen, Z., Maguluri, S. T., Shakkottai, S., and Shanmugam, K. A Lyapunov theory for finite-sample guarantees of asynchronous Q-learning and TD-learning variants. arXiv preprint arXiv:2102.01567 , 2021b. Chen, Z., Zhou, D., and Gu, Q. Almost optimal algorithms for two-player zero-sum linear mixture markov games. In International Conference on Algorithmic Learning Theory , pp. 227–261. PMLR, 2022b. Chen, Z., Maguluri, S. T., and Zubeldia, M. Concentration of contractive stochastic approximation: Additive and multiplicative noise. The Annals of Applied Probability ,35(2):1298–1352, 2025. Chiun, J., Zhang, S., Wang, Y., Cao, Y., and Sartoretti, G. MARVEL: Multi-Agent Reinforcement Learning for Con-strained Field-of-View Multi-Robot Exploration in Large-Scale Environments. In 2025 IEEE International Con-ference on Robotics and Automation (ICRA) , pp. 11392– 11398, 2025. doi: 10.1109/ICRA55743.2025.11127700. Craven, T. and Csordas, G. Karlin’s conjecture and a ques-tion of P ´olya. The Rocky Mountain Journal of Mathemat-ics , pp. 61–82, 2005. Cui, K. and Koeppl, H. Learning Graphon Mean Field Games and Approximate Nash Equilibria. In Interna-tional Conference on Learning Representations , 2022. Dann, C. and Brunskill, E. Sample complexity of episodic fixed-horizon reinforcement learning. Advances in Neural Information Processing Systems , 28, 2015. Daskalakis, C. and Pan, Q. A Counter-example to Karlin’s Strong Conjecture for Fictitious Play. In 2014 IEEE 55th Annual Symposium on Foundations of Computer Science ,pp. 11–20. IEEE, October 2014. doi: 10.1109/focs.2014. 10. Daskalakis, C. and Papadimitriou, C. Computing equilibria in anonymous games. In 48th Annual IEEE Symposium on Foundations of Computer Science (FOCS’07) , pp. 83– 93. IEEE, 2007. DeWeese, A. and Qu, G. Locally Interdependent Multi-Agent MDP: Theoretical Framework for Decentralized Agents with Dynamic Dependencies. In Forty-first Inter-national Conference on Machine Learning , 2024. Ding, D., Wei, C.-Y., Zhang, K., and Jovanovic, M. Inde-pendent policy gradient for large-scale Markov potential games: Sharper rates, function approximation, and game-agnostic convergence. In International Conference on Machine Learning , pp. 5166–5220. PMLR, 2022. Du, S., Kakade, S., Lee, J., Lovett, S., Mahajan, G., Sun, W., and Wang, R. Bilinear classes: A structural framework 10 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+for provable generalization in RL. In International Con-ference on Machine Learning , pp. 2826–2836. PMLR, 2021. Durand, S. and Gaujal, B. Complexity and Optimal-ity of the Best Response Algorithm in Random Po-tential Games. In Symposium on Algorithmic Game Theory (SAGT) 2016 , volume 9843 of Lecture Notes in Computer Science , pp. 40–51. Springer, 2016. doi: 10.1007/978-3-662-53354-3 4. Fujimoto, S., Meger, D., and Precup, D. Off-policy deep reinforcement learning without exploration. In Interna-tional conference on machine learning , pp. 2052–2062. PMLR, 2019. Gan, J., Han, M., Wu, J., and Xu, H. Robust Stackelberg equilibria. Mathematical Programming , pp. 1–41, 2025. Gerstgrasser, M. and Parkes, D. Oracles & followers: Stack-elberg equilibria in deep multi-agent reinforcement learn-ing. In Proceedings of the 40th International Conference on Machine Learning , ICML’23. JMLR.org, 2023. Giannou, A., Vlatakis-Gkaragkounis, E.-V., and Mer-tikopoulos, P. On the rate of convergence of regularized learning in games: From bandits and uncertainty to op-timism and beyond. Advances in Neural Information Processing Systems , 34:22655–22666, 2021. Golowich, N. and Moitra, A. Linear bellman completeness suffices for efficient online reinforcement learning with few actions. In The Thirty Seventh Annual Conference on Learning Theory , pp. 1939–1981. PMLR, 2024a. Golowich, N. and Moitra, A. The Role of Inherent Bell-man Error in Offline Reinforcement Learning with Linear Function Approximation. In Reinforcement Learning Conference , 2024b. Golowich, N., Moitra, A., and Rohatgi, D. Learning in ob-servable POMDPs, without computationally intractable oracles. In Proceedings of the 36th International Confer-ence on Neural Information Processing Systems , NIPS ’22, Red Hook, NY, USA, 2022. Curran Associates Inc. ISBN 9781713871088. Gu, H., Guo, X., Wei, X., and Xu, R. Mean-Field Controls with Q-Learning for Cooperative MARL: Convergence and Complexity Analysis. SIAM Journal on Mathematics of Data Science , 3(4):1168–1196, 2021. doi: 10.1137/ 20M1360700. Gu, H., Guo, X., Wei, X., and Xu, R. Mean-Field Multia-gent Reinforcement Learning: A Decentralized Network Approach. Math. Oper. Res. , 50(1):506–536, February 2025. ISSN 0364-765X. doi: 10.1287/moor.2022.0055. Guo, X., Li, X., Maheshwari, C., Sastry, S., and Wu, M. Markov α-potential games, 2025. Heinrich, T., Jang, Y., Mungo, L., Pangallo, M., Scott, A., Tarbush, B., and Wiese, S. Best-response dynamics, play-ing sequences, and convergence to equilibrium in random games. Int. J. Game Theory , 52(3):703–735, June 2023. ISSN 0020-7276. doi: 10.1007/s00182-023-00837-4. Hespanha, J. P., Naghshtabrizi, P., and Xu, Y. A survey of recent results in networked control systems. Proceedings of the IEEE , 95(1):138–162, 2007. Hoeffding, W. Probability inequalities for sums of bounded random variables. Journal of the American Statistical Association , 58(301):13–30, 1963. ISSN 01621459. Hu, Y., Wei, X., Yan, J., and Zhang, H. Graphon Mean-Field Control for Cooperative Multi-Agent Reinforce-ment Learning. Journal of the Franklin Institute , 360(18): 14783–14805, 2023. ISSN 0016-0032. Jin, C., Yang, Z., Wang, Z., and Jordan, M. I. Provably efficient reinforcement learning with linear function ap-proximation. In Abernethy, J. and Agarwal, S. (eds.), 
+
+Proceedings of Thirty Third Conference on Learning The-ory , volume 125 of Proceedings of Machine Learning Research , pp. 2137–2143. PMLR, 09–12 Jul 2020. Jin, C., Liu, Q., Wang, Y., and Yu, T. V-Learning–A Simple, Efficient, Decentralized Algorithm for Multiagent RL. 
+
+arXiv preprint arXiv:2110.14555 , 2021. Jin, J., Song, C., Li, H., Gai, K., Wang, J., and Zhang, W. Real-Time Bidding with Multi-Agent Reinforce-ment Learning in Display Advertising. In Proceed-ings of the 27th ACM International Conference on In-formation and Knowledge Management , CIKM ’18, pp. 2193–2201, New York, NY, USA, 2018. Association for Computing Machinery. ISBN 9781450360142. doi: 10.1145/3269206.3272021. Jin, Y., Karmarkar, I., Sidford, A., and Wang, J. Truncated Variance Reduced Value Iteration. In Advances in Neural Information Processing Systems , 2024. Kakade, S. and Langford, J. Approximately Optimal Ap-proximate Reinforcement Learning. In Sammut, C. and Hoffman, A. (eds.), Proceedings of the Nineteenth Inter-national Conference on Machine Learning (ICML 2002) ,pp. 267–274. Morgan Kauffman, 2002. ISBN 1-55860-873-7. Kiran, B. R., Sobh, I., Talpaert, V., Mannion, P., Sallab, A. A. A., Yogamani, S., and P ´erez, P. Deep Reinforcement Learning for Autonomous Driving: A Survey. IEEE Transactions on Intelligent Transportation Systems , 23 (6):4909–4926, 2022. doi: 10.1109/TITS.2021.3054625. 11 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Kober, J., Bagnell, J. A., and Peters, J. Reinforcement Learning in Robotics: A Survey. The International Jour-nal of Robotics Research , 32(11):1238–1274, 2013. doi: 10.1177/0278364913495721. Lasry, J.-M. and Lions, P.-L. Mean-field games with a major player. Comptes Rendus Mathematique , 356(8):886–890, 2018. Lauffer, N., Ghasemi, M., Hashemi, A., Savas, Y., and Topcu, U. No-regret learning in dynamic stackelberg games. IEEE Transactions on Automatic Control , 69(3): 1418–1431, 2024. doi: 10.1109/TAC.2023.3330797. Lazarsfeld, J., Piliouras, G., Sim, R., and Wibisono, A. Fast and furious symmetric learning in zero-sum games: Gradient descent as fictitious play, 2025. Leonardos, S., Overman, W., Panageas, I., and Piliouras, G. Global convergence of multi-agent policy gradient in markov potential games, 2025. Li, M., Qin, Z., Jiao, Y., Yang, Y., Wang, J., Wang, C., Wu, G., and Ye, J. Efficient ridesharing order dispatch-ing with mean field multi-agent reinforcement learning. In The World Wide Web Conference , WWW ’19, pp. 983–994, New York, NY, USA, 2019. Association for Computing Machinery. ISBN 9781450366748. doi: 10.1145/3308558.3313433. Li, Y., Wang, L., Yang, J., Wang, E., Wang, Z., Zhao, T., and Zha, H. Permutation Invariant Policy Optimization for Mean-Field Multi-Agent Reinforcement Learning: A Principled Approach, 2021. Lin, Y., Qu, G., Huang, L., and Wierman, A. Distributed reinforcement learning in multi-agent networked systems. 
+
+CoRR , abs/2006.06555, 2020. Lin, Y., Preiss, J. A., Anand, E., Li, Y., Yue, Y., and Wier-man, A. Online adaptive controller selection in time-varying systems: No-regret via contractive perturbations. 
+
+arXiv preprint arXiv:2210.12320 , 2022. Lin, Y., Preiss, J. A., Anand, E., Li, Y., Yue, Y., and Wier-man, A. Online adaptive policy selection in time-varying systems: No-regret via contractive perturbations. In Oh, A., Naumann, T., Globerson, A., Saenko, K., Hardt, M., and Levine, S. (eds.), Advances in Neural Information Processing Systems , volume 36, pp. 53508–53521. Cur-ran Associates, Inc., 2023. Lin, Y., Preiss, J. A., Xie, F., Anand, E., Chung, S.-J., Yue, Y., and Wierman, A. Online policy optimization in unknown nonlinear systems. In Agrawal, S. and Roth, A. (eds.), Proceedings of Thirty Seventh Conference on Learning Theory , volume 247 of Proceedings of Machine Learning Research , pp. 3475–3522. PMLR, 30 Jun–03 Jul 2024. Littman, M. L. Markov games as a framework for multi-agent reinforcement learning. In Machine learning pro-ceedings , Elsevier, pp. 157–163, 1994. Liu, Z., Lu, M., Xiong, W., Zhong, H., Hu, H., Zhang, S., Zheng, S., Yang, Z., and Wang, Z. Maximize to explore: One objective function fusing estimation, planning, and exploration. Advances in Neural Information Processing Systems , 36:22151–22165, 2023. Lv, Y., Lei, J., and Yi, P. A Local Information Aggregation-Based Multiagent Reinforcement Learning for Robot Swarm Dynamic Task Allocation. IEEE Transactions on Neural Networks and Learning Systems , 36(6):10437– 10449, 2025. doi: 10.1109/TNNLS.2025.3558282. Mondal, W. U., Agarwal, M., Aggarwal, V., and Ukkusuri, S. V. On the Approximation of Cooperative Heteroge-neous Multi-Agent Reinforcement Learning (MARL) Us-ing Mean Field Control (MFC). Journal of Machine Learning Research , 23(1), jan 2022. ISSN 1532-4435. Monderer, D. and Shapley, L. S. Potential games. Games and Economic Behavior , 14(1):124–143, 1996. Nash, J. F. Equilibrium points in n person games. Proceed-ings of the National Academy of Sciences , 36(1):48–49, 1950. doi: 10.1073/pnas.36.1.48. Nie, P.-y. and Zhang, P.-a. A note on Stackelberg games. In 2008 Chinese Control and Decision Conference , pp. 1201–1203, 2008. doi: 10.1109/CCDC.2008.4597505. Oliehoek, F. A., Amato, C., et al. A concise introduction to decentralized POMDPs , volume 1. Springer, 2016. Overman, W. and Bayati, M. The Oversight Game: Learn-ing to Cooperatively Balance an AI Agent’s Safety and Autonomy, 2025. Preiss, J. A., Honig, W., Sukhatme, G. S., and Ayanian, N. Crazyswarm: A large nano-quadcopter swarm. In 
+
+2017 IEEE International Conference on Robotics and Automation (ICRA) , pp. 3299–3304, 2017. doi: 10.1109/ ICRA.2017.7989376. Qu, G., Wierman, A., and Li, N. Scalable Reinforcement Learning for Multi-Agent Networked Systems, 2021. Shalev-Shwartz, S., Shammah, S., and Shashua, A. Safe, Multi-Agent, Reinforcement Learning for Autonomous Driving. ArXiv , abs/1610.03295, 2016. Shapley, L. S. Stochastic games*. Proceedings of the National Academy of Sciences , 39(10):1095–1100, 1953. doi: 10.1073/pnas.39.10.1095. 12 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Sidford, A., Wang, M., Wu, X., Yang, L. F., and Ye, Y. Near-optimal time and sample complexities for solving dis-counted markov decision process with a generative model. In Bengio, S., Wallach, H., Larochelle, H., Grauman, K., Cesa-Bianchi, N., and Garnett, R. (eds.), Advances in Neural Information Processing Systems , volume 31, pp. 7739–7750, 2018a. Sidford, A., Wang, M., Wu, X., and Ye, Y. Variance reduced value iteration and faster algorithms for solving markov decision processes. In Proceedings of the Twenty-Ninth Annual ACM-SIAM Symposium on Discrete Algorithms (SODA) , New Orleans, LA, USA, 2018b. Society for Industrial and Applied Mathematics. doi: 10.1137/1. 9781611975031.116. Silver, D., Huang, A., Maddison, C. J., Guez, A., Sifre, L., van den Driessche, G., Schrittwieser, J., Antonoglou, I., Panneershelvam, V., Lanctot, M., Dieleman, S., Grewe, D., Nham, J., Kalchbrenner, N., Sutskever, I., Lillicrap, T., Leach, M., Kavukcuoglu, K., Graepel, T., and Hassabis, D. Mastering the Game of Go with Deep Neural Net-works and Tree Search. Nature , 529(7587):484–489, Jan-uary 2016. ISSN 1476-4687. doi: 10.1038/nature16961. Subramanian, S. G., Taylor, M. E., Crowley, M., and Poupart, P. Decentralized mean field games. In Proceed-ings of the AAAI Conference on Artificial Intelligence ,volume 36, pp. 9439–9447, 2022. Sutton, R. S., McAllester, D., Singh, S., and Mansour, Y. Policy gradient methods for reinforcement learning with function approximation. In Solla, S., Leen, T., and M ¨uller, K. (eds.), Advances in Neural Information Processing Systems , volume 12. MIT Press, 1999. Swenson, B., Murray, R., and Kar, S. On best-response dynamics in potential games. SIAM Journal on Control and Optimization , 56(4):2734–2767, 2018. doi: 10.1137/ 17M1139461. Tsybakov, A. B. Introduction to Nonparametric Estimation .Springer Publishing Company, Incorporated, 1st edition, 2008. ISBN 0387790519. Wainwright, M. J. Variance-reduced Q-learning is minimax optimal. arXiv preprint arXiv:1906.04697 , 2019. Wang, A., Anand, E., Du, Y., and Solja ˇci ´c, M. Unsupervised decomposition and recombination with discriminator-driven diffusion models, 2026. Xie, Q., Yang, Z., Wang, Z., and Minca, A. Learning while playing in mean-field games: Convergence and optimality. In International Conference on Machine Learning , pp. 11436–11447. PMLR, 2021. Xu, Z., Song, Z., and Shrivastava, A. A tale of two efficient value iteration algorithms for solving linear MDPs with large action space. In International Conference on Ar-tificial Intelligence and Statistics , pp. 788–836. PMLR, 2023. Yan, H. and Liu, M. Markov Potential Game Construction and Multi-Agent Reinforcement Learning with Applica-tions to Autonomous Driving, 2025. Yang, L. and Wang, M. Sample-optimal parametric q-learning using linearly additive features. In International conference on machine learning , pp. 6995–7004. PMLR, 2019. Yang, M., Liu, G., Zhou, Z., and Wang, J. Partially Observ-able Mean Field Multi-Agent Reinforcement Learning Based on Graph Attention Network for UAV Swarms. 
+
+Drones , 7(7):476, July 2023. ISSN 2504-446X. doi: 10.3390/drones7070476. Yang, Y., Luo, R., Li, M., Zhou, M., Zhang, W., and Wang, J. Mean Field Multi-Agent Reinforcement Learning. In Dy, J. and Krause, A. (eds.), Proceedings of the 35th In-ternational Conference on Machine Learning , volume 80 of Proceedings of Machine Learning Research , pp. 5571– 5580. PMLR, 10–15 Jul 2018. Yang, Y., Wen, Y., Wang, J., and Zhang, W. Agent Exchange: Shaping the Future of AI Agent Economics, 2025. Young, H. P. Strategic Learning and Its Limits . Oxford University Press, Oxford; New York, 2004. Yu, Y., Xu, H., and Chen, H. Learning Correlated Stackel-berg Equilibrium in General-Sum Multi-Leader-Single-Follower Games, 2022. Zhong, Y., Kuba, J. G., Feng, X., Hu, S., Ji, J., and Yang, Y. Heterogeneous-agent reinforcement learning. Journal of Machine Learning Research , 25(32):1–67, 2024. 13 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Outline of the Appendices .• Section A provides mathematical background and some additional remarks, • Section B presents the proof of the approximate optimality of the learned global agent policy, • Section C presents the proof of the approximate optimality of the local agents’ policies, • Section D proves the convergence bounds towards Nash Equilibria and Approximate Nash Equilibria, • Section E provides an extension of the result to off-policy learning, • Section F provides an extension of the result for stochastic rewards, and • Section G presents numerical simulations to validate our theoretical framework. 
+
+## A. Mathematical Background and Additional Remarks  
+
+> Table 1. Important notations in this paper.
+
+Notation Meaning 
+
+∥ · ∥ 1 ℓ1 (Manhattan) norm; 
+
+∥ · ∥ ∞ ℓ∞ norm; 
+
+Z+ The set of strictly positive integers; 
+
+Rd The set of d-dimensional reals; 
+
+[m] The set {1, . . . , m }, where m ∈ Z+;
+
+ [m]
+
+> k
+
+ The set of k-sized subsets of {1, . . . , m };
+
+ag ag ∈ A g is the action of the global agent; 
+
+sg sg ∈ S g is the state of the global agent; 
+
+a1, . . . , a n a1, . . . , a n ∈ A nl are the actions of the local agents 1, . . . , n ;
+
+s1, . . . , s n s1, . . . , s n ∈ S nl are the states of the local agents 1, . . . , n ;
+
+a a = ( ag , a 1, . . . , a n) ∈ A g × A nl is the tuple of actions of all agents; 
+
+s s = ( sg , s 1, . . . , s n) ∈ S g × S nl is the tuple of states of all agents; 
+
+zi zi = ( si, a i) ∈ Z l, for i ∈ [n];
+
+μk(Sl) μk(Sl) = {v ∈ { 0, 1/k, 2/k, . . . , 1}|S l| : P 
+
+> x
+
+vx = 1 };
+
+μ(Sl) μ(Sl) := {v ∈ 0, 1/n, 2/n, . . . , 1}|S l| : P 
+
+> x
+
+vx = 1 };
+
+s∆ For ∆ ⊆ [n], and a collection of variables {s1, . . . , s n}, s∆ := {si : i ∈ ∆};
+
+σ(z∆, z ′
+
+> ∆
+
+) Product sigma-algebra generated by sequences z∆ and z′
+
+> ∆
+
+;
+
+π∗ π∗ is the optimal deterministic policy function such that a = π∗(s);
+
+ˆπ∗ 
+
+> k
+
+ˆπ∗ 
+
+> k
+
+is the optimal deterministic policy function on a constrained system of 
+
+|∆| = k local agents; 
+
+˜πest  
+
+> k
+
+˜πest  
+
+> k
+
+is the stochastic policy map learned with parameter k such that a ∼ ˜πest  
+
+> k
+
+(s);
+
+Pg (·| sg , a g ) Pg (·| sg , a g ) is the stochastic transition kernel for the state of the global agent; 
+
+Pl(·| si, s g , a i) Pl(·| si, s g , a i) is the stochastic transition kernel for the state of local agent i ∈ [n]; 
+
+rg (sg , a g ) rg is the global agent’s component of the reward; 
+
+rl(si, s g , a i) rl is the component of the reward for local agent i ∈ [n];
+
+r(s, a ) r(s, a ) = rg (sg , a g ) + 1
+
+> n
+
+P 
+
+> i∈[n]
+
+rl(si, s g , a i) is the reward of the system; 
+
+r∆(s, a ) r∆(s, a ) = rg (sg , a g ) + 1
+
+> |∆|
+
+P 
+
+> i∈∆
+
+rl(si, s g , a i) is the constrained system’s reward with |∆| = k local agents; 
+
+T T is the centralized Bellman operator; 
+
+ˆTk ˆTk is the Bellman operator on a constrained system of |∆| = k local agents; 
+
+Definition A.1 (Lipschitz continuity) . Given metric spaces (X , d X ) and (Y, d Y ) and a constant L > 0, a map f : X → Y 
+
+is L-Lipschitz continuous if for all x, y ∈ X , dY (f (x), f (y)) ≤ L · dX (x, y ).14 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Theorem A.2 (Banach-Caccioppoli fixed point theorem (Banach, 1922)) . Consider the metric space (X , d X ), and T : X → X such that T is a γ-Lipschitz continuous mapping for γ ∈ (0 , 1) . Then, by the Banach-Cacciopoli fixed-point theorem, there exists a unique fixed point x∗ ∈ X for which T (x∗) = x∗. Additionally, x∗ = lim s→∞ T s(x0) for any x0 ∈ X .
+
+Lemma A.3 (Freedman’s inequality, Lemma D.2 in Liu et al. (2023)) . Let {Xt}t≤T be a real-valued martingale difference sequence adapted to filtration {F t}t≤T . If |Xt| ≤ R almost surely, then for any η ∈ (0 , 1/R ), it holds that 
+
+Pr 
+
+" TX
+
+> t=1
+
+Xt ≤ O η
+
+> T
+
+X
+
+> t=1
+
+E[X2 
+
+> t
+
+|F t−1] + log(1 /δ )
+
+η
+
+!# 
+
+≥ 1 − δ. (10) 
+
+Lemma A.4 (Lemma 11 in Abbasi-Yadkori et al. (2011)) . Let {xs}s∈[T ] be a sequence of vectors with xs ∈ V for some Hilbert space V. Let Λ0 be a positive definite matrix and define Λt = Λ 0 + Pts=1 xsx⊤ 
+
+> s
+
+. Then, it holds that 
+
+> T
+
+X
+
+> s=1
+
+min {1, ∥xs∥Λ−1
+
+> s−1
+
+} ≤ 2 log 
+
+ det(Λ T )det(Λ 0)
+
+
+
+. (11) 
+
+Lemma A.5 (Multiplayer advantage decomposition from Zhong et al. (2024)) . In any cooperative Markov game, given a joint policy π, for any state s and any agent subset i1: m, we have that 
+
+Ai1: m 
+
+> π
+
+(s, a i1: m ) = 
+
+> m
+
+X
+
+> j=1
+
+Aij 
+
+> π
+
+(s, a i1: j−1 , a ij ). (12) 
+
+## B. Optimality of the Global Agent Policy 
+
+In this section, we show that the policy learned by the global agent is a ˜O(1 /√k) best-response to the local agent’s fixed policy πℓ. The structure of the proofs in this section closely mirror those of Anand et al. (2025a). For convenience, we begin by restating the various Bellman operators under consideration below. 
+
+Definition B.1 (Bellman Operator T ).
+
+T Qt(s, a g ) := rπℓ (s, a ) + γE s′        
+
+> g∼Pg(·| sg,a g),s′
+> i∼¯Pπℓl(·| si,s g),∀i∈[n]
+
+max  
+
+> a′
+> g∈A g
+
+Qt(s′, a ′ 
+
+> g
+
+). (13) 
+
+Definition B.2 (Adapted Bellman Operator ˆTk). The adapted Bellman operator updates a smaller Q function (which we denote by ˆQk), for a surrogate system with the global agent and k ∈ [n] local agents denoted by ∆, using mean-field value iteration and j ∈ ∆ such that 
+
+ˆTk ˆQtk(sg , F s∆ , a g ) := rπℓ 
+
+> ∆
+
+(s, a g ) + γE s′        
+
+> g∼Pg(·| sg,a g),s′
+> i∼¯Pπℓl(·| si,s g),∀i∈∆
+
+max  
+
+> a′
+> g∈A g
+
+ˆQtk(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+). (14) 
+
+Definition B.3 (Empirical Adapted Bellman Operator ˆTk,m ). The empirical adapted Bellman operator ˆTk,m empirically estimates the adapted Bellman operator update using mean-field value iteration by drawing m random samples of sg ∼
+
+Pg (·| sg , a g ) and si ∼ ¯P πℓ 
+
+> l
+
+(·| si, s g ) for i ∈ ∆, where for ℓ ∈ [m], the ℓ’th random sample is given by sℓg and sℓ
+
+> ∆
+
+, and j ∈ ∆:
+
+ˆTk,m ˆQtk,m (sg , F s∆\j , a g ) := rπℓ 
+
+> ∆
+
+(s, a g ) + γm
+
+X
+
+> ℓ∈[m]
+
+max  
+
+> a′
+> g∈A g
+
+ˆQtk,m (sℓg , F sℓ 
+
+> ∆
+
+, a ℓg ). (15) 
+
+Lemma B.4. For any ∆ ⊆ [n] such that |∆| = k, suppose 0 ≤ ¯rπℓ 
+
+> ∆
+
+(s, a g ) ≤ ˜r. Then, ˆQtk ≤ ˜r 
+
+> 1−γ
+
+.Proof. We prove this by induction on t ∈ N. The base case is satisfied as ˆQ0 
+
+> k
+
+= 0 . Assume that ∥ ˆQt−1 
+
+> k
+
+∥∞ ≤ ˜r 
+
+> 1−γ
+
+. We bound ˆQt+1  
+
+> k
+
+from the Bellman update at each time step as follows, for all sg ∈ S g , F s∆ ∈ μk(Sl), a g ∈ A g :
+
+ˆQt+1  
+
+> k
+
+(sg , F s∆ , a g ) = ¯ rπℓ 
+
+> ∆
+
+(s, a g ) + γE s′        
+
+> g∼Pg(·| sg,a g),s′
+> i∼¯Pπℓl(·| si,s g),∀i∈∆
+
+max  
+
+> a′
+> g∈A g
+
+ˆQtk(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+)
+
+≤ ˜r + γ max       
+
+> a′
+> g∈A g,s ′
+> g∈S g,F s′
+> ∆∈μk(Sl)
+
+ˆQtk(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+) ≤ ˜r
+
+1 − γ .
+
+Here, the first inequality follows by noting that the maximum value of a random variable is at least as large as its expectation. The second inequality follows from the inductive hypothesis. 15 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Remark B.5. Theorem B.4 is independent of the choice of k. Therefore, for k = n, this implies an identical bound on Qt.A similar argument as Theorem B.4 implies an identical bound on ˆQtk,m .Recall that the original Bellman operator T satisfies a γ-contractive property under the infinity norm. We similarly show that ˆTk and ˆTk,m satisfy a γ-contractive property under infinity norm in Theorem B.6 and Theorem B.7. 
+
+Lemma B.6. ˆTk satisfies the γ-contractive property under infinity norm: 
+
+∥ ˆTk ˆQ′ 
+
+> k
+
+− ˆTk ˆQk∥∞ ≤ γ∥ ˆQ′ 
+
+> k
+
+− ˆQk∥∞
+
+Proof. Suppose we apply ˆTk to ˆQk(sg , F s∆ , a g ) and ˆQ′
+
+> k
+
+(sg , F s∆ , a g ) for |∆| = k. Then: 
+
+∥ ˆTk ˆQ′ 
+
+> k
+
+− ˆTk ˆQk∥∞
+
+= γ max       
+
+> sg∈S g,ag∈A g,Fs∆∈μk(Sl)
+
+E s′        
+
+> g∼Pg(·| sg,a g),s′
+> i∼¯Pπℓl(·| si,s g),
+> ∀s′
+> i∈s′
+> ∆,
+
+max  
+
+> a′
+> g∈A g
+
+ˆQ′
+
+> k
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+) − E s′        
+
+> g∼Pg(·| sg,a g),s′
+> i∼¯Pπℓl(·| si,s g),
+> ∀s′
+> i∈s′
+> ∆
+
+max  
+
+> a′
+> g∈A g
+
+ˆQk(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+)
+
+≤ γ max      
+
+> s′
+> g∈S g,F s′
+> ∆∈μk(Sl),a ′
+> g∈A g
+
+ˆQ′
+
+> k
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+) − ˆQk(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+)
+
+= γ∥ ˆQ′ 
+
+> k
+
+− ˆQk∥∞.
+
+The equality implicitly cancels the common r∆(s, a g ) terms from each application of the adapted-Bellman operator. The inequality follows by triangle inequality and Jensen’s inequality (by the convexity of | · | ), and maximizing over the random variables. The last line recovers the definition of infinity norm. 
+
+Lemma B.7. ˆTk,m satisfies the γ-contractive property under infinity norm. Proof. Similarly to Theorem B.6, suppose we apply ˆTk,m to ˆQk,m (sg , F s∆ , a g ) and ˆQ′
+
+> k,m
+
+(sg , F s∆ , a g ). Then: 
+
+∥ ˆTk,m ˆQk,m − ˆTk,m ˆQ′
+
+> k,m
+
+∥∞ = γm
+
+X
+
+> j∈[m]
+
+( max  
+
+> a′
+> g∈A g
+
+ˆQk,m (sjg , F sj
+
+> ∆
+
+, a ′ 
+
+> g
+
+) − max  
+
+> a′
+> g∈A g
+
+ˆQ′
+
+> k,m
+
+(sjg , F sj
+
+> ∆
+
+, a ′ 
+
+> g
+
+)) 
+
+> ∞
+
+≤ γ max     
+
+> a′
+> g∈A g,s ′
+> g∈S g,s ∆∈S kl
+
+| ˆQk,m (s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+) − ˆQ′
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+)|≤ γ∥ ˆQk,m − ˆQ′
+
+> k,m
+
+∥∞
+
+The first inequality uses the triangle inequality and the general property | max a∈A f (a) − max a∈A g(a)| ≤
+
+max a∈A |f (a) − g(a)|. In the last line, we recover the definition of infinity norm. 
+
+Remark B.8. The γ-contractivity of ˆTk and ˆTk,m attracts the trajectory between two ˆQk and ˆQk,m functions on the same state-action tuple by γ at each step. Repeatedly applying the Bellman operators produces a unique fixed-point from the Banach fixed-point theorem which we introduce in Theorems B.9 and B.10. 
+
+Definition B.9 ( ˆQ∗
+
+> k
+
+-function) . Suppose ˆQ0 
+
+> k
+
+:= 0 and let ˆQt+1  
+
+> k
+
+(sg , F s∆ , a g ) = ˆTk ˆQtk(sg , F s∆ , a g ) for t ∈ N. Denote the fixed-point of ˆTk by ˆQ∗ 
+
+> k
+
+such that ˆTk ˆQ∗
+
+> k
+
+(sg , F s∆ , a g ) = ˆQ∗
+
+> k
+
+(sg , F s∆ , a g ).
+
+Definition B.10 ( ˆQest 
+
+> k,m
+
+-function) . Suppose ˆQ0 
+
+> k,m
+
+:= 0 and let ˆQt+1 
+
+> k,m
+
+(sg , F s∆ , a g ) = ˆTk,m ˆQtk,m (sg , F s∆ , a g ) for t ∈ N.Denote the fixed-point of ˆTk,m by ˆQest  
+
+> k,m
+
+such that ˆTk,m ˆQest 
+
+> k,m
+
+(sg , F s∆ , a g ) = ˆQest 
+
+> k,m
+
+(sg , F s∆ , a g ).
+
+16 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Corollary B.11. By backpropagating results of the γ-contractive property for T time steps, we have 
+
+∥ ˆQ∗ 
+
+> k
+
+− ˆQTk ∥∞ ≤ γT · ∥ ˆQ∗ 
+
+> k
+
+− ˆQ0
+
+> k
+
+∥∞ (16) 
+
+and 
+
+∥ ˆQest  
+
+> k,m
+
+− ˆQTk,m ∥∞ ≤ γT · ∥ ˆQest  
+
+> k,m
+
+− ˆQ0
+
+> k,m
+
+∥∞. (17) 
+
+Further, noting that ˆQ0 
+
+> k
+
+= ˆQ0 
+
+> k,m
+
+:= 0 , ∥ ˆQ∗
+
+> k
+
+∥∞ ≤ ˜r 
+
+> 1−γ
+
+, and ∥ ˆQest 
+
+> k,m
+
+∥∞ ≤ ˜r 
+
+> 1−γ
+
+from Theorem B.4, we have: 
+
+∥ ˆQ∗ 
+
+> k
+
+− ˆQTk ∥∞ ≤ γT ˜r
+
+1 − γ , (18) 
+
+and 
+
+∥ ˆQest  
+
+> k,m
+
+− ˆQTk,m ∥∞ ≤ γT ˜r
+
+1 − γ . (19) 
+
+Remark B.12. Theorem B.11 characterizes the error decay between ˆQTk and ˆQ∗ 
+
+> k
+
+and shows that it decays exponentially in the number of Bellman iterations by a γT multiplicative factor. Furthermore, we characterize the maximal policies greedy policies obtained from Q∗, ˆQ∗
+
+> k
+
+, and ˆQest 
+
+> k,m
+
+.
+
+Definition B.13 (Optimal policy π∗). The greedy policy derived from Q∗ is given by 
+
+π∗(s) := arg max  
+
+> ag∈A g
+
+Q∗(s, a g ). (20) 
+
+Definition B.14 (Optimal subsampled policy ˆπ∗
+
+> k
+
+). The greedy policy from ˆQ∗ 
+
+> k
+
+is 
+
+ˆπ∗
+
+> k
+
+(sg , F s∆ ) := arg max  
+
+> ag∈A g
+
+ˆQ∗
+
+> k
+
+(sg , F s∆ , a g ). (21) 
+
+Definition B.15 (Optimal empirically subsampled policy ˆπest 
+
+> k,m
+
+). The greedy policy from ˆQest  
+
+> k,m
+
+is given by 
+
+ˆπest 
+
+> k,m
+
+(sg , F s∆ ) := arg max  
+
+> ag∈A g
+
+ˆQest 
+
+> k,m
+
+(sg , F s∆ , a g ). (22) 
+
+Theorem B.16. For any state s ∈ S g × S nl ,
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) ≤ 2˜ r
+
+(1 − γ)2
+
+r n − k + 1 2nk ln(2 |S l||A g |√k) + 1
+
+√k
+
+!
+
++ 2ϵk,m 
+
+1 − γ .
+
+B.1. Proof of Lipschitz-Continuity Bound Definition B.17 (Joint Stochastic Kernels) . The joint stochastic kernel on (sg , s ∆) for ∆ ⊆ [n] where |∆| = k is defined as 
+
+Jk : Sg × S kl × S g × A g × S kl → [0 , 1] , where 
+
+Jk(s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+|sg , a g , s ∆) := Pr[( s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+)|sg , a g , s ∆]. (23) 
+
+Theorem B.18 ( ˆQTk is (PT −1 
+
+> t=0
+
+2γt)∥rl(·, ·)∥∞-Lipschitz continuous with respect to Fs∆ in total variation distance) . Suppose 
+
+∆, ∆′ ⊆ [n] such that |∆| = k and |∆′| = k′. Then, we have that 
+
+ˆQTk (sg , F s∆ , a g ) − ˆQTk′ (sg , F s∆′ , a g ) ≤ 
+
+> T−1
+
+X
+
+> t=0
+
+2γt
+
+!
+
+∥rl(·, ·)∥∞ · TV  Fs∆ , F s∆′
+
+ . (24) 17 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Proof. We prove this inductively. Note that ˆQ0 
+
+> k
+
+= ˆQ0 
+
+> k′
+
+= 0 by construction, proving the base case since TV( ·, ·) ≥ 0. For the remainder of this proof, we adopt the shorthand Es′  
+
+> g,s ′
+> ∆
+
+to refer to Es′        
+
+> g∼Pg(·| sg,a g),s ′
+> i∼¯Pπℓl(·| si,s g),∀i∈∆
+
+. At T = 1 :
+
+| ˆQ1
+
+> k
+
+(sg , F s∆ , a g ) − ˆQ1 
+
+> k′
+
+(sg , F s∆′ , a g )| = ˆTk ˆQ0
+
+> k
+
+(sg , F s∆ , a g ) − ˆTk′ ˆQ0 
+
+> k′
+
+(sg , F s∆′ , a g )
+
+= |¯rπℓ (sg , F s∆ , a g ) + γEs′  
+
+> g,s ′
+> ∆
+
+max  
+
+> a′
+> g∈A g
+
+ˆQ0
+
+> k
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+)
+
+− ¯rπℓ (sg , F s∆′ , a g ) − γEs′  
+
+> g,s ′
+> ∆′
+
+max  
+
+> a′
+> g∈A g
+
+ˆQ0 
+
+> k′
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆′
+
+, a ′ 
+
+> g
+
+)|
+
+= |¯rπℓ (sg , F s∆ , a g ) − ¯rπℓ (sg , F s∆′ , a g )|
+
+= 1
+
+k
+
+X
+
+> i∈∆
+
+¯rπℓ 
+
+> l
+
+(sg , s i) − 1
+
+k′
+
+X
+
+> i∈∆′
+
+¯rπℓ 
+
+> l
+
+(sg , s i)
+
+= |Esl∼Fs∆ ¯rπℓ 
+
+> l
+
+(sg , s l) − Es′ 
+
+> l∼Fs∆′
+
+¯rπℓ 
+
+> l
+
+(sg , s ′
+
+> l
+
+)|.
+
+In the first and second equalities, apply the adapted Bellman operators ˆTk and ˆTk′ to ˆQ0 
+
+> k
+
+and ˆQ0 
+
+> k′
+
+, respectively, and expand. Noting the property that for any function f : X → Y for |X | < ∞ we can write f (x) = P 
+
+> y∈X
+
+f (y)1{y = x}, we have: 
+
+| ˆQ1
+
+> k
+
+(sg , F s∆ , a g ) − ˆQ1 
+
+> k′
+
+(sg , F s∆′ , a g )| = Esl∼Fs∆
+
+" X
+
+> z∈S l
+
+¯rπℓ 
+
+> l
+
+(sg , z )1{sl = z}
+
+#
+
+− Es′
+
+> l∼Fs∆′
+
+" X
+
+> z∈S l
+
+¯rπℓ 
+
+> l
+
+(sg , z )1{s′ 
+
+> l
+
+= z}
+
+#
+
+= X
+
+> z∈S l
+
+¯rπℓ 
+
+> l
+
+(sg , z ) · (Esl∼Fs∆ 1{sl = z} − Es′ 
+
+> l∼Fs∆′
+
+1{s′ 
+
+> l
+
+= z})
+
+= X
+
+> z∈S l
+
+¯rπℓ 
+
+> l
+
+(sg , z ) · (Fs∆ (z) − Fs∆′ (z)) 
+
+≤ max 
+
+> z∈S l
+
+¯rπℓ 
+
+> l
+
+(sg , z )| · X
+
+> z∈S l
+
+|Fs∆ (z) − Fs∆′ (z) ≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ).
+
+The third equality uses that for any random variable X ∼ X , EX 1[X = x] = Pr[ X = x]. The first inequality uses triangle inequality and Cauchy-Schwarz, and the second inequality uses the definition of TV-distance. Thus, when T = 1 , ˆQ is 
+
+(2 ∥rl(·, ·)∥∞)-Lipschitz continuous with respect to TV-distance, proving the base case. Now, assume that for T ≤ t′ ∈ N:
+
+ˆQTk (sg , F s∆ , a g ) − ˆQTk′ (sg , F s∆′ , a g ) ≤ 
+
+> T−1
+
+X
+
+> t=0
+
+2γt
+
+!
+
+∥rl(·, ·)∥∞ · TV  Fs∆ , F s∆′
+
+ .
+
+Then, inductively we have: 
+
+| ˆQT +1  
+
+> k
+
+(sg , F s∆ , a g ) − ˆQT +1  
+
+> k′
+
+(sg , F s∆′ , a g )|≤ 1
+
+|∆|
+
+X
+
+> i∈∆
+
+¯rπℓ 
+
+> l
+
+(sg , s i) − 1
+
+|∆′|
+
+X
+
+> i∈∆′
+
+¯rπℓ 
+
+> l
+
+(sg , s i)
+
++ γ Es′  
+
+> g,s ′
+> ∆
+
+max  
+
+> a′
+> g∈A g
+
+ˆQTk (s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+) − Es′  
+
+> g,s ′
+> ∆′
+
+max  
+
+> a′
+> g∈A g
+
+ˆQTk′ (s′ 
+
+> g
+
+, F s′ 
+
+> ∆′
+
+, a ′ 
+
+> g
+
+)
+
+≤ 2∥rl(·, ·)∥∞ · TV  Fs∆ , F s∆′
+
+
+
++ γ Es′  
+
+> g,s ′
+> ∆
+
+max  
+
+> a′
+> g∈A g
+
+ˆQTk (s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, a ′ 
+
+> g
+
+) − Es′  
+
+> g,s ′
+> ∆′
+
+max  
+
+> a′
+> g∈A g
+
+ˆQTk′ (s′ 
+
+> g
+
+, F s′ 
+
+> ∆′
+
+, a ′ 
+
+> g
+
+) .
+
+The first equality uses the time evolution property of ˆQT +1  
+
+> k
+
+and ˆQT +1  
+
+> k′
+
+by applying the adapted-Bellman operators ˆTk and 
+
+ˆTk′ to ˆQTk and ˆQTk′ , respectively. The first term of the second inequality uses the Lipschitz bound from the base case. The 18 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+second term then rewrites the expectation over the states s′
+
+g , s ′
+
+∆, s ′
+
+∆′ into an expectation over the joint transition probabilities 
+
+Jk and Jk′ from Theorem B.17. Therefore, using the shorthand E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k to denote E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k (·,·| sg ,a g ,s ∆), we have: 
+
+| ˆQT +1 
+
+k (sg , F s∆ , a g ) − ˆQT +1 
+
+k′ (sg , F s∆′ , a g )|≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ) + γ|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J k′ max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ) + γ max 
+
+a′ 
+
+> g
+
+∈A g
+
+|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J k′ ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ) + γ
+
+T −1X
+
+τ =0 
+
+2γτ
+
+!
+
+∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ )=
+
+TX
+
+τ =0 
+
+2γτ
+
+!
+
+∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ).
+
+In the first inequality, we rewrite the expectations over the states as the expectation over the joint transition probabilities. The second inequality then follows from Theorem B.23. Finally, the third inequality follows from Theorem B.19. Then, by the inductive hypothesis, the claim is proven. 
+
+Lemma B.19. For all T ∈ N, for any ag , a ′
+
+g ∈ A g , s g ∈ S g , s ∆ ∈ S kl , and for all joint stochastic kernels Jk (defined in Theorem B.17), E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k (·,·| sg ,a g ,s ∆) ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) is (PT −1
+
+t=0 2γt)∥rl(·, ·)∥∞-Lipschitz continuous with respect to 
+
+Fs∆ in TV-distance: 
+
+|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k (·,·| sg ,a g ,s ∆) ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J k′ (·,·| sg ,a g ,s ∆′ ) ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|≤
+
+T −1X
+
+τ =0 
+
+2γτ
+
+!
+
+∥rl(·, ·)∥∞ · TV  Fs∆ , F s∆′
+
+ .
+
+Proof. We prove this inductively. At T = 0 , the statement is true since ˆQ0
+
+k(·, ·, ·) = ˆQ0
+
+k′ (·, ·, ·) = 0 and TV( ·, ·) ≥ 0. For 
+
+T = 1 , applying the adapted Bellman operator yields: 
+
+|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k (·,·| sg ,a g ,s ∆) ˆQ1
+
+k(s′
+
+g , F s′ 
+
+> ∆
+
+,a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J k′ (·,·| sg ,a g ,s ∆′ ) ˆQ1
+
+k′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|
+
+= E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J |∆∪∆′|(·,·| sg ,a g ,s ∆∪∆′ )
+
+"
+
+1
+
+|∆|
+
+X
+
+i∈∆
+
+¯rπℓ
+
+l (s′
+
+g , s ′
+
+i) − 1
+
+|∆′|
+
+X
+
+i∈∆′
+
+¯rπℓ
+
+l (s′
+
+g , s ′
+
+i)
+
+#
+
+= E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J |∆∪∆′|(·,·| sg ,a g ,s ∆∪∆′ )
+
+" X
+
+z∈S l
+
+¯rπℓ
+
+l (s′
+
+g , z ) · (Fs′ 
+
+> ∆
+
+(z) − Fs′ 
+
+> ∆′
+
+(z)) 
+
+#
+
+.
+
+Similarly to Theorem B.18, we implicitly write the result as an expectation over the reward functions and use the general property that for any function f : X → Y for |X | < ∞, we can write f (x) = P
+
+y∈X f (y)1{y = x}. Then, taking the expectation over the indicator variable yields the second equality. As a shorthand, let D denote the distribution of 
+
+s′
+
+g ∼ P
+
+s′ 
+
+> ∆∪∆′
+
+∈S |∆∪∆′|
+
+> l
+
+J|∆∪∆|(·, s ′
+
+∆∪∆′ |sg , a g , s ∆∪∆′ ).Then, by the law of total expectation, 
+
+|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k (·,·| sg ,a g ,s ∆) ˆQ1
+
+k(s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J k′ (·,·| sg ,a g ,s ∆′ ) ˆQ1
+
+k′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|
+
+= Es′ 
+
+> g
+
+∼D
+
+X
+
+z∈S l
+
+rl(s′
+
+g , z )Es′ 
+
+> ∆∪∆′
+
+∼J |∆∪∆′|(·| s′ 
+
+> g
+
+,s g ,a g ,s ∆∪∆′ )(Fs′ 
+
+> ∆
+
+(z) − Fs′ 
+
+> ∆′
+
+(z)) 
+
+≤ ∥ rl(·, ·)∥∞ · Es′ 
+
+> g
+
+∼D
+
+X
+
+z∈S l
+
+|Es′ 
+
+> ∆∪∆′
+
+∼J |∆∪∆′|(·| s′ 
+
+> g
+
+,s g ,a g ,s ∆∪∆′ )(Fs′ 
+
+> ∆
+
+(z) − Fs′ 
+
+> ∆′
+
+(z)) |≤ 2∥rl(·, ·)∥∞ · Es′ 
+
+> g
+
+∼DTV( Es′ 
+
+> ∆∪∆′
+
+|s′ 
+
+> g
+
+Fs′ 
+
+> ∆
+
+, Es′ 
+
+> ∆∪∆′
+
+|s′ 
+
+> g
+
+Fs′ 
+
+> ∆′
+
+)
+
+≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ),
+
+19 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+where we use Jensen’s inequality and triangle inequality to pull Es′
+
+> g
+
+P
+
+z∈S l from the absolute value, and then use Cauchy-Schwarz to factor ∥rl(·, ·)∥∞. The second inequality follows from Theorem B.20. We now assume that for T ≤ t′ ∈ N, for all joint stochastic kernels Jk and Jk′ , and for all a′
+
+g ∈ A g :
+
+|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k (·,·| sg ,a g ,s ∆) ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J k′ (·,·| sg ,a g ,s ∆′ ) ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|≤
+
+T −1X
+
+t=0 
+
+2γt
+
+!
+
+∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ).
+
+For the remainder of the proof, we adopt the shorthand E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J to denote E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J |∆|(·,·| sg ,a g ,s ∆), and E(s′′  
+
+> g
+
+,s ′′ 
+
+> ∆
+
+)∼J to denote E(s′′  
+
+> g
+
+,s ′′ 
+
+> ∆
+
+)∼J |∆|(·,·| s′ 
+
+> g
+
+,a ′ 
+
+> g
+
+,s ′
+
+> ∆
+
+). Then, inductively, we have: 
+
+|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J ˆQT +1 
+
+k (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J ˆQT +1 
+
+k′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|
+
+= |E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J [¯ rπℓ (s′
+
+g , s ′
+
+∆, a ′
+
+g ) − ¯rπℓ (s′
+
+g , s ′
+
+∆′ , a ′
+
+g ) + γE(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J [ max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g ) − max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk′ (s′′ 
+
+g , F s′′  
+
+> ∆′
+
+, a ′′ 
+
+g )]] |≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ) + γ|E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J [E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J [ max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g ) − max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk′ (s′′ 
+
+g , F s′′  
+
+> ∆′
+
+, a ′′ 
+
+g )]] |.
+
+Here, we expand out ˆQT +1 
+
+k and ˆQT +1 
+
+k′ using the adapted Bellman operator. In the ensuing inequality, we apply the triangle inequality and bound the first term using the base case. Then, note that 
+
+E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J (·,·| sg ,a g ,s ∆∪∆′ )E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J (·,·| s′ 
+
+> g
+
+,a ′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+) max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g ).−
+
+is, for some stochastic function J ′|∆∪∆′|, equal to 
+
+E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J ′|∆∪∆′|(·,·| sg ,a g ,s ∆∪∆′ ) max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g ),
+
+where J ′ is an implicit function of a′
+
+g which is fixed at the start. As a shorthand, denote E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J ′|∆∪∆′|(·,·| sg ,a g ,s ∆∪∆′ )
+
+by E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J ′ . Therefore, 
+
+|E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J ˆQT +1 
+
+k (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆′
+
+)∼J ˆQT +1 
+
+k′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ )+ γ|E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J ′ max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g ) − E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J ′ max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk′ (s′′ 
+
+g , F s′′  
+
+> ∆′
+
+, a ′′ 
+
+g )|≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ )+ γ max 
+
+a′′  
+
+> g
+
+∈A g
+
+|E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J ′ ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g ) − E(s′′  
+
+> g
+
+,s ′′  
+
+> ∆∪∆′
+
+)∼J ′ ˆQTk′ (s′′ 
+
+g , F s′′  
+
+> ∆′
+
+, a ′′ 
+
+g )|≤ 2∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ )+ γ
+
+T −1X
+
+t=0 
+
+2γt
+
+!
+
+∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ )=
+
+TX
+
+t=0 
+
+2γt
+
+!
+
+∥rl(·, ·)∥∞ · TV( Fs∆ , F s∆′ ).
+
+The second inequality uses Theorem B.23 by setting the joint stochastic kernel to be J ′|∆∪∆′| and then use the induction assumption for the transition probability functions J ′
+
+k and J ′
+
+k′ , proving the lemma. 20 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Lemma B.20. Given a joint transition probability J|∆∪∆′| as defined in Theorem B.17, 
+
+TV( Es′     
+
+> ∆∪∆′∼J |∆∪∆′|(·| s′
+> g,s g,a g,s ∆∪∆′)
+
+Fs′ 
+
+> ∆
+
+, Es′     
+
+> ∆∪∆′∼J |∆∪∆′|(·| s′
+> g,s g,a g,s ∆∪∆′)
+
+Fs′ 
+
+> ∆′
+
+) ≤ TV( Fs∆ , F s∆′ ).
+
+Proof. Note that from Theorem B.21: 
+
+Es′     
+
+> ∆∪∆′∼J |∆∪∆′|(·,·| s′
+> g,s g,a g,s ∆∪∆′)
+
+Fs′ 
+
+> ∆
+
+= Es′   
+
+> ∆∼J |∆|(·,·| s′
+> g,s g,a g,s ∆)
+
+Fs′ 
+
+> ∆
+
+= J1(·| sg (t + 1) , s g (t), a g (t), ·)Fs∆ .
+
+Then, by expanding the TV distance in ℓ1-norm: 
+
+TV( Es′     
+
+> ∆∪∆′∼J |∆∪∆′|(·| s′
+> g,s g,a g,s ∆∪∆′)
+
+Fs′ 
+
+> ∆
+
+, Es′     
+
+> ∆∪∆′∼J |∆∪∆′|(·| s′
+> g,s g,a g,s ∆∪∆′)
+
+Fs′ 
+
+> ∆′
+
+)= 12 ∥J 1(·| sg (t + 1) , s g (t), a g (t), ·)Fs∆ − J 1(·| sg (t + 1) , s g (t), a g (t), ·)Fs∆′ ∥1
+
+≤ ∥J 1(·| sg (t + 1) , s g (t), a g (t), ·)∥1 · 12 ∥Fs∆ − Fs∆′ ∥1
+
+≤ 12 ∥Fs∆ − Fs∆′ ∥1 = TV( Fs∆ , F s∆′ ).
+
+In the first inequality, we factorize ∥J 1(·| sg (t+1) , s g (t), a g (t)) ∥1 from the ℓ1-normed expression by the sub-multiplicativity of the matrix norm. Finally, since J1 is a column-stochastic matrix, we bound its norm by 1 to recover the total variation distance between Fs∆ and Fs∆′ .
+
+Lemma B.21. Given the joint transition probability Jk from Theorem B.17, we have 
+
+Es∆∪∆′ (t+1) ∼J |∆∪∆′|(·| sg (t+1) ,s g (t),a g (t),s ∆∪∆′ (t)) Fs∆(t+1) := J1(·| sg (t + 1) , s g (t), a g (t), ·)Fs∆ (t).
+
+Proof. First, observe that for all x ∈ S l:
+
+Es∆∪∆′ (t+1) ∼J |∆∪∆′|(·| sg (t+1) ,s g (t),a g (t),s ∆∪∆′ (t)) Fs∆(t+1) (x)= 1
+
+|∆|
+
+X
+
+> i∈∆
+
+Es∆∪∆′ (t+1) ∼J |∆∪∆′|(·| sg (t+1) ,s g (t),a g (t),s ∆∪∆′ (t)) 1(si(t + 1) = x)= 1
+
+|∆|
+
+X
+
+> i∈∆
+
+Pr[ si(t + 1) = x|sg (t + 1) , s g (t), a g (t), s ∆∪∆′ (t))] = 1
+
+|∆|
+
+X
+
+> i∈∆
+
+Pr[ si(t + 1) = x|sg (t + 1) , s g (t), a g (t), s i(t))] = 1
+
+|∆|
+
+X
+
+> i∈∆
+
+J1(x|sg (t + 1) , s g (t), a g (t), s i(t)) ,
+
+where in the first line, we expand on the definition of Fs∆(t+1) (x). Finally, we note that si(t+1) is conditionally independent to s∆∪∆′\i, which yields the equality above. Then, aggregating across every entry x ∈ S l, we have 
+
+Es∆∪∆′ (t+1) ∼J |∆∪∆′|(·| sg (t+1) ,s g (t),a g (t),s ∆∪∆′ (t)) Fs∆(t+1) = 1
+
+|∆|
+
+X
+
+> i∈∆
+
+J1(·| sg (t + 1) , s g (t), a g (t), ·)⃗1si(t)
+
+= J1(·| sg (t + 1) , s g (t), a g (t), ·)Fs∆ .
+
+Notably, every x corresponds to a choice of rows in J1(·| sg (t + 1) , s g (t), a g (t), ·) and every choice of si(t) corresponds to a choice of columns in J1(·| sg (t + 1) , s g (t), a g (t), ·), making J1(·| sg (t + 1) , s g (t), a g (t), ·) column-stochastic. 21 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Lemma B.22. The total variation distance between the expected empirical distribution of s∆(t + 1) and s∆′ (t + 1) is linearly bounded by the total variation distance of the empirical distributions of s∆(t) and s∆′ (t), for ∆, ∆′ ⊆ [n]:
+
+TV Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) ,
+
+∀i∈∆
+
+Fs∆(t+1) , Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) ,
+
+∀i∈∆′
+
+Fs∆′ (t+1) 
+
+!
+
+≤ TV  Fs∆(t), F s∆′ (t)
+
+ .
+
+Proof. We expand the TV-distance in ℓ1-norm and use the result in Theorem B.24 that 
+
+Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆
+
+Fs∆(t+1) = ¯P πℓ
+
+l (·| sg (t)) Fs∆(t).
+
+as follows: 
+
+TV 
+
+
+
+Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆
+
+Fs∆(t+1) , Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆′
+
+Fs∆′ (t+1) 
+
+
+
+= 12 Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆
+
+Fs∆(t+1) − Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆′
+
+Fs∆′ (t+1) 
+
+1
+
+= 12 ¯P πℓ
+
+l (·|· , s g (t)) Fs∆(t) − ¯P πℓ
+
+l (·|· , s g (t)) Fs∆′ (t) 1
+
+≤ ∥ ¯P πℓ
+
+l (·|· , s g (t)) ∥1 · 12 |Fs∆(t) − Fs∆′ (t)|1
+
+= ∥ ¯P πℓ
+
+l (·|· , s g (t)) ∥1 · TV( Fs∆(t), F s∆′ (t)).
+
+In the last line, we recover the total variation distance from the ℓ1 norm. Finally, by the column stochasticity of ¯P πℓ
+
+l (·|· , s g ),we have that ∥ ¯P πℓ
+
+l (·|· , s g )∥1 ≤ 1, which then implies 
+
+TV Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆
+
+Fs∆(t+1) , Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆′
+
+Fs∆′ (t+1) 
+
+!
+
+≤ TV( Fs∆(t), F s∆′ (t)).
+
+This proves the lemma. 
+
+Lemma B.23. The absolute difference between the expected maximums between ˆQk and ˆQk′ is bounded by the maximum of the absolute difference between ˆQk and ˆQk′ , where the expectations are taken over any joint distributions of states J ,and the maximums are taken over the actions. 
+
+|E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J |∆∪∆′|(·,·| sg ,a g ,s ∆∪∆′ )[ max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )] |≤ max 
+
+a′ 
+
+> g
+
+∈A g
+
+|E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J |∆∪∆′|(·,·| sg ,a g ,s ∆∪∆′ )[ ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )] |.
+
+Proof. Let 
+
+a∗
+
+g := arg max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g )
+
+and 
+
+˜a∗
+
+g := arg max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g ).
+
+For the remainder of this proof, we adopt the shorthand Es′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+to refer to E(s′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+)∼J |∆∪∆′|(·,·| sg ,a g ,s ∆∪∆′ ).22 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Then, if Es′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+max a′ 
+
+> g
+
+∈A g
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − Es′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+max a′ 
+
+> g
+
+∈A g
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g ) > 0, we have: 
+
+|Es′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − Es′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+max 
+
+a′ 
+
+> g
+
+∈A g
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|
+
+= Es′ 
+
+> g
+
+,s ′
+
+> ∆∪∆′
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ∗
+
+g ) − Es′ 
+
+> g
+
+,s ′
+
+> ∆∪∆′
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, ˜a∗
+
+g )
+
+≤ Es′ 
+
+> g
+
+,s ′
+
+> ∆∪∆′
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ∗
+
+g ) − Es′ 
+
+> g
+
+,s ′
+
+> ∆∪∆′
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ∗
+
+g )
+
+≤ max 
+
+a′ 
+
+> g
+
+∈A g
+
+|Es′ 
+
+> g
+
+,s ′
+
+> ∆∪∆′
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − Es′ 
+
+> g
+
+,s ′
+
+> ∆∪∆′
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g )|.
+
+Similarly, if Es′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+max a′ 
+
+> g
+
+∈A g
+
+ˆQTk (s′
+
+g , F s′ 
+
+> ∆
+
+, a ′
+
+g ) − Es′ 
+
+> g
+
+,s ′ 
+
+> ∆∪∆′
+
+max a′ 
+
+> g
+
+∈A g
+
+ˆQTk′ (s′
+
+g , F s′ 
+
+> ∆′
+
+, a ′
+
+g ) < 0, an analogous argument by replacing a∗
+
+g with ˜a∗
+
+g yields an identical bound. 
+
+Lemma B.24. For all t ∈ N and ∆ ⊆ [n],
+
+Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆
+
+[Fs∆(t+1) ] = ¯P πℓ
+
+l (·|· , s g (t)) Fs∆(t).
+
+Proof. For all x ∈ S l:
+
+Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆
+
+[Fs∆(t+1) (x)] := 1
+
+|∆|
+
+X
+
+i∈∆
+
+Esi(t+1) ∼ ¯P πℓl (si(t),s g (t)) [1(si(t + 1) = x)] = 1
+
+|∆|
+
+X
+
+i∈∆
+
+Pr[ si(t + 1) = x|si(t + 1) ∼ ¯P πℓ
+
+l (·| si(t), s g (t))] = 1
+
+|∆|
+
+X
+
+i∈∆
+
+¯P πℓ
+
+l (x|si(t), s g (t)) .
+
+The first line writes out the definition of Fs∆(t+1) (x) and uses the conditional independence in the evolutions of ∆ \ i and 
+
+i. The second line uses that for any random variable X ∈ X , EX 1[X = x] = Pr[ X = x]. In line 3, we observe that this probability can be written as an entry of the local transition matrix ¯P πℓ
+
+l .Then, aggregating across every entry x ∈ S l gives: 
+
+Esi(t+1) ∼ ¯P πℓl (·| si(t),s g (t)) 
+
+∀i∈∆
+
+[Fs∆(t+1) ] = 1
+
+|∆|
+
+X
+
+i∈∆
+
+¯P πℓ
+
+l (·| si(t), s g (t)) = 1
+
+|∆|
+
+X
+
+i∈∆
+
+¯P πℓ
+
+l (·|· , s g (t)) ⃗ 1si(t) =: ¯P πℓ
+
+l (·|· , s g (t)) Fs∆(t).
+
+Here, ⃗ 1si(t) ∈ { 0, 1}|S l| such that ⃗ 1si(t) is 1 at the index corresponding to si(t), and is 0 everywhere else. The last equality follows as ¯P πℓ
+
+l (·|· , s g (t)) is column-stochastic, yielding that ¯P πℓ
+
+l (·|· , s g (t)) ⃗ 1si(t) = ¯P πℓ
+
+l (·| si(t), s g (t)) .
+
+Lemma B.25. For any joint transition probability function on sg , s ∆, where |∆| = k, given by Jk : Sg × S |∆|
+
+l × S g ×Ag × S |∆|
+
+l → [0 , 1] , we have: 
+
+E(s′ 
+
+> g
+
+,s ′
+
+> ∆
+
+)∼J k (·,·| sg ,a g ,s ∆)
+
+
+
+E(s′′  
+
+> g
+
+,s ′′ 
+
+> ∆
+
+)∼J k (·,·| s′ 
+
+> g
+
+,a g ,s ′
+
+> ∆
+
+) max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g )
+
+
+
+= E(s′′  
+
+> g
+
+,s ′′ 
+
+> ∆
+
+)∼J 2 
+
+> k
+
+(·,·| sg ,a g ,s ∆) max 
+
+a′′  
+
+> g
+
+∈A g
+
+ˆQTk (s′′ 
+
+g , F s′′  
+
+> ∆
+
+, a ′′ 
+
+g ).
+
+23 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Proof. We start by expanding the expectations: 
+
+E(s′    
+
+> g,s ′
+> ∆)∼J k(·,·| sg,a g,s ∆)
+
+
+
+E(s′′      
+
+> g,s ′′
+> ∆)∼J k(·,·| s′
+> g,a g,s ′
+> ∆)
+
+max  
+
+> a′
+> g∈A g
+
+ˆQTk (s′′  
+
+> g
+
+, F s′′  
+
+> ∆
+
+, a ′ 
+
+> g
+
+)
+
+
+
+= X  
+
+> (s′
+> g,s ′
+> ∆)∈S g×S |∆|
+> l
+
+X  
+
+> (s′′
+> g,s ′′
+> ∆)∈S g×S |∆|
+> l
+
+Jk[s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, s g , a g , s ∆]Jk[s′′  
+
+> g
+
+, s ′′ 
+
+> ∆
+
+, s ′ 
+
+> g
+
+, a g , s ′
+
+> ∆
+
+] max  
+
+> a′
+> g∈A g
+
+ˆQTk (s′′  
+
+> g
+
+, F s′′  
+
+> ∆
+
+, a ′ 
+
+> g
+
+)= X  
+
+> (s′′
+> g,s ′′
+> ∆)∈S g×S |∆|
+> l
+
+J 2 
+
+> k
+
+[s′′  
+
+> g
+
+, s ′′ 
+
+> ∆
+
+, s g , a g , s ∆] max  
+
+> a′
+> g∈A g
+
+ˆQTk (s′′  
+
+> g
+
+, F s′′  
+
+> ∆
+
+, a ′ 
+
+> g
+
+)= E(s′′       
+
+> g,s ′′
+> ∆)∼J 2
+> k(·,·| sg,a g,s ∆)
+
+max  
+
+> a′
+> g∈A g
+
+ˆQTk (s′′  
+
+> g
+
+, F s′′  
+
+> ∆
+
+, a ′ 
+
+> g
+
+)
+
+The right-stochasticity of Jk implies the right-stochasticity of J 2 
+
+> k
+
+.Further, observe that Jk[s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, s g , a g , s ∆]Jk[s′′  
+
+> g
+
+, s ′′ 
+
+> ∆
+
+, s ′ 
+
+> g
+
+, a g , s ′
+
+> ∆
+
+] denotes the probability of the transitions (sg , s ∆) →
+
+(s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+) → (s′′  
+
+> g
+
+, s ′′ 
+
+> ∆
+
+) with actions ag at each step, where the joint state evolution is governed by Jk.Thus, P  
+
+> (s′
+> g,s ′
+> ∆)∈S g×S |∆|
+> l
+
+Jk[s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, s g , a g , s ∆]Jk[s′′  
+
+> g
+
+, s ′′ 
+
+> ∆
+
+, s ′ 
+
+> g
+
+, a g , s ′ 
+
+> g
+
+] is the stochastic probability function corresponding to the two-step evolution of the joint states from (sg , s ∆) to (s′′  
+
+> g
+
+, s ′′ 
+
+> ∆
+
+) under the action ag , which is equivalent to 
+
+J 2 
+
+> k
+
+[s′′  
+
+> g
+
+, s ′′ 
+
+> ∆
+
+, s g , a g , s ∆].The third equality lets the joint probabilities to be taken over J 2 
+
+> k
+
+, proving the lemma. 
+
+B.2. Bounding the Total Variation Distance Theorem B.26 (Theorem C.5 of Anand & Qu (2024)) . Consider a finite population X = ( x1, . . . , x n) ∈ S nl . Let ∆ ⊆ [n]
+
+be a random sample of size k chosen uniformly and without replacement. Then, for all x ∈ S l:
+
+Pr 
+
+ sup 
+
+> x∈S l
+
+1
+
+|∆|
+
+X
+
+> i∈∆
+
+1{xi = x} − 1
+
+n
+
+X
+
+> i∈[n]
+
+1{xi = x} < ϵ 
+
+ ≥ 1 − 2|S l|e− 2|∆|nϵ 2 
+
+> n−| ∆|+1
+
+.
+
+Combining the Lipschitz continuity bound and the TV-distance bound yields Theorem B.27. 
+
+Theorem B.27. For all sg ∈ S g , s 1, . . . , s n ∈ S nl , a g ∈ A g , we have that with probability at least 1 − δ:
+
+| ˆQTk (sg , F s∆ , a g ) − ˆQTn (sg , F s[n] , a g )| ≤ 2∥rl(·, ·)∥∞
+
+1 − γ
+
+s
+
+n − | ∆| + 1 8n|∆| ln(2 |S l|/δ ).
+
+Proof. By the definition of total variation distance, observe that 
+
+TV( Fs∆ , F s[n] ) ≤ ϵ ⇐⇒ sup 
+
+> x∈S l
+
+|Fs∆ − Fs[n] | < 2ϵ (25) Then, let X = Sl be the finite population in Theorem B.26 and recall the Lipschitz-continuity of ˆQTk from Theorem B.18: 
+
+ˆQTk (sg , F s∆ , a g ) − ˆQTn (sg , F s[n] , a g ) ≤ 
+
+> T−1
+
+X
+
+> t=0
+
+2γt
+
+!
+
+∥rl(·, ·)∥∞ · TV( Fs∆ , F s[n] )
+
+≤ 21 − γ ∥rl(·, ·)∥∞ · ϵ. 
+
+By setting the error parameter in Theorem B.26 to 2ϵ, we find that Equation (25) occurs with probability at least 1 −
+
+2|S l|e−2|∆|nϵ 2/(n−| ∆|+1) , and hence 
+
+Pr 
+
+
+
+ˆQTk (sg , F s∆ , a g ) − ˆQTn (sg , F s[n] , a g ) ≤ 2ϵ
+
+1 − γ ∥rl(·, ·)∥∞
+
+
+
+≥ 1 − 2|S l|e− 8n|∆|ϵ2 
+
+> n−| ∆|+1
+
+.
+
+24 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Finally, we parameterize the probability to 1 − δ to solve for ϵ, which yields 
+
+ϵ =
+
+s
+
+n − | ∆| + 1 8n|∆| ln(2 |S l|/δ ).
+
+This proves the theorem. 
+
+B.3. Using the Performance Difference Lemma to Bound the Optimality Gap 
+
+Recall that the fixed-point of the empirical adapted Bellman operator ˆTk,m is ˆQest  
+
+> k,m
+
+and ∥ ˆQ∗ 
+
+> k
+
+− ˆQest 
+
+> k,m
+
+∥∞ ≤ ϵk,m , where 
+
+ϵk,m is the Bellman gap whose value we bound later. 
+
+Lemma B.28. Fix s ∈ S := Sg × S nl . Suppose we are given a T -length sequence of i.i.d. random variables ∆1, . . . , ∆T ,distributed uniformly over the support  [n]
+
+> k
+
+. Further, suppose we are given a fixed sequence δ1, . . . , δ T ∈ (0 , 1) . Then, for each action ag ∈ A g and for i ∈ [T ], define events Bag 
+
+> i
+
+such that: 
+
+Bag 
+
+> i
+
+:= 
+
+ Q∗(sg , s [n], a g ) − ˆQest 
+
+> k,m
+
+(sg , F s∆i , a g ) >
+
+s
+
+n − k + 1 8kn ln 2|S l|
+
+δi
+
+· 21 − γ ∥rl(·, ·)∥∞ + ϵk,m 
+
+ .
+
+Next, for i ∈ [T ], we define “bad-events” Bi such that Bi = S  
+
+> ag∈A g
+
+Bag 
+
+> i
+
+. Next, denote 
+
+B := 
+
+> T
+
+[
+
+> i=1
+
+Bi =
+
+> T
+
+[
+
+> i=1
+
+[ 
+
+> ag∈A g
+
+Bag
+
+> i
+
+ .
+
+Then, the probability that no “bad event” occurs is 
+
+Pr  ¯B ≥ 1 − |A g |
+
+> T
+
+X
+
+> i=1
+
+δi.
+
+Proof. 
+
+Q∗(sg , s [n], a g ) − ˆQest 
+
+> k,m
+
+(sg , F s∆ , a g ) ≤ Q∗(sg , s [n], a g ) − ˆQ∗
+
+> k
+
+(sg , F s∆ , a g ) + ˆQ∗
+
+> k
+
+(sg , F s∆ , a g ) − ˆQest 
+
+> k,m
+
+(sg , F s∆ , a g )
+
+≤ Q∗(sg , s [n], a g ) − ˆQ∗
+
+> k
+
+(sg , F s∆ , a g ) + ϵk,m .
+
+The first inequality above follows from the triangle inequality, and the second inequality uses |Q∗(sg , s [n], a g ) −
+
+ˆQ∗
+
+> k
+
+(sg , F s∆ , a g )| ≤ ∥ Q∗(sg , s [n], a g ) − ˆQ∗
+
+> k
+
+(sg , F s∆ , a g )∥∞ ≤ ϵk,m . Then, from Theorem B.27, we have that with probability at least 1 − δi,
+
+Q∗(sg , s [n], a g ) − ˆQ∗
+
+> k
+
+(sg , F s∆ , a g ) ≤
+
+s
+
+n − k + 1 8nk ln 2|S l|
+
+δi
+
+· 21 − γ ∥rl(·, ·)∥∞.
+
+So, event Bi occurs with probability at most δi. Thus, by repeated applications of the union bound, we get: 
+
+Pr[ ¯B] ≥ 1 −
+
+> T
+
+X
+
+> i=1
+
+X 
+
+> ag∈A g
+
+Pr[ Bag 
+
+> i
+
+] ≥ 1 − |A g |
+
+> T
+
+X
+
+> i=1
+
+Pr[ Bag 
+
+> i
+
+].
+
+Finally, substituting Pr[ Bag 
+
+> i
+
+] ≤ δi yields the lemma. 25 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Recall that for any s ∈ S := Sg × S nl ∼= Sg , the policy function πest 
+
+> k,m
+
+(s) is defined as a uniformly random element in the maximal set of ˆπest  
+
+> k,m
+
+evaluated on all possible choices of ∆. Formally: 
+
+πest 
+
+> k,m
+
+(s) ∼ U 
+
+
+
+ˆπest 
+
+> k,m
+
+(sg , F s∆ ) : ∆ ∈
+
+[n]
+
+k
+
+ 
+
+. (26) We now use the celebrated performance difference lemma from Kakade & Langford (2002), restated below for convenience in Theorem B.29, to bound the value functions generated between πest  
+
+> k,m
+
+and π∗.
+
+Theorem B.29 (Performance Difference (Kakade & Langford, 2002)) . Given policies π1, π 2, with corresponding value functions V π1 , V π2 :
+
+V π1 (s) − V π2 (s) = 11 − γ E s′∼dπ1 
+
+> s
+> a′
+> g∼π1(·| s′)
+
+[Aπ2 (s′, a ′ 
+
+> g
+
+)] . (27) Here, Aπ2 (s′, a ′ 
+
+> g
+
+) := Qπ2 (s′, a ′ 
+
+> g
+
+) − V π2 (s′) and dπ1 
+
+> s
+
+(s′) = (1 − γ) P∞ 
+
+> h=0
+
+γh Pr π1 
+
+> h
+
+[s′, s ] where Pr π1 
+
+> h
+
+[s′, s ] is the probability of π1 reaching state s′ at time step h starting from state s.
+
+Theorem B.30 (Bounding value difference) . For any s ∈ S := Sg × S nl and (δ1, δ 2) ∈ (0 , 1] 2, we have: 
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) ≤ 2∥rl(·, ·)∥∞
+
+(1 − γ)2
+
+r n − k + 1 2nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
++ 2˜ r
+
+(1 − γ)2 |A g |δ1 + 2ϵk,m 
+
+1 − γ .
+
+Proof. Note that by definition of the advantage function, 
+
+Ea′ 
+
+> g∼πest
+> k,m (·| s′)
+
+Aπ∗
+
+(s′, a ′ 
+
+> g
+
+) = Ea′ 
+
+> g∼πest
+> k,m (·| s′)
+
+[Qπ∗
+
+(s′, a ′ 
+
+> g
+
+) − V π∗
+
+(s′)] = Ea′ 
+
+> g∼πest
+> k,m (·| s′)
+
+[Qπ∗
+
+(s′, a ′ 
+
+> g
+
+) − Ea∼π∗(·| s′)Qπ∗
+
+(s′, a g )] = Ea′ 
+
+> g∼πest
+> k,m (·| s′)
+
+Eag ∼π∗(·| s′)[Qπ∗
+
+(s′, a ′ 
+
+> g
+
+) − Qπ∗
+
+(s′, a g )] .
+
+Since π∗ is a deterministic policy, we can write: 
+
+Ea′ 
+
+> g∼πest
+> k,m (·| s′)
+
+Eag ∼π∗(·| s′)Aπ∗
+
+(s′, a ′ 
+
+> g
+
+) = Ea′ 
+
+> g∼πest
+> k,m (·| s′)
+
+[Qπ∗
+
+(s′, a ′ 
+
+> g
+
+) − Qπ∗
+
+(s′, π ∗(s′))] = 1
+
+ nk
+
+ X
+
+> ∆∈
+
+([n] 
+
+> k
+
+)[Qπ∗
+
+(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) − Qπ∗
+
+(s′, π ∗(s′))] .
+
+Then, by the linearity of expectations and the performance difference lemma (while noting that Qπ∗
+
+(·, ·) = Q∗(·, ·)): 
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) = 11 − γ
+
+X
+
+> ∆∈
+
+([n] 
+
+> k
+
+)1
+
+ nk
+
+ Es′∼dπest 
+
+> k,m s
+
+h
+
+Qπ∗
+
+(s′, π ∗(s′)) − Qπ∗
+
+(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) 
+
+i
+
+= 11 − γ
+
+X
+
+> ∆∈
+
+([n] 
+
+> k
+
+)1
+
+ nk
+
+ Es′∼dπest 
+
+> k,m s
+
+Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+))  .
+
+Next, we use Theorem B.31 to bound this difference (where the probability distribution function of D is set as dπest  
+
+> k,m
+> s
+
+as defined in Theorem B.29) while letting δ1 = δ2:
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) ≤ 11 − γ
+
+X
+
+> ∆∈
+
+([n] 
+
+> k
+
+)1
+
+ nk
+
+ 2∥rl(·, ·)∥∞
+
+1 − γ
+
+r n − k + 1 2nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
+ + 2˜ r
+
+1 − γ |A g |δ1 + 2 ϵk,m 
+
+
+
+≤ 2∥rl(·, ·)∥∞
+
+(1 − γ)2
+
+r n − k + 1 2nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
+ + 2˜ r
+
+(1 − γ)2 |A g |δ1 + 2ϵk,m 
+
+1 − γ ,
+
+proves the theorem. 26 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Lemma B.31. For any arbitrary distribution D of states S := Sg × S nl , for any ∆ ∈  [n]
+
+> k
+
+ and for δ1, δ 2 ∈ (0 , 1] , we have: 
+
+Es′∼D [Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′
+
+> ∆)
+
+)] 
+
+≤ 2∥rl(·, ·)∥∞
+
+1 − γ
+
+r n − k + 1 8nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
++
+
+s
+
+ln 2|S l|
+
+δ2
+
+ + ˜r
+
+1 − γ |A g |(δ1 + δ2) + 2 ϵk,m .
+
+Proof. Denote ζs, ∆ 
+
+> k,m
+
+:= Q∗(s, π ∗(s)) − Q∗(s, ˆπest 
+
+> k,m
+
+(sg , F s∆ ).We define the indicator function I : S × N × (0 , 1] × (0 , 1] by: 
+
+I(s, k, δ 1, δ 2) = 1
+
+ζs, ∆ 
+
+> k,m
+
+≤ 2∥rl(·, ·)∥∞
+
+1 − γ
+
+r n − k + 1 8nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
++
+
+s
+
+ln 2|S l|
+
+δ2
+
+ + 2 ϵk,m 
+
+ .
+
+We then study the expected difference between Q∗(s′, π ∗(s′)) and Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) . Observe that: 
+
+Es′∼D [ζs, ∆
+
+> k,m
+
+] = Es′∼D [Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+))] = Es′∼D 
+
+I(s′, k, δ 1, δ 2)( Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+))) 
+
++ Es′∼D [(1 − I (s′, k, δ 1, δ 2))( Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)))] 
+
+Here, we have used the general property for a random variable X and constant c that E[X] = E[X1{X ≤ c}] + E[(1 −
+
+1{X ≤ c})X]. Then, 
+
+Es′∼D [Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)] 
+
+≤ 2∥rl(·, ·)∥∞
+
+1 − γ
+
+r n − k + 1 8nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
++
+
+s
+
+ln 2|S l|
+
+δ2)
+
+ + 2 ϵk,m + ˜r
+
+1 − γ (1 − Es′∼D I(s′, k, δ 1, δ 2)) 
+
+≤ 2∥rl(·, ·)∥∞
+
+1 − γ
+
+r n − k + 1 8nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
++
+
+s
+
+ln 2|S l|
+
+δ2)
+
+ + 2 ϵk,m + ˜r
+
+1 − γ |A g |(δ1 + δ2).
+
+The first inequality uses E[X1{X ≤ c}] ≤ c and trivially bounds Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) by the maximum value of Q∗, which is ˜r 
+
+> 1−γ
+
+. The second inequality uses that the expectation of an indicator function is the conditional probability of the underlying event and applies Theorem B.32. 
+
+Lemma B.32. For a fixed s′ ∈ S := Sg × S nl , for any ∆ ∈  [n]
+
+> k
+
+, and for δ1, δ 2 ∈ (0 , 1] , we have that with probability at least 1 − |A g |(δ1 + δ2):
+
+Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) ≤ 2∥rl(·, ·)∥∞
+
+1 − γ
+
+r n − k + 1 8nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
++
+
+s
+
+ln 2|S l|
+
+δ2
+
+ + 2 ϵk,m .
+
+Proof. 
+
+Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) = Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′
+
+> ∆)
+
+)+ ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, π ∗(s′)) − ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, π ∗(s′)) + ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) − ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) .
+
+By the monotonicity of the absolute value and by the triangle inequality, 
+
+Q∗(s′, π ∗(s′)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) 
+
+≤ | Q∗(s′, π ∗(s′)) − ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, π ∗(s′)) | + | ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) − Q∗(s′, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) |.
+
+27 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+The above inequality uses that the residual term 
+
+ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, π ∗(s′)) − ˆQest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+, ˆπest 
+
+> k,m
+
+(s′ 
+
+> g
+
+, F s′ 
+
+> ∆
+
+)) ≤ 0,
+
+since ˆπest  
+
+> k,m
+
+is the optimal greedy policy for ˆQest 
+
+> k,m
+
+.Applying the error bound from Theorem B.28 for two timesteps completes the proof. 
+
+Corollary B.33. Optimizing parameters in Theorem 4.4 yields :
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) ≤ 2˜ r
+
+(1 − γ)2
+
+r n − k + 1 2nk ln(2 |S l||A g |√k) + 1
+
+√k
+
+!
+
++ 2ϵk,m 
+
+1 − γ .
+
+Proof. Recall from Theorem 4.4 that: 
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) ≤ 2∥rl(·, ·)∥∞
+
+(1 − γ)2
+
+r n − k + 1 2nk 
+
+s
+
+ln 2|S l|
+
+δ1
+
+ + 2∥rl(·, ·)∥∞
+
+(1 − γ)2 |A g |δ1 + 2ϵk,m 
+
+1 − γ .
+
+Note ∥rl(·, ·)∥∞ ≤ ˜r by assumption. Then, 
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) ≤ 2˜ r
+
+(1 − γ)2
+
+s
+
+n − k + 1 2nk ln 2|S l|
+
+δ1
+
++ |A g |δ1
+
+ + 2ϵk,m 
+
+1 − γ .
+
+Finally, setting δ1 = 1  
+
+> k1/2|A g|
+
+yields the claim. 
+
+B.4. Bounding the Bellman Error 
+
+To bound the Bellman error ϵk,m , we first recall Hoeffding’s inequality (Hoeffding, 1963). 
+
+Lemma B.34 (Hoeffding’s inequality) . Let X1, . . . , X n be independent random variables such that ai ≤ Xi ≤ bi almost surely. Let Sn = Pni=1 Xi. Then, for all t > 0, we have that 
+
+Pr[ |Sn − E[Sn]| ≥ t] ≤ 2 exp 
+
+
+
+− 2t2
+
+Pni=1 (bi − ai)2
+
+
+
+.
+
+Lemma B.35. Fix k ≥ 1 and let ˆTk and ˆTk,m be the adapted Bellman operator and adapted Bellman operator, respectively. Let ˆQ∗ 
+
+> k
+
+denote the unique fixed point of ˆTk and ˆQ∗ 
+
+> k,m
+
+the unique fixed point of ˆTk,m . Let Nk := |S g ||A g ||S l|k be the size of the Q-function under the standard parameterization, and let Mk := |S g ||A g ||S l|k|S l| be the size of the Q-function under the mean-field parameterization. Then for any ρ ∈ (0 , 1) , with probability at least 1 − ρ over the sampling used to form 
+
+ˆTk,m , we have that in the standard parameterization, 
+
+ϵk,m := ∥ ˆQ∗ 
+
+> k,m
+
+− ˆQ∗
+
+> k
+
+∥∞ ≤ γ∥rl∥∞
+
+(1 − γ)2
+
+r 2 ln(2 Nk/ρ )
+
+m ,
+
+and in the mean-field parameterization, 
+
+ϵk,m := ∥ ˆQ∗ 
+
+> k,m
+
+− ˆQ∗
+
+> k
+
+∥∞ ≤ γ∥rl∥∞
+
+(1 − γ)2
+
+r 2 ln(2 Mk/ρ )
+
+m .
+
+Proof. We first control the Bellman operator’s deviation at the fixed point ˆQ∗
+
+> k
+
+. For any (sg , s ∆, a g ) ∈ S g × S kl × A g , define 
+
+Y := max  
+
+> ag∈A g
+
+ˆQ∗
+
+> k
+
+(sg , s ∆, a g ).
+
+28 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+By Lemma B.4, we have ∥ ˆQ∗
+
+> k
+
+∥∞ ≤ ∥rl∥∞ 
+
+> 1−γ
+
+, hence |Y | ≤ ∥rl∥∞ 
+
+> 1−γ
+
+almost surely. The empirical operator uses i.i.d. samples 
+
+Y1, . . . , Y m of Y and forms their average. By Hoeffding’s inequality, 
+
+Pr 
+
+"
+
+1
+
+m
+
+> m
+
+X
+
+> ℓ=1
+
+Yℓ − E[Y ] ≥ η
+
+#
+
+≤ 2 exp 
+
+
+
+− m(1 − γ)2η2
+
+2∥rl∥2
+
+> ∞
+
+
+
+.
+
+Taking a union bound over all Nk tuples (sg , s ∆, a g ) gives 
+
+Pr 
+
+h
+
+∥ ˆTk,m ˆQ∗ 
+
+> k
+
+− ˆTk ˆQ∗
+
+> k
+
+∥∞ ≥ γη 
+
+i
+
+≤ 2Nk exp 
+
+
+
+− m(1 − γ)2η2
+
+2∥rl∥2
+
+
+
+.
+
+Setting the right-hand side to ρ and solving for η, we have 
+
+η = ∥rl∥∞
+
+1 − γ
+
+r 2 ln(2 Nk/ρ )
+
+m .
+
+Thus, with probability at least 1 − ρ, we have 
+
+∥ ˆTk,m ˆQ∗ 
+
+> k
+
+− ˆTk ˆQ∗
+
+> k
+
+∥∞ ≤ γ ∥rl∥∞
+
+1 − γ
+
+r 2 ln(2 Nk/ρ )
+
+m .
+
+Finally, using the contraction bound since ˆQ∗ 
+
+> k,m
+
+= ˆTk,m ˆQ∗
+
+> k,m
+
+, we have 
+
+∥ ˆQ∗ 
+
+> k,m
+
+− ˆQ∗
+
+> k
+
+∥∞ ≤ 11 − γ ∥ ˆTk,m ˆQ∗ 
+
+> k
+
+− ˆTk ˆQ∗
+
+> k
+
+∥∞
+
+≤ γ ∥rl∥∞
+
+(1 − γ)2
+
+r 2 ln(2 Nk/ρ )
+
+m ,
+
+which yields the stated bound for the standard parameterization. Re-writing the Q-function with inputs (sg , F s∆ , a g ) ∈Sg × μk(Sl) × A g proves the bound for the mean-field parameterization. 
+
+Lemma B.36. If T = 21−γ log ˜r√k 
+
+> 1−γ
+
+, the global agent’s Q-learning algorithm requires a sample complexity of 
+
+2k3γ2∥rl∥2
+
+> ∞
+
+|S g ||A g |
+
+(1 − γ)5 log ˜r√k
+
+1 − γ · ln(200 ke |S g ||A g ||S l|) · min 
+
+n
+
+|S l|2k|S l|, k |S l|ko
+
+to accrue a Bellman noise ϵk,m ≤ 2√k with probability at least 1 − 1100 ek .Proof. We first prove that ∥ ˆQTk − ˆQ∗
+
+> k
+
+∥∞ ≤ 1√k . For this, it suffices to show γT ˜r 
+
+> 1−γ
+
+≤ 1√k =⇒ γT ≤ 1−γ 
+
+> ˜r√k
+
+. Then, using 
+
+γ = 1 − (1 − γ) ≤ e−(1 −γ), it again suffices to show e−(1 −γ)T ≤ 1−γ 
+
+> ˜r√k
+
+. Taking logarithms, we have 
+
+exp( −T (1 − γ)) ≤ 1 − γ
+
+˜r√k
+
+−T (1 − γ) ≤ log 1 − γ
+
+˜r√kT ≥ 11 − γ log ˜r√k
+
+1 − γ .
+
+Since T = 21−γ log ˜r√k 
+
+> 1−γ
+
+> 11−γ log ˜r√k 
+
+> 1−γ
+
+, the condition holds and ∥ ˆQTk − ˆQ∗
+
+> k
+
+∥∞ ≤ 1√k .Then, rearranging Theorem B.35 and incorporating the convergence error of the ˆQk-function, one has that with probability at least 1 − ρ,
+
+ϵk,m ≤ 1
+
+√k + γ ∥rl∥∞
+
+(1 − γ)2
+
+r 2 ln(2 Bk/ρ )
+
+m , (28) 29 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+where Bk is the number of samples used in the parameterization of the Q-function. 
+
+In the mean-field parameterization, we have Bk ≤ |S g ||A g ||S l|k|S l|. Substituting this in Equation (28) yields that with probability at least 1 − ρ,
+
+ϵk,m ≤ 1
+
+√k + γ ∥rl∥∞
+
+(1 − γ)2
+
+r 2 ln(2 |S g ||A g ||S l|k|S l|/ρ )
+
+m , (29) 
+
+In the standard parameterization, we have Bk ≤ |S g ||S l|k|A g |. Substituting this in Equation (28) yields that with probability at least 1 − ρ,
+
+ϵk,m ≤ 1
+
+√k + γ ∥rl∥∞
+
+(1 − γ)2
+
+r 2 ln(2 |S g ||A g ||S l|k/ρ )
+
+m . (30) Therefore, to attain a Bellman error of ϵk,m ≤ 2/√k with probability at least 1 − δ, we set the number of samples m
+
+accordingly. For the mean-field parameterization, we set the number of samples to be 
+
+m1 = 2k2γ2∥rl∥2
+
+> ∞
+
+(1 − γ)4 ln(200 ek|S g ||A g ||S l|k|S l|), (31) and for the standard parameterization we set the number of samples to be 
+
+m2 = 2k2γ2∥rl∥2
+
+> ∞
+
+(1 − γ)4 ln(200 ek|S g ||A g ||S l|k).
+
+Therefore, the sample complexity of the global agent’s learning algorithm is 
+
+min 
+
+
+
+T m 1|S g ||S l||A g |k|S l|, T m 2|S g ||S l|k|A g |
+
+
+
+= 2k3γ2∥rl∥2
+
+> ∞
+
+|S g ||A g |
+
+(1 − γ)5 log ˜r√k
+
+1 − γ · ln(200 ke |S g ||A g ||S l|) · min 
+
+n
+
+|S l|2k|S l|, k |S l|ko
+
+,
+
+which proves the claim. 
+
+Corollary B.37 (Bounding the optimality gap of the best-response of the global agent) . From Theorem B.33, we have that if in the mean-field parameterization 
+
+m ≥ 2k2γ2∥rl∥2
+
+> ∞
+
+(1 − γ)4 ln(200 ek|S g ||A g ||S l|k),
+
+or in the standard parameterization 
+
+m ≥ 2k2γ2∥rl∥2
+
+> ∞
+
+(1 − γ)4 ln(200 ek|S g ||A g ||S l|k|S l|),
+
+then with probability at least 1 − 1100 ek :
+
+V π∗
+
+(s) − V πest  
+
+> k,m
+
+(s) ≤ 2˜ r
+
+(1 − γ)2
+
+r n − k + 1 2nk ln(2 |S l||A g |√k) + 1
+
+√k
+
+!
+
++ 4
+
+√k(1 − γ) ≤ ˜O(1 /√k).
+
+30 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+## C. Optimality of the Local Agent Policy 
+
+C.1. Upper Confidence Fixed-Horizon Episodic Reinforcement Learning 
+
+We begin by recalling the Upper-Confidence Fixed-Horizon (UCFH) episodic reinforcement learning algorithm in Dann & Brunskill (2015). We first formalize the notion of episodic fixed-horizon MDPs which can be formalized as a tuple 
+
+M = ( S, A, r, p, p 0, H ), where S and A are finite sets. The learning agent interacts with the MDP in episodes of H time steps. At time t = 1 , . . . , H , the agent observes state st, chooses action at using time-varying policy at = πt(st) for t = 1 , . . . , H . The next state is sampled from the stationary transition kernel st+1 ∼ p(·| st, a t) and the initial state from s1 ∼ p0. The agent receives a reward drawn from a distribution with mean r(st) determined by the reward function, which is non-stationary. The quality of the policy is given by RπM = E[PHt=1 rt(st)] , and the problem to solve is how many episodes does a learning agent follow a policy π that is not ϵ-optimal with probability at least 1 − δ, for any chosen accuracy ϵ and failure probability δ.We state the algorithm in Dann & Brunskill (2015) below for self-containedness, and refer the interested reader for intuitive descriptions and explanations, detailed algorithm implementations, and proofs of correctness and sample complexity analyses of UCFH and FixedHorizonEVI to Dann & Brunskill (2015). 
+
+Algorithm 5 UCFH : Upper-Confidence Fixed-Horizon (UCFH) episodic RL algorithm (Dann & Brunskill, 2015) Target accuracy ϵ ∈ (0 , 1] , failure tolerance δ ∈ (0 , 1] , and fixed horizon MDP M .Set i := 1 , w min := ϵ 
+
+> 4H|S|
+
+, Umax := |S × A| log 2 
+
+> |S| Hwmin
+
+, and δ1 = δ 
+
+> 20 Umax
+
+.Let m = 512(log 2 log 2 H)2 10 H2 
+
+> ϵ2
+
+log 2  8H2|S| 2
+
+> ϵ
+
+
+
+ln 60 |S×A| log 22(4 |S| 2H2/ϵ )
+
+> δ
+
+Let n(s, a ) = v(s, a ) = n(s, a, s ′) := 0 , ∀s ∈ S , a ∈ A , s ′ ∈ S (s, a ).
+
+while do 
+
+/* Optimistic planning 
+
+ˆp(s′|s, a ) := n(s, a, s ′)/n (s, a ) for all (s, a ) with n(s, a ) > 0 and s′ ∈ S (s, a ); 
+
+Let Mi := { fM ∈ M nonst. : ∀(s, a ) ∈ S × A , t = 1 , . . . , H, s ′ ∈ S (s, a ),
+
+˜pt(s′|s, a ) ∈ ConfidenceSet (ˆ p(s′|s, a ), n (s, a )) }
+
+fMi, π i := FixedHorizonEVI (Mi)
+
+repeat /* Execute policy SampleEpisode (πi) // from M using πi
+
+until there is a (s, a ) ∈ S × A with v(s, a ) ≥ max {mw min , n (s, a )} and n(s, a ) < |S| mH 
+
+/* Update model statistics for one (s, a )-pair with condition above 
+
+Let n(s, a ) := n(s, a ) + v(s, a )
+
+Let n(s, a, s ′) := n(s, a, s ′) + v(s, a, s ′), ∀s′ ∈ S (s, a )
+
+Let v(s, a ) := v(s, a, s ′) := 0 , ∀s′ ∈ S (s, a )
+
+Update i ← i + 1 
+
+Procedure SampleEpisode (π)
+
+s0 ∼ p0
+
+for t = 0 , . . . , H − 1 do 
+
+at := πt+1 (st) and st+1 ∼ p(·| st, a t)
+
+v(st, a t) := v(st, a t) + 1 and v(st, a t, s t+1 ) := v(st, a t, s t+1 ) + 1 
+
+Function ConfidenceSet (p, n )
+
+P := 
+
+
+
+p′ ∈ [0 , 1] : if n > 1 : |pp′(1 − p′) − pp(1 − p)| ≤ 
+
+q 2 ln(6 /δ 1) 
+
+> n−1
+
+,
+
+|p − p′| ≤ min 
+
+r 12n ln(6 /δ 1),
+
+r 2p(1 − p)
+
+n ln(6 /δ 1) + 73( n − 1) ln 6
+
+δ1
+
+! 
+
+return P
+
+31 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Algorithm 6 FixedHorizonEVI (M) (Dann & Brunskill, 2015) Let ˜Q⋆H:H (s, a ) = rH (s), ∀s, a ∈ S × A 
+
+for t = H − 1, . . . , 1 do 
+
+πt+1 (s) := arg max a∈cA ˜Q⋆t+1: H (s, a ), ∀s ∈ S 
+
+Sort states s(1) , . . . , s (|S| ) such that ˜Q⋆t+1: H (s(i), π t+1 (s(i))) ≥ ˜Q⋆t+1: H (s(i+1) , π t+1 (s(i+1) )) 
+
+for (s, a ) ∈ S × A do 
+
+˜pt(s′|s, a ) := min ConfidenceSet (ˆ p(s′|s, a ), n (s, a )) , ∀s′ ∈ S (s, a )
+
+Set ∆ := 1 − P 
+
+> s′∈S (s,a )
+
+˜pt(s′|s, a ) and i := 1 
+
+while ∆ > 0 do 
+
+s′ := s(i)
+
+∆′ := min {∆, max ConfidenceSet (ˆ p(s′|s, a ), n (s, a )) − ˜pt(s′|s, a )}
+
+˜pt(s′|s, a ) := ˜ pt(s′|s, a ) + ∆ ′
+
+Set ∆ := ∆ − ∆′ and i′ := i + 1 ˜Q⋆t:H (s, a ) = rt(s) + P 
+
+> s′∈S (s,a )
+
+˜pt(s′|s, a ) ˜Q⋆t+1: H (s′, π t+1 (s′)) 
+
+π1(s) := arg max a∈A ˜Q⋆ 
+
+> 1: H
+
+(s, a ), ∀s ∈ S 
+
+Return MDP with transition probabilities ˜pt and optimal policy π.
+
+C.2. Black-Box Reduction of Local Agent Best-Responses to Upper Confidence Fixed-Horizon Episodic RL 
+
+We first show how to reduce from the setting in Dann & Brunskill (2015) which has state rewards to our setting in the induced MDP which has state/action rewards. Algorithm 7 below works by adding an intermediate “deciding state” where we get no reward but have to choose an action. 
+
+Algorithm 7 Reduce State-Action Reward MDP to State-Reward MDP with Deciding States 
+
+Require: Input Markov Decision Process M = ( S, A, P, r, H )
+
+Introduce ⊥ /∈ A .Set ˜S ← (S × A ) ∪ (S × {⊥} ) and ˜A ← A ∪ {⊥} .Let ˜r(s, a ) ← r(s, a ) for a ∈ A and ˜r(s, ⊥) ← 0.Define simulator Step (( s, z ), u ) that returns (x′, ρ ′) where ρ = ˜ r(x′)
+
+if x = ( s, a ) for some a ∈ A then 
+
+/* committed state 
+
+Sample s′ ∼ P (·| s, a )
+
+x′ ← (s′, ⊥)
+
+Return (x′, 0) 
+
+else if x = ( s, ⊥) then 
+
+/* deciding state 
+
+if u =⊥ then 
+
+x′ ← (s, ⊥)
+
+Return (x′, 0) 
+
+else 
+
+x′ ← (s, u )
+
+Return (x′, r (s, u )) 
+
+We next show how to reduce our infinite horizon setting the finite horizon setting in Dann & Brunskill (2015). 
+
+Lemma C.1. Suppose ϵ > 0 and γ ∈ (0 , 1) . Then, for H := 11−γ log ∥r∥∞ 
+
+> ϵ(1 −γ)
+
+, we have 
+
+0 ≤
+
+> ∞
+
+X
+
+> t=0
+
+γtrt −
+
+> H
+
+X
+
+> t=0
+
+γtrt ≤ ϵ. 
+
+32 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Proof. Fix any T ≥ 0. Note that 
+
+> ∞
+
+X
+
+> t=0
+
+γtrt −
+
+> T
+
+X
+
+> t=0
+
+γtrt =
+
+> ∞
+
+X 
+
+> t=T+1
+
+γtrt ≤ γT +1 
+
+1 − γ ∥r∥∞ < ϵ. 
+
+Now, note that for T ≥ 11−γ log ∥r∥∞ 
+
+> ϵ(1 −γ)
+
+, we have −T (1 − γ) ≤ log ∥r∥∞ 
+
+> ϵ(1 −γ)
+
+. This implies 
+
+γT = (1 − (1 − γ)) T ≤ exp( −T (1 − γ)) ≤ ϵ(1 − γ)
+
+∥r∥∞
+
+,
+
+which completes the proof. 
+
+Corollary C.2. Suppose M = ( S, A, P, r, γ ) is an infinite-horizon discounted MDP. Let ϵ > 0 and H := 11−γ log ∥r∥∞ 
+
+> ϵ(1 −γ)
+
+.Then, for any policy π : S → A , for all s ∈ S, define 
+
+V π
+
+> ∞
+
+(s) := E
+
+X
+
+> t≥0
+
+γtr(st, π (st)) | s0 = s
+
+ , V πH (s) := E
+
+" HX
+
+> t=0
+
+γtr(st, π (st)) | s0 = s
+
+#
+
+.
+
+Then, for any π : S → A and s ∈ S, we have 
+
+0 ≤ V π
+
+> ∞
+
+(s) − V πH (s) ≤ ϵ. 
+
+Finally, we state the theoretical guarantee of Dann & Brunskill (2015) which gives us provable guarantees on the best-response nature of the learned policy. Specifically, we seek to show that the local agent policy update is an ϵℓ-best-response, which will later be used to show that the joint policy dynamics converges to an approximate Nash equilibrium. 
+
+Theorem C.3 (Theorem 1 of Dann & Brunskill (2015)) . For any 0 < ϵ, δ ≤ 1, we have that with probability at least 1 − δ,
+
+UCFH produces a policy π⋆l with 
+
+˜O
+
+ H2|S × A| 
+
+ϵ2 log 1
+
+δ
+
+
+
+episodes such that 
+
+R⋆ − Rπ⋆l = V ⋆ 
+
+> 1: H
+
+(s0) − V π⋆l 
+
+> 1: H
+
+(s0) ≤ ϵ. 
+
+Importantly, sampling one episode and updating the respective v variables has O(H) runtime. This results in a total runtime for sampling of 
+
+˜O
+
+ H3|S||A| 
+
+ϵ2 log 1
+
+δ
+
+
+
+.
+
+Each update of the policy involves updating the n variables and Mk, and calling FixedHorizonEVI with runtime cost 
+
+O(H|S||A| + H|S| log |S| ). Therefore, the total runtime for policy updates is 
+
+˜O
+
+
+
+H|S| 2|A| 2 log 1
+
+ϵ
+
+
+
+.
+
+C.3. Formulating the Local Agent’s Best-Response MDP 
+
+Our formulation of the best-response MDP works by serializing each macro-step into k micro-steps so the action space remains Al. We provide a reduction for the MDP in Algorithm 8 and the mean-field MDP in Algorithm 9. 
+
+Algorithm 8 (k-chained MDP for learning the local agent’s best response to policy πg : Sg × S kl → A g ). We begin by recapping the original (macro) process, where at macro time t the environment is in a pair (sg,t , s i,t ) and the global policy is queried on (sg,t , s 1: k,t ) and then each local agent transitions according to Pl(·| si,t , s g,t , a i,t ), while the global agent’s state transitions according to Pg (·| sg,t , a g,t ). The difficulty here is that the global agent’s policy πg requires a k-tuple of local states whereas a single local agent only sees sg,t and si,t . Our reduction resolves this by explicitly maintaining a k-tuple of local states and serializing the k local decisions within each macro step. 33 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+We begin by replacing each macro time step t by a chain of k micro steps τ = tk, tk + 1 , . . . , tk + ( k − 1) , indexed by a stage pointer j ∈ { 1, . . . , k }. The state of the unfolded system at micro step τ is given by (j, s g , ¯sg , s 1: k), where s1: k are the local “replica” states, sg is the current global state, and ¯sg is a pending next global state. At the first micro node of each chain (where the stage j = 1 and ¯sg =⊥), we evaluate the global agent’s policy using the entire replica tuple and compute 
+
+ag ∼ πg (·| sg , s 1: k), and sample a pending global next state ¯sg ∼ Pg (·| sg , a g ). Importantly, this pending global transition is computed before any local replica is updated, thereby making it consistent with the original macro-step semantics. Along the chain of micro nodes, only one local replica is “active” at a time. At stage j, the learner selects a single action 
+
+aℓ ∈ A l, interpreted as the action for replica j. The environment updates only that replica via s′ 
+
+> j
+
+∼ Pl(·| sj , s g , a ℓ) leaving the other k − 1 local replica states unchanged. Next, the stage pointer increments j ← j + 1 . At the end of the chain (stage 
+
+j = k), we commit the cached global transition by setting sg ← ¯sg and resetting ¯Sg ←⊥ , completing one macro step. Finally, to preserve the original discounted objective, we place the discounted reward γt · 1 
+
+> n
+
+rl(·) on a designated micro node within each chain (WLOG, we choose the j = 1 node), and set rewards to zero on the other k − 1 micro nodes. Summing over micro steps then exactly reproduces the intended macro step discounted return, up to the chosen horizon truncation. 
+
+Algorithm 8 k-chained MDP for the local agent’s best-response to policy πg : Sg × S kl → A g
+
+Require: Global agent transition function s′ 
+
+> g
+
+∼ Pg (·| sg , a g ) and local agent transition function s′ 
+
+> l
+
+∼ Pl(·| sl, s g , a l)
+
+Require: Global agent policy πg : Sg × S kl → A g , and stage reward rl : Sg × S l × A l → R+.
+
+Require: Subsampling parameter k and horizon H.
+
+Require: (sg, 0, s 1: k, 0) ∼ ρ, where ρ is the initial distribution over Sg × S kl .Define the micro-horizon eH = H · k
+
+Let ˜Sl = [ k] × S g × (Sg ∪ {⊥} ) × S kl .Let ˜Al = Al.Let ˜s0 = (1 , s g, 0, ⊥, s 1: k, 0) ∼ ˜ρ, where (sg, 0, s 1: k, 0) ∼ ρ.Let t(τ ) =  τk
+
+.Let ˜rτ (( j, s g , ¯sg , s 1: k), a ) := 1{j = 1 } · γt(τ ) · 1 
+
+> n
+
+rl(s1, s g , a )
+
+Transition kernel ˜P , given current state (j, s g , ¯sg , s 1: k) and action a ∈ A l:
+
+if ¯sg =⊥ then 
+
+/* Set the pending state of the global agent 
+
+Compute ag ∼ πg (·| sg , s 1: k)¯sg ∼ Pg (·| sg , a g )
+
+else 
+
+¯sg remains unchanged. Update the acting replica j: s′ 
+
+> j
+
+∼ Pl(·| sj , s g , a )
+
+if j < k then 
+
+/* Set the new state of the j’th local agent 
+
+Next state is (j + 1 , s g , ¯sg , (s′
+
+> 1
+
+, . . . , s ′ 
+
+> j
+
+, s j+1 , . . . , s k)
+
+else 
+
+/* Commit the cached global agent update and reset scratch variables 
+
+Next state is (1 , ¯sg , ⊥, s ′
+
+> 1: k
+
+)
+
+Return the new k-chained MDP ˜M = ( ˜S, ˜Al, ˜H, ˜p, { ˜rτ }H′−1  
+
+> τ=0
+
+, ˜P ).
+
+Algorithm 9 (|S|-chained mean-field MDP for learning the local agent’s best-response to policy πg : Sg × S l × μk−1(Sl) →Ag ). We also formulate a mean-field version of the MDP for the local agent’s best-response to the global agent’s mean-field policy πg : Sg × S l × μk−1(Sl) → A g which uses similar ideas as in Algorithm 8. Notably, in this parameterization, each macro step is unfolded into |S l| + 1 micro steps. At micro step j = 0 , we evaluate the global agent’s mean-field policy on the population and cache its resulting pending transition. Then, for the tagged local agent, we apply the action to the tagged agent sℓ while collecting its reward. Next, for micro-steps j = 1 , . . . , |S l|, we sweep through each local state-bin u = j. If h(u) agents occupy bin u, we apply the shared local action for state u and move the entire mass h(u) to next states according to the multinomial induced by Pl(·| u, s g , a ), accumulating these counts in a new histogram ¯F∆. After processing all bins, we commit (sg , s ℓ, F ∆) ← (¯ sg , ¯sℓ, ¯F∆) and repeat. 34 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Algorithm 9 |S l|-chained MF-MDP for learning the local agent’s best-response to policy πg : Sg × S l × μk−1(Sl) → A g
+
+Require: Global agent transition function s′ 
+
+> g
+
+∼ Pg (·| sg , a g ) and local agent transition function s′ 
+
+> l
+
+∼ Pl(·| sl, s g , a l).
+
+Require: Global agent policy πg : Sg × S l × μk−1(Sl) → A g , and stage reward rl : Sg × S l × A l → R+.
+
+Require: Subsampling parameter k and horizon H.
+
+Require: (sg, 0, s ℓ, 0, h 0) ∼ ρ, where ρ is the initial distribution over Sg × S l × μk−1(Sl).Let ϕ : [ |S l|] → S l enumerate Sl, i.e. ϕ(j) is the j’th element of Sl.Define the micro-horizon ˜H = H · (|S l| + 1) 
+
+Define ˜S = {0, 1, . . . , |S l|} × S g × (Sg ∪ {⊥} ) × S l × (Sl ∪ {⊥} ) × μk−1(Sl) × μk−1(Sl).Let ˜A = Al.Let ˜s0 = (0 , s g, 0, ⊥, s 0, ⊥, F s∆ , 0|S l|) ∼ ˜ρ, where (sg , s 0, F s∆ ) ∼ ρ
+
+Let t(τ ) = ⌊ τ 
+
+> |S l|+1
+
+⌋.Let ˜rτ (( j, s g , ¯sg , s ℓ, ¯sℓ, F ∆, ¯F∆), a ) := 1{j = 0 } · γt(τ ) · 1 
+
+> n
+
+rl(sℓ, s g , a ).Transition kernel ˜P , given state (j, s g , ¯sg , s ℓ, ¯sℓ, F ∆, ¯F∆) and action a ∈ A l, the new state is (j′, s ′ 
+
+> g
+
+, ¯s′ 
+
+> g
+
+, s ′
+
+> ℓ
+
+, ¯s′
+
+> ℓ
+
+, F ′
+
+> ∆
+
+, ¯F ′
+
+> ∆
+
+):
+
+if j = 0 then 
+
+/* Set the pending states of the global agent and local agent 0
+
+Compute ag ∼ πg (·| sg , s ℓ, F ∆)¯sg ∼ Pg (·| sg , a g )¯sℓ ∼ Pl(·| sℓ, s g , a )
+
+Move to state (1 , s g , ¯sg , s ℓ, ¯sℓ, F ∆, ¯F∆)
+
+else if j = u ∈ { 1, . . . , |S l|} then 
+
+Let c = ( k − 1) Fs∆ (ϕ(u)) be the number of agents in state ϕ(u).Let (Nu→1, . . . , N u→|S l|) ∼ Multinomial (c, (Pl(ϕ(1) |ϕ(u), s g , a ), . . . , P l(ϕ(|S l|)|ϕ(u), s g , a ))) 
+
+/* Shift mass of the c local agents at state ϕ(z) to their new states 
+
+for z ∈ { 1, . . . , |S l|} do 
+
+Let ¯F∆(ϕ(z)) := ¯F∆(ϕ(z)) + Nu→z
+
+> k−1
+
+if u < |S l| then 
+
+/* Update counter to examine the next state 
+
+Move to state (u + 1 , s g , ¯sg , s ℓ, ¯sℓ, F ∆, ¯F∆)
+
+else 
+
+/* Commit the cached updates and reset scratch variables 
+
+Move to state (0 , ¯sg , ⊥, ¯sℓ, ⊥, ¯F∆, 0|S l|)
+
+Return the new |S l|-chained mean-field MDP ˜M = ( ˜S, ˜Al, ˜H, ˜p, { ˜rτ }H′−1  
+
+> τ=0
+
+, ˜P ). 
+
+Theorem C.4 (Local agent best-response optimality and sample-complexity guarantees) . With probability at least 1 − δ, we have that the learned local-agent’s policy is an ϵ best-response to the global agent’s fixed policy πg with sample complexity 
+
+˜O
+
+
+
+min 
+
+ |S l|5|S g |2k2|S l||A l|
+
+ϵ2(1 − γ)2 ln 1
+
+δ , k5|S g |2|S l|k|A l|
+
+ϵ2(1 − γ)3 ln 1
+
+δ
+
+ 
+
+,
+
+and runtime 
+
+˜O
+
+ |S l|9|S g |4k4|S l||A l|2
+
+ϵ2(1 − γ)3 log 1
+
+δ log 1
+
+ϵ , k5|S g |4|S l|2k|A l|2
+
+ϵ2(1 − γ)3 log 1
+
+δ log 1
+
+ϵ
+
+
+
+.
+
+Proof. With the |S l|-chained mean-field MDP, the size of the MDP is |S g |2|S l|3 · k2|S l|, from Algorithm 9. The sample complexity of solving this is ˜O
+
+ ˜H2|S g |2|S l|3·k2|S l||A l| 
+
+> ϵ2
+
+ln 1
+
+> δ
+
+
+
+and the runtime is ˜O
+
+ ˜H3|S g |4|S l|6k4|S l||A l|2 
+
+> ϵ2
+
+log 1 
+
+> δ
+
+log 1
+
+> ϵ
+
+
+
+, from 35 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Theorem C.3. Next, using H := 11−γ log ∥r∥∞ 
+
+> ϵ(1 −γ)
+
+, we have 
+
+˜H = H(|S l| + 1) ≤ 2|S l|
+
+1 − γ log ∥r∥∞
+
+ϵ(1 − γ) .
+
+Plugging this, we have that the sample complexity of solving the |S l|-chained mean-field MDP is 
+
+˜O
+
+ |S l|5|S g |2k2|S l||A l|
+
+ϵ2(1 − γ)2 ln 1
+
+δ
+
+
+
+,
+
+and the runtime is 
+
+˜O
+
+ |S l|9|S g |4k4|S l||A l|2
+
+ϵ2(1 − γ)3 log 1
+
+δ log 1
+
+ϵ
+
+
+
+.
+
+Similarly, for the k-chained MDP, the size of the MDP is k|S g |2|S l|k, from Algorithm 8. Therefore, the sample complexity of solving this is ˜O
+
+ ˜H2|S g |2|S l|k |A l| 
+
+> ϵ2
+
+ln 1
+
+> δ
+
+
+
+and the runtime is ˜O
+
+ H3k2|S g |4|S l|2k |A l|2 
+
+> ϵ2
+
+log 1 
+
+> δ
+
+log 1
+
+> ϵ
+
+
+
+from Theorem C.3. Now, using H := 11−γ log ∥r∥∞ 
+
+> ϵ(1 −γ)
+
+, we have 
+
+˜H = kH ≤ k
+
+1 − γ log ∥r∥∞
+
+ϵ(1 − γ) .
+
+Plugging this, we have that the sample complexity of solving the k-chained MDP is 
+
+˜O
+
+ k5|S g |2|S l|k|A l|
+
+ϵ2(1 − γ)3 ln 1
+
+δ
+
+
+
+and the runtime is 
+
+˜O
+
+ k5|S g |4|S l|2k|A l|2
+
+ϵ2(1 − γ)3 log 1
+
+δ log 1
+
+ϵ
+
+
+
+.
+
+Taking the minimum of these sample complexities proves the theorem. 
+
+## D. Proof of convergence of the best-response dynamics 
+
+We begin with an idealized analysis where the global agent does not subsample (i.e., k = n), and the local agent does a best-response policy. We show that this best-response dynamics converges at an exponential rate to a Nash Equilibrium. To determine if the best-response oracle function converges, we define the Bellman optimality gap. 
+
+Definition D.1 (Bellman optimality gap) . We formalize the Bellman optimality gap, which for a joint policy πt = ( πtg , π tl ),represents the incentive to deviate: 
+
+∆tg (s) := V BR g (πtl ),π tl (s) − V πtg ,π tl (s)
+
+∆tl (s) := V πtg ,BR l(πtg )(s) − V πtg ,π tl (s)
+
+Then, define the global agent’s and local agent’s gap function as 
+
+Gap t
+
+> 1
+
+(πg , π l) := max  
+
+> s∈S
+
+∆tg (s) = max 
+
+> s∈S
+
+
+
+max 
+
+> π∗
+> g
+
+V π∗  
+
+> g,π l
+
+(s) − V πg ,π l (s)
+
+
+
+> 0.
+
+and 
+
+Gap t
+
+> 2
+
+(πg , π l) := max  
+
+> s∈S
+
+∆tl (s) = max 
+
+> s∈S
+
+
+
+max 
+
+> π∗
+> l
+
+V πg ,π ∗ 
+
+> l
+
+(s) − V πg ,π l (s)
+
+
+
+> 0.
+
+Let 
+
+Gt := max {Gap t
+
+> 1
+
+, Gap t
+
+> 2
+
+}.
+
+Then, a policy πt is an ϵ-approximate Nash-Equilibrium (henceforth, denoted ϵ-NE) if Gt ≤ ϵ.36 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Theorem D.2 (Convergence of Best-Response Dynamics (Monderer & Shapley, 1996; Young, 2004)) . The sequence of policies in the discrete time best-response dynamic converge to pure Nash equilibria in potential games. 
+
+Remark D.3. Note that Theorem D.2 does not, a priori, imply a rate on the convergence to a Nash equilibrium. In fact, in general, the rate of convergence is not guaranteed to be fast since only games with very special structure are known to have best-response dynamics that converge in (even) polynomial time, e.g. potential games, congestion games, etc. For instance, while best-response dynamics in continuous time can converge exponentially quickly, the discrete case is not well understood (Karlin’s conjecture), and under certain adversarial tie-breaking schemes in fictitious play, there are problem instances that converge exponentially slowly in some dimension parameters (Lazarsfeld et al., 2025; Daskalakis & Pan, 2014; Craven & Csordas, 2005; Abernethy et al., 2021). In this section, we show that our problem instance is a potential game (Guo et al., 2025; Yan & Liu, 2025; Ding et al., 2022; Arefizadeh et al., 2024; Leonardos et al., 2025; Overman & Bayati, 2025) and use it to obtain provable convergence guarantees. 
+
+Lemma D.4 (M is a Markov Potential Game) . Let M denote the Markov game of the dynamics between policies πg and 
+
+πℓ, where we view it as a meta-game over policies: each agent (global, representative local) chooses a stationary Markov policy. Then, M is a Markov Potential Game. Proof. Note that our reward structure defines an exact potential game. At each state s, define the stage potential 
+
+Φ( s, a ) = rg (sg , a g ) + 1
+
+n
+
+> n
+
+X
+
+> i=1
+
+rl(si, s g , a i), (32) which coincides with the global agent’s instantaneous reward. For any local agent i ∈ [n] and any unilateral deviation 
+
+πi → π′ 
+
+> i
+
+with π−i fixed, we have: 
+
+Eπ′
+
+> i,π −i
+
+"
+
+1
+
+n
+
+> ∞
+
+X
+
+> t=0
+
+γtrl(si, s g , a i)|s0 = s
+
+#
+
+− Eπ
+
+"
+
+1
+
+n
+
+> ∞
+
+X
+
+> t=0
+
+γtrl(si, s g , a i)|s0 = s
+
+#
+
+= Eπ′
+
+> i,π −i
+
+" ∞X
+
+> t=0
+
+γtΦ( st, a t)|s0 = s
+
+#
+
+− Eπ
+
+" ∞X
+
+> t=0
+
+γtΦ( st, a t)|s0 = s
+
+#
+
+.
+
+Similarly, for the global agent g and any unilateral deviation πg → π′ 
+
+> g
+
+with π[n] fixed, we have 
+
+Eπ′
+
+> i,π −i
+
+" ∞X
+
+> t=0
+
+γt rg (sg , a g ) + 1
+
+n
+
+> n
+
+X
+
+> i=1
+
+rl(si, s g , a i)
+
+!
+
+s0 = s
+
+#
+
+− Eπ
+
+" ∞X
+
+> t=0
+
+γt rg (sg , a g ) + 1
+
+n
+
+> n
+
+X
+
+> i=1
+
+rl(si, s g , a i)
+
+!
+
+s0 = s
+
+#
+
+= Eπ′
+
+> i,π −i
+
+" ∞X
+
+> t=0
+
+γtΦ( st, a t)|s0 = s
+
+#
+
+− Eπ
+
+" ∞X
+
+> t=0
+
+γtΦ( st, a t)|s0 = s
+
+#
+
+.
+
+Therefore, the game is an exact Markov potential game with potential Φ. Specifically, in our idealized analysis (exact best-response, finite policy class, finite action space), the alternating global/local best-response dynamics performs coordinate ascent on Ψ( π) and therefore converges to a pure Nash equilibrium (a local maximizer of Φ). 
+
+D.1. Warm up I: Idealized Analysis of the Best-Response Dynamics 
+
+In this subsection, we assume that the local agents are homogeneous with a shared stationary policy πl and no subsampling, i.e. we have that k = n. Then, the joint policy is parametrized by a pair (πg , π l), and we consider the idealized best-response dynamics where both players have exact BR oracles. Suppose we have a BR oracle for the local agent π∗ 
+
+> l
+
+(πg , s ) and an oracle for the global agent πg (s) (i.e., where k = n, so the global agent does not do any sampling of the local agents). In the idealized sequential dynamics, the policy updates are given by 
+
+πt+1  
+
+> g
+
+= BR g (πt
+
+> 1
+
+, π t
+
+> 2
+
+, . . . , π tn) = BR g (πtℓ) (33) 37 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+and 
+
+πt+1  
+
+> i
+
+= BR ℓ(πt+1  
+
+> g
+
+), ∀i ∈ [n]. (34) Specifically, BR g (πl) is the optimal global policy against an infinite-horizon MDP whose local agents are i.i.d. following 
+
+πl. Similarly, BR l(πg ) is a local policy that is optimal for a single local agent in the induced MDP Ml(πg ).
+
+Definition D.5 (Best-Response ( BR ) Dynamics Operator) . Let the space of all joint policy profiles be Π = Π g × Πl. Define the best-response operator Γ : Π → Π to be 
+
+Γ( πg , π l) = ( BR g (πl), BR l(πg )) , (35) where BR g (πl) is the global agent’s best response to πl and BR l(πg ) is the local agent’s best response to πg . A fixed point of this operator π∗ = Γ( π∗) is a Nash Equilibrium because each agent is playing a best response to the other. The below theorem gives an exponential rate for continuous dynamics. 
+
+Theorem D.6 (Theorem 2 in (Swenson et al., 2018)) . Suppose Γ is a potential game. Then, for all (but a measure 0 set of) initial points x0, the continuous best-response dynamics in the idealized sequential dynamics setting converges to a Nash equilibrium at an exponential rate. 
+
+In the discrete time dynamics, the worst-case bound can be exponential in the number of players. 
+
+Theorem D.7 (Theorem 1 in (Durand & Gaujal, 2016)) . For an N -player game with joint action set A, the round-robin dynamics in a Markov potential game reaches a Nash Equilibrium in TBRA = N |A|N −1 iterations. 
+
+However, since we are only updating two policies (in discrete time), i.e., the local-agent policy and the global agent policy, we have the following corollary: 
+
+Corollary D.8. The best-response dynamics to the Markov potential game M converges to a Nash Equilibrium in 
+
+TBRA = 2 |Πl|| Πg | = 2 |S l||A l||S g |2|A g ||S l|n iterations. Using the mean-field reduction, this iteration complexity reduces to TBRA = 2 |Sl|2|Sg |2|Al|| Ag |n|Sl|.
+
+D.2. Analysis with Probabilistic Approximate Best-Response Dynamics with Subsampling 
+
+Section D.1 considered the case where the global agent did no subsampling, i.e. k = n, and the local agents do an exact best-response. We now consider the case where the global agent subsamples k < n agents to learn an approximately optimal policy, and the local agents learn a best-response policy, with high probability. 
+
+Remark D.9. Subsampling and the introduction of Bellman noise may only affect how the agents choose policies, but leaves the reward structure invariant for the agents. Therefore, the true Markov game and its potential Φ are unchanged, i.e. for any joint policy π and any unilateral deviation π′
+
+> i
+
+, we still have that for any s0 ∈ S ,
+
+Φ( π′
+
+> i
+
+, π −i) − Φ( π) = V π′ 
+
+> i,π −i
+
+(s0) − V π (s0). (36) 
+
+Definition D.10 (Best-Response Dynamics Operator with Sampling) . Consider the policy simplexes Π = Π (k) 
+
+> g
+
+× Πl, where 
+
+Π(k) 
+
+> g
+
+is the simplex corresponding to policies Sg × S kl → A g , or the mean-field space of policies Sg × S l × μk(Sl) → A g .Define the best-response operator with k-agent subsampling Γk : Π → Π to be 
+
+Γ( π(k) 
+
+> g
+
+, π l) = ( BR (k) 
+
+> g
+
+(πl), BR l(π(k) 
+
+> g
+
+)) , (37) 
+
+where BR kg (πl) is the global agent’s approximate best-response to πl and BR l(π(k) 
+
+> g
+
+) is the local agent’s best response to 
+
+π(k) 
+
+> g
+
+. A fixed point of this operator π∗ 
+
+> k
+
+= Γ k(π∗
+
+> k
+
+) is a Nash Equilibrium because each agent is playing a best response to the other. 
+
+We first characterize the notion of a global-agent playing an ϵg -best response to πℓ.38 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Definition D.11. Fix a local agent policy πℓ. Then, a global agent policy ˜πg is called an ϵg -best response to πℓ if 
+
+max 
+
+> s∈S
+
+VBR g (πℓ),π ℓ (s) − V˜πg ,π ℓ (s) ≤ ϵg . (38) 
+
+Equivalently, this can be characterized by Gap 1(˜ πg , π ℓ) ≤ ϵg .
+
+Remark D.12. From Theorem 4.4, we see that by using k-agent subsampling, the global agent can compute a policy πest 
+
+> g,k
+
+such that for any fixed πℓ, we have an ϵg (k) best-response with probability at least 1 − δ1, where 
+
+ϵg (k) := sup 
+
+> s∈S
+
+h
+
+V BR g (πℓ),π ℓ (s) − V πest  
+
+> g,k,m (πℓ),π ℓ
+
+(s)
+
+i
+
+≤ ˜O
+
+ 1
+
+√k
+
+
+
+. (39) Similarly, the local-agent Q-learning algorithm that we use for learning the policy uses Nδ2 samples to, with probability at least 1 − δ2, yield an ϵℓ approximate best-response where 
+
+ϵℓ = sup 
+
+> s∈S
+
+h
+
+V πg ,BR ℓ(πg )(s) − V πg ,π alg  
+
+> ℓ
+
+(s)
+
+i
+
+. (40) 
+
+Definition D.13 (Per-update approximate scale) . Let the per-update approximation scale, the largest approximation error of each learning algorithm, be given by η := max {ϵg (k), ϵ ℓ}.
+
+Remark D.14. The dynamics of the system are that under sampling, each iteration returns an ϵg (k)-BR to πtℓ and an ϵℓ-BR to ˜πt+1  
+
+> g
+
+with probability at least 1 − δ. Since the meta-algorithm decides whether to adopt these proposals as the new policies or not using the accept rule 
+
+V ˜πi,π −i (s0) > V πi,π −i (s0), (41) we have that whenever we move to a new joint policy the potential Φ strictly increases. Hence, if a proposed approximate BR worsens the value by at least 2η, we simply keep the old policy, so that the potential does not decrease. In the case where the approximate BR has a value within 2η of the original value, then by definition we are at a 2η-approximate Nash equilibrium. We show that we reach an 2η-approximate Nash equilibrium in finite time. We first argue the correctness of the interval comparison in the UPDATE function in Algorithm 3 ( ALTERNATING-MARL ). 
+
+Lemma D.15. The interval comparison in the UPDATE function in ALTERNATING-MARL is correct. Proof. We consider policy updates in the order πg , π ℓ, π ′ 
+
+> g
+
+, π ′
+
+> ℓ
+
+, where πℓ is the local agent’s best-response to πg , π′ 
+
+> g
+
+is the global agent’s best-response to πℓ, and π′ 
+
+> ℓ
+
+is the local agent’s best-response to π′ 
+
+> g
+
+. Recall that for all s ∈ S g × S kl , we have that with probability at least 1 − δ, where V is the true value of the best-response policy and ˆV is the value of the learned best-response policy, 
+
+|V πℓ,π g (s) − ˆV πℓ,π g (s)| < η, (42) 
+
+|V π′ 
+
+> ℓ,π ′
+> g
+
+(s) − ˆV π′ 
+
+> ℓ,π ′
+> g
+
+(s)| < η, (43) 
+
+|V πℓ,π ′ 
+
+> g
+
+(s) − ˆV πℓ,π ′ 
+
+> g
+
+(s)| < η. (44) Therefore, we delineate to the following cases: 
+
+Case 1: Accept the new policy because the new pair is better on every state by at least 2η, i.e. the η-interval of the new policy lies ahead of the η-interval of the old policy. In other words, ˆV π′ 
+
+> ℓ,π g
+
+> ˆV πℓ,π g + 2 η.
+
+Case 2: Reject the new policy because there is a state for which the new pair is clearly worse by at least 2η, i.e. the η-interval of the old policy lies ahead of the η-interval of the new policy. In other words, ˆV π′ 
+
+> ℓ,π g
+
+< ˆV πℓ,π g − 2η.
+
+Case 3: The intervals of the policies overlap, i.e. ˆV πℓ,π g − 2η ≤ ˆV π′ 
+
+> ℓ,π ′
+> g
+
+≤ ˆV πℓ,π g + 2 η. In this case, we terminate the algorithm since πg , π ℓ is already a 2η-NE. To see this, suppose for the sake of contradiction that this is not the case. Then, WLOG, there exists a local agent policy ˜πℓ such that V ˜πℓ,π g ≥ V πℓ,π g + 2 η, with probability at least 1 − δ. However, this implies that the (approximate probabilistic) best-response of the local agents algorithm cannot have been πℓ, which contradicts Theorem C.4. Therefore, the initial assumption is wrong and πg , π ℓ is a 2η-NE. Together, these imply the correctness of the UPDATE function in ALTERNATING-MARL .39 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+∆k
+
+−2η 0 +2 η
+
+∆k ≤ −2η
+
+reject 
+
+|∆k | ≤ 2η
+
+stop ∆k ≥ +2 η
+
+accept Reject proposal 
+
+keep (πkg , π kℓ )
+
+Stop & certify 
+
+output (πkg , π kℓ ) as a 
+
+2η-approximate Nash certificate 
+
+Accept proposal 
+
+use (π′ 
+
+> g
+
+, π ′
+
+> ℓ
+
+)           
+
+> If |∆k| ≤ 2η, where ∆k:= Vπ′
+> g ,π ′
+> ℓ−
+> Vπg ,π ℓthen no unilateral approximate best-response gain exceeds 2η.
+
+Figure 2. Decision rule for consecutive best-response iterates using the progress statistic ∆k = V π′  
+
+> g,π ′
+> ℓ
+
+− V πg ,π ℓ . The middle region 
+
+|∆k | ≤ 2η triggers stopping and provides a 2η-approximate Nash certificate. 
+
+Lemma D.16 (Convergence of the ALTERNATING-MARL dynamics to a 2η-approximate Nash-Equilibrium) . Fix ϵ > 0
+
+and let η := max {ϵg (k), ϵ ℓ} be the largest optimality gap in the best-response policies of the global agent and the representative local agent. Then, the agent dynamics reaches a 2η-approximate Nash Equilibrium in at most Nsteps (η, k )
+
+iterations, where 
+
+Nsteps (η, k ) ≤ min 
+
+ ˜rη(1 − γ) , 2|S g |2|S l|2k|S l||A g ||A l|, |S g |2|S l|k+1 |A g ||A l|
+
+
+
+. (45) 
+
+Proof. Suppose that the current joint policy π is not a 2η-NE. Then, player i ∈ { g, ℓ } has a profitable deviation such that 
+
+∆i(π) = max 
+
+> π′
+> i
+
+h
+
+V π′ 
+
+> i,π −i
+
+(s0) − V π (s0)
+
+i
+
+> η. 
+
+Let π⋆i be such a best-response. Since our training procedure produces an ϵi-BR, its proposal ˜πi satisfies 
+
+V π⋆i ,π −i (s0) − V ˜πi,π −i (s0) ≤ ϵi ≤ η. 
+
+Rearranging this gives 
+
+V ˜πi,π −i (s0) − V π (s0) ≥ ∆i(π) − η > ϵ − η > 0.
+
+Therefore, the approximate BR strictly improves player i’s value by at least ϵ − η, and hence the potential increases by the same value: 
+
+Φ(˜ πi, π −i) − Φ( π) = V ˜πi,π −i (s0) − V π (s0) ≥ ϵ − η
+
+Hence, as long as the current policy is not an ϵ-NE, whichever player has gap ϵ can, when chosen to update, increase the potential by at least ϵ − η. To bound the iteration complexity, let R be a bound on the range of Φ. Since the rewards are bounded by ˜r and the potentials are non-negative, we have 
+
+|Φ( π)| = |V π (s0)| ≤ ˜r
+
+1 − γ =⇒ Φmax − Φmin ≤ ˜r
+
+1 − γ .
+
+When we are outside the ϵ-NE set and a player with gap > ϵ is updated, the potential increases by at least ϵ − η. Therefore, the number of such improving updates is at most 
+
+Nsteps (ϵ, k ) ≤ Φmax − Φmin 
+
+ϵ − η ≤ ˜r
+
+(1 − γ)( ϵ − η) .
+
+Moreover, the total number of update steps is before entering the ϵ-NE set is also bounded by the finite-state bound 
+
+Nsteps (ϵ, k ) ≤ min 
+
+ ˜r
+
+(1 − γ)( ϵ − η) , 2|Π(k) 
+
+> g
+
+|| Πℓ|
+
+
+
+,
+
+40 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+and the limit point is an ϵ-approximate Nash equilibrium, i.e. 
+
+max  
+
+> i∈{ g,ℓ }
+
+max 
+
+> π′
+> i
+
+
+
+V π′ 
+
+> i,π −i
+
+(s0) − V π (s0)
+
+
+
+≤ ϵ. 
+
+In the mean-field parameterization , we have 
+
+|Π(k) 
+
+> g
+
+| · | Πℓ| = |S g ||S l|k|S l||A g | · |S g ||S l||A l|
+
+= |S g |2|S l|2k|S l||A g ||A l|,
+
+and in the standard parameterization we have 
+
+|Π(k) 
+
+> g
+
+| · | Πℓ| = |S g ||S l|k|A g | · |S l||S g ||A l|
+
+= |S g |2|S l|k+1 |A g ||A l|.
+
+Therefore, if we set ϵ = 2 η, we have that the algorithm converges to an 2η-approximate Nash Equilibrium in Nsteps (ϵ, k )
+
+steps, where 
+
+Nsteps = min 
+
+ ˜rη(1 − γ) , 2|Πg |(k)|| Πℓ|
+
+
+
+= min 
+
+ ˜rη(1 − γ) , 2|S g |2|S l|2k|S l||A g ||A l|, |S g |2|S l|k+1 |A g ||A l|
+
+
+
+,
+
+which proves the theorem. 
+
+Theorem D.17 (Bounding η and computing the sample complexity required for a 2η-approximate Nash Equilibrium) . Fix 
+
+δ ∈ (0 , 1) . Let 
+
+η = 2˜ r
+
+(1 − γ)2
+
+r n − k + 1 2nk ln(2 |S l||A g |√k) + 1
+
+√k
+
+!
+
++ 4
+
+√k(1 − γ) + 1
+
+√k .
+
+Then, with probability at least 1 − δ, ALTERNATING-MARL learns a 2η-NE with total sample complexity 
+
+˜O
+
+
+
+min 
+
+ |S g |4|A g |2|A l|2|S l|8k3+3 |S l| ˜r
+
+(1 − γ)5 log 1
+
+δ , |S g |4|S l|2k+1 |A g |2|A l|2k7 ˜r2
+
+(1 − γ)5 log 1
+
+δ
+
+ 
+
+.
+
+Proof. From Theorem B.36, we have that with probability at least 1 − δ1, with Mδ1 samples where 
+
+Mδ1 = 2k3γ2∥rl∥2
+
+> ∞
+
+|S g ||A g |
+
+(1 − γ)5 log ˜r√k
+
+1 − γ · ln 
+
+ 2|S g ||A g ||S l|
+
+δ1
+
+
+
+· min 
+
+n
+
+|S l|2k|S l|, k |S l|ko
+
+,
+
+that the global agent learns an ϵg (k) := sup s∈S (V π∗
+
+(s) − V πk,m (s)) best-response, where 
+
+ϵg (k) = 2˜ r
+
+(1 − γ)2
+
+r n − k + 1 2nk ln(2 |S l||A g |√k) + 1
+
+√k
+
+!
+
++ 4
+
+√k(1 − γ) .
+
+Similarly, with probability at least 1 − δ2, we have from Theorem C.4 that the local agent learns an ϵℓ = 1 /√k best-response with Nδ2 samples, where 
+
+Nδ2 = ˜O
+
+
+
+min 
+
+ |S l|5|S g |2k2|S l|+1 |A l|
+
+(1 − γ)2 ln 1
+
+δ2
+
+, k6|S g |2|S l|k|A l|
+
+(1 − γ)3 ln 1
+
+δ2
+
+ 
+
+.
+
+41 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Then, with probability at least 1 − (δ1 + δ2)T , we have that the agent dynamics reaches a 2η-NE, where 
+
+η := max {ϵg (k), ϵ ℓ}≤ 2˜ r
+
+(1 − γ)2
+
+r n − k + 1 2nk ln(2 |S l||A g |√k) + 1
+
+√k
+
+!
+
++ 4
+
+√k(1 − γ) + 1
+
+√k ≤ ˜O
+
+ 1
+
+√k
+
+
+
+.
+
+Recall from Lemma D.16 that 
+
+Nsteps (k) ≤ min 
+
+ ˜rη(1 − γ) , 2|S g |2|S l|2k|S l||A g ||A l|, |S g |2|S l|k+1 |A g ||A l|
+
+
+
+.
+
+If we seek a success probability of at least 1 − δ, we can set δ1 = δ2 = δ/ 2Nsteps , and the result would follow by taking union-bounds. 
+
+In the mean-field parameterization , for the global agent, this gives a sample complexity of 
+
+Mδ/ 2Nsteps = 2k3+ |S l|γ2∥rl∥2
+
+> ∞
+
+|S g ||A g ||S l|2
+
+(1 − γ)5 log ˜r√k
+
+1 − γ · ln 
+
+ 4|S g |3|A g |2|S l|3k|S l||A l|
+
+δ
+
+
+
+≤ 2k3+ |S l|γ2∥rl∥2
+
+> ∞
+
+|S g ||A g ||S l|3
+
+(1 − γ)5 log ˜r√k
+
+1 − γ · ln 
+
+ 4|S g |3|A g |2|S l|3k|A l|
+
+δ
+
+
+
+.
+
+For the local agent this gives a sample complexity of 
+
+Nδ/ 2Nsteps = |S l|5|S g |2k2|S l|+1 |A l|
+
+(1 − γ)2 log |S g |2|S l|2k|S l||A g ||A l|
+
+δ
+
+≤ |S l|6|S g |2k2|S l|+1 |A l|
+
+(1 − γ)2 log |S g |2|S l|2k|A g ||A l|
+
+δ .
+
+Putting them together for Nsteps , we have that the sample complexity of learning a ˜O(1 /√k)-NE with probability at least 
+
+1 − δ is at most 
+
+Nsteps · (Mδ/ 2Nsteps + Nδ/ 2Nsteps )
+
+≤ ˜O
+
+
+
+|S g |2|S l|2k|S l||A g ||A l| · 
+
+ 2k3+ |S l|γ2∥rl∥2
+
+> ∞
+
+|S g ||A g ||S l|3
+
+(1 − γ)5 log 1
+
+δ + |S l|6|S g |2k2|S l|+1 |A l|
+
+(1 − γ)2 log 1
+
+δ
+
+  
+
+≤ ˜O
+
+ |S g |4|A g |2|A l|2|S l|8k3+3 |S l| ˜r
+
+(1 − γ)5 log 1
+
+δ
+
+
+
+.
+
+In the standard parameterization , for the global agent this gives a sample complexity of 
+
+Mδ/ 2Nsteps = 2k4γ2∥rl∥2
+
+> ∞
+
+|S g ||A g ||S l|k
+
+(1 − γ)5 log ˜r√k
+
+1 − γ · ln 
+
+ 4|S g |3|A g |2|S l|k+2 |A l|
+
+δ
+
+
+
+≤ 2k5γ2∥rl∥2
+
+> ∞
+
+|S g ||A g ||S l|k
+
+(1 − γ)5 log ˜r√k
+
+1 − γ · ln 
+
+ 4|S g |3|A g |2|S l|2|A l|
+
+δ
+
+
+
+.
+
+For the local agent this gives a sample complexity of 
+
+Nδ/ 2Nsteps = k6|S g |2|S l|k|A l|
+
+(1 − γ)3 log |S g |2|S l|k+1 |A g ||A l|
+
+δ
+
+≤ k7|S g |2|S l|k|A l|
+
+(1 − γ)3 log |S g |2|S l||A g ||A l|
+
+δ
+
+Putting them together for Nsteps , we have that the complexity of learning a ˜O(1 /√k)-NE with probability at least 1 − δ is at most 42 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Nsteps · (Mδ/ 2Nsteps + Nδ/ 2Nsteps )
+
+≤ ˜O
+
+
+
+|S g |2|S l|k+1 |A g ||A l| · 
+
+ k5γ2∥rl∥2
+
+> ∞
+
+|S g ||A g ||S l|k
+
+(1 − γ)5 log 1
+
+δ + k7|S g |2|S l|k|A l|
+
+(1 − γ)3 log 1
+
+δ
+
+ 
+
+≤ ˜O
+
+ |S g |4|S l|2k+1 |A g |2|A l|2k7 ˜r2
+
+(1 − γ)5 log 1
+
+δ
+
+
+
+Together, we have that with probability at least 1 − δ, ALTERNATING-MARL learns a ˜O(1 /√k)-NE in sample complexity 
+
+˜O
+
+
+
+min 
+
+ |S g |4|A g |2|A l|2|S l|8k3+3 |S l| ˜r
+
+(1 − γ)5 log 1
+
+δ , |S g |4|S l|2k+1 |A g |2|A l|2k7 ˜r2
+
+(1 − γ)5 log 1
+
+δ
+
+ 
+
+,
+
+which proves the theorem. 
+
+## E. Extension to Off-Policy Learning 
+
+As in Anand et al. (2025a), this section extends the G-LEARN framework to off-policy learning. A limitation of the planning in Algorithm 1 is that it learns ˆQ∗ 
+
+> k
+
+in an offline manner by assuming a generative oracle access to the transition functions 
+
+Pg , P l, and reward function r. In certain realistic RL applications, such a generative oracle might not exist, and it is more desirable to perform off-policy learning where the agent continues to learn in an offline manner but from historical data 
+
+(Fujimoto et al., 2019). In this setting, the agents learn the target policy ˆπ∗ 
+
+> κ
+
+using data generated by a different behavior policy (the strategy it uses to explore the environment). There is a significant body of work on the theoretical guarantees in off-policy learning (Chen et al., 2021b; Chen & Maguluri, 2022b; Chen et al., 2021a; 2025; Anand et al., 2024). In fact, these previous results are amenable to transforming guarantees about offline Q-learning to off-policy Q-learning, at the cost of log |S||A| factors in the runtime. Therefore, this section is devoted to showing that our result in Theorem 4.8 satisfies the assumptions of transforming offline Q-learning to off-policy Q-learning for the subsampled ˆQk-function, and we further show that, in expectation, can maintain the decaying optimality gap of ˜O(1 /√k) of the learned policy πk, where the randomness is over the heuristic exploration policy πb. The off-policy ˆQk-learning algorithm is an iterative algorithm to estimate the optimal ˆQk-function as follows: first, a sample trajectory {(sg , s ∆, a g )} is collected using a suitable behavior policy πk,b . Then, initialize 
+
+ˆQ0 
+
+> k
+
+: Sg × S kl × A g → R and let α > 0 be determined later. For each t ≥ 0 the iterate ˆQtk(sg , s ∆, a g ) is updated by 
+
+ˆQt+1  
+
+> k
+
+(sg , s ∆, a g ) = (1 − α) ˆQtk(sg , s ∆, a g ) + α
+
+
+
+r(s, a ) + γ max 
+
+> a′
+> g
+
+ˆQtk(s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, a ′ 
+
+> g
+
+)
+
+
+
+. (46) Note that the update in Equation (46) does not include an expectation and can be computed in a single trajectory via historical data. We make the following ergodicity assumption: 
+
+Assumption E.1. The behavior policy πb satisfies πb(a|sg , s ∆) > 0 for all (sg , s ∆, a g ) ∈ S g × S kl × A g and the Markov chain Ms = {st}t≥0 induced by πb is irreducible and aperiodic with stationary distribution μ and mixing time tδ (M) = min {t ≥ 0 : max S∆∈S g ×S kl ∥P t(sg , s ∆, ·) − μ(·)∥T V ≤ δ}. There are a number of heuristic behav-ior/exploration policies that satisfy this assumption (Fujimoto et al., 2019). 
+
+Theorem E.2. Let πκ be the policy learned through off-policy ˆQk-learning. Then, under Theorem E.1, we have that with probability at least 1 − 1100 ek ,
+
+E[V π∗
+
+(s0) − V πk (s0)] ≤ ˜r
+
+(1 − γ)2
+
+r n − k + 1 2nk 
+
+s
+
+ln 40˜ r|S| g |S l||A g |k|S l|+ 12
+
+(1 − γ)2 + 110 √k = ˜O(1 /√k), (47) 
+
+where the randomness in the expectation is over the stochasticity of the exploration policy πb.
+
+43 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Proposition E.3. Recall that the following are true: 1. ∥ ˆQk(sg , s ∆, a g ) − ˆQk(sg , s ′
+
+> ∆
+
+, a g )∥ ≤ 11−γ ∥rl(·, ·)∥∞ · TV( Fs∆ , F s′ 
+
+> ∆
+
+), for any (sg , s ∆, a g ) ∈ S g × S kl × A g by Lemma B.18, 2. ∥ ˆQk∥ ≤ ˜r 
+
+> 1−γ
+
+by Lemma B.4, 3. ∥ ˆQt+1  
+
+> k
+
+(sg , s ∆, a g ) − ˜Qt+1  
+
+> k
+
+(sg , s ∆, a g )∥∞ ≤ γ∥ ˆQtk − ˜Qtk∥∞ by Lemma B.6, 4. The Markov chain MS enjoys a rapid mixing property from Theorem E.1, 
+
+Treating the single trajectory update of the ˆQκ-function as a noisy addition to the expected update from the ideal Bellman operator, Chen et al. (2021b) uses Markovian stochastic approximation to bound E[∥ ˆQTκ − ˆQ∗
+
+> κ
+
+∥2
+
+> ∞
+
+]. We restate their result: 
+
+Theorem E.4 (Theorem 3.1 in Chen et al. (2021b) adapted to our setting) . Suppose αt = α for all t ≥ 0, where α is chosen such that αt α(Ms) ≤ cQ, 0 (1 −β1)2  
+
+> log |S||A|
+
+, where cQ, 0 is a numerical constant. Then, under Propositions E.3, for all t ≥ tα(Ms),we have 
+
+E[∥ ˆQtk − ˆQ∗
+
+> k
+
+∥2
+
+> ∞
+
+] ≤ cQ, 1
+
+
+
+1 − (1 − γ)α
+
+2
+
+t−tα(Ms)
+
++ cQ, 2
+
+log k|S||A| 
+
+(1 − γ)2 αt α(Ms), (48) 
+
+where cQ, 1 = 3( ˜r 
+
+> 1−γ
+
++ 1) 2, cQ, 2 = 912 e( 3˜ r 
+
+> 1−γ
+
++ 1) 2, and where the randomness in the expectation is over the randomness of the stochasticity of the behavior/exploration policy πb.
+
+Corollary E.5 (Corollary 3.2 in Chen et al. (2021b) adapted to our setting) . To make E[∥ ˆQtk − ˆQ∗
+
+> k
+
+∥∞ ≤ 1100 √k ] for ϵ > 0,we need 
+
+t > ˜O
+
+ k|S| g |S l||A g |k|S l| log 2 k
+
+(1 − γ)5
+
+
+
+. (49) With this sample complexity, by the triangle inequality we also recover an expected-value analog of Theorem 4.4. 
+
+Corollary E.6. For δ ∈ (0 , 1) 2, with probability at least 1 − δ, we have 
+
+E[ ˆQ∗
+
+> k
+
+(sg , s ∆, a g ) − Q∗
+
+> n
+
+(sg , s [n], a g )] ≤ ln 2|S l|
+
+> δ
+
+1 − γ
+
+r n − k + 1 8kn ∥rl∥∞, (50) 
+
+where the randomness in the expectation is over the stochasticity of the exploration policy πb.
+
+In turn, following the argument in the proof of Theorem 4.4, it is straightforward to verify that this leads to a result on the expected performance difference using off-policy learning: 
+
+Corollary E.7. With probability at least 1 − 1100 eκ ,
+
+E[V π∗
+
+(s0) − V πk (s0)] ≤ ˜r
+
+(1 − γ)2
+
+r n − k + 1 2nk 
+
+s
+
+ln 40˜ r|S| g |S l|k|A g |
+
+(1 − γ)2 + 110 √k = ˜O
+
+ 1
+
+√k
+
+
+
+, (51) 
+
+where the randomness in the expectation is over the stochasticity of the exploration policy πb.
+
+## F. Generalization to Stochastic Rewards 
+
+As in Anand et al. (2025a), this section extends the ALTERNATING-MARL framework to handle environments where rewards are stochastic. While our primary analyses is for deterministic local rewards, many real-world multi-agent systems can be drawn from a probability distribution. First, note that the local-agent policy-learning algorithm can a priori handle stochastic rewards since it is a nonstationary MDP. Therefore, it suffices to handle the case for the global agent. We begin by fixing a local agent policy πℓ, thereby giving that the local agent reward component has form rl(si, s g , a i) = rl(si, s g ).44 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Reward distributions. Suppose we are given two families of distributions, {G sg ,a g }sg ,a g ∈S g ×A g and {L si,s g }si,s g ∈S l×S g .Then, for s ∈ S g × S nl and a ∈ A g , let R(s, a ) denote a stochastic reward of the form 
+
+R(s, a ) = rg (sg , a g ) + 1
+
+n
+
+X
+
+> i∈[n]
+
+rl(si, s g ), (52) where the rewards of the global agent rg emerge from a distribution rg (sg , a g ) ∼ G sg ,a g , and the rewards of the local agents 
+
+rl emerge from a distribution rl(si, s g ) ∼ L si,s g . Similarly, for ∆ ⊆ [n], let R∆(s, a ) be defined as: 
+
+R∆(s, a ) = rg (sg , a g ) + 1
+
+k
+
+X
+
+> i∈∆
+
+rl(si, s g ). (53) We make some standard assumptions of boundedness on Gsg ,a g and Lsi,s g .
+
+Assumption F.1. Define ¯G = S    
+
+> (sg,a g)∈S g×A g
+
+supp  Gsg ,a g
+
+ and ¯L = S  
+
+> (si,s g)∈S l×S g
+
+supp  Lsi,s g
+
+, where for any distri-bution D, supp( D) is the support (set of all random variables D that can be sampled with probability strictly larger than 0)of D. Then, let ˆG = sup   ¯G , ˆL = sup   ¯L ,
+
+> b
+
+G = inf   ¯G, and 
+
+> b
+
+L = inf   ¯L. We assume that ˆG < ∞, ˆL < ∞,
+
+> b
+
+G > −∞ ,b
+
+L > −∞ , and that ˆG, ˆL,
+
+> b
+
+G,
+
+> b
+
+L are all known a priori. 
+
+Definition F.2. Let the randomized empirical adapted Bellman operator be ˆT random  
+
+> k,m
+
+such that: 
+
+ˆT random  
+
+> k,m
+
+ˆQtk,m (sg , s ∆, a g ) = R∆(s, a ) + γm
+
+X
+
+> ℓ∈[m]
+
+max  
+
+> a′
+> g∈A g
+
+ˆQtk,m (s′ 
+
+> g
+
+, s ′
+
+> ∆
+
+, a ′ 
+
+> g
+
+), (54) 
+
+ALTERNATING-MARL : Learning with Stochastic Rewards. Following Anand et al. (2025b), our proposed extension of 
+
+ALTERNATING-MARL averages Ξ samples of the adapted randomized empirical adapted Bellman operator, T random  
+
+> k,m
+
+and updates the ˆQk,m function using with the average. One can show that T random  
+
+> k,m
+
+is a contraction operator with modulus γ. By Banach’s fixed point theorem, T random  
+
+> k,m
+
+admits a unique fixed point ˆQrandom  
+
+> k,m
+
+.
+
+Algorithm 10 ALTERNATING-MARL : Learning with Stochastic Rewards 
+
+Require: A multi-agent system as described in Section 2. Parameter T for the number of iterations in the initial value iteration step. Sampling parameters k ∈ [n] and m ∈ N. Discount parameter γ ∈ (0 , 1) . Oracle O to sample 
+
+s′ 
+
+> g
+
+∼ Pg (·| sg , a g ) and si ∼ Pl(·| si, s g ), and number of reward samples Ξ ∈ N.
+
+1: Set ˆQ0
+
+> k,m
+
+(sg , s ∆, a g ) = 0 , for (sg , s ∆, a g ) ∈ S g × S kl × A g .
+
+2: for t = 0 to T − 1 do 
+
+3: for (sg , s ∆, a g ) ∈ S g × S kl × A g do 
+
+4: ρ = 0 
+
+5: for ξ ∈ { 1, . . . , Ξ} do 
+
+6: ρ = ρ + ˆT random  
+
+> k,m
+
+ˆQtk,m (sg , s ∆, a g )
+
+7: ˆQt+1 
+
+> k,m
+
+(sg , s ∆, a g ) = ρ
+
+> Ξ
+
+8: For all (sg , s ∆) ∈ S g × S kl , let 
+
+ˆπest 
+
+> k,m
+
+(sg , s ∆) = arg max  
+
+> ag∈A g
+
+ˆQTk,m (sg , s ∆, a g ).
+
+To bound the error introduced by the stochasticity of the rewards, we recall a standard concentration result. 
+
+Theorem F.3 (Hoeffding’s Theorem (Tsybakov, 2008)) . Let X1, . . . , X n be independent random variables such that 
+
+ai ≤ Xi ≤ bi almost surely. Then, let Sn = X1 + · · · + Xn. Then, for all ϵ > 0,
+
+Pr[ |Sn − E[Sn]| ≥ ϵ] ≤ 2 exp 
+
+
+
+− 2ϵ2
+
+Pni=1 (bi − ai)2
+
+
+
+(55) 45 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Lemma F.4. When πest  
+
+> k,m
+
+is derived from the randomized empirical value iteration operation and applying our online subsampling execution in Algorithm 4, we get 
+
+Pr 
+
+
+
+V π∗
+
+(s0) − V ˜πk,m (s0) ≤ ˜O
+
+ 1
+
+√k
+
+ 
+
+≥ 1 − 1100 √k . (56) 
+
+Proof. 
+
+Pr 
+
+h ρ
+
+Ξ − E[R∆(s, a )] ≥ ϵ
+
+Ξ
+
+i
+
+≤ 2 exp − 2ϵ2
+
+PΞ 
+
+> i=1
+
+| ˆG + ˆL − 
+
+> b
+
+G − 
+
+> b
+
+L| 2
+
+!
+
+= 2 exp − 2ϵ2
+
+Ξ| ˆG + ˆL − 
+
+> b
+
+G − 
+
+> b
+
+L| 2
+
+!
+
+Rearranging this, we get: 
+
+Pr 
+
+ ρ
+
+Ξ − E[R∆(s, a )] ≤
+
+s
+
+ln 
+
+ 2
+
+δ
+
+ | ˆG + ˆL − 
+
+> b
+
+G − 
+
+> b
+
+L| 2
+
+2Ξ 2
+
+ ≥ 1 − δ (57) Then, setting δ = 1100 √k , and setting Ξ = 10 | ˆG + ˆL − 
+
+> b
+
+G − 
+
+> b
+
+L| k1/4
+
+q
+
+ln(200 √k) gives: 
+
+Pr 
+
+ ρ
+
+Ξ − E[R∆(s, a )] ≤ 1
+
+√200 k
+
+
+
+≥ 1 − 1100 √k
+
+Then, applying the triangle inequality to ϵk,m allows us to derive a probabilistic bound on the optimality gap between ˆQest 
+
+> k,m
+
+and Q∗, where the gap is increased by 1√200 k , and where the randomness is over the stochasticity of the rewards. Then, the optimality gap between V π∗
+
+and V πest  
+
+> k,m
+
+, for when the policy ˆπest  
+
+> k,m
+
+is learned using Algorithm 10 in the presence of stochastic rewards obeying Theorem F.1 follows 
+
+Pr 
+
+
+
+V π∗
+
+(s0) − V ˜πk,m (s0) ≤ ˜O
+
+ 1
+
+√k
+
+ 
+
+≥ 1 − 1100 √k , (58) which proves the lemma. 
+
+## G. Numerical Simulations for Communication-Constrained Robotic Coordination Tasks 
+
+This section describes our numerical simulations which scale to n = 1000 agents and validate our theoretical framework. In this section, we provide a formulation of ALTERNATING-MARL within the context of communication-constrained control. We then provide an empirical evaluation of the algorithm in a robotic coordination task with n = 1000 agents. 
+
+G.1. Experimental Setup 
+
+Consider a warehouse with n mobile robots (local agents) operating across |S l| zones (local states). A central dispatcher (global agent) manages the warehouse’s operational mode (global state), i.e. which zone gets priority resource allocation (charging stations, loading docks, clear pathways). The dispatcher’s problem is that it cannot poll the full population of robots for their current zone before deciding where to allocate resources. Therefore, it must sample states of local agents. With k = 1 , it gets a single noisy snapshot, and with k = 35 , it gets a reliable picture of where the fleet is concentrated. The local agents (robots) have their own decision-making too. Each robot chooses between |A l| actions: stay in its current zone, move up to the next zone, or move down to the previous zone. Specifically, each robot decides whether to stay put or migrate toward the prioritized zone; however, moving has a cost since the robot is less productive in transit, and it might arrive after the dispatcher has already shifted priority elsewhere. Indeed, the robots are cooperative but decentralized. Each robot only sees its own zone sℓ and the current system priority sg , but not the positions of other robots. Therefore, they must rely on the dispatcher to choose good priorities and implicitly coordinate through the shared global state. Each evaluation run is conducted over a horizon of H = 100 time steps. 
+
+Compute. All experiments were implemented in Python and ran on a 2-core CPU server with 12GB RAM. We chose a parameter complexity for each simulation that was sufficient to emphasize characteristics of the theory, such as the complexity improvement and the decaying optimality gap. 1 
+
+> 1We provide supporting code for the experiments in https://github.com/emiletimothy/alternating-marl
+
+46 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+G.2. Dynamics and Rewards 
+
+We let Sg = {0, 1, 2, 3, 4}, Sl = {0, 1, 2, 3, 4}, Ag = {0, 1, 2, 3, 4}, and Al = {0, 1, 2}. We now define the transition dynamics of the agents. First, let ds′   
+
+> g,s g,a g
+
+= 3 · 1{s′ 
+
+> g
+
+= ag } + 0 .5 · 1{s′ 
+
+> g
+
+= sg } + 0 .1. Then, Pg (s′ 
+
+> g
+
+|sg , a g ) is given by the softmax over the logits, 
+
+Pg (s′ 
+
+> g
+
+| sg , a g ) = eds′
+
+> g ,sg ,ag
+
+P 
+
+> j∈S g
+
+edj,sg ,ag 
+
+,
+
+which allows action ag to drive the global agent’s state towards state ag .Next, let fs′  
+
+> ℓ,s ℓ,s g,a ℓ
+
+= 3 .5 · 1{s′ 
+
+> ℓ
+
+= sℓ} + 1 .5 · 1{s′ 
+
+> ℓ
+
+= target (sℓ, a ℓ)} + 0 .3 · 1{s′ 
+
+> ℓ
+
+= sg } + 0 .1, where target (sℓ, 1) = (sℓ + 1) mod 5 and target (sℓ, 2) = ( sℓ − 1) mod 5 . Then, similarly, Pl(s′
+
+> l
+
+|sl, s g , a l) is given by the softmax over the logits 
+
+Pl(s′ 
+
+> l
+
+| sl, s g , a l) = efs′
+
+> l,s l,sg ,a l
+
+P 
+
+> j∈S l
+
+efj,s l,sg ,a l
+
+.
+
+We define the stage reward 
+
+rt = rg (sg , a g ) + 1
+
+n
+
+> n
+
+X
+
+> i=1
+
+rl(siℓ, s g , a iℓ), (59) where: rg (sg , a g ) = 4 − | sg − ag | and rl(sℓ, s g , a ℓ) = base (sℓ, s g ) + bonus (aℓ), where base (sℓ, s g ) = 
+
+(10 .0 sℓ = sg  
+
+> 2.01+ dcirc (sℓ,s g)
+
+otherwise ,
+
+and bonus (aℓ) ∈ 0.0, +0 .5, −0.3, where with dcirc (i, j ) = min( |i − j|, 5 − | i − j|). The local reward peaks at alignment (sℓ = sg ), so the global agent maximizes the stage reward by steering sg to the mode of the population distribution. 
+
+G.3. Algorithm Configuration 
+
+The hyperparameters used in our implementation are detailed in Table 2. Hyperparameter Value Population size ( n) 1000 Discount Factor ( γ) 0.95 Global agent state space size ( |S g |) 5Local agent state space size ( |S l|) 5Global agent action space size ( |A g |) 5Local agent action space size ( |A l|) 3Subsample Sizes ( k) {1, 2, . . . , 50 }
+
+Monte Carlo Samples ( m) 30 (per Bellman update) Learning Rate ( α) 1.0 (Exact Operator Update) Exploration Rate ( ϵ) 0.0 (Exhaustive Offline Sweep) Number of alternations ( Nsteps ) 10 Independent Runs 15 seeds per k
+
+Number of rollouts 50 per seed Horizon 100 
+
+Table 2. ALTERNATING-MARL Training and Evaluation Configuration 
+
+G.4. Experimental Results 
+
+We plot our results in Figure 3, which shows the discounted cumulative rewards for each k and the associated runtime for learn-ing the ˜O(1 /√k)-approximate Nash Equilibrium, and Figure 4 which plots the fraction of n = 1000 robots occupying each of the 5 zones, and the discrepancy between the global agent’s action and the true population mode. We see that as k increases, the quality of the learned policy, as measured by the reward observed by the system, generally increases, albeit with a higher required sampled complexity, further underscoring the tradeoff in the sampling parameter k as mentioned in Theorem 4.9. 47 Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling 
+
+Figure 3. a) Discounted cumulative rewards for k < n = 1000 . As k increases, the rewards generally increase and converge, b) As k
+
+increases, the runtime required to converge to a ˜O(1 /√k)-approximate Nash Equilibrium blows up. For some values of k, the runtime is significantly shorter since ALTERNATING-MARL learns a policy before Nsteps iterations, and terminates early. 
+
+Figure 4. Simulation of the multi-agent warehouse system for subsampling budgets k = 1 , 10 , 20 , 35 . The heatmap shows the fraction of 
+
+n = 1000 robots occupying each of the 5 zones at each timestep, where darker shades imply a higher concentration. The solid blue line indicates the zone chosen by the dispatcher (global agent), while the dashed black line shows the true population mode (the zone with the most robots). At k = 1 , the dispatcher’s choices differ significantly from the true mode, while at k = 35 , the dispatcher tracks the mode substantially better, steering resources to the correct zone more than twice as often. The initial agent positions are drawn from a 
+
+Dirichlet (0 .3) distribution, creating a concentrated starting configuration, and all panels share the same random seed for comparability. 
+
+48

@@ -1,0 +1,253 @@
+Title: Towards Explainable Deep Learning for Ship Trajectory Prediction in Inland Waterways
+
+URL Source: https://arxiv.org/pdf/2603.04472v1
+
+Published Time: Fri, 06 Mar 2026 01:04:31 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# Towards Explainable Deep Learning for Ship Trajectory Prediction in Inland Waterways ∗
+
+Tom Legel 1, Dirk S¨ offker 2, Roland Sch¨ atzle 3, and Kathrin Donandt 4
+
+> 1
+
+Department Hydraulic Engineering in Inland Areas, Federal Waterways Engineering and Research Institute, Germany, tom.legel@baw.de 
+
+> 2
+
+Chair of Dynamics and Control, University of Duisburg-Essen, Germany, soeffker@uni-due.de 
+
+> 3
+
+Department of Technology (Computer Science), Baden-Wuerttemberg Cooperative State University, Germany, roland.schaetzle@dhbw-karlsruhe.de 
+
+> 4
+
+Institute for Sustainable and Autonomous Maritime Systems, University of Duisburg-Essen, Germany, 
+
+kathrin.donandt@uni-due.de 
+
+Abstract 
+
+Accurate predictions of ship trajectories in crowded environments are essential to ensure safety in inland waterways traffic. Recent advances in deep learning promise increased accuracy even for complex scenarios. While the challenge of ship-to-ship awareness is being addressed with growing success, the explainability of these models is often overlooked, potentially obscuring an inaccurate logic and undermining the confidence in their reliability. This study examines an LSTM-based vessel trajectory prediction model by incorporating trained ship domain parameters that provide insight into the attention-based fusion of the interacting vessels’ hidden states. This approach has previously been explored in the field of maritime shipping, yet the variety and complexity of encounters in inland waterways allow for a more profound analysis of the model’s interpretability. The prediction performance of the proposed model variants are evaluated using standard displace-ment error statistics. Additionally, the plausibility of the generated ship domain values is analyzed. With an final displacement error of around 40 meters in a 5-minute prediction horizon, the model performs comparably to similar studies. Though the ship-to-ship attention architecture enhances prediction accuracy, the weights assigned to vessels in encounters using the learnt ship domain values deviate from the expectation. The observed accuracy improvements are thus not entirely driven by a causal relationship between a predicted trajectory and the trajectories of nearby ships. This finding underscores the model’s explanatory capabilities through its intrinsically interpretable design. Future work will focus on utilizing the architecture for counterfactual analysis and on the incorporation of more sophisticated attention mechanisms. 
+
+# 1 Introduction 
+
+Inland shipping stands out as an indispensable mode of transportation with considerable unexploited potential. As a cost- and energy-efficient alternative, it offers a promising pathway toward sustainable and competitive freight movement compared to other transport modes ([1]). With a growing demand, automation of inland shipping is gaining increasing relevance. Trajectory prediction is a fundamen-tal component of autonomous shipping systems, necessary to address the challenges of dense traffic environments, support collision avoidance, facilitate the safe coexistence of autonomous and human-operated vessels, and for an optimized traffic flow. Predicting inland vessel trajectories presents unique challenges compared to the maritime domain. Besides aspects of river geometry, fluid dynamics, and waterway regulations that impact ship trajectories in general, the accurate handling of ship-to-ship interactions constitutes a persistent difficulty regarding both the development of adequate models and their appropriate evaluation. Let alone the complicacy of model comparison in interaction-agnostic 
+
+> ∗
+
+This is a preprint of a paper published in the Proceedings of the 35th European Safety and Reliability & the 33rd Society for Risk Analysis Europe Conference. DOI of the published version: 10.3850/978-981-94-3281-3 ESREL-SRA-E2025-P1370-cd. Reproduced here with permission of the publisher. For citation purposes, please refer exclusively to the published version. 
+
+1
+
+> arXiv:2603.04472v1 [cs.LG] 4 Mar 2026
+
+cases due to differences in the datasets, preprocessing, hyperparameter optimization and simplifying assumptions ([2]), especially the incorporation of interaction awareness raises questions regarding its evaluation. Specifically, it remains challenging to discern whether 
+
+• improved predictions can be attributed to the interaction mechanism, 
+
+• these mechanisms inadvertently affect predictions in scenarios where interaction awareness is not essential. Addressing these issues, an adaptation of the multi-ship trajectory prediction approach introduced in [3], where interaction awareness is realized using a learnable ship domain, is proposed. Adjustments to the inland shipping context are made and limitations in the model architecture regarding the weighting of surrounding ships are revealed and addressed. To address 1 the ship domain parameters are used to indicate the extent to which the model has learned to regard an encounter type or if it has learned to ignore it entirely. To address 1 an architecture variant is proposed that separates the trajectory prediction into an interaction-agnostic and a interaction-aware path. This allows the model to predict interactionless trajectories without the involvement of the interaction attending component. The remainder of this contribution is organized as follows. After situating the study within the broader research context in Section 2, a problem definition and description of the proposed model variants are provided in Section 3. The experimental results are presented in Section 4, and the performance of the models and insights from the ship domain parameters are discussed. In Section 5, the paper concludes by highlighting the contributions and suggesting directions for future research. 
+
+# 2 Related work 
+
+Deep learning-based ship trajectory prediction methods can be classified as interaction-agnostic and interaction-aware. While most approaches are developed using maritime AIS datasets, some specifically address the inland shipping case (e.g., [4, 5, 6]). The disparity between maritime and inland-specific approaches is more noticeable when interaction is considered. A few studies have evaluated models on both maritime and inland AIS datasets ([7, 8, 9]). Interaction-aware STP methods tailored specifically to the inland shipping contexts are still rare. One example is the work of [10] where the surrounding traffic during observation is represented in a social tensor ([11]) which is jointly processed with the target vessel trajectory features. Predictions, however, are only generated for the target ship with-out considering the potential future behavior of the surrounding ships. To the best of the authors’ knowledge, inland-specific multi-ship trajectory prediction (MSTP) models, which jointly predict the trajectories of all vessels in a scene, do not yet exist. Some MSTP approaches use the concept of a ship domain, which is defined as a two-dimensional area around a vessel that must remain clear of intrusion by surrounding vessels or obstacles ([12]). [7] propose a combination of the Social-STGCNN ([13]) for trajectory prediction with Model Predictive Control for the adjustment of the predictions to comply with kinematic constraints. For training of the GNN-based trajectory prediction model, a sampling approach incorporating both positive samples (i.e., ground truth positions) and negative samples (i.e., “fake” positions) is used. The bumper model, defining a ship domain only depending on the ship length, is applied to generate negative samples by selecting trajectory points that fall within the bumper model zone of a nearby ship. [12] employ an LSTM encoder-decoder model for MSTP. The Quaternion Ship Domain (QSD) ([14]) , a ship domain depending on the vessel’s speed, length, advance, and tactical diameter, is used to identify influential vessels. The hidden states of nearby vessels falling within the QSD of a given target are aggregated in a social pooling layer using the distance to the target and the repulsion force magnitude ([15]). The resulting interactive state is combined with a representation of the target and fed to the LSTM. In contrast to the previous approaches that rely on a predefined ship domain, [3] propose determin-ing the dynamic extensions of the ship domain during the training of an LSTM encoder-decoder-based MSTP model with spatial and temporal attention mechanisms. During training, a parameter matrix is optimized, in which the cell indices represent intervals for the relative heading and relative bearing between each ship and its neighbors, and the cell entries represent the ship domain value corresponding to these intervals. The weights used to combine the hidden states of target and neighboring ships in the spatial attention mechanism are obtained by comparing the ship domain values to the actual distances. For smaller ship domain values, the weights are set to 0, implying the exclusion of the corresponding 2vessels’ hidden states in the fused hidden state calculation; otherwise, the weights are equal to the difference between the distances and the respective ship domain values. In this study, the approach of [3] is adapted to the inland domain. Instead of fusing the hidden states of all vessels, however, a clear separation of the representations for the target vessel’s state and the interactive state as in [12] is real-ized. Different from the latter approach, the fusion of these separate states is done on the hidden state level and the learnt ship domain parameter values are used to combine the surrounding vessels’ hidden states. Furthermore, different to [3], the selection of relevant ships through the ship domain parameter matrix and the subsequent hidden state fusion are clearly separated into distinct and independently exchangeable components, facilitating future XAI approaches such as counterfactual analysis. 
+
+# 3 Methodology 
+
+The task of multi-ship trajectory prediction can be formally described as a function from XTobs ×| V |
+
+to Y Tpred ×| V |, where X and Y denote the observational and predictive feature spaces, Tobs and Tpred 
+
+denote the observation and prediction time steps (in minutes), and V the set of ships present in a traffic situation. Specifically, X ∋ xti = ( kti , f ti , ∆kti , ∆f ti , c ti, ˆcti) describes the position of an inland vessel 
+
+i ∈ V at a given observation time step t ∈ { 1, · · · , T obs } by the waterway kilometer (wkm) kti (as the longitudinal position), the offset from the fairway center f ti (as the lateral position), and both positional changes between two subsequent prediction time steps as ∆ kti = kti − kt−1 
+
+> i
+
+and ∆ f ti = f ti − f t−1 
+
+> i
+
+. The 
+
+Figure 1: Illustration of positional features wkm as kti , offset from the fairway axis as f ti , and their changes with respect to the previous time step ∆ kti and ∆ f ti .curvature of the waterway axis cti and the direction of the curve ˆ cti are included in consideration of a curved environment being transformed into Cartesian coordinates (cf. [6]). Instead of directly predicting the vessel’s positions, yti ∈ Y consists of the positional distances ∆ kt+Tobs  
+
+> i
+
+and ∆ f t+Tobs  
+
+> i
+
+. In this study, the observational and predictive time horizons are equal, hence Tobs = Tpred =: T .The function from X to Y is realized as an LSTM-based Encoder-Decoder model with embedded global Dot-Product-Luong-Attention ([16]), and different variants are proposed herein. The Encoder-Attention-Decoder-Attention model (EA-DA) updates the hidden state of each vessel i at time step t
+
+during observation in its encoder as 
+
+hti = EncLST M (xti, α (ωi(ht−1))) , (1) where ht−1 are the hidden states of all vessels in the traffic situation at the previous time step, h0 is a zero-valued tensor, ωi is a weighting function from vessel i’s perspective, and α an attention function. These functions are given by 
+
+ωi(ht) = ( wtij htj )j∈Ni , (2) 
+
+α(ωi(ht)) = X
+
+> j∈Ni
+
+(ωi(ht)) j , (3) where Ni = V . The weight wij is obtained as 
+
+wtij = max  S  Γtij , Θtij , Φtij 
+
+ − ∆tij , 0 , (4) 3Figure 2: Illustration of ship-to-ship relations for opposing ships (Θ = −1). The change in longitudinal distance Φ tij is given by ∆ tij − ∆t−1 
+
+> ij
+
+.using a learnable ship domain parameter tensor S. For a triple of discretized, inland-specific ship-to-ship relation values, Γ tij , Θ tij , and Φ tij , S  Γtij , Θtij , Φtij 
+
+ returns a domain parameter in the unit of wkm, which is then compared to the distance between i and j, ∆ tij = |kti − ktj |.Here, Γ tij , Θ tij , and Φ tij are obtained from the lateral distance |f ti − f tj |, the relative direction of movement, sign (∆ kti ) × sign (∆ ktj ), and from the distance change rate, ∆ tij − ∆t−1 
+
+> ij
+
+, respectively. An illustration for the calculation of the ship-to-ship relation values is given in Fig. 2. In Tab. 1, the categories and intervals used for discretization resulting in a 3 × 4 × 4-dimensional S are detailed. Note that the trained S solely depends on combinations of Γ, Θ, and Φ values, abstracting from any specifically observed trajectories xi and xj . Thus, S(Γ , Θ, Φ) can be interpreted as an awareness range for the encounter type constituted by Γ , Θ, Φ. Particularly, a S(Γ , Θ, Φ) close to 0 indicates complete irrelevance of the corresponding encounter type, while a high value suggests relevance for that type at greater distances. The EA-DA decoder LSTM updates its hidden state ˆh similar to Eq. (1) and the output at each prediction time step t is obtained as ˆhti = DecLST M (yt−1 
+
+> i
+
+, α (ˆ ωi(ˆht−1))) (5) 
+
+yti = fout (ˆhti), (6) where fout is a Feed Forward Network, ˆh0 = hT , y0 
+
+> i
+
+= (∆ kTi , ∆f Ti ), and ˆ ωi is defined analog to Eq. (2) as ˆωi(ˆht) = ( wt+Tij ˆhtj )j∈Ni . (7) Note that LSTM cell states are not included here for the purpose of simplicity. In Fig. 3a, the architecture of EA-DA is depicted. Unlike [3], where weighting and attending are integrated in a single concept of spatial attention, this model considers them as two separate aspects: 
+
+• The weighting function ω is expected to prioritize and preselect hidden states deemed relevant with respect to the current ship-to-ship relation values Γ, Θ, and Φ. 
+
+• The attention function α is expected to deduce an interaction-aware hidden state from the preselected ones in 3. Table 1: Discretisation of ship-to-ship relation values. 
+
+Relative Distance Lateral direction Θ change Φ distance Γ
+
+(wkm/min) (m) 
+
+-1 (opposing) < −0.2 0 − 10 1 (aligned) −0.2 to −0.05 10 − 20 0 (stationary) −0.05 to +0 .05 20 − 40 – > 0.05 > 40 4(a) EA-DA 
+
+> (b) E-DA
+> (c) E-DDA
+
+Figure 3: Model variants Two variants of the EA-DA are developed: the Encoder-Decoder-Attention model (E-DA) (Fig. 3b) and the Encoder-Dual-Decoder-Attention model (E-DDA) (Fig. 3c). Compared to EA-DA, E-DA only uses the weighting and attention complex in the decoder LSTM to reduce the impact of the attention component to one specific point in the model. This reduction aims to facilitate future analysis towards the causality incorporated in and the added value given by such a component. The E-DDA model is an E-DA where the decoder is split into an interaction-blind and an attention decoder, BlindLST M 
+
+and AttLST M . The prediction for vessel i at time step t is obtained as 
+
+yti = fout 
+
+ BlindLST M (yt−1    
+
+> i,ˆh′t−1
+> i),AttLST M (yt−1
+> i,α (ˆ ωi(ˆht−1))
+
+
+
+, (8) where ˆh′ are the hidden states of BlindLST M and Ni = V \ { i} with respect to Formula (3) and (7). Thus, the BlindLST M only processed vessel i’s own hidden states, whereas AttLST M processes the weighted and attended hidden states of the foreign vessels only. This differs from EA-DA and E-DA, where wii is calculated and therefore the ship-to-ship relation of vessel i to itself is represented in a (Γ , Θ, Φ)-combination (see Tab. 1). In the following the proposed models are compared by their final displacement error at varying 5prediction horizons t ∈ { 1, ..., T } defined as 
+
+F DE t =
+
+P 
+
+> i∈I
+
+d (yti , ˆyti )
+
+|I| , (9) where d is the Euclidean distance, and I denotes the validation set consisting of prediction-ground-truth tuples ( yt, ˆyt). Note, that not all vessels have predictions up to time step T as some exit the considered waterway area before completing T time steps. Thus, more prediction-ground truth tuples exist for the shorter prediction horizons than for the longer ones. After the performance comparison, the soundness of the learned ship domain parameters with respect to the ship-to-ship encounters incorporated by realisations of Γ, Θ, and Φ is investigated. 
+
+# 4 Results 
+
+An AIS dataset for a selected section of the Rhine (Rhine kilometers 595 - 611) covering more than 3 years (January 2021 - April 2024) is used in this study. It consists of regularly sampled time series (1 min time step size), referred to as situations. A situation contains all vessel trajectories present in the selected river section. The sizes of the training, validation, and test datasets (as number of situations and total number of trajectories) are given in Tab. 2. With a temporal horizon of T = 5 Table 2: Sizes of datasets in number of trajectories and situations. 
+
+Training Validation Test 
+
+Situations 15,920 2,079 2,055 Total 159,673 21,178 20,758 trajectories for observation and prediction and the ship domain parameter tensor initialized as S(·, ·, ·) = 0 .1, the models are trained for 750 epochs. Since the hidden state size of 6 proposed by [3] performs poorly, a significantly higher one (300) is chosen. For all model variant, the distribution of each F DE t is depicted in Fig. 4. As a benchmark model, a further simplified variant of E-DA is adopted by removing the attention component from the decoder, resulting in a standard Encoder-Decoder model (E-D) with incorporated Luong-Attention. According to these boxplots, E-DA achieves the lowest errors and E-1 2 3 4 5
+
+> Time Step (min)
+> 0
+> 25
+> 50
+> 350
+> 650
+> 950
+> 1250
+> 1585
+> Error Value (m)
+> E-D
+> EA-DA
+> E-DA
+> E-DDA
+
+Figure 4: F DE t per model and time steps. The error values are linearly scaled from 0 to 50 and 
+
+log 10 -scaled beyond that range. Outliers are shown as diamonds. DDA performs better than EA-DA. The mean, median, and standard deviation ( σ) of F DE 5 (see 6Tab. 3) indicate the same ranking of the model variants. The interaction-agnostic benchmark model performs worst across all metrics. A visual analysis of the prediction results with extreme outliers Table 3: Statistic values of F DE 5.
+
+Model E-D EA-DA E-DA E-DDA Mean 45.1 41.9 38.4 40.9 
+
+Median 31.2 28.8 25.1 27.3 
+
+σ 64.7 61.9 60.1 61.0 (more than 300 m) shows that they can mostly be attributed to very specific events, especially ship leaving a port or a mooring. These cases are not expected to be predicted well and also not a concern of ship-to-ship interaction. Overall, the proposed models do satisfactorily predict sound trajectories. Though having the lowest F DE t values, the learned ship domain of E-DA, as depicted in Fig. 5a [0,10] 
+
+> (10,20]
+> (20,40]
+> (40,inf]
+> Lateral distance (m)
+> 0.00
+> 0.02
+> 0.04
+> 0.06
+> 0.08
+> 0.10
+> Ship domain value (wkm)
+> Distance change
+> (wkm/min)
+> (-inf,-0.2]
+> (-0.2,-0.05]
+> (-0.05,0.05]
+> (0.05,inf)
+
+(a) E-DA [0,10]  
+
+> (10,20]
+> (20,40]
+> (40,inf]
+> Lateral distance (m)
+> 0.0
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> 0.6
+> Ship domain value (wkm)
+> Distance change
+> (wkm/min)
+> (-inf,-0.2]
+> (-0.2,-0.05]
+> (-0.05,0.05]
+> (0.05,inf)
+
+(b) E-DDA 
+
+Figure 5: Ship domain values for vessels that are moving in opposite directions. The red dashed line indicates the initial ship domain value. for vessels moving in opposing direction, indicates that this predictive quality does not rely on its ability to attend and interpret ship-to-ship interaction for most encounter types. The model has not increased its ship domain values for any opposing ships, on the contrary decreasing it for any opposing ship-to-ship relation with a negative distance change. Hence, when predicting vessel i’s next position, any opposing ship j with a distance of more than 0.1 wkm is deemed irrelevant for the prediction of i’th next position as the corresponding weight obtained from Formula (4) is 0. For EA-DA, the learned ship domain parameter is similar. In contrast, the E-DDA model’s learned ship domain values tend towards the expected behavior: the initial ship domain values of 0.1 wkm have predominantly been increased during training for encounters with a negative distance change of opposing ships (see Fig. 5b). Therefore, an opposing and approaching ship is indeed taken into account for the prediction of ship i. The difference in ship domain values between the EA-DA and E-DA models on one side and the E-DDA model on the other, observable also for ships moving in the same direction, is likely to stem from the indistinction of target and neighboring ships in the weighting function of the EA-DA and E-DA variants. This issue is addressed in the E-DDA variant by explicitly excluding the target ship from the weighting mechanism. While this adjustment results in a seemingly more plausible weighting, the E-DDA model shows a trend to attribute higher importance to surrounding vessels that have a higher lateral distance to the target. This behavior appears counterintuitive, as ships at small lateral distance are generally expected to have greater relevance to a target ship’s future trajectory. Possible explanations are that either ships in close proximity have already set their course or that ships near 7the fairway boundary - after giving way to a passing ship - try to return to their typical position closer to the center of the fairway. These hypotheses, however, require further analysis of the cases corresponding to the respective encounter types to be confirmed. 
+
+# 5 Conclusion and Outlook 
+
+This paper proposed three variants of interaction-aware multi-ship trajectory prediction tailored to inland waterway shipping. A design that separates the selection of relevant ships through a trainable ship domain parameter from the attention mechanism for hidden state fusion was explored, offering distinct and independently exchangeable components. The evaluation of ship domain parameters revealed that models with an overall well performance do not derive that quality from an effective implementation of interaction awareness. This underscores the need for evaluation methods beyond displacement error metrics to avoid erroneous conclusions about the role of a presumed interaction awareness in prediction quality. Future work will focus on comparing alternative attention functions for the hidden state fusion, on improving the encounter type definition, and leveraging the weighting function as a basis for counterfactual analysis. 
+
+Acknowledgement The authors thank the German Federal Waterways Engineering and Research Institute for the provision of AIS and river-specific data, the trip splitting and kilometerization algo-rithms, and the training infrastructure. 
+
+# References 
+
+[1] Natalia Calder´ on-Rivera, Inga Bartuseviˇ cien˙ e, and Fabio Ballini. Barriers and solutions for sus-tainable development of inland waterway transport: A literature review. Transport Economics and Management , 2:31–44, 2024. [2] Isaac Slaughter, Jagir Laxmichand Charla, Martin Siderius, and John Lipor. Vessel trajectory prediction with recurrent neural networks: An evaluation of datasets, features, and architectures. 
+
+Journal of Ocean Engineering and Science , 2024. In press. [3] Jasmine Sekhon and Cody Fleming. A Spatially and Temporally Attentive Joint Trajectory Prediction Framework for Modeling Vessel Intent. In Proc. 2nd Conference on Learning for Dynamics and Control , volume 120, pages 318–327. PMLR, 2020. [4] Lan You, Siyu Xiao, Qingxi Peng, Christophe Claramunt, Xuewei Han, Zhengyi Guan, and Jiahe Zhang. ST-Seq2Seq: A Spatio-Temporal Feature-Optimized Seq2Seq Model for Short-Term Vessel Trajectory Prediction. IEEE Access , 8:218565–218574, 2020. [5] Pim Dijt and Pascal Mettes. Trajectory prediction network for future anticipation of ships. In 
+
+Proc. International Conference on Multimedia Retrieval (ICMR ’20) , ICMR ’20, page 73–81. ACM, 2020. [6] Kathrin Donandt, Karim B¨ ottger, and Dirk S¨ offker. Improved context-sensitive transformer model for inland vessel trajectory prediction. In Proc. of the 26th Int. Conf. on Intelligent Transportation Systems (ITSC) , pages 5903–5908, Bilbao, Spain, September 2023. IEEE. [7] Hui Feng, Guilin Cao, Haixiang Xu, and Shuzhi Sam Ge. IS-STGCNN: An improved social spatial-temporal graph convolutional neural network for ship trajectory prediction. Ocean Engineering ,266(3):112960, 2022. [8] Junhao Jiang, Yi Zuo, Yang Xiao, Wenjun Zhang, and Tieshan Li. STMGF-Net: A spatiotemporal multi-graph fusion network for vessel trajectory forecasting in intelligent maritime navigation. 
+
+IEEE Transactions on Intelligent Transportation Systems , 25(12):21367–21379, 2024. [9] Zhiheng Liu, Wenjuan Qi, Suiping Zhou, Wenjie Zhang, Cheng Jiang, Yongshi Jie, Chengyang Li, Yuru Guo, and Jianhua Guo. Hybrid deep learning models for ship trajectory prediction in complex scenarios based on ais data. Applied Ocean Research , 153:104231, 2024. 8[10] Kathrin Donandt and Dirk S¨ offker. Spatial and Social Situation-Aware Transformer-Based Tra-jectory Prediction of Autonomous Systems. In 2023 IEEE International Conference on Systems, Man, and Cybernetics (SMC) , page 4488–4493, Oahu, HI, USA, October 2023. [11] Alexandre Alahi, Kratarth Goel, Vignesh Ramanathan, Alexandre Robicquet, Li Fei-Fei, and Silvio Savarese. Social LSTM: Human trajectory prediction in crowded spaces. In Proc. IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , pages 961–971, Las Vegas, NV, USA, June 2016. IEEE. [12] Ryan Wen Liu, Kunlin Hu, Maohan Liang, Yan Li, Xin Liu, and Dong Yang. QSD-LSTM: Vessel trajectory prediction using long short-term memory with quaternion ship domain. Applied Ocean Research , 136:103592, 2023. [13] Abduallah Mohamed, Kun Qian, Mohamed Elhoseiny, and Christian Claudel. Social-STGCNN: A social spatio-temporal graph convolutional neural network for human trajectory prediction. In Proc. IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , page 14412–14420, Seattle, WA, USA, June 2020. IEEE. [14] Ning Wang. An intelligent spatial collision risk based on the quaternion ship domain. Journal of Navigation , 63(4):733–749, 2010. [15] Antoine Tordeux, Mohcine Chraibi, and Armin Seyfried. Collision-Free Speed Model for Pedestrian Dynamics , page 225–232. Traffic and Granular Flow ’15. Springer International Publishing, 2016. [16] Thang Luong, Hieu Pham, and Christopher D. Manning. Effective approaches to attention-based neural machine translation. In Llu´ ıs M` arquez, Chris Callison-Burch, and Jian Su, editors, 
+
+Proc. Conference on Empirical Methods in Natural Language Processing , pages 1412–1421, Lisbon, Portugal, September 2015. Association for Computational Linguistics. 9

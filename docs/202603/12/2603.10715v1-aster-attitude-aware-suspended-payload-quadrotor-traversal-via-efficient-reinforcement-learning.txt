@@ -1,0 +1,514 @@
+Title: ASTER: Attitude-aware Suspended-payload Quadrotor Traversal via Efficient Reinforcement Learning
+
+URL Source: https://arxiv.org/pdf/2603.10715v1
+
+Published Time: Thu, 12 Mar 2026 00:56:44 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# ASTER: Attitude-aware Suspended-payload Quadrotor Traversal via Efficient Reinforcement Learning 
+
+Dongcheng Cao 1, Jin Zhou 1, and Shuo Li 1
+
+Abstract — Agile maneuvering of the quadrotor cable-suspended system is significantly hindered by its non-smooth hybrid dynamics. While model-free Reinforcement Learning (RL) circumvents explicit differentiation of complex models, achieving attitude-constrained or inverted flight remains an open challenge due to the extreme reward sparsity under strict orientation requirements. This paper presents ASTER , a robust RL framework that achieves, to our knowledge, the first successful autonomous inverted flight for the cable-suspended system. We propose hybrid-dynamics-informed state seeding (HDSS), an initialization strategy that back-propagates target configurations through physics-consistent kinematic inversions across both taut and slack cable phases. HDSS enables the policy to discover aggressive maneuvers that are unreachable via standard exploration. Extensive simulations and real-world experiments demonstrate remarkable agility, precise attitude alignment, and robust zero-shot sim-to-real transfer across complex trajectories. [ video 2]
+
+I. INTRODUCTION The field of aerial robotics has undergone rapid growth in recent years, leading to the development of various platforms with heterogeneous structures [1], [2]. Within this domain, the cable-suspended system has gained significant attention. As a structurally elegant yet dynamically complex platform, this system represents a focal point of research with immense potential for various application scenarios [3], [4]. A primary motivation for research in the cable-suspended system is the continuous exploration of its dynamic potential to facilitate more diverse tasks. Initial studies primarily focus on suppressing cable oscillations to ensure safety, often trading off agility for stability [5], [6]. Subsequent research pushes these boundaries to include navigation through dense obstacle environments and even narrow gates [7], [8], [9]. In the pursuit of higher maneuverability, the cable-suspended system inevitably encounters hybrid dynamics arising from the transitions between taut and slack cable phases. These inherent non-smooth characteristics signifi-cantly impede the computational efficiency of traditional optimization-based methods [8], [10]. Recently, reinforce-ment learning (RL) has emerged as a powerful paradigm to enhance quadrotor agility, offering remarkable computational efficiency for real-time onboard deployment and robust sim-to-real transfer [11], [12], [13]. Moreover, model-free RL circumvents the need for explicit differentiation of system dynamics, effectively bypassing the analytical challenges  
+
+> 1Authors are with the College of Control Science and Engineering, Zhejiang University, Hangzhou 310027, China.
+
+cdc11@zju.edu.cn shuo.li@zju.edu.cn  
+
+> 2https://www.youtube.com/playlist?list=PLbEQeDMEVpqzsP6haWt2Vl-vCpcqTf4Fzu
+> (a) Time-lapse sequence of the single-loop maneuver.
+> (b) Time-lapse sequence of the double-loop maneuver. Fig. 1. Composite time-lapse illustration of the real-world inverted flight maneuvers, showcasing the continuous motion and attitude transitions.
+
+posed by the hybrid dynamics of the cable-suspended system [14]. Leveraging these strengths, recent research successfully extend RL to the cable-suspended system, enabling highly agile maneuvers in diverse scenarios [14] and complex multi-drone collaborative tasks [15]. Moreover, it is attractive to investigate the attitude-aware tasks for the suspended system, which further unlock the dynamic potential of the system. Parallel to studies on precise quadrotor traversal, reaching targets with prescribed orientations is a common requirement for whole-body control to pass through angled narrow gates [16], [17], or in extreme aerobatic flights that impose even more demanding attitude requirements [18], [19], [20]. When employing RL policies to master these maneu-vers, such demanding orientation requirements significantly narrow the feasible search space. Notably, recent studies augment RL with the guided reset mechanism [17] or cur-riculum learning strategy [19], [21] to facilitate rapid con-vergence for attitude-aware quadrotor maneuvers, even under the sparse rewards imposed by strict orientation constraints. 
+
+> arXiv:2603.10715v1 [cs.RO] 11 Mar 2026
+
+Target point  
+
+> Taut-cable Phase Slack-cable Phase
+> K steps
+
+Hybrid-dynamics-informed 
+
+State Seeding ( majority )
+
+Default 
+
+hover state 
+
+(minority )
+
+# Training Pipeline  
+
+> Simulation Environment
+> Betaflight-like
+> FCU
+> Tar get
+> reward
+> Smoothness
+> reward
+> Crash
+> reward
+> Safe
+> reward
+> Quadrotor
+> states
+> Payload
+> states
+> Target
+> observation
+> Observation
+> Input Action
+> CTBR
+> Previous action
+> Propeller
+> Command
+> Reward Setting
+> Genesis
+> State
+> Initialization Fig. 2. Overview of the training pipeline of the proposed framework. We highlight the design of hybrid-dynamics-informed state seeding (HDSS), a critical strategy for state initialization to overcome exploration bottlenecks in reward-sparse tasks. HDSS back-propagates target configurations through hybrid phases to provide physics-consistent initializations. This strategy balances efficient maneuver discovery with global robustness, enabling the policy to master complex flight dynamics.
+
+However, research specifically targeting the cable-suspended system is quite limited. Moreover, the inherent non-smooth hybrid dynamics and underactuated nature of these systems further aggravate the exploration bottleneck. Consequently, training an attitude-aware policy for such systems under sparse rewards and phase transitions remains challenging and unexplored. Motivated by these challenges, this paper proposes ASTER, a reinforcement learning (RL) framework for the attitude-aware traversal task of the quadrotor cable-suspended system. Specifically, we investigate maneuvers along flight tracks incorporating inverted waypoints, neces-sitating the satisfaction of exceptionally demanding attitude constraints during flight. By addressing the exploration chal-lenges jointly induced by the demanding attitude requirement and complex system dynamics, our approach facilitates ef-ficient convergence to a high-reward regime. The primary contributions of this work are summarized as follows: 1) We present an RL framework that enables the quadro-tor cable-suspended system to perform waypoint traversal tasks on random tracks with specific attitude constraints. To the best of our knowledge, this work is the first study to realize inverted flight for this system. 2) We design the hybrid-dynamics-informed state seeding (HDSS) strategy, which addresses exploration bot-tlenecks in reward-sparse environments and incor-porates the inherent hybrid dynamics of the cable-suspended system into the learning process. This physics-informed approach ensures efficient conver-gence while further exploiting the dynamic potential of the platform. 3) We demonstrate the effectiveness of our approach through extensive validations both in simulations and real-world experiments. The proposed method achieves successful sim-to-real transfer, enabling real-time on-board execution of challenging inverted flights. II. METHODOLOGY 
+
+A. Suspended-payload system dynamics 
+
+The quadrotor suspended system exhibits hybrid dynamics characterized by two phases depending on whether the cable is taut or slack. In the taut phase, the system dynamics is governed by: 
+
+(mq + ml)( ¨xl − g) = ( ρ · RT − mq l( ˙ρ · ˙ρ)) ρ,
+
+xq = xl − lρ, ˙R = Rˆ ω,mq l ¨ρ = −mq l( ˙ρ · ˙ρ)ρ + ρ × (ρ × RT ),
+
+Iq ˙ω = M − ω × Iq ω,
+
+(1) where T = [0 , 0, T ]⊤ represents the thrust vector, R denotes the rotation matrix, g = [0 , 0, g ]⊤ is the gravity vector, l is the cable length, ρ denotes the cable direction unit vector from quadrotor to payload. The variables xq , ω, mq , Iq , M
+
+represent the position, body angular rates, mass, the inertia matrix and the moment vector of quadrotor, and xl, ml
+
+represent the position and mass of payload, respectively. In the slack phase, the quadrotor resumes nominal quadro-tor dynamics, while the payload obeys free-fall dynamics. Such complex hybrid dynamics make optimization-based methods computationally expensive. Therefore, this work employs model-free RL to achieve real-time navigation. 
+
+B. Problem formulation 
+
+In this work, we aim to enable the cable-suspended system to traverse a sequence of waypoints while strictly adhering to prescribed target attitudes. We formulate the attitude-aware motion planning problem of this system as a general infinite-horizon Markov Decision Process (MDP), defined as M =(S, A, P, R, γ ). Here, S denotes the state space, A the action space, P the transition probability, R the reward function, and γ the discount factor. Within this MDP framework, we aim to optimize the parameters ψ of a policy network πψ to maximize the expected discounted return: 
+
+π∗ 
+
+> ψ
+
+= arg max 
+
+> πψ
+
+E
+
+" ∞X
+
+> t=0
+
+γtr(t)
+
+#
+
+, (2) where γ ∈ [0 , 1) is the discount factor, and r(t) represents the immediate reward at time step t. Following this, we define the observations, actions, and reward functions, as the general framework illustrated in Fig. 2. For notational brevity, all symbols are expressed in the world frame W
+
+unless otherwise specified by a superscript indicating adifferent reference frame. 
+
+1) Observations: The observation vector o encapsulates the essential system states and target information required for attitude-aware motion planning, formulated as: 
+
+o = [ oquad , oload , otarget ]⊤, (3) where oquad , oload , and otarget represent the quadrotor, payload, and target observations, respectively. Specifically, the quadrotor component oquad integrates its current states as well as spatial and attitude guidance: 
+
+oquad = [∆ xq1 , ∆xq2 , vq , vec( RTB )] ⊤. (4) Among these, ∆xq1 and ∆xq2 denote the relative position vectors from the quadrotor to the subsequent two waypoints, providing the policy with the necessary look-ahead infor-mation. vq ∈ R3 specifies the quadrotor linear velocity. To represent the attitude error, vec( RTB ) is the flattened relative rotation matrix defined as RTB = ( RWT )⊤RWB ∈
+
+SO (3) , where RWT and RWB denote the orientations of the target waypoint frame T and the quadrotor body frame B
+
+relative to the world frame W , respectively. This formulation projects the quadrotor’s body orientation into the target waypoint frame, enabling the policy to perceive the relative orientation discrepancy. The payload component oload = [ xB 
+
+> l
+
+, vl]⊤ is designed to capture the payload states. It comprises the payload’s position vector xB 
+
+> l
+
+in body frame B, as illustrated in Fig. 3, and its linear velocity vl in the world frame. This formulation enables the policy to account for the coupling effects between the quadrotor and the cable-suspended payload. The target component otarget = vec( RWT ) provides global context via the reference rotation matrix RWT ∈
+
+SO (3) , which specifies the target’s orientation relative to the world frame. The combination of relative and global attitude representations enables the policy to effectively approach the desired maneuver. 
+
+2) Action Space: The policy network πψ outputs a nor-malized action vector a = [ ˜Tcmd , ˜ωcmd ]⊤ ∈ [−1, 1] 4, repre-senting the collective thrust and body rate setpoints. These normalized actions are then mapped to physical commands through the following linear transformations: 
+
+Tcmd = ˜Tcmd + 1 2 Tmax , ωcmd = ˜ ωcmd ⊙ ωmax , (5) Target 
+
+��
+
+��
+
+��
+
+��
+
+> �
+
+��
+
+��
+
+��
+
+��
+
+��
+
+��       
+
+> ��
+> Fig. 3. Schematic of the reference frames and payload state: including the world frame W, the quadrotor body frame B, and the target frame T
+> (illustrated for a waypoint with a downward-pointing Z-axis). The vector
+> xB
+> ldenotes the payload position described in the quadrotor body frame.
+
+where Tmax denotes the maximum thrust, ωmax ∈ R3 repre-sents the predefined limits for body rates, and ⊙ denotes the element-wise product. 
+
+3) Reward Function: The reward function is defined as follows: 
+
+r = rtarget + rsafe + rcrash + rsmooth , (6) where we define the sub-rewards as follows. The target traversal reward rtarget evaluates the precision and success of the traversal under concurrent spatial and attitude constraints. Unlike continuous shaping rewards, this term is granted only when the system satisfies specific spatial and orientation criteria at the moment of traversal. The reward is formulated as a piecewise function: 
+
+rtarget =
+
+(
+
+λ1e−σp∥∆xq1 ∥ + λ2e−σθ θerr + C, if traversed ,
+
+0, otherwise ,
+
+(7) where ∥∆xq1 ∥ and θerr represent the position error and atti-tude deviation relative to the target waypoint at the moment of traversing, respectively. Specifically, σp and σθ regulate the decay rates, while λ1, λ 2, and C serve as scaling weights and a constant completion bonus, respectively, with all values detailed in Table I. Notably, a successful traversal occurs when the following criteria are simultaneously satisfied:  
+
+> •
+
+Plane Crossing: The dot product ∆xq1 · xT transitions from a negative to a positive value, where xT denotes the X-axis vector in the target frame of the current waypoint. This indicates that the quadrotor has crossed the Y -O-Z plane of the target frame T . 
+
+> •
+
+Spatial Proximity: The Euclidean distance between the quadrotor and the target is within a predefined threshold, specifically ∥∆xq1 ∥ < L , ensuring the quadrotor passes sufficiently close to the waypoint.  
+
+> •
+
+Attitude Alignment: The attitude deviation of quadrotor remains within a predefined tolerance, θerr < ϵ θ , vali-dating the precision of the attitude-aware maneuver. The safety reward rsafe is designed to mitigate the risk of catastrophic failure during agile flight, specifically addressing the danger of cable-propeller entanglement. Let zB 
+
+> l
+
+denote the third component of the relative position vector xB 
+
+> l
+
+(as defined in the payload observation oload ), which represents the payload’s vertical displacement along the Z-axis of the body frame B. A penalty is imposed if the payload enters the region above the rotor plane ( zB 
+
+> l
+
+> 0). The reward is formulated as follows: 
+
+rsafe =
+
+(
+
+−rexceed , zB 
+
+> l
+
+> 0,
+
+0, otherwise . (8) The crash reward rcrash combines a boundary violation penalty with an immediate termination strategy. Specifically, the crash reward activates exclusively when the system violates its spatially valid workspace W, defined as: 
+
+rcrash =
+
+(
+
+−rbound , xq or xl /∈ W ,
+
+0, otherwise . (9) The smoothness reward rsmooth penalizes dynamically in-feasible commands through limiting the abrupt variation of consecutive actions a, defined as: 
+
+rsmooth = −λ3∥at−1 − at∥. (10) 
+
+C. Hybrid-Dynamics-Informed State Seeding 
+
+The simultaneous constraints in the aforementioned rtarget 
+
+result in extreme reward sparsity, making standard RL prone to non-convergence. To bridge this exploration gap, we propose hybrid-dynamics-informed state seeding (HDSS). Instead of default random resets, HDSS initializes the system in states back-propagated from the given waypoint with its target attitude, effectively accelerating convergence, as illustrated in Fig. 2. The state initialization for each episode is generated by back-propagating the system state K steps prior to reaching a predefined goal state, utilizing a discrete time step of 
+
+∆t = 0.01 s. Specifically, to start the back-propagation, the quadrotor’s goal position is set to the position of the current waypoint. Accordingly, the payload’s goal position is randomly sampled from a spherical surface of radius l
+
+centered at the quadrotor’s goal position, where l denotes the cable length. The remaining components of the goal state are generated via sampling within a prescribed range. Subsequently, the specific state seeding process between consecutive timesteps is detailed, in which the system states are governed by the following kinematic inversion formula: 
+
+ξlt−1 = A(∆ t)ξlt + B(∆ t)slt−1 + C(∆ t),
+
+ξqt−1 = D(∆ t)ξqt + E(∆ t)jqt−1 + F(∆ t), (11) where t denotes the discrete time index within the K-step horizon. The payload state vector ξl is defined as the vector comprised of the position and its higher-order time derivatives ξl = [ xl, vl, al, jl]⊤, and sl ∈ R3 represents the payload snap vector. The quadrotor state vector ξq is defined as ξq = [ xq , vq , aq ]⊤, with jq ∈ R3 representing the quadrotor jerk vector. The definitions of the transition matrices A through F vary according to the taut or slack phases of the cable, as formulated below. 
+
+1) Taut-cable phase: In the taut-cable phase, according to the kinematic coupling between the compnents of ξl, we define the matrices A, B, and C as follows: 
+
+A(∆ t) = 
+
+
+
+1 −∆t 12 ∆t2 − 16 ∆t3
+
+0 1 −∆t 12 ∆t2
+
+0 0 1 −∆t
+
+0 0 0 1
+
+ ,
+
+B(∆ t) = − 124 ∆t4 16 ∆t3 − 12 ∆t2 ∆t⊤ , C(∆ t) = 0.
+
+(12) Building upon this, the payload state seeding is accom-plished with a randomly sampled snap value slt−1 . Similarly, the matrices D, E, and F are formulated as follows: 
+
+D(∆ t) = 
+
+1 −∆t 12 ∆t2
+
+0 1 −∆t
+
+0 0 0
+
+ , E(∆ t)jqt−1 = 0,
+
+F(∆ t) = 
+
+h0 0 alt−1 + l  
+
+> ∥alt−1−g∥
+
+slt−1
+
+i⊤
+
+,
+
+(13) which characterizes the state seeding process for the quadro-tor, where the matrix F(∆ t) is derived by differentiating the position constraint (included in Eq. 1) between the quadrotor and the payload with respect to time. Consequently, the quadrotor’s orientation is derived from its linear acceleration and a yaw angle aligned with the target frame T , thereby yielding the full back-propagated states for the state seeding process. 
+
+2) Slack-cable phase: In the slack phase, the kinematics of the quadrotor and the payload are decoupled. Specifically, the payload undergoes free-fall motion, and accordingly, the transition matrices A, B, and C are defined as follows: 
+
+A(∆ t) = 
+
+
+
+1 −∆t 12 ∆t2 00 1 −∆t 00 0 0 00 0 0 0
+
+ , B(∆ t)slt−1 = 0,
+
+C(∆ t) = 0 0 g 0⊤ .
+
+(14) Furthermore, as the quadrotor is no longer subjected to cable tension, we accordingly define the matrices D, E, and 
+
+F as follows to complete the state seeding for the quadrotor: 
+
+D(∆ t) = 
+
+1 −∆t 12 ∆t2
+
+0 1 −∆t
+
+0 0 1
+
+ ,
+
+E(∆ t) = − 16 ∆t3 12 ∆t2 −∆t⊤ , F(∆ t) = 0.
+
+(15) Notably, to accomplish the slack-cable phase state seeding, we sample the quadrotor jerk jqt−1 instead of the payload snap slt−1 , as the payload experiences constant acceleration in this phase. 
+
+3) Phase transition: The state seeding for each episode starts within the taut-cable phase. At each timestep, we monitor for slack transition by examining the term alt−1 −g.If this value equals zero, implying zero cable tension, the system transitions to the slack-cable phase. Correspondingly, during the slack-cable phase, the system monitors for a return to the taut-cable phase by checking if the distance between the quadrotor and payload exceeds the cable length. Once this geometric constraint is violated, the system transitions to the taut-cable phase. 
+
+D. Composite State Initialization 
+
+Relying exclusively on initialization with HDSS may hinder the policy’s ability to complete flights starting from a default hover state. To achieve efficient exploration with global robustness, the initial reset state is sampled from a non-uniform mixture of the following two functional sets:  
+
+> •
+
+HDSS Seeds (90%) : The majority of resets are ini-tialized from the physics-consistent states generated in Sec. II-C. This targeted seeding initializes the system in states with a higher probability of reward acquisition, efficiently facilitating the exploration.  
+
+> •
+
+Workspace Samples (10%) : To maintain global robust-ness, a minority of episodes are initialized at positions sampled randomly across the workspace W while the system is set to a default hover state. In these resets, both the quadrotor and payload are initialized with zero linear and angular velocities in an upright orientation. 
+
+E. Policy training 1) Algorithm Paradigm and Policy Architecture: In this paper, we employ Proximal Policy Optimization (PPO) [22] to learn the control policy πψ . The policy is parameterized by a multi-layer perceptron (MLP) consisting of two hidden layers with 128 neurons each. The hidden features are mapped to a normalized action vector a ∈ [−1, 1] 4 via a Tanh activation layer. Moreover, the input observation vector 
+
+ot is augmented with the previous action at−1.Before entering the network, all observations are scaled by specific constants, which ensures balanced feature weight-ing and numerical stability across different units. Specif-ically, relative positions ( ∆xq1,2 , xB 
+
+> l
+
+) and linear velocities (vq , vl) are scaled by their respective normalization param-eters to align their magnitudes, while the rotation matrices (RTB , RWT ) remain in their original form as their elements are inherently bounded within [−1, 1] :
+
+¯o = [∆ xq1,2 /kq , vq /kv , xB 
+
+> l
+
+/kl, vl/kv , vec( RTB , RWT )] ⊤,
+
+(16) where the scaling constants k{·} are detailed in Table I.                                                            
+
+> TABLE I SIMULATION AND TRAINING PARAMETERS
+> Parameter Value Parameter Value
+> Tmax [m/s 2]3.5gωmax [rad/s] [10 ,10 ,3]
+> kq[m] [4 ,4,3] kv[m/s] [5 ,5,5]
+> kl[m] [0 .5,0.5,0.5] σp3.0
+> σθ2.0ϵθ[◦]25
+> L[m] 0.75 C5
+> λ110 λ210
+> λ31×10 -4rexceed 3
+> rbound 10 K60
+> mq[g] 315 ml[g] 35
+> l[m] 0.4W[m 3][−8,8] 2×[0 .1,8]
+
+2) Training Tracks: The training tracks are characterized by a sequence of target waypoints in SE (3) , defined by their spatial positions and target attitudes. These setpoints comprise two distinct types: nominal upright waypoints and inverted waypoints featuring a vertically downward Z-axis. Furthermore, to ensure broad coverage of the state space, target waypoints are dynamically resampled within a relative bounding volume of [−2, 2] × [−2, 2] × [0 .5, 3.0] m. This resampling is triggered by either a successful traversal or episode termination, exposing the policy to an infinite variety of targets rather than a fixed track. 
+
+3) Training environment: Training and evaluation are con-ducted in Genesis [23], a GPU-accelerated engine leveraging massive parallelization across thousands of instances. Within this simulator, the cable is represented as a serial chain of small segments, similar to [8], [14], [15]. By executing all simulations at a timestep of 0.01 s, we achieve a total training volume of 4.1 × 10 8 steps. The entire learning process converges in a total training duration of 25 minutes, which is achieved by leveraging 8,192 parallel environments on an NVIDIA RTX 5090 GPU. III. SIMULATION RESULTS AND ANALYSIS In this section, we evaluate the ASTER framework focus-ing on three key metrics: maneuver performance, training ef-ficiency, and policy robustness. We first analyze the policy’s capability to execute agile maneuvers across diverse demand-ing tracks. Subsequently, an ablation study is conducted to quantify the necessity of the HDSS strategy in overcoming exploration bottlenecks during training progress. Finally, we assess the system’s zero-shot generalization under significant parametric uncertainties, ensuring a solid foundation for sim-to-real deployment. 
+
+A. Performance on various tracks 
+
+We first evaluate the performance of the learned pol-icy across a diverse set of challenging tracks. The cable-suspended system is required to successively traverse a se-quence of waypoints defined in SE (3) . Notably, these tracks incorporate extremely demanding inverted flight waypoints, where the quadrotor must navigate with its Z-axis pointing vertically downward. Such demanding orientation constraints serve to validate the system’s capability in handling aggres-sive, attitude-aware maneuvers. To provide a detailed analysis within a broad evaluation set, we highlight three representative trajectories from an extensive collection of test tracks. Fig. 4 illustrates the pol-icy’s performance on three custom-designed tracks: Ribbon ,
+
+Croissant , and Multi-heading , each tailored to evaluate spe-cific aspects of extreme maneuverability. Specifically, Ribbon 
+
+isolates a single inverted segment to examine precision, while 
+
+Croissant consists of consecutive inverted waypoints to test stability under prolonged constraints. Finally, Multi-heading 
+
+features several inverted waypoints with varying yaw angles, necessitating inverted traversals from different directions. The successful execution of these demanding tracks, as evidenced by 3D velocity heatmaps, payload trajectories, and Ribbon Croissant Multi-heading Fig. 4. Agile trajectory visualization on 3 representative tracks. The policy is evaluated on (a) Ribbon , (b) Croissant , and (c) Multi-heading tracks. The quadrotor’s velocity is visualized via heatmaps, with payload trajectories and system keyframes overlaid. The high-speed, attitude-constrained navigation across all tracks validates the robustness and agility of the learned policy. For visual clarity, only inverted waypoints are denoted by circular markers with embedded arrows indicating the target z-axis direction, while standard upright waypoints are hidden. Target frame 
+
+Fig. 5. Time-lapse visualization of agile flight on the Croissant track in the Genesis simulator. The snapshot sequence demonstrates the policy’s capability to execute consecutive inverted maneuvers while maintaining precise attitude alignment and system stability. 
+
+keyframe poses in Fig. 4, firmly validates the robustness and agility of the learned policy. Given the heightened complexity of maintaining stability during prolonged inverted flight, Fig. 5 provides a further time-lapse illustration of the Croissant track performed in the Genesis simulator [23]. This visualization captures the system’s dynamic capability to execute high-speed maneu-vers while maintaining precise attitude alignment. 
+
+TABLE II PERFORMANCE STATISTICS ACROSS REPRESENTATIVE MANEUVERING 
+
+TRACKS 
+
+Track WPs Time Avg Vel. Max Vel. 
+
+(s) (m/s) (m/s) Ribbon 3 1.61 2.77 5.03 
+
+Croissant 11 6.12 3.05 5.36 
+
+Multi-heading 9 5.47 3.44 5.32 
+
+> Note: WPs denotes the number of waypoints. The velocity-related statistics refer to the quadrotor.
+
+As summarized in Table II for all three flights, the sys-tem successfully completes these attitude-constrained tracks at high speeds, demonstrating that our training framework can extensively exploit the agility potential of the cable-suspended system. 
+
+B. Exploration Efficiency Analysis 
+
+To verify the necessity of our HDSS strategy, we conduct an ablation study comparing the full framework against a baseline that utilizes standard initialization which is referred to as “w/o HDSS”. This baseline method resets each episode with the quadrotor and payload in a default hover state at a randomized origin. In contrast, our full framework incorpo-rates HDSS, as detailed in Section II-C, which seeds each episode with physically consistent, non-zero states back-propagated from the waypoint. All other hyperparameters, network architectures, and reward structures remain identical to ensure a controlled comparison. 0 200 400 600 800 1000 1200 
+
+> Training Steps
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> 70
+> Reward  Ours (with HDSS) - Reward
+> Baseline (w/o HDSS) - Reward
+> Ours (with HDSS) - Episode Length
+> Baseline (w/o HDSS) - Episode Length
+> 0
+> 200
+> 400
+> 600
+> 800
+> 1000
+> 1200
+> 1400
+> Episode Length (Steps)
+
+Reward & Episode Length 
+
+Fig. 6. Ablation study of the hybrid-dynamics-informed state seeding (HDSS) strategy. The plots compare the proposed framework against a baseline without HDSS. The baseline remains trapped in a near-zero reward regime, while HDSS enables rapid discovery of high-reward maneuvers. 
+
+The comparative training curves in Fig. 6 illustrate that the baseline policy remains trapped in a near-zero reward regime, highlighting a fundamental exploration bottleneck. This bottleneck is directly mirrored in the episode length evolution, where baseline episodes terminate prematurely due to catastrophic failures or timeouts before reaching the first waypoint. Conversely, the HDSS-enabled policy demonstrates a rapid and stable increase in both cumulative reward and episode length. By the conclusion of the training phase, the proposed method outperforms the baseline by an order of magnitude across both metrics. This significant performance gap con-firms that HDSS is not merely an auxiliary optimization but a critical prerequisite for mastering high-agility inverted maneuvers for the cable-suspended system. 
+
+C. Robustness Analysis 
+
+To evaluate the zero-shot generalization of the proposed policy, we conduct robustness tests by varying the payload mass ml and cable length l. While domain randomization (DR) is applied within a ±20% range for both parameters during training, we expand the testing envelope to ±40% to assess the policy’s robustness to out-of-distribution states. At each variation point, the evaluation is performed over 200 randomly generated tracks, each containing 10 waypoints. Table III reports the Success Rates (SR) and Average Com-pletion Times ( T ).                       
+
+> TABLE III ROBUSTNESS METRICS (SR / T)UNDER INDEPENDENT PARAMETER
+> VARIATIONS
+> Variation Payload Mass ( ml)Cable Length ( l)
+> −40% 87.5% / 5.91s 96.5% / 5.97s
+> −20% 93% / 6.00s 97% / 6.03s
+> 0% (Nom.) 97.5% / 6.15s 98.5% / 6.15s
+> +20% 91.5% / 6.28s 82.5% / 6.22s
+> +40% 82% / 6.47s 56% / 6.31s
+> Note: SR and Tdenote the success rate and average completion time, respectively.
+
+The quantitative results, summarized in Table III, validate the robust generalization of the learned policy across a di-verse set of random tracks. Within the DR envelope ( ±20% ), the system maintains a high success rate and consistent average completion times T , demonstrating that the policy captures the intrinsic varying physics rather than over-fitting to nominal parameters. Beyond the DR envelope, the policy exhibits different sensitivity to payload mass and cable length. While main-taining a high success rate (above 80%) under extreme mass variations, the system shows a notable performance disparity regarding the cable length l. At the −40% test point, the success rate still remains high as the reduced swing radius facilitates stable inverted maneuver. Conversely, increasing 
+
+l to +40% leads to a drastic drop in success rate. This degradation is primarily due to the increased rotational inertia of the longer cable, which renders the payload significantly harder to maneuver and increases the risk of cable-propeller entanglement during aggressive maneuvers. IV. EXPERIMENT SETUP AND RESULT 
+
+A. Experimental Setup 
+
+The real-world platform (Fig. 7) consists of a 315 g 
+
+quadrotor equipped with a 35 g suspended payload, providing a thrust-to-weight ratio of 3.5. The system employs a hier-archical control architecture: an onboard Cool Pi computer executes the RL policy at 100 Hz via LibTorch , while a Betaflight-based controller handles low-level rate tracking. A motion capture system provides global states within a 5.5 m 
+
+× 5.5 m × 2.5 m arena. To evaluate the robustness of our method, the policy is transferred zero-shot from simulation to the physical quadrotor without any fine-tuning or domain adaptation. 0.4 m  
+
+> Fig. 7. Cable-suspended payload system in real-world experiments.
+
+B. Agile Inverted Maneuvers 
+
+To evaluate the policy’s performance in extreme flight regimes, we conduct two representative challenging exper-iments: a single-loop and a consecutive double-loop inverted flight. The visual results of these maneuvers are captured in Fig. 1, while the corresponding quantitative spatial data is illustrated in Fig. 8. X position (m)     
+
+> Y position (m)
+> Z position (m)
+> End
+> Start
+> Z position (m)
+> Y position (m)
+> X position (m)
+> Drone Trajectory
+> Payload Trajectory
+> Cable
+> Start
+> End
+> Drone Trajectory
+> Payload Trajectory
+> Cable
+> (a) Single-loop 3D reconstructed trajectory. X position (m)
+> Y position (m)
+> Z position (m)
+> End
+> Start
+> Z position (m)
+> Y position (m)
+> X position (m)
+> Drone Trajectory
+> Payload Trajectory
+> Cable
+> Start
+> End
+> Drone Trajectory
+> Payload Trajectory
+> Cable
+> (b) Double-loop 3D reconstructed trajectory. Fig. 8. Reconstructed 3D trajectories of the quadrotor and payload during the agile inverted maneuvers shown in Fig. 1
+
+As shown in the single-loop flight (Fig. 1(a)), the quadro-tor successfully executes a vertical loop, reaching a fully inverted pose at the top while preventing the payload from falling into the rotors. The 3D trajectory in Fig. 8(a) further confirms the precision of the flight, with the payload (pink dashed line) following a smooth, physics-consistent arc be-hind the quadrotor. The double-loop experiment (Fig. 1(b)) further demon-strates the system’s ability to handle rapid, back-to-back transitions between upright and different inverted waypints. The reconstructed 3D data in Fig. 8(b) reveals that the sys-tem maintains high performance across consecutive inverted waypoints with different positions, validating the robustness and stability of our policy. C. Sim-to-Real Fidelity 
+
+To evaluate the transferability of the learned policy, we conduct a comparative analysis between the simulation envi-ronment and real-world flight on these two identical tracks. Table IV summarizes the flight statistics, demonstrating that the physical system’s performance aligns closely with simulation results. Across both test tracks, maximum velocity discrepancies remain within 6.0 % with slight discrepancies in completion times. Notably, these discrepancies reduce from the single loop to the double loops, demonstrating the policy’s sustained consistency as the task duration scales. Despite these minor variations, the policy successfully sta-bilizes the hybrid dynamics without real-world fine-tuning, validating the structural robustness of the ASTER framework for zero-shot sim-to-real transfer. 
+
+TABLE IV COMPARISON OF FLIGHT STATISTICS : S IMULATION VS . R EAL -WORLD 
+
+Track Completion Time (s) Max Quad Vel. (m/s) Sim Real Sim Real 
+
+Single Loop 0.98 1.34 3.83 4.01 Double Loops 2.87 3.14 7.05 6.63 
+
+V. CONCLUSIONS In this work, we propose ASTER, an RL-based framework for agile, attitude-aware traversal of the quadrotor suspended payload system, specifically focusing on the challenging inverted flight task. The proposed HDSS leverages ana-lytical physics models to guide model-free RL, thereby overcoming persistent exploration bottlenecks. Experimental results demonstrate that the learned policy enables stable inverted maneuvers on random tracks and generalizes to real-world platforms without fine-tuning. Future work will extend the state-seeding strategy to multi-drone suspended systems, facilitating the discovery of policies for complex aerial manipulation or cooperative transport tasks. REFERENCES [1] H. Cao, J. Shen, Y. Zhang, Z. Fu, C. Liu, S. Sun, and S. Zhao, “Proximal cooperative aerial manipulation with vertically stacked drones,” Nature , vol. 646, no. 8085, pp. 576–583, 2025. [2] R. Peng, Y. Wang, M. Lu, and P. Lu, “A dexterous and compliant aerial continuum manipulator for cluttered and constrained environments,” 
+
+Nature Communications , vol. 16, no. 1, p. 889, 2025. [3] S. Sun, X. Wang, D. Sanalitro, A. Franchi, M. Tognon, and J. Alonso-Mora, “Agile and cooperative aerial manipulation of a cable-suspended load,” Science Robotics , vol. 10, no. 107, p. eadu8015, 2025. [4] G. Li, X. Liu, and G. Loianno, “Human-aware physical human–robot collaborative transportation and manipulation with multiple aerial robots,” IEEE Transactions on Robotics , vol. 41, pp. 762–781, 2024. [5] I. Palunko, R. Fierro, and P. Cruz, “Trajectory generation for swing-free maneuvers of a quadrotor with suspended payload: A dynamic programming approach,” in 2012 IEEE international conference on robotics and automation , pp. 2691–2697, IEEE, 2012. [6] K. Sreenath, N. Michael, and V. Kumar, “Trajectory generation and control of a quadrotor with a cable-suspended load-a differentially-flat hybrid system,” in 2013 IEEE international conference on robotics and automation , pp. 4888–4895, IEEE, 2013. [7] H. Li, H. Wang, C. Feng, F. Gao, B. Zhou, and S. Shen, “Autotrans: A complete planning and control framework for autonomous uav payload transportation,” IEEE Robotics and Automation Letters , vol. 8, no. 10, pp. 6859–6866, 2023. [8] H. Wang, H. Li, B. Zhou, F. Gao, and S. Shen, “Impact-aware planning and control for aerial robots with suspended payloads,” IEEE Transactions on Robotics , 2024. [9] M. Sarvaiya, G. Li, and G. Loianno, “Polyfly: Polytopic optimal plan-ning for collision-free cable-suspended aerial payload transportation,” 
+
+IEEE Robotics and Automation Letters , 2026. [10] P. Foehn, D. Falanga, N. Kuppuswamy, R. Tedrake, and D. Scara-muzza, “Fast trajectory optimization for agile quadrotor maneuvers with a cable-suspended payload,” 2017. [11] Y. Song, A. Romero, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Reaching the limit in autonomous racing: Optimal control versus reinforcement learning,” Science Robotics , vol. 8, no. 82, p. eadg1462, 2023. [12] E. Kaufmann, L. Bauersfeld, A. Loquercio, M. M¨ uller, V. Koltun, and D. Scaramuzza, “Champion-level drone racing using deep reinforce-ment learning,” Nature , vol. 620, no. 7976, pp. 982–987, 2023. [13] X. Wang, J. Zhou, Y. Feng, J. Mei, J. Chen, and S. Li, “Dashing for the golden snitch: Multi-drone time-optimal motion planning with multi-agent reinforcement learning,” 2025. [14] D. Cao, J. Zhou, X. Wang, and S. Li, “Flare: Agile flights for quadrotor cable-suspended payload system via reinforcement learning,” IEEE Robotics and Automation Letters , 2026. [15] J. Zeng, A. M. Gimenez, E. Vinitsky, J. Alonso-Mora, and S. Sun, “Decentralized aerial manipulation of a cable-suspended load using multi-agent reinforcement learning,” arXiv preprint arXiv:2508.01522 ,2025. [16] Y. Wang, B. Wang, S. Zhang, H. W. Sia, and L. Zhao, “Learning agile flight maneuvers: Deep se (3) motion planning and control for quadrotors,” in 2023 IEEE International Conference on Robotics and Automation (ICRA) , pp. 1680–1686, IEEE, 2023. [17] T. Wu, Y. Chen, T. Chen, G. Zhao, and F. Gao, “Whole-body control through narrow gaps from pixels to action,” in 2025 IEEE Interna-tional Conference on Robotics and Automation (ICRA) , pp. 11317– 11324, IEEE, 2025. [18] M. Wang, Q. Wang, Z. Wang, Y. Gao, J. Wang, C. Cui, Y. Li, Z. Ding, K. Wang, C. Xu, et al. , “Unlocking aerobatic potential of quadcopters: Autonomous freestyle flight generation and execution,” 
+
+Science Robotics , vol. 10, no. 101, p. eadp9905, 2025. [19] Z. Han, X. Huang, Z. Xu, J. Zhang, Y. Wu, M. Wang, T. Wu, and F. Gao, “Reactive aerobatic flight via reinforcement learning,” IEEE Robotics and Automation Letters , 2025. [20] Z. Yin, C. Zheng, S. Guo, Z. Wang, and S. Zhao, “Taco: General ac-robatic flight control via target-and-command-oriented reinforcement learning,” in 2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pp. 9083–9090, IEEE, 2025. [21] Y. Xie, M. Lu, R. Peng, and P. Lu, “Learning agile flights through nar-row gaps with varying angles using onboard sensing,” IEEE Robotics and Automation Letters , vol. 8, no. 9, pp. 5424–5431, 2023. [22] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, “Proximal policy optimization algorithms,” arXiv preprint arXiv:1707.06347 , 2017. [23] G. Authors, “Genesis: A generative and universal physics engine for robotics and beyond,” December 2024.

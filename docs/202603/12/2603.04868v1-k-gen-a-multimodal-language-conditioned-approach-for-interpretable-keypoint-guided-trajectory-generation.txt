@@ -1,0 +1,357 @@
+Title: K-Gen: A Multimodal Language-Conditioned Approach for Interpretable Keypoint-Guided Trajectory Generation
+
+URL Source: https://arxiv.org/pdf/2603.04868v1
+
+Published Time: Fri, 06 Mar 2026 01:37:24 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# K-Gen: A Multimodal Language-Conditioned Approach for Interpretable Keypoint-Guided Trajectory Generation 
+
+1st Mingxuan Mu 
+
+Harbin Institute of Technology Chongqing Research Inst. of HIT 
+
+mmxuan0516@163.com 
+
+2nd Guo Yang 
+
+Changan Automobile Co., Ltd 
+
+Chongqing, China yangguo@changan.com.cn 
+
+3rd Lei Chen 
+
+Changan Automobile Co., Ltd 
+
+Chongqing, China chenlei5@changan.com.cn 
+
+4th Ping Wu 
+
+Changan Automobile Co., Ltd 
+
+Chongqing, China wuping@changan.com.cn 
+
+5th Jianxun Cui* 
+
+Harbin Institute of Technology Chongqing Research Inst. of HIT 
+
+cuijianxun@hit.edu.cn 
+
+Abstract —Generating realistic and diverse trajectories is a critical challenge in autonomous driving simulation. While Large Language Models (LLMs) show promise, existing methods often rely on structured data like vectorized maps, which fail to capture the rich, unstructured visual context of a scene. To address this, we propose K-Gen, an interpretable keypoint-guided multimodal framework that leverages Multimodal Large Language Models (MLLMs) to unify rasterized BEV map inputs with textual scene descriptions. Instead of directly predicting full trajectories, K-Gen generates interpretable keypoints along with reasoning that reflects agent intentions, which are subsequently refined into accurate trajectories by a refinement module. To further enhance keypoint generation, we apply T-DAPO, a trajectory-aware re-inforcement fine-tuning algorithm. Experiments on WOMD and nuPlan demonstrate that K-Gen outperforms existing baselines, highlighting the effectiveness of combining multimodal reasoning with keypoint-guided trajectory generation. 
+
+Index Terms —trajectory generation, multimodal large lan-guage model, autonomous driving, reinforcement learning. 
+
+I. I NTRODUCTION 
+
+Simulation is indispensable for autonomous driving re-search, enabling large-scale, risk-free testing [1]–[3]. Specifi-cally, generating diverse, realistic traffic scenarios is crucial for evaluating motion planning algorithms. However, constructing high-fidelity simulation environments remains a challenging task: most existing approaches either rely on hand-crafted rules, which limit diversity, or data-driven generative models, which often struggle with controllability and interpretability. Recent advances in large language models (LLMs) [4]–[6] have motivated a new paradigm of language-guided scenario generation, where textual reasoning can provide structured, human-readable explanations of agent behavior. While promis-ing in terms of interpretability, these methods often suffer from coarse-grained motion control, limited physical consistency, 
+
+This research is funded by the Chongqing Natural Science Foundation Innovation and Development Joint Fund (Changan Automobile) (Grant No. CSTB2024NSCQ-LZX0157) Scene Data 
+
+KeyPoints 
+
+Trajectories 
+
+MLLM  
+
+> “Vehicle 1 is moving at 3.7 m/s with
+> a heading of -1.30 rad, crossing
+> below ego's path. ”
+> KeyPoints
+> Reasoning
+> Ego Vehicle: Will likely continue straight through the
+> intersection……
+> Vehicle 1: Will continue moving southbound across
+> the intersection, possibly……
+> ······
+> Scene Analysis:
+> The scene depicts a four -way intersection with
+> multiple lanes in each direction……
+> Agent Predictions:
+> Ego vehicle:
+> <num>2</num><point>(0.000, 0.000, 0), (16.631,
+> 1.684, 49)</point>
+> Key challenges:
+> The intersection has typical urban road markings with
+> turning paths visible……
+> Vehicle 1:
+> <num>5</num><point>(0.000, 0.000, 0), (5.066,
+> 1.647, 13), (8.825, 5.061, 24), (10.814, 9.602, 35),
+> (11.597, 15.777, 49)</point>
+> ······
+
+Fig. 1. Overall workflow of the proposed multimodal trajectory generation framework K-Gen. The MLLM takes multimodal scene data (map images and textual inputs) as input, produces both reasoning and sparse keypoints, and refines them into complete trajectories. 
+
+and dependence on rigid intermediate representations that constrain generalization. A critical limitation of prior works is their reliance on vectorized map inputs and structured agent representations, which fail to capture the full multimodal richness of driving environments. Vectorized encodings abstract away spatial de-tails and contextual semantics essential for modeling complex interactions and reasoning about future motions. In contrast, raw visual representations of maps can preserve intricate lane structures, traffic elements, and local context, enabling more faithful and flexible understanding of the scene. To overcome these challenges, we propose K-Gen , a mul-timodal large language model (MLLM) framework that com-bines visualized maps with textual scene inputs to generate accurate and interpretable trajectories. Instead of directly pro-
+
+> arXiv:2603.04868v1 [cs.AI] 5 Mar 2026
+
+ducing full trajectories, K-Gen first generates sparse keypoints guided by the Chain-of-Thought (CoT) reasoning of MLLM, which are then refined into complete trajectories by the Tra-jRefiner module. Extensive experiments on WOMD [7] and nuPlan [8] demonstrate that our method outperforms existing baselines in trajectory quality. Our main contributions are threefold:  
+
+> •
+
+We propose K-Gen , a multimodal trajectory generation framework that integrates rasterized maps and text inputs, enabling both interpretable intent prediction and accurate trajectory forecasting.  
+
+> •
+
+We design a keypoint-guided strategy that decomposes the trajectory generation task into two steps: a keypoint generation phase and a trajectory refinement phase. This design effectively improves accuracy and stability com-pared to direct MLLM outputs.  
+
+> •
+
+We introduce T-DAPO , a Trajectory-aware Decoupled Clip and Dynamic Sampling Policy Optimization (T-DAPO) algorithm that incorporates trajectory-centric re-ward signals to enhance keypoint generation and ensure accurate motion reconstruction. II. R ELATED WORK 
+
+A. Trajectory Generation 
+
+Trajectory generation aims to synthesize realistic agent motions in complex scenarios. Early model-based methods [3], [9] rely on predefined rules, while recent learning-based approaches [10]–[12] learn distributions directly from data. However, relying on structured inputs without capturing high-level semantics severely limits their flexibility and controlla-bility. Recently, language-guided trajectory generation has emerged as a promising direction. LCTGen [13] pioneers this direction by converting language queries to structured representations with LLMs, which are then decoded into realistic traffic scenarios. Building on this, InteractTraj [14] introduces interaction-aware codes to enhance inter-agent dynamics in generated trajectories. Traj-LLM [15] takes a different approach by directly producing trajectories through LLMs with its ”interaction-behavior-trajectory” translation framework. LC-LLM [16] further leverages chain-of-thought reasoning for trajectory prediction, generating both trajectory forecasts and lane-change intents in natural language. Despite these advances, most existing methods still rely on vectorized maps or structured representations, which fail to exploit richer multimodal cues from realistic traffic scenes. Our K-Gen framework adopts a multimodal design, where maps are provided in visualized image form and combined with textual reasoning. This integration enables more expres-sive modeling of interactions and intentions for trajectory generation. 
+
+B. Reinforcement Fine-Tuning 
+
+Reinforcement Fine-Tuning (RFT) has evolved from general policy gradient methods [17], [18] to specialized algorithms for language model alignment. Early approaches established foundational optimization techniques [19], while recent ad-vances focus on direct preference optimization through meth-ods like DPO [20] that eliminate explicit reward modeling. Subsequent developments introduced group-relative optimiza-tion strategies, with GRPO [21] incorporating gradient regu-larization and DAPO [22] further enhancing training stability through differentiable alignment objectives. These methods collectively address key challenges in preference-based rein-forcement learning, including training stability, reward mod-eling, and policy alignment. In autonomous driving, AlphaDrive [23] employs au-tonomous driving planning with GRPO and a two-stage reasoning framework. AutoVLA [24] advances end-to-end driving by combining vision-language-action pretraining with GRPO-based fine-tuning. Our approach builds upon DAPO’s stable alignment framework, incorporating chain-of-thought reasoning and enhanced optimization strategies for trajectory generation. III. M ETHOD 
+
+A. Overview 
+
+Fig. 2 illustates the two parts of our K-GEN: first generating sparse keypoints guided by multimodal reasoning, and then refining them into full-length trajectories. At the keypoint generation module, a vision encoder and a text encoder extract tokens from the BEV map and text inputs, which are integrated through a MLLM. The MLLM produces both CoT reasoning and structured keypoint sequences, effec-tively capturing agents’ high-level intentions. At the trajectory refinement module, the interpolated trajectories derived from the keypoints are further corrected by the TrajRefiner. This module incorporates historical trajectories and agent states to predict residual adjustments, ensuring the final outputs are both smooth and accurate. For training, we propose the Trajectory-aware Decoupled Clip and Dynamic s Ampling Policy Optimization (T-DAPO) algorithm, a trajectory-refined variant of the DAPO algo-rithm. By emphasizing challenging samples and rewarding high-quality outputs, T-DAPO enables our model to generate interpretable and high-fidelity trajectories in complex traffic scenarios. 
+
+B. Data Preprocessing Pipeline 
+
+We design a multi-stage preprocessing pipeline to transform raw trajectory data into structured representations, generate reasoning annotations, and extract motion-critical keypoints, compressing temporal redundancy while preserving kinematic features. 
+
+Scene Description. For each scenario τi, the ith agent is represented as a tuple Ai =  type i, p 0 
+
+> i
+
+, v 0 
+
+> i
+
+, ∆di, ∆θi
+
+, where type i denotes the agent type(vehicle, pedestrian, cyclist), p0
+
+> i
+
+and v0 
+
+> i
+
+are initial position and velocity, and (∆ di, ∆θi) denote relative distance and bearing to the ego agent. These tuples are serialized into natural language to provide the MLLM with a structured scene context. Vision         
+
+> encoder
+> Text
+> encoder
+> …
+> …
+> MLLM
+> …
+> …
+> Vision Tokens
+> Text Tokens
+> KeyPoints
+> Tokens
+> Reasoning Tokens
+> filling
+> Agent States
+> Filled
+> Trajectory
+> History
+> Trajectory
+> 𝑀𝐿𝑃 !"#$%&'(
+> ⊕
+> Vision Encoder
+> Language Model
+> Supervised Fine -tuning Reinforcement Fine -tuning
+> Hard
+> Examples
+> top 30%
+> Accuracy Score
+> CoT Length
+> Rewards
+> Format
+> T-DAPO
+> Trajectory
+> Transformer
+> Refined
+> Trajectory
+> System
+> Prompt
+> Agent
+> States
+> Scene
+> Descriptions
+> KeyPoint Trajectory
+> Full
+> Datasets
+> Scene Data KeyPoint
+> KeyPoints
+> Answer
+> Reasoning
+> Answer
+> Stage 1 Stage 2 Fig. 2. Overall framework of K-Gen. The framework is composed of two main components: an MLLM for reasoning and keypoint generation, and a Transformer-based module for trajectory refinement. For the MLLM, the training pipeline includes two stages: SFT with CoT outputs, followed by reinforcement RFT using the T-DAPO algorithm.
+
+Reasoning Data. We generate structured reasoning anno-tations by prompting Claude 3.7 Sonnet [5] to analyze traffic scenes through three interconnected perspectives: road geom-etry, potential collision risks, and intention prediction. The resulting annotations serve as auxiliary supervision to instill structured reasoning capabilities prior to trajectory generation. 
+
+KeyPoints. We extract spatial keypoints Kg = DP (τi(t)) via the Douglas-Peucker algorithm [25] for high-curvature seg-ments, and kinematic keypoints Kv = {pti | | ∆vti | > δ v } for significant velocity changes. The final keypoint set combines both aspects through the union operation K = Kg ∪ Kv ,ensuring a comprehensive representation that captures both the geometric shape and dynamic motion characteristics of trajectories. 
+
+C. SFT-based Warm-up 
+
+In the warm-up stage, we adapt the pretrained MLLM to the trajectory generation task through supervised fine-tuning. The model’s output consists of two distinct to-ken types: reasoning tokens yR and keypoint tokens yK ,which together form the complete output sequence y∗ 
+
+> t
+
+=(y∗ 
+
+> 1
+
+, . . . , y ∗
+
+> R
+
+, y ∗
+
+> R+1
+
+, . . . , y ∗ 
+
+> R+K
+
+), where T = R + K is the total sequence length. Given an input x comprising multimodal scene information such as map image, scene description, contextual instructions, and historical trajectories, the model is trained to maximize the conditional likelihood of the ground-truth output sequence: 
+
+LSFT = −
+
+> T
+
+X
+
+> t=1
+
+log Pθ (y∗ 
+
+> t
+
+| x, y ∗
+
+> <t
+
+) , T = R + K (1) 
+
+D. RFT-based Enhancement 
+
+To further enhance the model beyond the SFT warm-up, we employ the proposed Trajectory-aware Decoupled Clip and Dynamic Sampling Policy Optimization (T-DAPO) algorithm. T-DAPO is specifically designed for the trajectory generation task, where model performance critically depends on both the fidelity of predicted trajectories and the interpretability of reasoning. Instead of treating all samples equally, T-DAPO emphasizes the most challenging subset of the training data to encourage the model to improve in difficult scenarios. Specifically, we define this subset as the top 30% of sam-ples exhibiting the highest mean Average Displacement Error (mADE) and mean Final Displacement Error (mFDE) based on the predictions of the post-SFT model. Continuous tra-jectory spaces cause severe gradient oscillation in standard GRPO. T-DAPO’s truncation mechanism stabilizes training on these hard samples, preventing convergence to simplistic straight-line predictions. 
+
+Accuracy Reward. This component evaluates the predicted trajectory quality by computing trajectory metrics via the TrajRefiner module, rewarding lower errors. 
+
+Racc = λ1 · e−ADE /τ 1 + λ2 · e−FDE /τ 2 (2) where τ1 and τ2 serve as normalization coefficients that control the decay scale of trajectory errors, and λ1 and λ2 are scaling factors balancing the ADE and FDE terms. 
+
+CoT Length Reward. This component encourages concise yet informative reasoning by penalizing unnecessarily long Chain-of-Thought outputs: 
+
+Rcot =
+
+(
+
+1 − LLmax , if L ≤ Lmax ,
+
+0, if L > L max , (3) where L denotes the actual length, and Lmax represents the maximum allowable length. 
+
+Format Correctness Reward. This component ensures structural integrity by verifying the presence and ordering of required tags (e.g., <think> , <answer> , <point> ,
+
+<num> ): 
+
+Rfmt =
+
+(
+
+1, if all tags are present and correctly ordered, 
+
+0, otherwise. (4) The final composite reward is obtained as a weighted sum: 
+
+R = αR acc + βR cot + γR fmt (5) where α, β , and γ are hyperparameters weighting the relative importance of accuracy, reasoning conciseness, and format correctness, respectively. 
+
+E. TrajRefiner 
+
+We design TrajRefiner as a Transformer-based residual refinement module to adjust filled trajectories derived from sparse keypoints. Given historical trajectories H, sparse key-points K, and initial agent states S, we first obtain a coarse filled trajectory ˜Y via linear filling. TrajRefiner then predicts a residual correction ∆Y to refine ˜Y into the final trajectory 
+
+ˆY = ˜Y + ∆ Y .The model architecture employs two Transformer decoder layers [14], where K interacts with both H and S through cross-attention. The resulting feature streams are fused via another cross-attention block, enabling joint reasoning over temporal dynamics and static state cues. An MLP head 
+
+M LP Residual finally outputs the residual correction ∆Y .The overall training objective integrates three key compo-nents: a motion loss Lmotion for trajectory accuracy, a kinematic consistency loss LKCL to enforce feasibility, and a final point loss LFPL to ensure endpoint precision. The orientation θ
+
+and velocity v used in LKCL are derived from the predicted trajectories. Each term is implemented using mean squared error (MSE), collectively ensuring that the refined trajectories are both accurate and kinematically consistent: 
+
+Lmotion = MSE(ˆ p, p ∗), LFPL = MSE(ˆ pT , p ∗ 
+
+> T
+
+)
+
+LKCL = λθ MSE( ˆθ, θ ∗) + λv MSE(ˆ v, v ∗) (6) 
+
+L = Lmotion + LKCL + LFPL                                                                              
+
+> TABLE I QUANTITATIVE RESULTS ON WOMD AND NU PLAN DATASETS . M ETHODS MARKED WITH †ARE BASED ON CLOSED -SOURCE LLM S(API ACCESS ONLY ,NO MODEL TRAINING ).
+> Dataset Method Size mADE ↓mFDE ↓SCR ↓
+> WOMD LCTGen [13] †-1.262 2.696 0.072 InteractTraj [14] †-1.067 2.190 0.070 InternVL3 [6] 2B 1.260 3.147 0.011 InternVL2.5 [26] 4B 1.187 2.796 0.010 InternVL3 [6] 8B 1.128 2.770 0.007 Qwen2.5-VL [27] 7B 0.989 2.602 0.008 Qwen3-VL [28] 8B 0.926 2.478 0.007
+> K-Gen (ours) 8B 0.915 2.422 0.006
+> nuPlan LCTGen [13] †-1.161 2.497 0.074 InteractTraj [14] †-0.962 1.987 0.067 InternVL3 [6] 2B 0.676 1.654 0.028 InternVL2.5 [26] 4B 0.666 1.669 0.029 InternVL3 [6] 8B 0.610 1.514 0.029 Qwen2.5-VL [27] 7B 0.624 1.547 0.028 Qwen3-VL [28] 8B 0.607 1.470 0.028
+> K-Gen (ours) 8B 0.591 1.478 0.027
+
+IV. E XPERIMENTS 
+
+A. Experimental Setup 
+
+Datasets. We evaluate our method on two datasets, Waymo Open Motion Dataset (WOMD) [7] and nuPlan [8]. Both datasets provide diverse urban driving scenarios with multi-agent interactions. To balance inference speed and accommo-date the context length limits of current MLLMs, we set the maximum number of agents per scenario to 8, sorted by their entering time. All evaluation metrics are calculated exclusively based on these filtered agents to ensure fair comparisons. We adopt a 5-second horizon at 10 fps, resulting in 50 timesteps each scene. 
+
+Metrics. For trajectory evaluation, we report the mean average displacement error (mADE), the mean final displace-ment error (mFDE), and the scenario collision rate (SCR) to measure accuracy and safety [13]. 
+
+Implementation. We use InternVL3-8B [6] as the base model. For keypoint extraction, we set the simplification threshold ϵ = 0 .5 and the velocity change threshold δv = 1 .0.In SFT stage, reasoning data is generated with Claude 3.7 Sonnet, and the model is full-parameter fine-tuned with a learning rate of 4e −5. The TrajRefiner module is trained separately with AdamW (learning rate 3e −4, batch size 64, 100 epochs), using loss weights λθ = 1 .0 and λv = 0 .1.For the T-DAPO algorithm, we set the maximum CoT length 
+
+Lmax to 512. The reward scaling factors are set to λ1 =
+
+0.5 , λ 2 = 0.5 , τ 1 = 1.0, and τ2 = 2.0, with the final composite reward weights configured as α = 0.7 , β = 0.2, and γ = 0.1. These hyperparameters were empirically tuned to balance error scales, prioritizing safety and physical compliance. All experiments are run on eight NVIDIA A100 GPUs. For inference efficiency, benchmarking 200 scenarios on a single A100 yields an average running time of 1.63 seconds per scene, confirming practical feasibility. 
+
+B. Main Results 
+
+Table I reports the quantitative results on the WOMD and nuPlan datasets. We compare our method with LCTGen [13] and InteractTraj [14]. While InteractTraj achieves a lower mFDE on the WOMD dataset, K-Gen significantly outper-forms baselines in mADE and SCR. This confirms that our approach prioritizes interaction-aware, physically consistent trajectories and safety over aggressively overfitting the end-point accuracy. We also evaluate InternVL models of different scales (2B, 4B, and 8B) under the SFT+interpolation setting. While larger models show gradual improvements, our K-Gen significantly outperforms them. We also evaluated Qwen2.5-VL and Qwen3-VL. K-Gen outperforms them, as their dy-namic image cropping introduces coordinate inconsistencies that weaken fine-grained spatial modeling. This highlights that the proposed training strategy and TrajRefiner module brings substantial gains beyond simple model scaling. 
+
+C. Qualitative Analysis 
+
+To further investigate how our model perceives complex driving environments, we visualize the attention heatmaps of the MLLM backbone across diverse scenarios, as shown in Fig. 3. 
+
+Visualizing Attention Patterns. The attention heatmaps (column d) reveal that our model effectively focuses on the Fig. 3. Qualitative results and attention visualization across diverse scenarios (Case 1: Intersection, Case 2: Merging, Case 3: Curved Lane). Columns (a)-(c) show the comparison between the ground truth and trajectories generated by the baseline and our TrajRefiner. Column (d) visualizes the MLLM’s attention heatmaps, where warmer colors indicate higher focus on safety-critical regions and interacting agents. TABLE II ABLATION STUDY ON TRAINING PIPELINE COMPONENTS . A LL EXPERIMENTS ARE BASED ON THE 8B MODEL AND WOMD DATASETS .Setting SFT GRPO DAPO TrajRefiner mADE ↓ mFDE ↓ SCR ↓                                   
+
+> Zero-shot ----9.880 15.369 0.5034 SFT ✓---1.128 2.770 0.0068 SFT + TrajRefiner ✓--✓0.926 2.496 0.0073 SFT + GRPO + TrajRefiner ✓✓-✓0.923 2.447 0.0064 SFT + DAPO + TrajRefiner(ours) ✓-✓✓0.915 2.422 0.0058
+
+most safety-critical regions relevant to the ego-vehicle’s future path.  
+
+> •
+
+Intersection (Case 1): When navigating a busy intersec-tion, the model’s attention is highly concentrated on the cluster of interacting agents and the upcoming junction area, ensuring a balanced consideration of multi-agent dynamics.  
+
+> •
+
+Merging (Case 2): In the merging scenario, the attention peak accurately aligns with the conflict point where the merging vehicle interacts with the main road traffic, demonstrating the model’s ability to identify potential collision risks.  
+
+> •
+
+Curved Lane (Case 3): For the curved lane scenario, the heatmap shows a continuous distribution along the lane boundaries and the leading vehicles, indicating that the model successfully captures the geometric constraints of the road. These qualitative results suggest that the MLLM does not merely process the scene as a holistic image but actively ”reasons” about the spatial relationships and key constraints, which explains the superior trajectory accuracy and safety observed in the quantitative experiments. 
+
+D. Ablation Study 
+
+To validate our design, we perform ablation studies on both the training pipeline and the TrajRefiner module, disentangling the contributions of each component. Effects of the training pipeline components. The ab-lation study evaluates the impact of key training pipeline components: supervised fine-tuning, reinforcement learning with GRPO and DAPO, and the TrajRefiner module. Our results, summarized in Table II, demonstrate that each stage contributes to significant performance gains on the WOMD datasets. Specifically, SFT provides a strong foundation, the TrajRefiner module enhances trajectory accuracy, and the rein-forcement learning stages further refine the results. The results confirm the effectiveness of each component and highlight the robustness of our overall framework. 
+
+Effects of TrajRefiner. We evaluate the contributions of relative coordinate encoding (RCE), kinematic consistency loss (KCL), and final point loss (FPL) within the TrajRefiner module. As shown in Table III, the linear interpolation baseline yields the highest error. Incorporating RCE, which transforms the trajectory into an agent-centric relative coordinate system, leads to substantial improvements. Building upon this, both KCL and FPL further refine the trajectory and enhance the evaluation metrics. The full integration of all three components in our complete model, TrajRefiner, proves to be the most effective, achieving the best overall performance. Crucially, TrajRefiner corrects physically infeasible keypoints from the MLLM—even when textual reasoning is correct—using resid-ual predictions and kinematic consistency loss. The near-zero SCR validates its capability. 
+
+TABLE III ABLATION STUDY OF TRAJ REFINER . E XPERIMENTS ARE BASED ON THE 
+
+WOMD DATASETS .Method mADE ↓ mFDE ↓ SCR ↓
+
+Baseline 1.154 2.660 0.0229 + RCE 0.499 1.404 0.0116 + KCL 0.416 1.289 0.0099 + FPL 0.423 0.798 0.0086 TrajRefiner(ours) 0.369 0.738 0.0078 
+
+V. C ONCLUSION 
+
+We introduced K-Gen, a multimodal framework for in-terpretable, high-fidelity trajectory generation. By integrating rasterized map inputs and separating strategic intent from mo-tion execution, K-Gen provides a new paradigm for language-guided modeling. Extensive experiments on WOMD and nu-Plan validate its superior accuracy, safety, and generalization in diverse autonomous driving scenarios. REFERENCES [1] M. Fellendorf, “Vissim: A microscopic simulation tool to evaluate actu-ated signal control including bus priority,” in 64th Institute of transporta-tion engineers annual meeting , vol. 32. Springer Berlin/Heidelberg, Germany, 1994, pp. 1–9. [2] D. Krajzewicz, G. Hertkorn, C. R¨ ossel, and P. Wagner, “Sumo (simula-tion of urban mobility)-an open-source traffic simulation,” in Proceed-ings of the 4th middle East Symposium on Simulation and Modelling (MESM20002) , 2002, pp. 183–187. [3] A. Dosovitskiy, G. Ros, F. Codevilla et al. , “Carla: An open urban driving simulator,” in Conference on robot learning . PMLR, 2017, pp. 1–16. [4] J. Achiam, S. Adler, S. Agarwal et al. , “Gpt-4 technical report,” arXiv preprint arXiv:2303.08774 , 2023. [5] Anthropic, “Claude 3.7 sonnet and claude code,” https://www.anthropic. com/news/claude-3-7-sonnet, 2025, 2025-08-27. [6] J. Zhu, W. Wang, Z. Chen et al. , “Internvl3: Exploring advanced training and test-time recipes for open-source multimodal models,” arXiv preprint arXiv:2504.10479 , 2025. [7] S. Ettinger, S. Cheng, B. Caine et al. , “Large scale interactive motion forecasting for autonomous driving: The waymo open motion dataset,” in Proceedings of the IEEE/CVF international conference on computer vision , 2021, pp. 9710–9719. [8] H. Caesar, J. Kabzan, K. S. Tan et al. , “nuplan: A closed-loop ml-based planning benchmark for autonomous vehicles,” arXiv preprint arXiv:2106.11810 , 2021. [9] T. A. Wheeler and M. J. Kochenderfer, “Factor graph scene distribu-tions for automotive safety analysis,” in 2016 IEEE 19th International Conference on Intelligent Transportation Systems (ITSC) . IEEE, 2016, pp. 1035–1040. [10] Z. Zhong, D. Rempe, D. Xu et al. , “Guided conditional diffusion for controllable traffic simulation,” in 2023 IEEE International Conference on Robotics and Automation (ICRA) , 2023, pp. 3560–3566. [11] S. Shi, L. Jiang, D. Dai, and B. Schiele, “Motion transformer with global intention localization and local movement refinement,” Advances in Neural Information Processing Systems , vol. 35, pp. 6531–6543, 2022. [12] W. Wu, X. Feng, Z. Gao, and Y. Kan, “Smart: Scalable multi-agent real-time motion generation via next-token prediction,” Advances in Neural Information Processing Systems , vol. 37, pp. 114 048–114 071, 2024. [13] S. Tan, B. Ivanovic, X. Weng et al. , “Language conditioned traffic generation,” in 7th Annual Conference on Robot Learning , 2023. [Online]. Available: https://openreview.net/forum?id=PK2debCKaG [14] J. Xia, C. Xu, Q. Xu et al. , “Language-driven interactive traffic trajec-tory generation,” Advances in Neural Information Processing Systems ,vol. 37, pp. 77 831–77 859, 2024. [15] K. Yang, Z. Guo, G. Lin et al. , “Trajectory-llm: A language-based data generator for trajectory prediction in autonomous driving,” in The Thirteenth International Conference on Learning Representations , 2025. [16] M. Peng, X. Guo, X. Chen et al. , “Lc-llm: Explainable lane-change intention and trajectory predictions with large language models,” Com-munications in Transportation Research , vol. 5, p. 100170, 2025. [17] R. J. Williams, “Simple statistical gradient-following algorithms for connectionist reinforcement learning,” Machine learning , vol. 8, no. 3, pp. 229–256, 1992. [18] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, “Prox-imal policy optimization algorithms,” arXiv preprint arXiv:1707.06347 ,2017. [19] J. Schulman, S. Levine, P. Abbeel et al. , “Trust region policy optimiza-tion,” in International conference on machine learning . PMLR, 2015, pp. 1889–1897. [20] R. Rafailov, A. Sharma, E. Mitchell et al. , “Direct preference optimiza-tion: Your language model is secretly a reward model,” Advances in neural information processing systems , vol. 36, pp. 53 728–53 741, 2023. [21] Z. Shao, P. Wang, Q. Zhu et al. , “Deepseekmath: Pushing the limits of mathematical reasoning in open language models,” arXiv preprint arXiv:2402.03300 , 2024. [22] Q. Yu, Z. Zhang, R. Zhu et al. , “Dapo: An open-source llm reinforce-ment learning system at scale,” arXiv preprint arXiv:2503.14476 , 2025. [23] B. Jiang, S. Chen, Q. Zhang et al. , “Alphadrive: Unleashing the power of vlms in autonomous driving via reinforcement learning and reasoning,” 
+
+arXiv preprint arXiv:2503.07608 , 2025. [24] Z. Zhou, T. Cai, S. Z. Zhao et al. , “Autovla: A vision-language-action model for end-to-end autonomous driving with adaptive reasoning and reinforcement fine-tuning,” arXiv preprint arXiv:2506.13757 , 2025. [25] D. H. Douglas and T. K. Peucker, “Algorithms for the reduction of the number of points required to represent a digitized line or its caricature,” 
+
+Cartographica: the international journal for geographic information and geovisualization , vol. 10, no. 2, pp. 112–122, 1973. [26] Z. Chen, W. Wang, Y. Cao et al. , “Expanding performance boundaries of open-source multimodal models with model, data, and test-time scaling,” 
+
+arXiv preprint arXiv:2412.05271 , 2024. [27] S. Bai, K. Chen, X. Liu et al. , “Qwen2.5-vl technical report,” arXiv preprint arXiv:2502.13923 , 2025. [28] S. Bai, Y. Cai, R. Chen et al. , “Qwen3-vl technical report,” arXiv preprint arXiv:2511.21631 , 2025.

@@ -1,0 +1,1265 @@
+Title: Joint Inverse Learning of Cognitive Radar Perception and Perception-Action Policy
+
+URL Source: https://arxiv.org/pdf/2603.07051v1
+
+Published Time: Tue, 10 Mar 2026 00:31:57 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+> 1
+
+# Joint Inverse Learning of Cognitive Radar Perception and Perception-Action Policy 
+
+Anoop C V and Anup Aprem 
+
+Abstract —Cognitive Radars (CRs) employ perception–action cycle to adapt their sensing and transmission strategies based on its’ perception of the target kinematic states and mission objectives. This paper considers an inverse learning Electronic Counter Measure (ECM) that infers both the perception and perception-driven action policy of the adversarial CR’s from the actions of the CR, i.e. the sensing and transmission actions taken by the CR. Existing frameworks, in the literature, assume the knowledge of either the perception or the perception-action policy and infer the other. However, this assumption is unrealistic in an adversarial setting. We address this gap by proposing an online, nonparametric Bayesian machine learning frame-work and developing the Inverse Particle Filter with Dependent Dirichlet Process (IPFDDP) algorithm, which characterizes the perception-dependent action policy using a Dependent Dirichlet Process (DDP) and embeds kernel-based DDP inference within a Bayesian inverse particle filtering framework to jointly estimate the CR’s perception and perception-action policy. Extensive numerical simulations demonstrate that IPFDDP outperforms existing inverse learning methods in terms of mean squared error, Kullback–Leibler divergence between the estimated and true policy, and accuracy in identifying relative action preferences. Unlike the existing techniques, the proposed Bayesian formula-tion naturally quantifies uncertainty in inferred perception and perception-action policy, enabling active probing strategies for sample efficient inverse learning. Simulation results show that active probing integrated with IPFDDP achieves, on average, a 
+
+40% faster reduction in KL divergence compared to randomized probing. 
+
+Index Terms —Cognitive Radar, Adversarial Inference, Bayesian Inverse Filtering, Perception–Action Cycle, Perception-Dependent Policy Learning, Nonparametric Bayesian Learning, Dependent Dirichlet Process, Particle Filtering, Electronic Counter Measures, Active Probing 
+
+I. I NTRODUCTION 
+
+# COGNITIVE Radars (CRs) are intelligent sensing systems capable of environmental awareness and autonomous adaptation, allowing them to adjust their sensor parameters or policies adaptively for more accurate target tracking and detection. [1]. They adjust various operational parameters, such as waveform characteristics, beam direction, transmission power, and track update periodicity, based on their perception of the target state, aligned with its’ operational objectives or mission intent specified by the operators. These mission ob-jectives frequently include, but are not limited to, minimizing tracking uncertainty, lowering the false alarm rate in target detection, ensuring a low probability of interception (LPI), and 
+
+Both Anoop C V and Anup Aprem are with the Department of Electronics and Communication Engineering, National Institute of Technology Calicut, India (e-mail: anoop p210065ec@nitc.ac.in, anup.aprem@nitc.ac.in). 
+
+facilitating coexistence with other co-located communication systems [2]. Electronic Counter Measure (ECM) denotes a collection of offensive and/or defensive strategies to either deny an 
+
+adversarial radar accurate targeting information or exploit vul-nerabilities in the capabilities of radar. This paper considers an electronic warfare context wherein an intelligent surveillance agent tries to infer the radar’s perception and the perception driven policy of the CR - referred to as inverse learning 
+
+[3], [4] with an intent to design ECM strategies to exploit vulnerabilities in the perception-action policy of the CR. This inverse learning challenge has received considerable attention in the literature, particularly in the context of CRs [5]–[8]. A CR employs Bayesian filtering techniques (e.g., Kalman Filter, Extended Kalman Filter, Unscented Kalman Filter, or Particle Filter) to obtain the posterior belief, which represents the radar’s perception of the target’s kinematic state, con-ditional on noisy observations [9]. Subsequently, it executes adaptive actions (such as modifying waveform parameters or adjusting beam steering) as a function of this posterior belief [10]–[12]. For example, the study in [10], [13] demonstrates that the FAR dynamically selects one of three available waveforms—Linear Frequency Modulation (LFM), Power Fre-quency Modulation (PFM), or Hyperbolic Frequency Modu-lation (HFM)—with the objective of minimizing the tracking covariance produced by its internal Bayesian tracker. In the context of inverse learning in the CR, Bayesian inverse filtering approaches in the literature [5], [6] estimate the radar’s perception of the target (estimate of the posterior belief), assuming that the perception adaptation policy of the radar is known apriori. The estimated perception can then be utilized to predict the radar’s subsequent actions under a novel set of environmental conditions. The assumption of perfect knowledge of the perception driven action policy of an adversarial CR is unrealistic in an electronic warfare scenario or in dynamic environments. In this paper, we address the main limitation of assumption of perception-action policy in existing literature. The main challenge arises from the fact that the radar’s perception (belief) of the target state is itself unobservable. Subsequently inverse learner must jointly estimate the radar’s perception and its perception-dependent policy, from observed state trajecto-ries and corresponding radar actions. In this context, the main contributions of this paper are summarized as follows: 1) We propose an online, nonparametric Bayesian machine learning framework for jointly inferring the perception and the perception-dependent stochastic action policy of a cognitive radar, by observing a sequence of actions taken 
+
+> arXiv:2603.07051v1 [eess.SP] 7 Mar 2026 2
+
+Fig. 1: CR-target interaction and the proposed inverse learning approach. We consider the problem of jointly estimating the radar’s belief state πk and its belief-dependent policy Gπ, a := p(a|π), solely from observed state trajectories x1: k and corresponding radar actions a1: k. The main challenge arises from the fact that the radar’s belief πk is itself unobservable, and the action policy Gπ, a is also unknown and potentially nonparametric. by the CR corresponding to known kinematic states of the target. 2) We develop IPFDDP, a nonparametric Bayesian machine learning algorithm to jointly infer the policy (or belief) and perception-action policy of the CR. The IPFDDP algorithm characterizes the belief-dependent policy of the CR using the Dependent Dirichlet Process (DDP), and incorporates kernel-based DDP inference into a Bayesian inverse particle filtering framework to jointly estimate the CR’s belief and policy. 3) We compare the performance of the IPFDDP-based pol-icy learning algorithm with state-of-the-art ML models, based on MSE and KL divergence between the predicted and the true policy, as well as accuracy in identifying the relative preferences for actions, and show that IPFDDP outperforms the competing approaches across all metrics. 4) The proposed Bayesian formulation inherently quantifies the uncertainty in the learner’s estimates of belief and pol-icy and facilitates the design of active probing strategies to perform inference in a sample-efficient manner. We propose an active sensing approach in which the target on the learner’s side adapts its acceleration maneuver to probe the CR to minimize uncertainty in the inverse learning estimate. 5) Numeric simulations show that incorporating active prob-ing strategy into IPFDDP reduces the KL divergence between the estimated and true policy on an average by 
+
+40% faster compared to randomized probing. 
+
+To the best of our knowledge, there exist no learning frame-works in the literature that can jointly estimate both the perception and the perception-action policy of a cognitive radar. 
+
+This paper is organized as follows. Sec. II reviews the related literature on inverse learning based ECM strategies. Sec. III presents the system model and outlines the nec-essary background, including Bayesian inverse filtering and the Dirichlet process formulation in the considered context. Sec. IV details the proposed inverse learning framework and the associated active sensing strategies. Comprehensive numerical results are provided in Sec. V. Further, conclusions are drawn in Section VI. The detailed architectures and training procedures of the machine learning models employed for benchmarking in Sec. V are provided as supplementary material. II. R ELATED LITERATURE 
+
+Classical ECM : ECM against conventional radars include a set of pre-programmed techniques such as noise jamming, deceptive jamming (false target generation) and repeated based spoofing [16], [17], which assume stationary radar operating modes and are therefore not suitable for cognitive radars that continuously adapt waveform, beamforming, and processing based on feedback from the scene (the environment in which the target is present) [18]. ECM against cognitive radar must therefore adaptively adjust its strategy based on the behaviour of the cognitive radar learned from observations [1], [18]. 
+
+Bayesian Inverse Filtering (IF) based ECM : Inverse fil-tering techniques to aid ECM attempt to learn the radar’s posterior state estimate or perception of the scene (e.g., pos-terior of the target state estimate or track quality) by inverting its Bayesian filtering structure. [5] introduced Inverse Hidden Markov Model Filter (IHMMF), Inverse Kalman Filter (IKF) and Inverse Particle Filter (IPF) in the context of ECM against CRs. Inverse Extended Kalaman Filter (IEKF) [14], [19], Inverse Unscented Kalman Filters (IUKF) [15] and Inverse Particle Filter (IPF) extends the work in [5] to a non-linear setting. But, all the existing Bayesian Inverse Filtering works in literature [5], [6], [14], [15], [19] typically assume that the radar’s action policy is known apriori—unrealistic in an electronic warfare scenario or in dynamic environments. 
+
+Inverse Reinforcement Learning (IRL) based ECM: In contrast, inverse learning / inverse reinforcement learning based approaches [8], [12] in the literature assume that the radar perceives the state of the target perfectly and that the 3
+
+TABLE I: Knowledge, Observability and Assumptions of inverse learner in the literature                                 
+
+> Quantity Description IF [5], [6], [14], [15] IRL [8], [12] Proposed
+> P, B Model dynamics Known Known Known
+> x0: kTarget state trajectory Observable Observable Observable
+> a1: kRadar action trajectory Observable Observable Observable
+> y1: kRadar’s measurements Unobservable Unobservable Unobservable
+> π1: kRadar belief state Unobservable Known Unobservable
+> Gπ, aBelief-dependent radar policy Known Unknown Unknown
+> AAction set Known Known Unknown
+
+actions taken by the radar are optimal with respect to some reward / utility function, and subsequently attempt to estimate the reward / utility that the radar seeks to maximize. Similarly, inverse reinforcement learning, inverse optimal control, and changepoint-detection-based techniques proposed to aid ECM also assume that the radar perceives the target state perfectly, or is provided with ground-truth state trajectories, and focus on recovering the radar’s reward structure, utility, or mode-switching strategy from observed actions [8], [20]. However, an adversarial radar’s perception of the target state is gener-ally not known perfectly to the learner and must therefore be inferred. Moreover, the inverse learning performance of parametric approaches is sensitive to the assumed functional form of the reward / utility [21]. In addition, naive neural network based approximations of the mapping from the true kinematic states of the targets to radar actions typically fail or are not sample efficient, since the radar’s actions are not a direct function of the true target states but rather of the CR’s perception of the target states, which is unknown to the learner, and because the number of observations available for inference in adversarial settings is often scarce [8]. Furthermore, modern CRs with meta-cognitive capabilities often take suboptimal or stochastic de-cisions either to mask their cognition from adversaries [22] or to enable better exploration under imperfect perception of the environment. Consequently, the assumptions underlying both inverse filtering and inverse reinforcement learning approaches are not valid in realistic radar–inverse learner engagements, where the radar operates under partial observability and model uncertainty, and both the radar’s perception (state estimation) and policy (waveform / processing selection) must be inferred jointly from observations of its actions, as summarized in Table I. III. B ACKGROUND AND SYSTEM MODEL 
+
+We consider an adversarial interaction between a CR and a learner, as illustrated in Fig. 1. The CR tracks a maneuvering target (drone/UAV/aircraft) located on the learner’s side. The learner observes the radar’s actions and seeks to infer its internal perception and perception-action policy. The overall architecture consists of a scene (target dynamics), a sensor, a Bayesian tracker, and a perception-driven radar controller. 
+
+Scene and Target Dynamics : The scene consists of a moving target whose kinematic state evolves in discrete time 
+
+k = 1 , 2, . . . . Let xk ∈ X denote the Markovian state of the target at time k, with prior x0 ∼ π0. The motion dynamics are governed by 
+
+Motion dynamics: xk ∼ Pxk−1,xk = p(xk | xk−1), (1) where X denotes the state space and Pxk−1,xk specifies the target motion model. 
+
+Sensor Model : The CR observes the target state through noisy measurements yk generated according to 
+
+Observation: yk ∼ Bxk ,y = p(yk | xk), (2) where Bxk ,y denotes the conditional probability density of the observation given the true target state. 
+
+Bayesian Tracker : The CR employs a Bayesian tracker (e.g., Kalman filter or particle filter) to compute a posterior belief over the target state. Let πk ∈ Π denote the posterior belief at time k. The belief evolves according to the Bayesian filtering recursion 
+
+Perception: πk = T (πk−1, yk) = p(xk | y1: k), (3) where y1: k = [ y1, . . . , yk] and the filtering operator T is given by 
+
+T (π, y) = Bx,y
+
+R 
+
+> X
+
+Pζ, xπ(ζ)dζ 
+
+R 
+
+> X
+
+Bx,y
+
+R 
+
+> X
+
+Pζ, xπ(ζ)dζd x , x ∈ X . (4) Thus, πk represents the internal perception of the CR regarding the target state. 
+
+Radar Controller Based on the belief πk, the radar con-troller selects an action ak ∈ A according to a perception-dependent stochastic policy 
+
+Perception–action policy: ak ∼ Gπk ,a = p(ak | πk). (5) Here, A denotes the radar action space (e.g., waveform selection, beam steering, or power allocation), and Gπk ,a
+
+characterizes the conditional distribution of actions given the belief. We assume that the belief space Π is partitioned into disjoint regions, with distinct policies associated with each region. In this work, the learner is assumed to perfectly observe the radar actions. This assumption is reasonable when actions correspond to discrete waveform switching. Extensions to scenarios where actions are observed through noise (e.g., power adaptation) are deferred to future work. 
+
+Information Structure and Inverse Learning Problem: 
+
+As shown in Fig. 1, the CR internally implements the forward generative chain 
+
+xk → yk → πk → ak,4
+
+where the belief πk is a sufficient statistic of the observation history for decision-making. The learner does not observe the radar measurements yk
+
+nor the belief trajectory π0: k = [ π0, π 1, · · · , π k]. Instead, it observes the target state trajectory x0: k = [ x0, x1, · · · , xk] on its side and the radar action trajectory a1: k = [ a1, a2, · · · , ak].The objective of the learner is to solve the following inverse problem: given the observed state-action sequence 
+
+(x0: k, a1: k), jointly infer the hidden belief process π0: k and the perception-dependent stochastic policy Gπ, a. This constitutes an adversarial inverse learning problem in which the learner attempts to reconstruct both the internal perception dynamics and the control strategy of the enemy CR. In Sec. III-A, we discuss the classical Bayesian inverse filtering, where the learner recursively estimates the CR’s posterior belief of its kinematic state, given a1: k and x0: k,under the assumptions that P, B, A, and Gπ, a in (1) through (5) are perfectly known to the learner, and in Sec. IV, we extend to the case of unknown A and Gπ, a.
+
+A. Bayesian Inverse Filtering 
+
+Based on the model dynamics in (1) through (5), the joint distribution of πk, yk, a1: k and x0: k can be expressed as: 
+
+p(πk, yk, a1: k, x0: k) = p(ak | πk)p(yk | xk)p(xk | xk−1)
+
+Z
+
+> Π
+
+p(πk | yk, π k−1)p(πk−1, a1: k−1, x0: k−1)dπ k−1. (6) The Bayesian inverse filtering problem is defined as inferring the CR’s posterior belief πk, given x0: k and a1: k, expressed as [7]: 
+
+ρk(π) = p(πk | a1: k, x0: k). (7) Analogous to the forward Bayesian filtering recursion in (4), the posterior update in Bayesian inverse filtering in (7) can be recursively written, based on (1) through (6), as [7]: 
+
+ρk+1 (π) = Gπ, ak+1 
+
+R 
+
+> Π
+
+Bxk+1 ,yπk ,π ρk(πk) dπ k
+
+R 
+
+> Π
+
+Gπ, ak+1 
+
+R 
+
+> Π
+
+Bxk+1 ,yπk ,π ρk(πk) dπ k dπ , (8) where yπk ,π is the observation y such that π = T (πk, y), with 
+
+T defined in (4). If P, B, A, and G are known to the learner, the recursion in (8) can be implemented using the classical Bayesian inverse filtering techniques, namely, Inverse Hidden Markov Model Filter (IHMMF), Inverse Kalman Filter (IKF), Inverse Extended Kalman Filter (IEKF), Inverse Unscented Kalman Filter (IUKF), or Inverse Particle Filter (IPF), depend-ing on the problem dynamics [5]–[7]. 
+
+B. Bayesian Inverse Particle Filtering Framework 
+
+Given the CR–learner interaction dynamics in (1)–(6) and the learner’s assumptions in Table I, the optimal inverse filtering recursion in (8) generally lacks a finite-dimensional sufficient statistics. Below we describe the inverse particle filter (IPF) algorithm proposed in [5], [6]. The IPF empirically evaluates the recursive Bayesian posterior in (8) using a set of N particles {(π(i)0: k, y(i)1: k)}Ni=1 along with their corresponding importance weights {w(i) 
+
+> k
+
+(π(i)0: k, y(i)1: k)}Ni=1 , randomly evolving in time according to the dynamics of the CR–learner interac-tion (1) through (4). The posterior distribution of the CR’s belief π0: k and observations y1: k given D1: k = {x0: k, a1: k} can be expressed based on (6) as [5]: 
+
+p(π0: k,y1: k | x0: k, a1: k) ∝ Gπk ,ak p(πk | πk−1, yk)×
+
+p(yk | xk)p(π0: k−1, y1: k−1 | x0: k−1, a1: k−1). (9) Since drawing samples directly from (9) is intractable, IPF samples π(i) 
+
+> k
+
+and y(i) 
+
+> k
+
+are instead drawn from a proposal distribution (importance density) [5]: 
+
+Q(π0: k, y1: k | x0: k, a1: k) = 
+
+Q(π0: k−1, y1: k−1 | x0: k−1, a1: k−1) (10) 
+
+Q(πk, yk | π0: k−1, y1: k−1, x0: k, a1: k).
+
+Given the original–(9), and, the proposal–(10) distributions, the importance weight in IPF can be defined as [5]: 
+
+w(i) 
+
+> k
+
+(π(i)0: k, y(i)1: k) = p(π(i)0: k, y(i)1: k | x0: k, a1: k)
+
+Q(π(i)0: k, y(i)1: k | x0: k, a1: k) . (11) In this particular problem, we use the following optimal importance density [5], [6] that minimizes the variance of importance weights in (11): 
+
+Q∗(π(i) 
+
+> k
+
+,y(i) 
+
+> k
+
+| π(i)0: k−1, y(i)1: k−1, x0: k, a1: k)= p(π(i) 
+
+> k
+
+, y(i) 
+
+> k
+
+| π(i)0: k−1, y(i)1: k−1, x0: k, a1: k). (12) Using (9), (10) and (12) the importance weight computation in (11) reduces to the following recursive form: 
+
+w(i) 
+
+> k
+
+(π(i)0: k, y(i)1: k) ∝ w(i)
+
+> k−1
+
+(π(i)0: k−1, y(i)1: k−1)
+
+× Gπ(i) 
+
+> k,ak
+
+Pxk−1,xk . (13) Bayesian inverse filtering algorithm, presented in Algorithm 1 assume that P, B , G and T in (1) through (5) are perfectly known to the learner. However, as indicated in Table I, A and G are not known to the learner in our setting, and therefore any Bayesian inverse filtering algorithm must jointly infer both the belief-dependent radar policy (action likelihood) Gπ, a = p(a | π), and the CR’s posterior belief π. Since parametric modeling of the action likelihood is not straightforward when the action space A
+
+or its cardinality |A| is unknown, in this paper, we adopt a Bayesian nonparametric approach. An important aspect in Bayesian non-parametric inference of Gπ, a is the choice of prior for Gπ, a. In our context, since the CR selects its actions from a set of finitely many discrete actions, a Dirichlet distributed prior is a possible candidate, as is commonly used in Bayesian machine learning. However, since |A| is unknown, the action likelihood prior must be modeled using a Dirichlet Process (DP), allowing the number of actions to grow to ∞
+
+as time progresses. Sec. III-C provide a brief background of DP. 
+
+C. Dirichlet Process 
+
+The DP provides a natural and mathematically principled option for the prior over Gπ, a.5
+
+Algorithm 1 Bayesian Inverse Particle Filter [5], [6] 
+
+Require: Observed data x0: k , a1: k ; number of particles N ; known models P, B, T, G  
+
+> 1:
+
+Initialize particles {π(i)0 }Ni=1 ∼ π0, set w(i)0 = 1 
+
+> N
+> 2:
+
+for j = 1 to k do  
+
+> 3:
+
+for i = 1 to N do  
+
+> 4:
+
+Sample y(i) 
+
+> j
+
+∼ Bxj ,y 
+
+> 5:
+
+Propagate belief: 
+
+π(i) 
+
+> j
+
+= T (π(i)
+
+> j−1
+
+, y(i) 
+
+> j
+
+) 
+
+> 6:
+
+Update importance weight using (13): 
+
+w(i) 
+
+> j
+
+∝ w(i)
+
+> j−1
+
+Gπ(i) 
+
+> j,aj
+
+Pxj−1,xj 
+
+> 7:
+
+end for  
+
+> 8:
+
+Normalize weights: 
+
+w(i) 
+
+> j
+
+= w(i)
+
+> j
+
+PNℓ=1 w(ℓ) 
+
+> j
+> 9:
+
+Resample {π(i)0: j }Ni=1 according to {w(i) 
+
+> j
+
+}Ni=1  
+
+> 10:
+
+end for  
+
+> 11:
+
+Output: Weighted particle approximation 
+
+p(π0: k , y1: k | x0: k , a1: k ) ≈
+
+> N
+
+X
+
+> i=1
+
+w(i) 
+
+> k
+
+δ(π0: k − π(i)0: k )
+
+1) Definition of Dirichlet Process: Let (A, U) be a mea-surable space that represents possible action choices of the CR. A random probability measure G ∼ DP (α, H ) with concentration parameter α > 0 and a base measure H is called a Dirichlet process if, for every measurable partition 
+
+(U1, · · · , Um) of A [23], 
+
+(G(U1), ·· , G (Um)) ∼ Dir (αH (U1), · · · , αH (Um)) , (14) where Dir (·) is the Dirichlet distribution of order m with parameters α = (αH (U1), · · · , αH (Um)) . Its realizations 
+
+(ν1, · · · , ν m) are m-dimensional vectors belonging to the 
+
+(m − 1) -dimensional probability simplex, with probability density function [24]: 
+
+f (ν1, ·· , ν m; α) = Γ( Pmi=1 αH (Ui)) 
+
+Qmi=1 Γ( αH (Ui)) 
+
+> m
+
+Y
+
+> i=1
+
+ναH (Ui)−1 
+
+> i
+
+. (15) In (15), νi = p(a ∈ U i) and Γ( ·) is the standard Gamma function. The definition of the DP in (14) implies that G
+
+is almost surely discrete, and therefore suitable for modeling categorical phenomena whose support can grow as more data are observed. Given G, the generation of CR action in (5) can be modeled by the learner using the DP as [23]: 
+
+at | G∼G; t = 1 , · · · , T. (16) 
+
+However, in our context, the radar’s policy depends on its posterior belief of the target’s kinematic states, and any model for radar’s policy should depend on the belief π, necessitating the use of a dependent Dirichlet Process (DDP) [25]. The details of the proposed DDP prior modeling are provided in Sec. IV. 
+
+IV. P ROPOSED METHODOLOGY 
+
+Initially we discuss, Bayesian non-parametric characteriza-tion of belief dependent policy using DDP in Sec. IV-A. Subse-quently, in Sec. IV-B, we incorporate the DDP characterization of the policy in Sec. IV-A within the inverse particle filtering framework in Sec. III-B to jointly infer the belief and the belief dependent policy of the CR. 
+
+A. Modeling of Gπ, a using Dependent Dirichlet Process 1) DDP formulation and generative model: Since the CR’s policy G depends on belief π ∈ Π - ideally, we need to introduce individual DP priors for each π ∈ Π - necessitating a DDP formulation - capable of characterizing random probabil-ity measure that changes depending on the covariate π [25]. Extending the DP formulation in Sec. III-C, the generative model for the DDP characterization can be represented for any π ∈ Π as follows: 
+
+Gπ ∼ DP (α, H π ),
+
+a | Gπ ∼ Gπ . (17) 
+
+Hπ in (17) is a base probability measure (corresponding to belief π) over the action space A, and DP (·) denotes the Dirichlet process as defined in Sec. III-C1. Since |A| is not known to the learner apriori, we hierarchically model Hπ in (17) as a DP over the unknown A such that any partition 
+
+U ⊂ A and its complement UC will be Dirichlet distributed as defined in (14). 
+
+2) DDP Predictive Distribution: A key property of the DP is its closed-form predictive distribution obtained by marginal-izing out G [25], [26]. Assume we are given a set of T
+
+observations, comprising the CR’s belief and corresponding actions, {(πk, ak)}Tk=1 . Let the radar actions be a1: T with distinct revealed categories AT = {u1, . . . , uNT }, where 
+
+NT = |A T | and AT ∪ A CT = A. For a new belief πT +1 ∈ Π,the next action aT +1 may either match an existing category (aT +1 ∈ A T ): 
+
+p(aT +1 = ui ∈ A T | a1: T , π T +1 ) = 
+
+αH πT +1 (ui) + PTk=1 1{uk =ui,π T +1 =πk }δuk
+
+T + α ; (18) or be a previously unseen one ( aT +1 ∈ A CT )
+
+p(aT +1 = u ∈ A CT | a1: T , π T +1 ) = αH πT +1 (u)
+
+T + α . (19) The predictive distributions (18) and (19) naturally capture the possibility that the radar may take previously unrevealed action categories, with probability governed by the concentration parameter α.
+
+3) DDP Posterior Update: After observing a1: T , the pos-terior over Gπ ∼ DP (α, H π ), ∀π ∈ Π, remains a DP [23] given by: 
+
+Gπ | a1: T ∼
+
+DP α + T, αH π + PTt=1 1{πt=π}δat
+
+α + T
+
+!
+
+. (20) 6
+
+This posterior is centered on a convex combination of the prior base measure and the empirical distribution revealed by the T
+
+observed actions. However, in our context, the covariate—CR belief (πt ∈ Π) 
+
+is not directly observable by the learner, and hence, (18) through (20) cannot be used to approximate the likelihood 
+
+Gπ, a in (13), since π and G must be jointly inferred. In Sec. IV-B, we incorporate DDP inference of policy into the inverse particle filter framework to jointly infer p(G, π 0: k |
+
+x0: k, a1: k). Further, since the belief space Π is continuous, we use the standard kernel smoothing techniques to update the posterior from finite set of observations. 
+
+B. IPFDDP: Joint inference of belief and policy 
+
+In this section, we describe the joint online inference of the radar’s belief and the belief–dependent action policy by incorporating the DDP characterization of the radar’s policy from Sec. IV-A into the Bayesian inverse particle filtering formulation of the radar belief estimate in Sec. III-B. We jointly sample the latent CR belief (π), the latent CR obser-vation (y), and the DP–distributed policy G, given the model dynamics in (1) and the Bayesian filter (4) used by the CR. A straightforward extension of the importance density in (12) is used to jointly sample the particles: 
+
+Q∗(π(i) 
+
+> k
+
+, y(i) 
+
+> k
+
+, G (i)0: k | π(i)0: k−1, y(i)1: k−1, G (i)0: k−1, D1: k)= p(π(i) 
+
+> k
+
+, y(i) 
+
+> k
+
+, G (i)0: k | π(i)0: k−1, y(i)1: k−1, G (i)0: k−1, D1: k)= p(G(i)0: k | π(i)0: k, G (i)0: k−1, D1: k) δ π(i) 
+
+> k
+
+− T (π(i)
+
+> k−1
+
+, y(i) 
+
+> k
+
+)
+
+× p(y(i) 
+
+> k
+
+| xk), i = 1 , . . . , N, (21) where D1: k = {x0: k, a1: k} denotes the trajectory of the observed state–action pairs. The functions T (π(i)
+
+> k−1
+
+, y(i) 
+
+> k
+
+) and 
+
+p(y(i) 
+
+> k
+
+| xk) follow directly from the known dynamics in (1) through (5). The weights of each particle are updated as in (13), wherein the Gπ,k in (13) is replaced by G(i)0: k For each particle i, we initialize G(i)0 as 
+
+G(i)0 ∼ DP (α(i)0 , H (i)0 ), (22) with α(i)0 > 0 as the concentration parameter and H(i)0 as the base measure defined on the entire action space A. Although the action space A or |A| is not explicitly known, after each observation ( k = 0, 1, . . . ), we may partition A into the observed actions Ak and their unobserved complement ACk ,and thereby specify a probability measure via the DP as in (14). The probability of observing an action not previously observed is captured, up to a proportionality constant, through the concentration parameter and an initial non-informative base measure. As the learner receives additional observations, the posterior belief over G is updated non-parametrically, and the posterior term in (21) is again characterized by a DP. Conditioned on the particle history π(i)0: k and the observed actions a1: k, the posterior over G(i)0 satisfies 
+
+G(i)0: k | π(i)0: k, a1: k, G (i)0 ∼ DP (α(i)0: k(π), H (i)0: k(π)) , (23) where α(i)0: k is the updated concentration parameter and H(i)0: k
+
+is the updated base measure according to (20). 
+
+Smoothing the estimated radar policy : The radar policy estimated using the particle filter in (23), as a weighted combination of G(i)0: k, is inherently sample-based and there-fore exhibits discontinuities over the belief space, making it unsuitable for practical ECM applications. Hence, in this paper, we apply, standard kernel smoothing techniques to obtain a regularized nonparametric posterior update. Under the assumption that the policy varies smoothly with respect to the belief, we use a squared exponential kernel to capture the dependence of the policy on π:
+
+K(π, π ′) = σ2 
+
+> f
+
+exp 
+
+
+
+− ∥π − π′∥2
+
+2ℓ2
+
+
+
+, (24) where σ2 
+
+> f
+
+> 0 denotes the signal variance , controlling the amplitude of the function, and ℓ > 0 is the length–scale 
+
+(bandwidth), governing how rapidly the function varies with respect to π. Thus, the updated concentration parameter α(i)0: k
+
+in (23) is 
+
+α(i)0: k(π) = α(i)0 +
+
+> k
+
+X
+
+> j=1
+
+K(π, π (i) 
+
+> j
+
+), ∀ i, ∀ π ∈ Π, (25) and ∀ π ∈ Π, the updated base measure H(i)0: k in (23) is 
+
+H(i)0: k(π) = α(i)0 H(i)0 + Pkj=1 δaj K(π, π (i) 
+
+> j
+
+)
+
+α(i)0 + Pkj=1 K(π, π (i) 
+
+> j
+
+) ; ∀ i. (26) Further, the importance weight, w(i)0: k(π(i)0: k, y(i)1: k, G (i)0: k) can be updated as a straight forward extension of (13), with 
+
+Gπ(i) 
+
+> k,ak
+
+∼ G(i)0: k−1. The likelihood of observing a previ-ously observed action, ak ∈ A k−1 or an unobserved action 
+
+ak ∈ A Ck−1 can be approximated by extending (18) and (19), respectively, as follows: 
+
+p(ak = u ∈ A k−1 | a1: k, π (i) 
+
+> k
+
+) (27) 
+
+=
+
+Pk−1 
+
+> j=1
+
+1{u=aj }K(π(i) 
+
+> j
+
+, π (i) 
+
+> k
+
+) + α(i)0 H(i)0 (u)
+
+α(i)0 + Pk−1 
+
+> j=1
+
+K(π(i) 
+
+> j
+
+, π (i) 
+
+> k
+
+) ; ∀i, 
+
+and, 
+
+p(ak =u ∈ A Ck | a1: k, π (i) 
+
+> k
+
+)= α(i)0 H(i)0 (u)
+
+α(i)0 + Pk−1 
+
+> j=1
+
+K(π(i) 
+
+> j
+
+, π (i) 
+
+> k
+
+) ; ∀i. (28) However, in practice, for large values of k, Ak → A and 
+
+ACk → ∅ , and hence p(ak = u ∈ A Ck | a1: k, π (i) 
+
+> k
+
+) → 0.The proposed approach, IPFDDP, for joint inference of the CR’s belief and policy is given in Algorithm 2. The details of the DDP posterior update, corresponding to steps 10 through 12 of Algorithm 2, are presented in Algorithm 3. Furthermore, IPFDDP employs the non-parametric likelihood approxima-tion described in Algorithm 4 to update the weights of the individual particles. At any time step k, IPFDDP provides the particles {π(i)0: k, G (i)0: k}Ni=1 along with their corresponding importance weights {w(i)0: k}Ni=1 . The combined measure is then expressed as a convex combination of the individual particles, as presented in Algorithm 5, the global policy approximation 7
+
+Algorithm 2 Sequential DDP-Based Inverse Particle Filtering Algorithm (IPFDDP) 
+
+Require: Initial sets: A0 = ∅, α0 = 1 , H0, π0 = ( x0, Σ0), R,
+
+1: for all i do 
+
+2: weights w(i)0 = 1 
+
+> N
+
+;
+
+3: for k = 1 to K do 
+
+4: Observe xk and ak
+
+5: for i = 1 to N do 
+
+6: y(i) 
+
+> k
+
+∼ p(y | xk )
+
+7: π(i) 
+
+> k
+
+← T (π(i)
+
+> k−1
+
+, y(i) 
+
+> k
+
+)
+
+8: Update: α(i)0: k using (25) 
+
+9: Update: H(i)0: k using (26) 
+
+10: G(i)0: k | π(i)0: k , a1: k = DP( α(i)0: k , H (i)0: k ): use Alg. 3 
+
+11: Compute: Gπ(i)  
+
+> k,ak
+
+= G(i)0: k−1(π(i) 
+
+> k
+
+, ak ): use Alg. 4 
+
+12: Update: w(i) 
+
+> k
+
+∝ w(i) 
+
+> k−1
+
+G(i)0: k−1(π(i) 
+
+> k
+
+, ak )
+
+13: Update: Ak ← A k−1 ∪ ak
+
+14: end for 
+
+15: end for 
+
+16: end for 
+
+17: Outputs: Particle set: {π(i)0: K , G (i)0: K , w (i) 
+
+> K
+
+}Ni=1 , AK , a1: K
+
+Algorithm 3 Non parametric posterior update of DDP 
+
+Require: x0: k , a1: k , α(i)0 , H(i)0 and π(i)0: k
+
+1: for all π ∈ Π and i do 
+
+2: for j = 1 to k do 
+
+3: Compute K(π, π (i) 
+
+> j
+
+) using (24) 
+
+4: Compute α(i)0: j (π) using (25) 
+
+5: Compute H(i)0: j (π) using (26) 
+
+6: end for 
+
+7: G(i)0: k (π) = DP (α(i)0: k (π), H (i)0: k (π)) 
+
+8: end for 
+
+9: Output: G(i)0: k
+
+algorithm. For any measurable sets ψ ∈ Π and U ∈ A , the belief dependent policy is characterized by: 
+
+G0: k(ψ, U) = 
+
+> N
+
+X
+
+> i=1
+
+w(i)0: kG(i)0: k(ψ, U), (29) with 
+
+E[G0: k(ψ, U)] = E
+
+" NX
+
+> i=1
+
+w(i)0: kG(i)0: k(ψ, U)
+
+#
+
+=
+
+> N
+
+X
+
+> i=1
+
+w(i)0: kH(i)0: k(ψ, U),
+
+(30) and, 
+
+Var[ G0: k(ψ, U)] = Var 
+
+" NX
+
+> i=1
+
+w(i)0: k G(i)0: k(ψ, U)
+
+#
+
+=
+
+> N
+
+X
+
+> i=1
+
+
+
+w(i)0: k
+
+2
+
+Var 
+
+h
+
+G(i)0: k(ψ, U)
+
+i
+
+, (31) where independence across particles is assumed. For each particle-level Dirichlet process, 
+
+Var 
+
+h
+
+G(i)0: k(ψ, U)
+
+i
+
+= H(i)0: k(ψ, U)  1 − H(i)0: k(ψ, U)
+
+α(i)0: k(ψ) + 1 . (32) 
+
+Algorithm 4 Non parametric likelihood approximation 
+
+Require: π(i) 
+
+> k
+
+, ak , π (i)0: k−1, a1: k−1, Ak−1
+
+1: for all i do 
+
+2: for j = 1 to k − 1 do 
+
+3: Compute K(π(i) 
+
+> j
+
+, π (i) 
+
+> k
+
+) using (24) and store 
+
+4: end for 
+
+5: if ak ∈ A k−1 then 
+
+6: Compute p(ak | a1: k−1, π (i) 
+
+> k
+
+) using (27) 
+
+7: else 
+
+8: Compute p(ak | a1: k−1, π (i) 
+
+> k
+
+) using (28) 
+
+9: end if 
+
+10: end for 
+
+11: Output: G(i)0: k−1(π(i) 
+
+> k
+
+, ak ) ←p(ak | a1: k−1, π (i) 
+
+> k
+
+) ∀i
+
+Algorithm 5 Global policy approximation from IPFDDP particles 
+
+Require: Particle set: {π(i)0: K , G (i)0: K , w (i) 
+
+> K
+
+}Ni=1 , AK , a1: K , π ∈ Π,
+
+u ∈ A 
+
+1: G0: K (π, u ) ← 0
+
+2: for i = 1 to N do 
+
+3: Compute G(i)0: K (π, u ) using Alg. 4 
+
+4: G0: K (π, u ) ← w(i) 
+
+> K
+
+× G(i)0: K (π, u )
+
+5: end for 
+
+6: Output: G0: K (π, u )
+
+C. Active sensing strategy in IPFDDP 
+
+In the electronic warfare context, the inverse learner inter-acts with an adversarial radar to learn the radar’s perception and perception-action policy, and it is essential to minimize the interaction and perform learning using the smallest possible number of observations (interactions), since an increase in interaction time makes the inverse learner more susceptible to ECCM attacks. Accordingly, in this section, we extend the IPFDDP framework to an active sensing setting, in which the learner actively selects its actions (e.g., acceleration ma-neuvers) to probe a desired belief region πk+1 , observes the resulting action ak+1 , and updates the posterior over policies accordingly, thereby enabling sample–efficient learning. Ac-tive sensing, as referred to here, determines the belief that should be explored next, and the inverse learner is assumed to know an approximate mapping from the desired belief to an inverse learning action. Further details on how this is achieved are provided in Sec. V-E. 
+
+Proposition 1 (Entropy–Concentration Based Active Probing) .
+
+Let G0: k denote the global belief–dependent policy posterior defined in (29) . For a given belief π ∈ Π, define the predictive mean action distribution 
+
+¯p0: k(a | π) = E[G0: k(π, a)] = 
+
+> N
+
+X
+
+> i=1
+
+w(i)0: kH(i)0: k(π, a). (33) 
+
+Define the acquisition function 
+
+γ0: k(π) = H(¯ p0: k(· | π)) 
+
+PNi=1 w(i)0: k α(i)0: k(π) , (34) 
+
+where H(·) denotes Shannon entropy: 
+
+H(¯ p0: k(· | π)) = − X
+
+> a∈A
+
+¯p0: k(a | π) log ¯ p0: k(a | π), (35) 8
+
+Algorithm 6 Active sensing strategy for IPFDDP 
+
+Require: Particle weights {w(i)0: k }Ni=1 , particle-level posteriors 
+
+{H(i)0: k , α (i)0: k }Ni=1 , candidate belief set Πcand  
+
+> 1:
+
+for all π ∈ Πcand do  
+
+> 2:
+
+Compute predictive mean using (33)  
+
+> 3:
+
+Compute γ0: k (π) using (34) and (35)  
+
+> 4:
+
+end for  
+
+> 5:
+
+Select next probe: 
+
+πk+1 = arg max 
+
+> π∈Πcand
+
+γ0: k (π) 
+
+> 6:
+
+return πk+1 , Optimal inverse learning action 
+
+and α(i)0: k(π) is the particle-level concentration parameter in 
+
+(25) . Selecting the next belief probe as 
+
+πk+1 = arg max  
+
+> π∈Π
+
+γ0: k(π) (36) 
+
+prioritizes beliefs regions exhibiting high predictive ambiguity in the global policy while discounting regions of high posterior confidence. 
+
+Rationale : When no observations are available, the belief– dependent policy is characterized by the uninformative prior in (22), which corresponds to a maximum–entropy distribu-tion. As learning progresses and observations are accumulated within a given belief region, the posterior concentrates around the actual value, leading to a reduction in entropy. Moreover, due to the use of kernel smoothing in the IPFDDP posterior, beliefs lying near policy transition regions will have higher entropy, as multiple local policies contribute non-negligible mass masking clear action preferences. So, the effective con-centration parameter in the denominator of the acquisition function, (34) , promotes exploration of sparsely probed belief regions, and the entropy term ensures that the transition regions are sufficiently probed. 
+
+V. N UMERICAL RESULTS 
+
+We consider a setting involving a target on the learner’s side moving at nearly constant velocity, being tracked by an adversarial CR. In order to track the kinematic state xk =[rk, ˙rk]⊤ at time step k, where rk and ˙rk denote the range and range rate of the target, respectively, the CR employs a Kalman filter based on the following motion model: 
+
+xk+1 = Ak xk + wk, wk ∼ N (0, Q k), (37) where 
+
+Ak =
+
+1 ∆tk
+
+0 1
+
+
+
+, Qk = σ2
+
+> a
+
+" ∆t4 
+
+> k
+> 4∆t3
+> k
+> 2∆t3
+> k
+> 2
+
+∆t2
+
+> k
+
+#
+
+. (38) Here, Ak denotes the state transition matrix and Qk denotes the nominal process noise covariance corresponding to aconstant-velocity motion model driven by white noise with variance σ2
+
+> a
+
+, with ∆tk representing the fixed radar revisit interval between observations k − 1 and k.The CR gets a noisy observation of xk given by the linear Gaussian observation model: 
+
+yk = H xk + vk, vk ∼ N (0, R ), (39) 
+
+Fig. 2: The range ( rk) estimate obtained using CR Kalman fil-ter tracker and the IPFDDP estimate of CR’s belief. Since the generative models used by the CR are assumed to be known to the inverse learner, the uncertainty of the learner regarding the CR’s mean estimate of the target state is attributed to the IPFDDP particles y(i) 
+
+> k
+
+representing the latent CR observations. where 
+
+H =
+
+1 00 1
+
+
+
+, R =
+
+σ2 
+
+> r
+
+00 σ2˙r
+
+
+
+. (40) The matrices H and R in (40) represent the observation matrix and the observation noise covariance matrix, respectively. In our context, R is a function of the CR’s sensing parameters and waveform choice as in [10], and can be reconstructed by the learner given the waveform choice of the CR. We assume that the motion and observation models in (37)–(40) are known to both the CR and our side. Based on the linear Gaussian motion and observation model assumption, the CR uses Kalman filter, (41) through (46), to estimate πk = p(xk | y1: k):
+
+ˆxk|k−1 = Ak ˆxk−1|k−1, (41) 
+
+Σk|k−1 = Ak Σk−1|k−1 A⊤ 
+
+> k
+
++ Qk, (42) 
+
+Sk = H Σk|k−1 H⊤ + R, (43) 
+
+Kk = Σ k|k−1 H⊤ Sk
+
+−1, (44) 
+
+ˆxk|k = ˆ xk|k−1 + Kk
+
+ yk − H ˆxk|k−1
+
+, (45) 
+
+Σk|k = ( I − KkH) Σ k|k−1. (46) The CR’s posterior estimate of xk, obtained using Kalman Filter tracker is in turn Gaussian and can be parameterized using the mean state estimate, ˆxk, and the covariance matrix 
+
+Σk. We define the predicted (prior) belief πk|k−1 and the updated (posterior) belief πk|k as in (47): 
+
+πk|k−1 ≜
+
+
+
+ˆxk|k−1, Σk|k−1
+
+
+
+, π k ≜
+
+
+
+ˆxk|k, Σk|k
+
+
+
+. (47) Let A = {u1, u 2, u 3} be the action space (the set of all possible actions (i.e. waveform choices) CR can take). For example, u1, u 2 and u3 denote waveform chirps: Linear Frequency Modulation (LFM), Power Frequency Modulation 9
+
+Fig. 3: Trace of predictive covariance of CR’s Kalman filter tracker and its estimate obtained by the learner using IPFDDP. The figure also shows the disjoint partitions of the CR’s belief space as in (49). The radar takes action according to (50): chooses LFM, PFM and HFM respectively for low, medium and high uncertainties respectively. τ1 and τ2 in (49) are chosen in our context as 0.49 and 0.56 respectively. (PFM) and Hyperbolic Frequency Modulation (HFM), respec-tively [10], [12], [13]. In each time step, radar chooses the waveform based on the predicted belief πk|k−1 ∈ Π before making the observation yk, where ˆxk|k−1 given by (41) is the predicted state estimate and Σk|k−1 given by (42) is the predicted covariance. CR quantifies the anticipated uncertainty in estimate as: 
+
+σk = trace (Σ k|k−1). (48) The CR partitions the belief space Π into three disjoint subsets, based on the predicted uncertainty as follows 
+
+Φ1 ≜ {π = (ˆ x, Σ) ∈ Π : trace (Σ) ≤ τ1}
+
+Φ2 ≜ {π = (ˆ x, Σ) ∈ Π : τ1 < trace (Σ) ≤ τ2}
+
+Φ3 ≜ {π = (ˆ x, Σ) ∈ Π : trace (Σ) > τ 2}.
+
+Φ1 ∪ Φ2 ∪ Φ3 = Π , Φi ∩ Φj = ∅, i̸ = j. 
+
+(49) Let G : Π → ∆( {u1, u 2, u 3}) denote the mapping from a belief π to the corresponding action–probability vector. The mapping 
+
+Gπ =
+
+
+
+(0 .6, 0.3, 0.1) , π ∈ Φ1,
+
+(0 .1, 0.6, 0.3) , π ∈ Φ2,
+
+(0 .3, 0.1, 0.6) , π ∈ Φ3.
+
+(50) specifies how likely CR is to choose each action, given its predicted belief is π. The conditional distribution is therefore: 
+
+a | π ∼ Gπ . (51) The Kalman Filter tracking: (41) through (46), and the sub-sequent action selection strategy used in the simulation are illustrated in Fig. 2 and Fig. 3, respectively. In the remainder of this section, we present the results of Radar belief and policy estimation using the proposed IPFDDP algorithm. 
+
+A. Radar’s belief estimated using IPFDDP 
+
+We assume that the learner is equipped with a radar detector that can observe the CR’s action, ak, corresponding to the target’s kinematic state, xk. We further use the data set 
+
+D1: T = {x0: T , a1: T }, together with knowledge of the CR’s generative model in (37)–(46), to jointly estimate the CR’s belief of the target’s kinematic state and the CR’s belief-dependent action policy using the proposed IPFDDP algorithm described in Algorithm 2. The results of inverse filtering, corresponding to the estimation of the CR’s perception, are shown in Fig. 2 through Fig. 3. Since the generative models used by the CR are assumed to be known to the inverse learner, the uncertainty of the learner regarding the CR’s mean estimate of the target state in Fig. 2 is attributed to the particles 
+
+y(i) 
+
+> k
+
+representing the latent CR observations. Given that A,
+
+Q, H, R, and T (·) are perfectly known to the learner, the CR’s tracking covariance can be accurately estimated using the IPFDDP algorithm. In the remainder of this section, we discuss the effectiveness of IPFDDP in learning the belief dependent policy of the adversarial CR. 
+
+B. Belief dependent CR policy estimated using IPFDDP 
+
+We used IPFDDP (Algorithm 2) and the global policy approximation procedure in Algorithm 5 to estimate the belief dependent CR policy given by equations (49) through (51), for various number of observations, T , for initial concentration parameter, α0 = 20 , and for kernel bandwidth of l = 10 −4.Algorithm 5 approximates the CR policy using the DDP in (29), and the mean and samples respectively of the approxi-mated global policy are visualized in Figures 4 and 5. Fig. 4 demonstrates that the mean estimate, (30), converges to the true policy, (50) as T increases. Fig. 5 illustrates samples on the probability simplex drawn from the DDP in (29) for covariance trace values of 0.2, 0.5,and 0.8, corresponding to three different partitions of the belief space as defined in (49). For T = 2000 , the mean estimate (red marker) lies very close to the true value (black marker), and the spread of the samples depends on the number of samples as well as the initial concentration parameter α0. The confidence of the learner’s policy estimate can be controlled by increasing 
+
+α0, which results in Dirichlet samples that are more tightly clustered around the mean value. Furthermore, for a fixed α0,the learner becomes increasingly confident in its estimated policy as it observes a larger number of samples, as implied by the variance of the estimate in (31). 
+
+C. Effect of bandwidth and number of observations on IPFDDP based CR policy predictions - random probing 
+
+We used T = 100 , 500 , 1000 , 2000 , 5000 , and 10000 dis-tinct observations to learn the CR’s policy and to predict the policy corresponding to the subsequent K = 200 observations using Algorithms 2 and 5. We compared the expected value of the learned CR policy from (30) with the actual policy defined by (49)–(50), using the metrics: (i) Mean Squared Error (MSE), (ii) KL Divergence, and (iii) accuracy in capturing 10 
+
+Fig. 4: Mean of the approximated global policy learned via IPFDDP as a function of radar belief—covariance trace, for different data lengths T ∈ { 30 , 500 , 2000 }. Solid lines denote the mean estimated action probabilities, while dashed lines represent the true policy. As T increases, the mean estimate converges to the true policy, demonstrating consistency of the proposed approach. 
+
+Fig. 5: Samples on the probability simplex obtained from the Dirichlet process in (29) for trace(Σ k|k−1) ∈ { 0.2, 0.5, 0.8},corresponding to three belief-space partitions defined in (49). Blue points show Dirichlet samples, the red marker denotes the IPFDDP mean estimate, and the black marker indicates the true policy. For T = 2000 , the mean estimate closely matches the true policy. The spread of the samples depends on the initial concentration parameter α0 and the number of observations: larger α0 and increased data lead to higher confidence, consistent with the variance in (31). 
+
+Fig. 6: Model performance vs. bandwidth for varying training sample sizes (fixed test set = 200). Metrics: (a) MSE, (b) KL Divergence, (c) Rank Accuracy. 11 
+
+TABLE II: Performance Metrics Across Bandwidth Values                            
+
+> Bandwidth MSE KL RankAcc
+> 10 −60.060269 0.726982 0.810
+> 10 −50.028568 0.230592 0.910
+> 10 −40.0048 0.0354 0.950
+> 10 −30.018648 0.033537 0.830
+> 10 −20.059849 0.097742 0.530
+> 10 −10.112931 0.180199 0.650
+> 10 00.125722 0.199276 0.055
+> 10 10.127164 0.201425 0.000
+
+the preferences towards action (denoted as RankAcc), defined in equations (53) through (55) respectively. Let {πt}Kt=1 denote a set of test belief points. For each πt,let the posterior mean CR policy inferred via IPFDDP be 
+
+¯pt ≜ E[p(· | πt) | D ] ∈ ∆2, p⋆t ≜ ptrue (· | πt), (52) where ∆2 is the 3-dimensional probability simplex. 
+
+1) Mean Squared Error (MSE): The MSE between the posterior mean policy and the true policy is defined as 
+
+MSE = 1
+
+K
+
+> K
+
+X
+
+> t=1
+
+∥¯pt − p⋆t ∥22 . (53) 
+
+2) KL Divergence: Interpreting both ¯pt and p⋆t as categorical distributions over the action space, the average KL divergence is given by 
+
+KL = 1
+
+K
+
+> K
+
+X
+
+> t=1 3
+
+X
+
+> i=1
+
+p⋆t,i log p⋆t,i 
+
+¯pt,i 
+
+, (54) where p⋆t,i and ¯pt,i denote the probabilities assigned to action 
+
+ui by p⋆t and ¯pt, respectively. 
+
+3) Rank Accuracy: Rank accuracy evaluates whether the posterior mean policy preserves the ordinal action preferences. Let rank( ·) denote the ordering induced by sorting the action probabilities in descending order. The average rank accuracy is defined as 
+
+RankAcc = 1
+
+T
+
+> T
+
+X
+
+> t=1
+
+I[rank(¯ pt) = rank( p⋆t )] , (55) where I[·] is the indicator function. The non-parametric likelihood–estimation steps employed in both IPFDDP (Algorithm 2) and the Global policy approxi-mation (Algorithm 5) use the squared exponential kernel given in (24). As with all non-parametric kernel-based techniques, the correctness of the prediction is sensitive to the choice of the bandwidth (length scale) hyperparameter. Trends in variation of MSE, KL divergence, and rank accuracy—for different training samples and bandwidths, are depicted in Fig. 6. Table II specifically presents how the metrics vary with kernel bandwidth when T = 2000 samples are used for learning the policy. For bandwidths in the range 10 −4 to 10 −2,the IPFDDP-based policy–learning model achieves MSE and KL divergence on the order of 10 −2. However, a finite band-width results in interference/overlap in the predictions near the partition boundaries, preventing the rank accuracy from reaching 100% . Adaptive bandwidth selection approaches [27] can be used for optimal kernel bandwidth selection, and the discussion is beyond the scope of this paper. TABLE III: Performance Comparison of Models                                                                         
+
+> Model MSE KL Divergence RankAcc
+> Logistic Regression [28] 0.0310 0.1450 0.622 Random Forest [29] 0.0741 0.4982 0.565 Gradient Boosting [30] 0.0865 0.4289 0.598 SVM (RBF) [31] 0.0232 0.1142 0.687 kNN [28] 0.0361 0.2913 0.603 Gaussian Process [32] 0.0279 0.1332 0.648 MLP Neural Net [33] 0.0297 0.1421 0.620 LSTM lag2 [34] 0.0180 0.0874 0.802 LSTM lag3 [34] 0.0208 0.0981 0.713 LSTM lag4 [34] 0.0201 0.0944 0.788 LSTM lag6 [34] 0.0209 0.0999 0.782 LSTM lag10 [34] 0.0206 0.0992 0.733 Transformer lag2 [35] 0.0223 0.1054 0.703 Transformer lag3 [35] 0.0263 0.1260 0.680 Transformer lag4 [35] 0.0328 0.1567 0.582 Transformer lag6 [35] 0.0347 0.1664 0.513 Transformer lag10 [35] 0.0457 0.2190 0.372 Attention lag2 [35] 0.0304 0.1440 0.622 Attention lag3 [35] 0.0321 0.1544 0.620 Attention lag4 [35] 0.0367 0.1742 0.472 Attention lag6 [35] 0.0384 0.1831 0.452 Attention lag10 [35] 0.0407 0.1935 0.445
+> IPFDDP 0.0048 0.0354 0.950
+> Note: The detailed model architectures, training objectives and policy prediction details of all above models are presented in supplementary material.
+
+D. Comparison with state of the art ML/DL models in char-acterizing CR policy 
+
+To the best of our knowledge, ours is the first work in the literature that jointly infers the CR’s belief and the belief-dependent policy. Since the radar selects its action based on its belief of the target’s state, and this belief is not known to the learner, a simple function mapping from the target’s kinematic state xk to the corresponding action ak is insufficient to char-acterize the CR’s controller strategy. Furthermore, the action space A is not known apriori, which makes a straightforward use of parametric ML models intractable. However, assuming the action space is known apriori, the models in Table III all can serve as function approximators that learn a mapping from the target state x (or sequences xt−L+1: t in the case of sequence models as LSTMs) to a probability distribution over the CR’s discrete action set A = {u1, u 2, u 3}. The details of all the models are available in the supplementary material. During training, each model adjusts its parameters to min-imize its respective loss, so that pθ (a | x) approximates the true underlying action probabilities {p1, p 2, p 3} associated with the regions of the continuous feature space X . Once trained, the model outputs an estimate ˆp(a | x) for each action, learning how different x ∈ X correspond to distinct radar action likelihoods. Table III compares the performance of the IPFDDP-based policy–learning algorithm with state-of-the-art ML models, based on MSE, KL divergence, and rank accuracy, given by equations (53) through (55). Among these methods, the LSTM variants show improved performance over classical ML models, with LSTM lag2 achieving the best results within the LSTM family. However, the proposed IPFDDP model significantly outperforms all baselines, achieving the lowest MSE( 0.0048 ) and KL divergence( 0.0354 ), and the highest rank accuracy ( 0.950 ), demonstrating its superior predictive capability and more accurate belief–action modeling. 12 
+
+Fig. 7: Reduction in KL divergence for IPFDDP under active sensing compared to random probing, showing faster conver-gence and lower uncertainty. The performance of IPFDDP can be further improved through optimal bandwidth selection and by explicitly incorpo-rating active sensing strategies. Importantly, none of the other models in Table III can support active sensing, as they do not provide a principled quantification of uncertainty in the estimated belief or action distribution. E. Effect of Active Sensing on IPFDDP Performance 
+
+In modern CR systems, optimal Bayesian trackers are often augmented with adaptive noise estimation or covariance-matching mechanisms that continuously adjust the effective process noise covariance associated with the assumed target dynamics model Pxk−1,xk [20], [36]. In our setting, the CR employs the state-space model described in (37)–(46) to track the target. Under the constant-velocity assumption, the predicted target state according to the CR’s generative model is given by (41). The CR estimates the target’s acceleration maneuver through the innovation process 
+
+νk = yk − Hxk|k−1. (56) An adaptive Kalman filtering routine [36], [37] matches the empirical innovation variance 
+
+CνK = E[ν⊤ 
+
+> k
+
+νk], (57) with the theoretical innovation covariance Sk defined in (43), by compensating for model mismatch through adjustment of the process noise covariance matrix Q, as in [37]: 
+
+ˆQk = Kk CνK K⊤ 
+
+> k
+
+, (58) where Kk is the Kalman gain matrix given in (44). Hence, the adapted predictive covariance becomes 
+
+ˆΣk|k−1 = Ak Σk−1|k−1 A⊤ 
+
+> k
+
++ ˆQk, (59) and the anticipated uncertainty in (48) becomes 
+
+σk = trace 
+
+ ˆΣk|k−1
+
+
+
+. (60) The CR then takes actions according to (49)–(50) based on the tracking uncertainty σk. If the optimal belief to be probed according to (36) is π′, the optimal acceleration maneuver 
+
+ak+1 for probing can be obtained by solving 
+
+xk+1 = [ rk+1 , ˙rk+1 ] = arg min  
+
+> x′
+
+E[π′ − ρ(ˆ πk, x′)] , (61) subject to the kinematic constraint 
+
+rk+1 = rk + ˙ rk∆t + ak+1 (∆ t)2
+
+2 . (62) The term, ρ(πk, x′
+
+), in (61) is given by the inverse filtering recursion in (8) for xk+1 = x′
+
+.When the true target acceleration deviates significantly from the constant-velocity assumption in (37), persistent innovation bias arises. Under this paradigm, purposeful acceleration ma-neuvers by the target induce sustained mismatch relative to the CR’s assumed motion model. Consequently, the adaptive covariance-matching mechanism modifies the effective process noise covariance used by the CR’s tracker [36], [37]. Fig. 7 illustrates the impact of the optimal probing strategy discussed in Proposition 1 of Sec. IV-C on the performance of IPFDDP, measured in terms of the KL divergence (equation (54)) (mean and standard deviation over 100 trials) between the true policy and the IPFDDP estimate. The horizontal axis of Fig. 7 represents the number of time steps following 200 
+
+random CR–target interactions, for the experimental setting described in Sec. V-B. Active sensing consistently achieves a faster and more pronounced reduction in KL divergence (≈ 40% faster) compared to random probing, indicating more informative data acquisition. In addition, the variance under active sensing is significantly lower, reflecting improved estimation stability across trials. These results confirm that uncertainty-aware probing substantially enhances belief refine-ment in IPFDDP. VI. C ONCLUSION 
+
+This paper considered an adversarial inference problem involving an adversarial cognitive radar (CR) and a learner, in which the CR uses a Bayesian tracker to form a perception of the target kinematic states and takes possibly stochastic actions according to a perception-dependent policy, while the learner observes these actions corresponding to known target states and seeks to jointly infer the CR’s perception and policy. Motivated by the lack of existing learning frameworks that can simultaneously estimate both the perception and the perception-driven stochastic action policy of a cognitive agent, we proposed an online nonparametric Bayesian machine learning framework and developed the IPFDDP algorithm. IPFDDP jointly infers the belief (perception) and action-selection strategy of the CR by characterizing the belief-dependent policy using a Dependent Dirichlet Process and embedding kernel-based DDP inference within a Bayesian inverse particle filtering framework. Numerical simulations demonstrated that the proposed IPFDDP-based policy learning approach outperforms state-of-the-art machine learning models in terms of MSE, KL divergence between the estimated and true policy, and accuracy in identifying relative action 13 
+
+preferences. The proposed Bayesian formulation inherently quantifies uncertainty in the learner’s estimates of perception and policy, enabling the design of active probing strategies in which the target dynamically adapts its acceleration ma-neuver to probe the CR in regions of maximum uncertainty. Simulation results show that incorporating active probing into IPFDDP reduces the KL divergence between the estimated and true policy, on average, 40% faster than randomized probing, highlighting the benefits of uncertainty-aware active learning in adversarial cognitive radar settings. REFERENCES [1] S. Haykin, “Cognitive radar: A way of the future,” IEEE Sig. Proc. Magazine , vol. 23, no. 1, pp. 30–40, 2006. [2] M. Bockmair, C. Fischer, M. Letsche-Nuesseler, C. Neumann, M. Schikorr, and M. Steck, “Cognitive radar principles for defence and security applications,” IEEE AES Magazine , vol. 34, no. 12, pp. 20–29, 2019. [3] C. Zhang, L. Wang, R. Jiang, J. Hu, and S. Xu, “Radar jamming decision-making in cognitive electronic warfare: A review,” IEEE Sen-sors Journal , vol. 23, no. 11, pp. 11 383–11 403, 2023. [4] A. Gupta and V. Krishnamurthy, “Principal–agent problem as a prin-cipled approach to electronic counter-countermeasures in radar,” IEEE TAES , vol. 58, no. 4, pp. 3223–3235, 2022. [5] V. Krishnamurthy and M. Rangaswamy, “How to calibrate your adver-sary’s capabilities? Inverse filtering for counter-autonomous systems,” 
+
+IEEE TSP , vol. 67, no. 24, pp. 6511–6525, 2019. [6] H. Singh, A. Chattopadhyay, and K. V. Mishra, “Inverse particle filter,” 
+
+IEEE TSP , vol. 73, pp. 1922–1938, 2025. [7] V. Krishnamurthy, K. Pattanayak, S. Gogineni, B. Kang, and M. Ran-gaswamy, “Adversarial radar inference: Inverse tracking, identifying cognition, and designing smart interference,” IEEE TAES , vol. 57, no. 4, pp. 2067–2081, 2021. [8] C. V. Anoop and A. Aprem, “Bayesian inverse learning and online changepoint detection of cognitive radar strategies,” IEEE Transactions on Radar Systems , vol. 3, pp. 562–575, 2025. [9] K. L. Bell, C. J. Baker, G. E. Smith, J. T. Johnson, and M. Rangaswamy, “Cognitive radar framework for target detection and tracking,” IEEE Journal of Selected Topics in Signal Processing , vol. 9, no. 8, pp. 1427– 1439, 2015. [10] S. P. Sira, A. Papanreou-Suppappola, and D. Morrell, Advances in waveform-agile sensing for tracking . Springer Nature, 2022. [11] R. Oechslin, U. Aulenbacher, K. Rech, S. Hinrichsen, S. Wieland, and P. Wellig, “Cognitive radar experiments with CODIR,” in International Conference on Radar Systems (Radar 2017) , 2017, pp. 1–6. [12] V. Krishnamurthy, D. Angley, R. Evans, and B. Moran, “Identifying cog-nitive radars-inverse reinforcement learning using revealed preferences,” 
+
+IEEE TSP , vol. 68, pp. 4529–4542, 2020. [13] S. P. Sira, A. Papandreou-Suppappola, and D. Morrell, “Dynamic configuration of time-varying waveforms for agile sensing and tracking in clutter,” IEEE TSP , vol. 55, no. 7, pp. 3207–3217, 2007. [14] H. Singh, A. Chattopadhyay, and K. V. Mishra, “Inverse extended kalman filter—part ii: Highly nonlinear and uncertain systems,” IEEE TSP , vol. 71, pp. 2952–2967, 2023. [15] H. Singh, K. V. Mishra, and A. Chattopadhyay, “Inverse unscented kalman filter,” IEEE TSP , vol. 72, pp. 2692–2709, 2024. [16] F. Neri, Introduction to electronic defense systems . SciTech Publishing, 2006. [17] M. I. Skolnik, Radar handbook . McGraw-Hill, 2008. [18] K. Haigh and J. Andrusenko, Cognitive electronic warfare: an artificial intelligence approach . Artech House, 2021. [19] H. Singh, A. Chattopadhyay, and K. V. Mishra, “Inverse extended kalman filter—part i: Fundamentals,” IEEE TSP , vol. 71, pp. 2936–2951, 2023. [20] V. Krishnamurthy, D. Angley, R. Evans, and B. Moran, “Identifying cog-nitive radars-inverse reinforcement learning using revealed preferences,” 
+
+IEEE TSP , vol. 68, pp. 4529–4542, 2020. [21] D. Jarrett, A. H¨ uy¨ uk, and M. Van Der Schaar, “Inverse decision model-ing: Learning interpretable representations of behavior,” in International Conference on Machine Learning . PMLR, 2021, pp. 4755–4771. [22] K. Pattanayak, V. Krishnamurthy, and C. M. Berry, “Meta-cognitive radar. Masking cognition from an inverse reinforcement learner,” IEEE TAES , 2023. [23] T. S. Ferguson, “A bayesian analysis of some nonparametric problems,” 
+
+The annals of statistics , pp. 209–230, 1973. [24] J. E. Mosimann, “On the compound multinomial distribution, the multi-variate β-distribution, and correlations among proportions,” Biometrika ,vol. 49, no. 1/2, pp. 65–82, 1962. [25] S. N. MacEachern, “Decision theoretic aspects of dependent nonpara-metric processes,” Bayesian methods with applications to science, policy and official statistics , pp. 551–560, 2001. [26] F. A. Quintana, P. M¨ uller, A. Jara, and S. N. MacEachern, “The dependent dirichlet process and related models,” Statistical Science ,vol. 37, no. 1, pp. 24–41, 2022. [27] M. J. Kochenderfer, T. A. Wheeler, and K. H. Wray, Algorithms for decision making . MIT press, 2022. [28] T. Hastie, R. Tibshirani, J. H. Friedman, and J. H. Friedman, The elements of statistical learning: data mining, inference, and prediction .Springer, 2009, vol. 2. [29] L. Breiman, “Random forests,” Machine learning , vol. 45, no. 1, pp. 5–32, 2001. [30] J. H. Friedman, “Greedy function approximation: a gradient boosting machine,” Annals of statistics , pp. 1189–1232, 2001. [31] J. Platt et al. , “Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods,” Advances in large margin classifiers , vol. 10, no. 3, pp. 61–74, 1999. [32] C. K. Williams and C. E. Rasmussen, Gaussian processes for machine learning . MIT press Cambridge, MA, 2006, vol. 2, no. 3. [33] C. Bishop, Pattern Recognition and Machine Learning . Springer, January 2006. [34] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural computation , vol. 9, no. 8, pp. 1735–1780, 1997. [35] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” Advances in neural information processing systems , vol. 30, 2017. [36] R. Mehra, “On the identification of variances and adaptive Kalman filtering,” IEEE Transactions on automatic control , vol. 15, no. 2, pp. 175–184, 1970. [37] A. Mohamed and K. Schwarz, “Adaptive Kalman filtering for INS/GPS,” 
+
+Journal of geodesy , vol. 73, no. 4, pp. 193–203, 1999.

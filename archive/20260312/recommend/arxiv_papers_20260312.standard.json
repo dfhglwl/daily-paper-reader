@@ -1,0 +1,621 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-03-12T19:32:49.614573+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 5,
+    "deep_cap": 6,
+    "deep_selected": 5,
+    "quick_candidates": 69,
+    "quick_skim_target": 11,
+    "quick_selected": 11
+  },
+  "deep_dive": [
+    {
+      "id": "2603.10743v1",
+      "title": "Scaling and Trade-offs in Multi-agent Autonomous Systems",
+      "abstract": "Designing autonomous drone swarms is hampered by a vast design space spanning platform, algorithmic, and numerical-strength choices. We perform large-scale agent-based simulations in three canonical scenarios: swarm-on-swarm battle, cooperative area search with attrition, and pursuit of scattering targets. We demonstrate that dimensional-analysis and data-scaling, established techniques in physical sciences, can be leveraged to collapse performance data onto scaling functions that are mathematically simple, yet counterintuitive and therefore difficult to predict a priori. These scaling laws reveal success-failure boundaries, including sharp break points. Additionally, we show how this technique can be used to quantify trade-offs between agent count and platform parameters such as velocity, sensing or weapon range, and attrition rate. Furthermore, we show the benefits of embedding an optimal path planning loop within this framework, which can qualitatively improve the scaling laws that govern the outcome. The methods we demonstrate are highly flexible and would enable rapid, budget-aware sizing and algorithm selection for large autonomous swarms.",
+      "authors": [
+        "Abram H. Clark",
+        "Liraz Mudrik",
+        "Colton Kawamura",
+        "Nathan C. Redder",
+        "João P. Hespanha",
+        "Isaac Kaminer"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY"
+      ],
+      "published": "2026-03-11T13:15:35+00:00",
+      "link": "https://arxiv.org/pdf/2603.10743v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "swarm-on-swarm battle simulations and scaling laws",
+      "llm_evidence_cn": "集群对战模拟与缩放法则",
+      "llm_evidence": "集群对战模拟与缩放法则",
+      "canonical_evidence": "集群对战模拟与缩放法则",
+      "llm_tldr_en": "Analyzes scaling laws and trade-offs in autonomous drone swarms during combat and pursuit scenarios.",
+      "llm_tldr_cn": "分析了自主无人机群在战斗和追击场景中的缩放法则与权衡。",
+      "llm_tldr": "分析了自主无人机群在战斗和追击场景中的缩放法则与权衡。",
+      "llm_tags": [
+        "query:uav-air-combat:composite"
+      ],
+      "matched_query_tag": "query:uav-air-combat:composite",
+      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; adversary behavior modeling and intent recognition in dogfights; prediction-based decision making framework for aerial combat; multi-agent reinforcement learning for cooperative and competitive air combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat.",
+      "matched_requirement_id": "req-composite-uav-air-combat",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2603.04695v1",
+      "title": "Selecting Spots by Explicitly Predicting Intention from Motion History Improves Performance in Autonomous Parking",
+      "abstract": "In many applications of social navigation, existing works have shown that predicting and reasoning about human intentions can help robotic agents make safer and more socially acceptable decisions. In this work, we study this problem for autonomous valet parking (AVP), where an autonomous vehicle ego agent must drop off its passengers, explore the parking lot, find a parking spot, negotiate for the spot with other vehicles, and park in the spot without human supervision. Specifically, we propose an AVP pipeline that selects parking spots by explicitly predicting where other agents are going to park from their motion history using learned models and probabilistic belief maps. To test this pipeline, we build a simulation environment with reactive agents and realistic modeling assumptions on the ego agent, such as occlusion-aware observations, and imperfect trajectory prediction. Simulation experiments show that our proposed method outperforms existing works that infer intentions from future predicted motion or embed them implicitly in end-to-end models, yielding better results in prediction accuracy, social acceptance, and task completion. Our key insight is that, in parking, where driving regulations are more lax, explicit intention prediction is crucial for reasoning about diverse and ambiguous long-term goals, which cannot be reliably inferred from short-term motion prediction alone, but can be effectively learned from motion history.",
+      "authors": [
+        "Long Kiu Chung",
+        "David Isele",
+        "Faizan M. Tariq",
+        "Sangjae Bae",
+        "Shreyas Kousik",
+        "Jovin D'sa"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-03-05T00:21:44+00:00",
+      "link": "https://arxiv.org/pdf/2603.04695v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "predicting intention from motion history for decision making",
+      "llm_evidence_cn": "通过运动历史预测意图以辅助决策",
+      "llm_evidence": "通过运动历史预测意图以辅助决策",
+      "canonical_evidence": "通过运动历史预测意图以辅助决策",
+      "llm_tldr_en": "Improves autonomous decision making by explicitly predicting agent intentions from their motion history.",
+      "llm_tldr_cn": "通过从运动历史中显式预测代理意图，提升自动驾驶在复杂场景下的决策性能。",
+      "llm_tldr": "通过从运动历史中显式预测代理意图，提升自动驾驶在复杂场景下的决策性能。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "adversary behavior modeling and intent recognition in dogfights",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2603.07051v1",
+      "title": "Joint Inverse Learning of Cognitive Radar Perception and Perception-Action Policy",
+      "abstract": "Cognitive Radars (CRs) employ perception-action cycle to adapt their sensing and transmission strategies based on its' perception of the target kinematic states and mission objectives. This paper considers an inverse learning Electronic Counter Measure (ECM) that infers both the perception and perception-driven action policy of the adversarial CR's from the actions of the CR, i.e. the sensing and transmission actions taken by the CR. Existing frameworks, in the literature, assume the knowledge of either the perception or the perception-action policy and infer the other. However, this assumption is unrealistic in an adversarial setting. We address this gap by proposing an online, nonparametric Bayesian machine learning framework and developing the Inverse Particle Filter with Dependent Dirichlet Process (IPFDDP) algorithm, which characterizes the perception-dependent action policy using a Dependent Dirichlet Process (DDP) and embeds kernel-based DDP inference within a Bayesian inverse particle filtering framework to jointly estimate the CR's perception and perception-action policy. Extensive numerical simulations demonstrate that IPFDDP outperforms existing inverse learning methods in terms of mean squared error, Kullback-Leibler divergence between the estimated and true policy, and accuracy in identifying relative action preferences. Unlike the existing techniques, the proposed Bayesian formulation naturally quantifies uncertainty in inferred perception and perception-action policy, enabling active probing strategies for sample efficient inverse learning. Simulation results show that active probing integrated with IPFDDP achieves, on average, a 40% faster reduction in KL divergence compared to randomized probing.",
+      "authors": [
+        "Anoop C",
+        "Anup Aprem"
+      ],
+      "primary_category": "eess.SP",
+      "categories": [
+        "eess.SP"
+      ],
+      "published": "2026-03-07T06:10:43+00:00",
+      "link": "https://arxiv.org/pdf/2603.07051v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "inferring perception and action policy of adversarial radar",
+      "llm_evidence_cn": "推断对抗雷达的感知与动作策略",
+      "llm_evidence": "推断对抗雷达的感知与动作策略",
+      "canonical_evidence": "推断对抗雷达的感知与动作策略",
+      "llm_tldr_en": "Develops a framework to infer both perception and policy of adversarial cognitive radars.",
+      "llm_tldr_cn": "开发了一个推断对抗性认知雷达感知和动作策略的反向学习框架。",
+      "llm_tldr": "开发了一个推断对抗性认知雷达感知和动作策略的反向学习框架。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "adversarial intent recognition and strategy generation for UAVs",
+      "matched_requirement_id": "req-11",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2603.10098v1",
+      "title": "Code-Space Response Oracles: Generating Interpretable Multi-Agent Policies with Large Language Models",
+      "abstract": "Recent advances in multi-agent reinforcement learning, particularly Policy-Space Response Oracles (PSRO), have enabled the computation of approximate game-theoretic equilibria in increasingly complex domains. However, these methods rely on deep reinforcement learning oracles that produce `black-box' neural network policies, making them difficult to interpret, trust or debug. We introduce Code-Space Response Oracles (CSRO), a novel framework that addresses this challenge by replacing RL oracles with Large Language Models (LLMs). CSRO reframes the best response computation as a code generation task, prompting an LLM to generate policies directly as human-readable code. This approach not only yields inherently interpretable policies but also leverages the LLM's pretrained knowledge to discover complex, human-like strategies. We explore multiple ways to construct and enhance an LLM-based oracle: zero-shot prompting, iterative refinement and \\emph{AlphaEvolve}, a distributed LLM-based evolutionary system. We demonstrate that CSRO achieves performance competitive with baselines while producing a diverse set of explainable policies. Our work presents a new perspective on multi-agent learning, shifting the focus from optimizing opaque policy parameters to synthesizing interpretable algorithmic behavior.",
+      "authors": [
+        "Daniel Hennes",
+        "Zun Li",
+        "John Schultz",
+        "Marc Lanctot"
+      ],
+      "primary_category": "cs.GT",
+      "categories": [
+        "cs.GT",
+        "cs.AI",
+        "cs.LG"
+      ],
+      "published": "2026-03-10T17:37:06+00:00",
+      "link": "https://arxiv.org/pdf/2603.10098v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "interpretable multi-agent policies using LLMs and Policy-Space Response Oracles",
+      "llm_evidence_cn": "使用大模型和策略空间响应先验的可解释多智能体策略",
+      "llm_evidence": "使用大模型和策略空间响应先验的可解释多智能体策略",
+      "canonical_evidence": "使用大模型和策略空间响应先验的可解释多智能体策略",
+      "llm_tldr_en": "Generates interpretable multi-agent policies as code using LLMs within a game-theoretic framework.",
+      "llm_tldr_cn": "在博弈论框架下利用大模型生成可解释的代码形式多智能体策略。",
+      "llm_tldr": "在博弈论框架下利用大模型生成可解释的代码形式多智能体策略。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "intelligent air combat tactics using multi agent reinforcement learning",
+      "matched_requirement_id": "req-12",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2603.10715v1",
+      "title": "ASTER: Attitude-aware Suspended-payload Quadrotor Traversal via Efficient Reinforcement Learning",
+      "abstract": "Agile maneuvering of the quadrotor cable-suspended system is significantly hindered by its non-smooth hybrid dynamics. While model-free Reinforcement Learning (RL) circumvents explicit differentiation of complex models, achieving attitude-constrained or inverted flight remains an open challenge due to the extreme reward sparsity under strict orientation requirements. This paper presents ASTER, a robust RL framework that achieves, to our knowledge, the first successful autonomous inverted flight for the cable-suspended system. We propose hybrid-dynamics-informed state seeding (HDSS), an initialization strategy that back-propagates target configurations through physics-consistent kinematic inversions across both taut and slack cable phases. HDSS enables the policy to discover aggressive maneuvers that are unreachable via standard exploration. Extensive simulations and real-world experiments demonstrate remarkable agility, precise attitude alignment, and robust zero-shot sim-to-real transfer across complex trajectories.",
+      "authors": [
+        "Dongcheng Cao",
+        "Jin Zhou",
+        "Shuo Li"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-03-11T12:40:29+00:00",
+      "link": "https://arxiv.org/pdf/2603.10715v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "autonomous agile maneuvering and reinforcement learning for quadrotors",
+      "llm_evidence_cn": "四旋翼无人机的自主敏捷机动与强化学习",
+      "llm_evidence": "四旋翼无人机的自主敏捷机动与强化学习",
+      "canonical_evidence": "四旋翼无人机的自主敏捷机动与强化学习",
+      "llm_tldr_en": "Achieves autonomous agile maneuvers for quadrotors using a robust reinforcement learning framework.",
+      "llm_tldr_cn": "利用鲁棒强化学习框架实现四旋翼无人机的自主敏捷机动控制。",
+      "llm_tldr": "利用鲁棒强化学习框架实现四旋翼无人机的自主敏捷机动控制。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2603.03595v1",
+      "title": "Hybrid Belief Reinforcement Learning for Efficient Coordinated Spatial Exploration",
+      "abstract": "Coordinating multiple autonomous agents to explore and serve spatially heterogeneous demand requires jointly learning unknown spatial patterns and planning trajectories that maximize task performance. Pure model-based approaches provide structured uncertainty estimates but lack adaptive policy learning, while deep reinforcement learning often suffers from poor sample efficiency when spatial priors are absent. This paper presents a hybrid belief-reinforcement learning (HBRL) framework to address this gap. In the first phase, agents construct spatial beliefs using a Log-Gaussian Cox Process (LGCP) and execute information-driven trajectories guided by a Pathwise Mutual Information (PathMI) planner with multi-step lookahead. In the second phase, trajectory control is transferred to a Soft Actor-Critic (SAC) agent, warm-started through dual-channel knowledge transfer: belief state initialization supplies spatial uncertainty, and replay buffer seeding provides demonstration trajectories generated during LGCP exploration. A variance-normalized overlap penalty enables coordinated coverage through shared belief state, permitting cooperative sensing in high-uncertainty regions while discouraging redundant coverage in well-explored areas. The framework is evaluated on a multi-UAV wireless service provisioning task. Results show 10.8% higher cumulative reward and 38% faster convergence over baselines, with ablation studies confirming that dual-channel transfer outperforms either channel alone.",
+      "authors": [
+        "Danish Rizvi",
+        "David Boyle"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-03-04T00:00:34+00:00",
+      "link": "https://arxiv.org/pdf/2603.03595v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "hybrid belief reinforcement learning for planning trajectories",
+      "llm_evidence_cn": "用于轨迹规划的混合信念强化学习框架",
+      "llm_evidence": "用于轨迹规划的混合信念强化学习框架",
+      "canonical_evidence": "用于轨迹规划的混合信念强化学习框架",
+      "llm_tldr_en": "Combines spatial beliefs with RL for coordinated trajectory planning in autonomous agents.",
+      "llm_tldr_cn": "结合空间信念与强化学习，实现自主智能体的协同轨迹规划与决策。",
+      "llm_tldr": "结合空间信念与强化学习，实现自主智能体的协同轨迹规划与决策。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "autonomous maneuver decision making for UAVs",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2603.03664v1",
+      "title": "Principled Learning-to-Communicate with Quasi-Classical Information Structures",
+      "abstract": "Learning-to-communicate (LTC) in partially observable environments has received increasing attention in deep multi-agent reinforcement learning, where the control and communication strategies are jointly learned. Meanwhile, the impact of communication on decision-making has been extensively studied in control theory. In this paper, we seek to formalize and better understand LTC by bridging these two lines of work, through the lens of information structures (ISs). To this end, we formalize LTC in decentralized partially observable Markov decision processes (Dec-POMDPs) under the common-information-based framework from decentralized stochastic control, and classify LTC problems based on the ISs before (additional) information sharing. We first show that non-classical LTCs are computationally intractable in general, and thus focus on quasi-classical (QC) LTCs. We then propose a series of conditions for QC LTCs, under which LTCs preserve the QC IS after information sharing, whereas violating which can cause computational hardness in general. Further, we develop provable planning and learning algorithms for QC LTCs, and establish quasi-polynomial time and sample complexities for several QC LTC examples that satisfy the above conditions. Along the way, we also establish results on the relationship between (strictly) QC IS and the condition of having strategy-independent common-information-based beliefs (SI-CIBs), as well as on solving Dec-POMDPs without computationally intractable oracles but beyond those with SI-CIBs, which may be of independent interest.",
+      "authors": [
+        "Xiangyu Liu",
+        "Haoyi You",
+        "Kaiqing Zhang"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY",
+        "cs.LG",
+        "cs.MA",
+        "math.OC"
+      ],
+      "published": "2026-03-04T02:36:18+00:00",
+      "link": "https://arxiv.org/pdf/2603.03664v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-agent reinforcement learning in partially observable environments",
+      "llm_evidence_cn": "部分可观测环境下的多智能体强化学习",
+      "llm_evidence": "部分可观测环境下的多智能体强化学习",
+      "canonical_evidence": "部分可观测环境下的多智能体强化学习",
+      "llm_tldr_en": "Bridges control theory and MARL to improve communication and decision-making in decentralized systems.",
+      "llm_tldr_cn": "结合控制理论与多智能体强化学习，优化去中心化系统中的通信与决策。",
+      "llm_tldr": "结合控制理论与多智能体强化学习，优化去中心化系统中的通信与决策。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.03680v1",
+      "title": "MAGE: Meta-Reinforcement Learning for Language Agents toward Strategic Exploration and Exploitation",
+      "abstract": "Large Language Model (LLM) agents have demonstrated remarkable proficiency in learned tasks, yet they often struggle to adapt to non-stationary environments with feedback. While In-Context Learning and external memory offer some flexibility, they fail to internalize the adaptive ability required for long-term improvement. Meta-Reinforcement Learning (meta-RL) provides an alternative by embedding the learning process directly within the model. However, existing meta-RL approaches for LLMs focus primarily on exploration in single-agent settings, neglecting the strategic exploitation necessary for multi-agent environments. We propose MAGE, a meta-RL framework that empowers LLM agents for strategic exploration and exploitation. MAGE utilizes a multi-episode training regime where interaction histories and reflections are integrated into the context window. By using the final episode reward as the objective, MAGE incentivizes the agent to refine its strategy based on past experiences. We further combine population-based training with an agent-specific advantage normalization technique to enrich agent diversity and ensure stable learning. Experiment results show that MAGE outperforms existing baselines in both exploration and exploitation tasks. Furthermore, MAGE exhibits strong generalization to unseen opponents, suggesting it has internalized the ability for strategic exploration and exploitation. Code is available at https://github.com/Lu-Yang666/MAGE.",
+      "authors": [
+        "Lu Yang",
+        "Zelai Xu",
+        "Minyang Xie",
+        "Jiaxuan Gao",
+        "Zhao Shok",
+        "Yu Wang",
+        "Yi Wu"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-03-04T03:14:37+00:00",
+      "link": "https://arxiv.org/pdf/2603.03680v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "meta-reinforcement learning for multi-agent strategic exploitation",
+      "llm_evidence_cn": "多智能体策略博弈的元强化学习",
+      "llm_evidence": "多智能体策略博弈的元强化学习",
+      "canonical_evidence": "多智能体策略博弈的元强化学习",
+      "llm_tldr_en": "A meta-RL framework for LLM agents to achieve strategic exploration and exploitation in multi-agent settings.",
+      "llm_tldr_cn": "一种元强化学习框架，使大模型智能体在多智能体环境中实现策略性博弈。",
+      "llm_tldr": "一种元强化学习框架，使大模型智能体在多智能体环境中实现策略性博弈。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "intelligent air combat tactics using multi agent reinforcement learning",
+      "matched_requirement_id": "req-12",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2603.03741v1",
+      "title": "HALyPO: Heterogeneous-Agent Lyapunov Policy Optimization for Human-Robot Collaboration",
+      "abstract": "To improve generalization and resilience in human-robot collaboration (HRC), robots must handle the combinatorial diversity of human behaviors and contexts, motivating multi-agent reinforcement learning (MARL). However, inherent heterogeneity between robots and humans creates a rationality gap (RG) in the learning process-a variational mismatch between decentralized best-response dynamics and centralized cooperative ascent. The resulting learning problem is a general-sum differentiable game, so independent policy-gradient updates can oscillate or diverge without added structure. We propose heterogeneous-agent Lyapunov policy optimization (HALyPO), which establishes formal stability directly in the policy-parameter space by enforcing a per-step Lyapunov decrease condition on a parameter-space disagreement metric. Unlike Lyapunov-based safe RL, which targets state/trajectory constraints in constrained Markov decision processes, HALyPO uses Lyapunov certification to stabilize decentralized policy learning. HALyPO rectifies decentralized gradients via optimal quadratic projections, ensuring monotonic contraction of RG and enabling effective exploration of open-ended interaction spaces. Extensive simulations and real-world humanoid-robot experiments show that this certified stability improves generalization and robustness in collaborative corner cases.",
+      "authors": [
+        "Hao Zhang",
+        "Yaru Niu",
+        "Yikai Wang",
+        "Ding Zhao",
+        "H. Eric Tseng"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI"
+      ],
+      "published": "2026-03-04T05:26:13+00:00",
+      "link": "https://arxiv.org/pdf/2603.03741v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-agent reinforcement learning for heterogeneous agent collaboration",
+      "llm_evidence_cn": "异构智能体协作的多智能体强化学习",
+      "llm_evidence": "异构智能体协作的多智能体强化学习",
+      "canonical_evidence": "异构智能体协作的多智能体强化学习",
+      "llm_tldr_en": "Proposes a stable MARL algorithm for collaboration between agents with diverse behaviors and contexts.",
+      "llm_tldr_cn": "提出一种稳定的多智能体强化学习算法，用于具有多样行为特征的智能体协作。",
+      "llm_tldr": "提出一种稳定的多智能体强化学习算法，用于具有多样行为特征的智能体协作。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.04472v1",
+      "title": "Towards Explainable Deep Learning for Ship Trajectory Prediction in Inland Waterways",
+      "abstract": "Accurate predictions of ship trajectories in crowded environments are essential to ensure safety in inland waterways traffic. Recent advances in deep learning promise increased accuracy even for complex scenarios. While the challenge of ship-to-ship awareness is being addressed with growing success, the explainability of these models is often overlooked, potentially obscuring an inaccurate logic and undermining the confidence in their reliability. This study examines an LSTM-based vessel trajectory prediction model by incorporating trained ship domain parameters that provide insight into the attention-based fusion of the interacting vessels' hidden states. This approach has previously been explored in the field of maritime shipping, yet the variety and complexity of encounters in inland waterways allow for a more profound analysis of the model's interpretability. The prediction performance of the proposed model variants are evaluated using standard displacement error statistics. Additionally, the plausibility of the generated ship domain values is analyzed. With an final displacement error of around 40 meters in a 5-minute prediction horizon, the model performs comparably to similar studies. Though the ship-to-ship attention architecture enhances prediction accuracy, the weights assigned to vessels in encounters using the learnt ship domain values deviate from the expectation. The observed accuracy improvements are thus not entirely driven by a causal relationship between a predicted trajectory and the trajectories of nearby ships. This finding underscores the model's explanatory capabilities through its intrinsically interpretable design. Future work will focus on utilizing the architecture for counterfactual analysis and on the incorporation of more sophisticated attention mechanisms.",
+      "authors": [
+        "Tom Legel",
+        "Dirk Söffker",
+        "Roland Schätzle",
+        "Kathrin Donandt"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-03-04T07:01:59+00:00",
+      "link": "https://arxiv.org/pdf/2603.04472v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "explainable deep learning for trajectory prediction in crowded environments",
+      "llm_evidence_cn": "拥挤环境下基于深度学习的可解释轨迹预测",
+      "llm_evidence": "拥挤环境下基于深度学习的可解释轨迹预测",
+      "canonical_evidence": "拥挤环境下基于深度学习的可解释轨迹预测",
+      "llm_tldr_en": "Uses LSTM and attention mechanisms for vessel trajectory prediction with explainability.",
+      "llm_tldr_cn": "利用LSTM和注意力机制实现具备可解释性的船舶轨迹预测，方法可迁移至空战预测。",
+      "llm_tldr": "利用LSTM和注意力机制实现具备可解释性的船舶轨迹预测，方法可迁移至空战预测。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "maneuvering target trajectory prediction in aerial combat",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2603.03759v1",
+      "title": "Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling",
+      "abstract": "Many large-scale platforms and networked control systems have a centralized decision maker interacting with a massive population of agents under strict observability constraints. Motivated by such applications, we study a cooperative Markov game with a global agent and $n$ homogeneous local agents in a communication-constrained regime, where the global agent only observes a subset of $k$ local agent states per time step. We propose an alternating learning framework $(\\texttt{ALTERNATING-MARL})$, where the global agent performs subsampled mean-field $Q$-learning against a fixed local policy, and local agents update by optimizing in an induced MDP. We prove that these approximate best-response dynamics converge to an $\\widetilde{O}(1/\\sqrt{k})$-approximate Nash Equilibrium, while yielding a separation in the sample complexities between the joint state space and action space. Finally, we validate our results in numerical simulations for multi-robot control and federated optimization.",
+      "authors": [
+        "Emile Anand",
+        "Ishani Karmarkar"
+      ],
+      "primary_category": "cs.MA",
+      "categories": [
+        "cs.MA",
+        "cs.AI",
+        "cs.LG",
+        "eess.SY",
+        "math.OC"
+      ],
+      "published": "2026-03-04T06:14:24+00:00",
+      "link": "https://arxiv.org/pdf/2603.03759v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "cooperative multi-agent reinforcement learning in large-scale systems",
+      "llm_evidence_cn": "大规模系统中的协作多智能体强化学习",
+      "llm_evidence": "大规模系统中的协作多智能体强化学习",
+      "canonical_evidence": "大规模系统中的协作多智能体强化学习",
+      "llm_tldr_en": "Studies approximate Nash equilibria in large-scale cooperative MARL under observability constraints.",
+      "llm_tldr_cn": "研究了观测受限下大规模协作多智能体强化学习中的近似纳什均衡。",
+      "llm_tldr": "研究了观测受限下大规模协作多智能体强化学习中的近似纳什均衡。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.04659v1",
+      "title": "GIANT - Global Path Integration and Attentive Graph Networks for Multi-Agent Trajectory Planning",
+      "abstract": "This paper presents a novel approach to multi-robot collision avoidance that integrates global path planning with local navigation strategies, utilizing attentive graph neural networks to manage dynamic interactions among agents. We introduce a local navigation model that leverages pre-planned global paths, allowing robots to adhere to optimal routes while dynamically adjusting to environmental changes. The models robustness is enhanced through the introduction of noise during training, resulting in superior performance in complex, dynamic environments. Our approach is evaluated against established baselines, including NH-ORCA, DRL-NAV, and GA3C-CADRL, across various structurally diverse simulated scenarios. The results demonstrate that our model achieves consistently higher success rates, lower collision rates, and more efficient navigation, particularly in challenging scenarios where baseline models struggle. This work offers an advancement in multi-robot navigation, with implications for robust performance in complex, dynamic environments with varying degrees of complexity, such as those encountered in logistics, where adaptability is essential for accommodating unforeseen obstacles and unpredictable changes.",
+      "authors": [
+        "Jonas le Fevre Sejersen",
+        "Toyotaro Suzumura",
+        "Erdal Kayacan"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI"
+      ],
+      "published": "2026-03-04T22:45:53+00:00",
+      "link": "https://arxiv.org/pdf/2603.04659v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "multi-agent trajectory planning and collision avoidance",
+      "llm_evidence_cn": "多智能体轨迹规划与避障",
+      "llm_evidence": "多智能体轨迹规划与避障",
+      "canonical_evidence": "多智能体轨迹规划与避障",
+      "llm_tldr_en": "Combines global path planning with attentive graph networks for dynamic multi-agent collision avoidance.",
+      "llm_tldr_cn": "结合全局路径规划与注意力图网络，实现动态环境下的多机器人协同避障。",
+      "llm_tldr": "结合全局路径规划与注意力图网络，实现动态环境下的多机器人协同避障。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2603.03848v1",
+      "title": "Dual-Interaction-Aware Cooperative Control Strategy for Alleviating Mixed Traffic Congestion",
+      "abstract": "As Intelligent Transportation System (ITS) develops, Connected and Automated Vehicles (CAVs) are expected to significantly reduce traffic congestion through cooperative strategies, such as in bottleneck areas. However, the uncertainty and diversity in the behaviors of Human-Driven Vehicles (HDVs) in mixed traffic environments present major challenges for CAV cooperation. This paper proposes a Dual-Interaction-Aware Cooperative Control (DIACC) strategy that enhances both local and global interaction perception within the Multi-Agent Reinforcement Learning (MARL) framework for Connected and Automated Vehicles (CAVs) in mixed traffic bottleneck scenarios. The DIACC strategy consists of three key innovations: 1) A Decentralized Interaction-Adaptive Decision-Making (D-IADM) module that enhances actor's local interaction perception by distinguishing CAV-CAV cooperative interactions from CAV-HDV observational interactions. 2) A Centralized Interaction-Enhanced Critic (C-IEC) that improves critic's global traffic understanding through interaction-aware value estimation, providing more accurate guidance for policy updates. 3) A reward design that employs softmin aggregation with temperature annealing to prioritize interaction-intensive scenarios in mixed traffic. Additionally, a lightweight Proactive Safety-based Action Refinement (PSAR) module applies rule-based corrections to accelerate training convergence. Experimental results demonstrate that DIACC significantly improves traffic efficiency and adaptability compared to rule-based and benchmark MARL models.",
+      "authors": [
+        "Zhengxuan Liu",
+        "Yuxin Cai",
+        "Yijing Wang",
+        "Xiangkun He",
+        "Chen Lv",
+        "Zhiqiang Zuo"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY",
+        "cs.MA",
+        "cs.RO"
+      ],
+      "published": "2026-03-04T09:00:49+00:00",
+      "link": "https://arxiv.org/pdf/2603.03848v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-agent reinforcement learning for interaction perception",
+      "llm_evidence_cn": "用于交互感知的多智能体强化学习",
+      "llm_evidence": "用于交互感知的多智能体强化学习",
+      "canonical_evidence": "用于交互感知的多智能体强化学习",
+      "llm_tldr_en": "Uses MARL to handle behavior uncertainty in mixed environments, transferable to cooperative air combat.",
+      "llm_tldr_cn": "利用多智能体强化学习处理混合环境中的行为不确定性，可迁移至协同空战。",
+      "llm_tldr": "利用多智能体强化学习处理混合环境中的行为不确定性，可迁移至协同空战。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.04833v1",
+      "title": "SCoUT: Scalable Communication via Utility-Guided Temporal Grouping in Multi-Agent Reinforcement Learning",
+      "abstract": "Communication can improve coordination in partially observed multi-agent reinforcement learning (MARL), but learning \\emph{when} and \\emph{who} to communicate with requires choosing among many possible sender-recipient pairs, and the effect of any single message on future reward is hard to isolate. We introduce \\textbf{SCoUT} (\\textbf{S}calable \\textbf{Co}mmunication via \\textbf{U}tility-guided \\textbf{T}emporal grouping), which addresses both these challenges via temporal and agent abstraction within traditional MARL. During training, SCoUT resamples \\textit{soft} agent groups every \\(K\\) environment steps (macro-steps) via Gumbel-Softmax; these groups are latent clusters that induce an affinity used as a differentiable prior over recipients. Using the same assignments, a group-aware critic predicts values for each agent group and maps them to per-agent baselines through the same soft assignments, reducing critic complexity and variance. Each agent is trained with a three-headed policy: environment action, send decision, and recipient selection. To obtain precise communication learning signals, we derive counterfactual communication advantages by analytically removing each sender's contribution from the recipient's aggregated messages. This counterfactual computation enables precise credit assignment for both send and recipient-selection decisions. At execution time, all centralized training components are discarded and only the per-agent policy is run, preserving decentralized execution. Project website, videos and code: \\hyperlink{https://scout-comm.github.io/}{https://scout-comm.github.io/}",
+      "authors": [
+        "Manav Vora",
+        "Gokul Puthumanaillam",
+        "Hiroyasu Tsukamoto",
+        "Melkior Ornik"
+      ],
+      "primary_category": "cs.MA",
+      "categories": [
+        "cs.MA",
+        "cs.AI"
+      ],
+      "published": "2026-03-05T05:33:28+00:00",
+      "link": "https://arxiv.org/pdf/2603.04833v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Scalable communication in multi-agent reinforcement learning via temporal grouping",
+      "llm_evidence_cn": "通过时间分组实现多智能体强化学习中的可扩展通信",
+      "llm_evidence": "通过时间分组实现多智能体强化学习中的可扩展通信",
+      "canonical_evidence": "通过时间分组实现多智能体强化学习中的可扩展通信",
+      "llm_tldr_en": "Enhances MARL coordination by learning utility-guided temporal grouping for scalable communication.",
+      "llm_tldr_cn": "通过学习效用引导的时间分组来增强多智能体强化学习的协作通信。",
+      "llm_tldr": "通过学习效用引导的时间分组来增强多智能体强化学习的协作通信。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "intelligent air combat tactics using multi agent reinforcement learning",
+      "matched_requirement_id": "req-12",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2603.04029v1",
+      "title": "Self-adapting Robotic Agents through Online Continual Reinforcement Learning with World Model Feedback",
+      "abstract": "As learning-based robotic controllers are typically trained offline and deployed with fixed parameters, their ability to cope with unforeseen changes during operation is limited. Biologically inspired, this work presents a framework for online Continual Reinforcement Learning that enables automated adaptation during deployment. Building on DreamerV3, a model-based Reinforcement Learning algorithm, the proposed method leverages world model prediction residuals to detect out-of-distribution events and automatically trigger finetuning. Adaptation progress is monitored using both task-level performance signals and internal training metrics, allowing convergence to be assessed without external supervision and domain knowledge. The approach is validated on a variety of contemporary continuous control problems, including a quadruped robot in high-fidelity simulation, and a real-world model vehicle. Relevant metrics and their interpretation are presented and discussed, as well as resulting trade-offs described. The results sketch out how autonomous robotic agents could once move beyond static training regimes toward adaptive systems capable of self-reflection and -improvement during operation, just like their biological counterparts.",
+      "authors": [
+        "Fabian Domberg",
+        "Georg Schildbach"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI"
+      ],
+      "published": "2026-03-04T13:07:42+00:00",
+      "link": "https://arxiv.org/pdf/2603.04029v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "online continual reinforcement learning for robotic agents",
+      "llm_evidence_cn": "机器人智能体的在线持续强化学习",
+      "llm_evidence": "机器人智能体的在线持续强化学习",
+      "canonical_evidence": "机器人智能体的在线持续强化学习",
+      "llm_tldr_en": "A framework for online adaptation of robotic controllers using world model feedback and reinforcement learning.",
+      "llm_tldr_cn": "一种利用世界模型反馈和强化学习实现机器人控制器在线自适应的框架。",
+      "llm_tldr": "一种利用世界模型反馈和强化学习实现机器人控制器在线自适应的框架。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.04868v1",
+      "title": "K-Gen: A Multimodal Language-Conditioned Approach for Interpretable Keypoint-Guided Trajectory Generation",
+      "abstract": "Generating realistic and diverse trajectories is a critical challenge in autonomous driving simulation. While Large Language Models (LLMs) show promise, existing methods often rely on structured data like vectorized maps, which fail to capture the rich, unstructured visual context of a scene. To address this, we propose K-Gen, an interpretable keypoint-guided multimodal framework that leverages Multimodal Large Language Models (MLLMs) to unify rasterized BEV map inputs with textual scene descriptions. Instead of directly predicting full trajectories, K-Gen generates interpretable keypoints along with reasoning that reflects agent intentions, which are subsequently refined into accurate trajectories by a refinement module. To further enhance keypoint generation, we apply T-DAPO, a trajectory-aware reinforcement fine-tuning algorithm. Experiments on WOMD and nuPlan demonstrate that K-Gen outperforms existing baselines, highlighting the effectiveness of combining multimodal reasoning with keypoint-guided trajectory generation.",
+      "authors": [
+        "Mingxuan Mu",
+        "Guo Yang",
+        "Lei Chen",
+        "Ping Wu",
+        "Jianxun Cui"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-03-05T06:48:12+00:00",
+      "link": "https://arxiv.org/pdf/2603.04868v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "interpretable trajectory generation reflecting agent intentions",
+      "llm_evidence_cn": "反映智能体意图的可解释轨迹生成",
+      "llm_evidence": "反映智能体意图的可解释轨迹生成",
+      "canonical_evidence": "反映智能体意图的可解释轨迹生成",
+      "llm_tldr_en": "Uses multimodal LLMs to generate trajectories guided by interpretable keypoints and reasoning.",
+      "llm_tldr_cn": "利用多模态大模型通过可解释的关键点和推理引导轨迹生成。",
+      "llm_tldr": "利用多模态大模型通过可解释的关键点和推理引导轨迹生成。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "adversary behavior modeling and intent recognition in dogfights",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

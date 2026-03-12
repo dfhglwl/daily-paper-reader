@@ -1,0 +1,1088 @@
+Title: Dual-Interaction-Aware Cooperative Control Strategy for Alleviating Mixed Traffic Congestion
+
+URL Source: https://arxiv.org/pdf/2603.03848v1
+
+Published Time: Thu, 05 Mar 2026 01:49:02 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+> JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 1
+
+# Dual-Interaction-Aware Cooperative Control Strategy for Alleviating Mixed Traffic Congestion 
+
+Zhengxuan Liu, Student Member, IEEE, Yuxin Cai, Student Member, IEEE, Yijing Wang, Xiangkun He, Senior Member, IEEE, Chen Lv, Senior Member, IEEE and Zhiqiang Zuo, Senior Member, IEEE 
+
+Abstract —As Intelligent Transportation System (ITS) develops, Connected and Automated Vehicles (CAVs) are expected to signif-icantly reduce traffic congestion through cooperative strategies, such as in bottleneck areas. However, the uncertainty and diver-sity in the behaviors of Human-Driven Vehicles (HDVs) in mixed traffic environments present major challenges for CAV coopera-tion. This paper proposes a Dual-Interaction-Aware Cooperative Control (DIACC) strategy that enhances both local and global interaction perception within the Multi-Agent Reinforcement Learning (MARL) framework for Connected and Automated Vehicles (CAVs) in mixed traffic bottleneck scenarios. The DIACC strategy consists of three key innovations: 1) A Decentralized Interaction-Adaptive Decision-Making (D-IADM) module that enhances actor’s local interaction perception by distinguishing CAV-CAV cooperative interactions from CAV-HDV observational interactions. 2) A Centralized Interaction-Enhanced Critic (C-IEC) that improves critic’s global traffic understanding through interaction-aware value estimation, providing more accurate guidance for policy updates. 3) A reward design that employs softmin aggregation with temperature annealing to prioritize interaction-intensive scenarios in mixed traffic. Additionally, a lightweight Proactive Safety-based Action Refinement (PSAR) module applies rule-based corrections to accelerate training convergence. Experimental results demonstrate that DIACC sig-nificantly improves traffic efficiency and adaptability compared to rule-based and benchmark MARL models. 
+
+Index Terms —Mixed traffic, cooperative control, interac-tion perception, multi-agent reinforcement learning, interaction-intensive scenario. 
+
+I. I NTRODUCTION 
+
+# WITH the rapid growth of vehicle ownership, traffic con-gestion has become a critical challenge, and connected and automated vehicles (CAVs) have demonstrated significant potential for improving traffic performance [1], [2]. However, Human-Driven Vehicles (HDVs) will continue to coexist with CAVs for the foreseeable future [3]. Human drivers exhibit diverse and unpredictable driving styles, posing a fundamental challenge for CAVs that must adapt to uncertain HDV behav-iors while coordinating toward overall traffic optimization. 
+
+*This work was supported by the National Natural Science Foundation of China (grants 62173243 and 61933014). Zhengxuan Liu, Yijing Wang and Zhiqiang Zuo are with the Tianjin Key Laboratory of Intelligent Unmanned Swarm Technology and System, School of Electrical and Information Engineering, Tianjin University, Tian-jin 300072, China. (e-mail: liuzhengxuan@tju.edu.cn; yjwang@tju.edu.cn; zqzuo@tju.edu.cn) Yuxin Cai, and Chen Lv are with School of Mechanical and Aerospace Engineering, Nanyang Technological University, Singapore. (e-mail: caiy0039@e.ntu.edu.sg; lyuchen@ntu.edu.sg) Xiangkun He is with Shenzhen Institute for Advanced Study, Uni-versity of Electronic Science and Technology of China. (e-mail: xi-angkun.he@uestc.edu.cn) 
+
+(a) In purely HDV traffic, human drivers typically prioritize their own driving efficiency, leading to non-cooperative actions and congestion in the merging area. Different colors represent HDVs with various driving styles. 
+
+(b) In mixed traffic, CAVs engage in cooperative merging behav-iors, providing opportunities for neighboring vehicles to change lanes, thus alleviating congestion. Blue vehicles represent CAVs. 
+
+Fig. 1: Illustrations of non-cooperative merging in purely HDV traffic and cooperative merging with CAVs in a bottleneck scenario. This paper focuses on bottleneck merging scenarios char-acterized by high-density mixed traffic, where HDVs with varying driving styles coexist with cooperatively controlled CAVs (as depicted in Fig. 1). Vehicle interaction is a critical determinant of traffic performance in bottleneck scenarios. In purely HDV traffic, the lack of cooperation leads to severe congestion at the merging point, while CAVs with cooperative strategies can plan merging routes in advance and yield to surrounding vehicles to enhance overall efficiency. However, the uncertainty and diversity of HDV behaviors significantly complicate the modeling of vehicle interactions, posing a core challenge for cooperative CAV control in mixed traffic. For cooperative control of CAVs in bottleneck merging scenarios, existing solutions fall into two categories. The first includes rule-based or optimization-based approaches [4]–[8], while the second relies on Reinforcement Learning (RL) [9]– [12]. The centralized optimization method has advantages in addressing global traffic issues, but its computational cost is relatively high [13]. Furthermore, these methods often struggle to cope with complex traffic environments and vehicle interac-tions, as they heavily rely on the models of the traffic system and vehicle motion [5]–[7]. In contrast, RL-based methods are usually model-free, learning effective policies through interac-tion with the environment. They have advantages in handling the uncertainties and complexities of mixed traffic environ- 
+
+> arXiv:2603.03848v1 [eess.SY] 4 Mar 2026 JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 2
+
+ments. However, single-agent RL algorithms have limitations in designing effective cooperative strategies for CAVs in mixed traffic. They are more suitable for solving local control prob-lems [9]. Multi-Agent Reinforcement Learning (MARL) offers a more robust solution by facilitating coordination among multiple agents through interaction and information sharing, thereby improving the learning of cooperative strategies and enhancing training efficiency. Consequently, MARL is an ap-propriate and effective scheme for addressing the cooperative control of CAVs in the bottleneck scenarios discussed in this paper. However, in the decentralized MARL framework, cooperation between CAVs is restricted to local observations, limiting the improvement of global traffic efficiency. In fact, the influence of vehicle interactions on traffic performance is a global problem, while existing MARL methods focus on local vehicle interactions and lack consideration for global traffic dynamics. As discussed above, vehicle interaction is a critical factor influencing traffic performance in bottleneck scenarios, how-ever, it remains inadequately addressed in existing approaches. To bridge this gap, we propose a Dual-Interaction-Aware Co-operative Control (DIACC) strategy that enhances interaction perception from both local and global perspectives within the MARL framework. The main contributions of this paper are as follows:  
+
+> •
+
+To address the actor’s inability to distinguish between heterogeneous vehicle interactions (i.e., CAVs, HDVs), a Decentralized Interaction-Adaptive Decision-Making (D-IADM) module is proposed. The core design employs separate graph attention networks to differentiate CAV-CAV cooperative interactions (incorporating previous-timestep decision feedback) from CAV-HDV observa-tional interactions that rely solely on historical trajecto-ries. Experimental results demonstrate improved training stability, higher traffic efficiency, and reduced safety-critical events.  
+
+> •
+
+Centralized Interaction-Enhanced Critic (C-IEC) is de-vised to enable the critic to capture how vehicle interac-tions influence global traffic dynamics during training. This provides a more accurate value estimation that guides D-IADM toward cooperative strategies account-ing for system-level traffic dynamics. The performance advantage is particularly pronounced in high-density sce-narios.  
+
+> •
+
+A cooperative reward mechanism with softmin aggrega-tion and temperature annealing is presented. This mecha-nism transitions from uniform exploration to optimization on difficult cases, thereby concentrating training on chal-lenging interaction scenarios. The resulting enhancement in training stability and convergence enables D-IADM to develop more robust cooperative strategies across diverse interactive scenarios. The structure of the rest of this paper is as follows. Section II reviews the latest CAV cooperative control strategies. Sec-tion III provides the fundamental mathematical descriptions for this study. Section IV presents the framework of DIACC strategy and details the design of each module. The experiment design and the corresponding analysis are conducted in Section V as well as the discussion of the findings. Section VI concludes this work. To facilitate the explanation of the collaborative control strategy designed in this paper, Table I lists two categories of abbreviations: terminology abbreviations defined in our strategy and performance metric abbreviations used in the subsequent experimental evaluation. TABLE I: Abbreviations.            
+
+> Full Name Abbreviation Centralized Training and Decentralized Execution CTDE Dual-Interaction-Aware Cooperative Control DIACC Decentralized Interaction-Adaptive Decision-Making D-IADM Trajectory-Aware Interaction Encoder TAIE Proactive Safety-Based Action Refinement PSAR Centralized Interaction-Enhanced Critic C-IEC Integrated Traffic Dynamics Representation ITDR MAPPO Model With D-IADM Module MAPPO-IADM Safety-Critical Event SCE Waiting Event WE
+
+II. RELATED WORK Researchers have long focused on the issue of cooperative control of CAVs. The present results indicate that CAV coop-erative control can significantly enhance traffic performance, such as traffic safety, efficiency, and energy consumption reduction. The latest CAV cooperative control strategies are summarized in this section, including control theory-based approach, single-agent RL-based approach and MARL-based approach. We analyze their characteristics, and thus clarify their advantages and limitations. 
+
+A. Control Theory-based Approach 
+
+The control theory-based approach typically relies on traffic flow theory (such as macroscopic and microscopic traffic flow models) [5], [14] and optimization algorithms, for example, Model Predictive Control (MPC) [8], [15]. When considering optimization objectives at the local or microscopic level, the focus is on car-following speed and lane-changing gap [4], [16], and optimizing the vehicle trajectory according to these two factors. While at the global or macroscopic level, the main points of interest are typically the average speed and flow of the traffic [5]. In these studies, vehicle behavior is guided by manually designed driving rules or objective functions [15], [17]. The centralized optimization strategy can provide the optimal solution for global traffic issues like improving traffic efficiency but at high computational cost [18], [19]. Another significant limitation of control theory-based approach is the difficulty in handling complex traffic environments and vehicle interactions, as it usually depends on the modeling of traffic environment and vehicle behavior [20], [21]. However, it is challenging to model complex traffic evolution and vehicle interactions accurately. 
+
+B. Single-Agent RL-based Approach 
+
+The RL-based scheme has the advantage in dealing with environmental uncertainty and complexity. It does not rely on precise environmental modeling, but learns optimal decision strategies through interaction with the environment [10]. Re-inforcement learning guides the learning process by designing JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 3
+
+reward functions and training loss to achieve desired goals [11], [22]. In cooperative control, researchers focus on two key issues: understanding interactions with vehicles in the traffic environment and enhancing cooperation among vehicles via communication. A Multi-View Graph Convolutional Rein-forcement Learning (MVGRL) algorithm was proposed in [3], which addresses on the interactions among traffic participants and the resulting complex traffic states. [23] put forward the parameter-sharing mechanism and dense communication topology to enable CAVs to tackle traffic fluctuations and improve driving efficiency. However, it is worth noting that the single-agent reinforcement learning approach still has some drawbacks when dealing with the collaboration among CAVs in mixed traffic. On the one hand, single-agent approach is more suitable for solving local control problems [9], but it faces challenges in global traffic optimization, with the re-quirement of a large amount of interaction experience to learn effective decision strategies. This leads to high training cost and the difficulty of large-scale deployment. On the other hand, it is challenging for such an approach to handle coordination problems among multiple vehicles, often requiring additional rule guidance or manually designed coordination interaction settings. For example, [24] evaluated the level of cooperation among drivers by learning vehicle interactions and used this cooperation belief state as the input to the RL algorithm. 
+
+C. MARL-based Approach 
+
+MARL helps to model and analyze interactions among agents in traffic environments [25], and its own flexible cooperation and sharing mechanism also promote research on collaborative control. Currently, the MARL approach has been applied to various traffic optimization problems, such as traffic light control [26], [27], variable speed limit control [9], multi-vehicle cooperative control [28], [29], and vehicle-road co-operative control [30], [31]. The advantages of MARL have been demonstrated in several aspects. First, it facilitates the cooperation through interaction and information sharing among multiple agents [10], [11], allowing the learning of optimal collaborative strategies. Second, MARL can handle non-stationarity in the environment, especially as the number of agents increases [32], [33]. Third, MARL shows its merits in terms of convergence, optimality, and stability [34]. In traffic systems, MARL offers new possibilities for achiev-ing highly intelligent and adaptive traffic management. How-ever, due to the complexity of interactions among multiple agents, the design of MARL algorithms for multi-vehicle cooperative control is in the early phase. For multi-vehicle collaboration, [35] employed a multi-agent deep deterministic policy gradient algorithm to train several CAVs from the main-line and ramp, while [11] proposed a multi-agent advantage actor-critic algorithm to train all CAVs within a merging area. Additionally, cooperative lane-changing actions for vehicles were designed in [10] through communication collaboration and parameter sharing. The purpose of these studies is mainly the design of individual agents in MARL algorithms, but the guiding role for critics has not been fully explored. At the same time, they ignore the global impact of vehicle interaction on traffic optimization. Within the framework of MARL involving CTDE, this paper highlights the important influence of vehicle interaction integrating both local and global perspectives. Based on local interaction awareness, we design the D-IADM to enhance CAV adaptability to HDVs with unpredictable and diverse behaviors. To realize better guidance of vehicle cooperation, the C-IEC is suggested to investigate the effects of vehicle interactions on traffic efficiency with the help of global in-teraction awareness. By doing so, we achieve a significant improvement in traffic efficiency in bottleneck scenarios and enhance the adaptability of the MARL model to various scenarios. III. PROBLEM FORMULATION 
+
+A. Modeling Cooperative Decision-Making Problem 
+
+In this study, we model the cooperative decision-making process of CAVs in bottleneck merging scenarios within a mixed traffic environment as an MARL problem, which is characterized by a decentralized partially observable Markov decision process (Dec-POMDP) [36]. The MARL model can be represented as a tuple (N , S, A, O, R, P, γ ), where:  
+
+> •
+
+N = {1, . . . , n } denotes the set of CAVs in the mixed traffic environment.  
+
+> •
+
+S stands for the global state space of the environment.  
+
+> •
+
+A = Qni=1 Ai is the joint action space of all CAVs.  
+
+> •
+
+O = Qni=1 Oi denotes the joint observation space of all CAVs.  
+
+> •
+
+R : O × A → R specifies the joint reward function.  
+
+> •
+
+P (st+1 |st, a 1 
+
+> t
+
+, . . . , a nt ) : S × A × S → [0 , 1] defines the state transition probability function.  
+
+> •
+
+γ ∈ [0 , 1) is the discount factor, balancing the importance of immediate and future rewards. In this setup, each CAV i at any time step t observes its local state oit ∈ O i and selects an action ait according to its policy 
+
+πiθ (·| oit) parameterized by θ.The collective objective for all CAVs is to optimize the team policy π∗ 
+
+> θ
+
+, aiming to maximize the expected cumulative reward over a horizon of L time steps, that is, 
+
+J(πθ ) = Eπθ
+
+" LX
+
+> t=0
+
+γtRt
+
+#
+
+. (1) 
+
+B. Multi-Agent Actor-Critic Framework 
+
+In this subsection, we utilize MARL with CTDE, which consists of two pivotal parts: a centralized critic network and n decentralized actor networks. The former supplements the training phase by accessing global information from all agents, thus mitigating the non-stationary of the environ-ment and enhancing learning efficiency. Concurrently, each decentralized actor network strives to maximize its individual reward, benefiting from the global insights provided by the critic. A well-known representative is MAPPO [37], which extends Proximal Policy Optimization (PPO) [38] to multi-agent setting. MAPPO is characterized by its ability to accom-modate the complexities of multiple interacting agents, making it particularly effective for developing decentralized control strategies where each agent independently interacts with the environment and other agents. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 4
+
+In MAPPO, each agent’s actor network πiθ maps its local observation oit to a categorical distribution over the discrete ac-tion space Ai, with the aim of optimizing its policy πiθ (ait|oit)
+
+to maximize the expected reward. Specifically, the actor net-works focus on optimizing the clipped surrogate objective [38], 
+
+LCLIP (θ) = E
+
+h
+
+min 
+
+
+
+rit(θ) ˆAt, clip (rit(θ), 1 − ϵ, 1 + ϵ) ˆAt
+
+i 
+
+(2) where rit(θ) = πθ (ait|oit)  
+
+> πθold (ait|oit)
+
+represents the probability ratio between the new and old policies. The clipping mechanism governed by hyperparameter ϵ prevents the policy from devi-ating too far from the old policy, which ensures the updating stability. In this objective, the advantage estimator ˆAt is derived according to Generalized Advantage Estimator (GAE), which provides a bias-variance trade-off for accurate advan-tage estimation. The joint advantage estimate is calculated by: 
+
+ˆAGAE t (γ, λ ) =  
+
+> T−t
+
+X
+
+> l=0
+
+(γλ )lδt+l, (3) where λ is the GAE parameter and T is the episode length. 
+
+δt is the TD error with the form of 
+
+δt = Rt + γV ϕ(st+1 ) − Vϕ(st), (4) where Rt is the immediate reward and Vϕ is the central-ized critic’s value function (detailed below). The TD error quantifies the discrepancy between the actual return and the critic’s estimate, which is accumulated via GAE to compute the advantage for policy updates. In addition to the clipped objective, an entropy term is incor-porated into the actor’s loss to prevent premature convergence and promote sufficient exploration: 
+
+L(θ) = LCLIP (θ) + σE H(πθ (ait|oit))  (5) where H denotes the entropy of the policy, and σ is the entropy coefficient. The inclusion of entropy rewards facil-itates exploration and avoids overfitting to specific scenario features, fostering action diversity and enhances generalization capability in similar states. While each actor independently optimizes its local policy based on individual observations, the centralized critic lever-ages global state information to guide the training process. The centralized critic, denoted as Vϕ, performs the mapping: 
+
+S → R. It provides a global value function Vϕ(st) that evaluates the current state st, guiding the policy update for each agent. To stabilize the critic’s updates, the centralized critic, parameterized by ϕ, is also trained using clipped value predictions: 
+
+V CLIP (ϕ) = clip (Vϕ(st), V ϕold (st) − ϵ, V ϕold (st) + ϵ) (6) The value function loss has the form 
+
+LV (ϕ) = E
+
+h
+
+max 
+
+
+
+(Vϕ(st) − ˆRt)2, (V CLIP (ϕ) − ˆRt)2i 
+
+(7) where ˆRt represents the discounted reward-to-go PTt′=t γt′ R(st′ , a t′ , s t′+1 ), indicating the expected future return. To summarize, we adopt the MAPPO framework to learn decentralized policies ( π1 
+
+> θ
+
+, π 2 
+
+> θ
+
+, ..., π nθ ) where each agent’s inde-pendent policy update is clipped in terms of the objective (2). Then, a centralized critic is employed to estimate the value function, which provides shared information across agents to stabilize learning and improve coordination. However, ap-plying vanilla MAPPO to mixed traffic cooperative control reveals several limitations, which motivate the DIACC strategy presented in the next section:  
+
+> •
+
+The actor does not explicitly model the interactions among agents, which is particularly challenging in mixed traffic where CAV-CAV cooperative interactions and CAV-HDV observational interactions exhibit fundamen-tally different characteristics. To address this, we propose the D-IADM module, which focuses on modeling the local interaction relationships of CAVs in mixed traffic environments.  
+
+> •
+
+Although the centralized critic has access to global in-formation, it lacks effective mechanisms to fully exploit such information, making it difficult to obtain accurate value estimation. To this end, we propose C-IEC, which leverages the relationship mapping between global ve-hicle interactions and traffic dynamics to provide more accurate value estimates for guiding policy updates.  
+
+> •
+
+The standard reward design does not adequately em-phasize interaction-intensive scenarios where agents face complex coordination challenges, potentially neglecting critical situations in bottleneck merging. To overcome this, we propose a cooperative reward mechanism with softmin aggregation and temperature annealing, which directs training attention toward difficult interaction sce-narios and enhances learning robustness. IV. D UAL -I NTERACTION -A WARE COOPERATIVE CONTROL 
+
+STRATEGY FOR CAV S
+
+With the MAPPO framework, we propose Dual-Interaction-Aware Cooperative Control (DIACC) strategy for CAVs, to enhance the effectiveness of cooperative control in bottleneck scenarios. This section details the design and implementation of this strategy. 
+
+A. Framework 
+
+The proposed cooperative control model combines a multi-agent actor-critic framework, including several Decentral-ized Interaction-Adaptive Decision-Making (D-IADM) mod-ules and a Centralized Interaction-Enhanced Critic (C-IEC), as shown in Fig. 2. During the training process, each CAV acquires local observation from the environment and outputs its control action through the D-IADM. The D-IADM first obtains interaction features between the ego and surrounding vehicles via a Trajectory-Aware Interaction Encoder (TAIE). Then, it combines the last decision output ait−1 with a Gated Recurrent Unit (GRU) [39] and a decision layer to generate the learnable action output ˆait. The GRU captures temporal dependencies between observation features across different time steps, enhancing the continuity of decision-making. The output ˆait is subsequently fed into the PSAR module, alightweight action refinement layer that monitors spacing and TTC during lane-changing and car-following maneuvers. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 5
+
+Fig. 2: Framework of DIACC strategy. When the spacing or TTC falls below a safety threshold, PSAR applies minor corrections to ˆait to mitigate potential collision risks. The C-IEC module receives all state information from the environment and outputs a global state value function to assess the overall state quality and guide parameter updating in the D-IADM. In order to better understand the evolution of traffic and guide the movement of CAVs, we use Integrated Traffic Dynamics Representation (ITDR) module to capture the key features of traffic dynamics and interactions among vehicles. The details of state space, action space and reward function are illustrated in the following. 
+
+1) State Space 
+
+The vehicular states consist of the position (x, y ), speed v,heading angle θ, lane index l, and vehicle type c. Furthermore, lane-specific information, including the number of vehicles nl,density Dl, average speed vl is also considered, and CAV penetration rate ρl, where l represents the index of each lane in the bottleneck scenario. Additionally, detailed road structure information is provided by high-precision maps. These data form the state information that the centralized critic can get from the environment. To help CAVs better understand interaction features with their surroundings, we design local observation states for each CAV i, more specifically,  
+
+> •
+
+Self-State Information : Position coordinates (xit, y it),speed vit, heading angle θit, and lane index lit. 
+
+> •
+
+Neighboring Vehicle State Information : This is defined by a set Mis, which includes six closest vehicles in the same and adjacent lanes. The state of each neighboring vehicle j ∈ M is relative to CAV i is described by relative position (∆ xi,j t , ∆yi,j t ) and relative speed ∆vi,j t as well as heading angle θjt and vehicle type cj of neighboring vehicles.  
+
+> •
+
+Neighboring Lane Traffic Flow Statistics : CAVs un-derstand surrounding traffic status through shared lane statistics, including the number of vehicles nl, density 
+
+Dl, average speed vl, and CAV penetration rate ρl. 
+
+> •
+
+Static Road Structure Information : The coordinates and lane counts of sections before and after the merging point are used as static road structure information. 
+
+2) Action Space 
+
+Each CAV i has a discrete action space Ai, encompass-ing lateral control and longitudinal control. Specifically, AiJOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 6
+
+contains five decision behaviors: maintain current lane and speed (denoted as “remain”), lane change to the left or right, accelerate, or decelerate. Thus, the action set for each CAV is formally defined as Ai = {0 : remain , 1 : left , 2 : right , 3 : 
+
+accelerate , 4 : decelerate }. At each time step, CAV i selects an action ait ∈ A i through its policy πiθ , to maximize its expected cumulative reward. 
+
+3) Reward Function 
+
+The total reward comprises three components: a softmin-aggregated local ego reward ¯re, a global reward rg , and a completion reward rdone :
+
+Rt = we ¯re + wg rg + rdone , (8) where we and wg are fixed weighting coefficients. The reward 
+
+rdone is also included to incentivize CAVs to traverse the bottleneck area, thereby improving throughput. In mixed traffic bottleneck scenarios, CAVs encounter het-erogeneous interaction complexity: some operate in sparse regions with simple dynamics, while others navigate dense merging areas with intensive vehicle interactions, constituting the interaction-intensive cases. To direct learning toward these cases, a softmin-based aggregation is applied to the local ego rewards: 
+
+¯re =
+
+> n
+
+X
+
+> i=1
+
+wirie, (9) where the softmin weights are computed as: 
+
+wi = exp( −rie/τ )
+
+Pnj=1 exp( −rje/τ ) . (10) The weight wi ∝ exp( −rie/τ ) assigns higher importance to agents with lower rewards, thereby directing the learning focus toward poorly-performing agents and the most challeng-ing cooperative scenarios at the bottleneck. The temperature parameter τ controls the focus intensity: a large τ yields nearly uniform weighting for broad exploration, while a small 
+
+τ concentrates learning on the worst-performing agents. To leverage both regimes throughout training, a linear annealing schedule is employed: 
+
+τ (t) = 
+
+(
+
+τinit − (τinit −τf inal )·tTanneal if t ≤ Tanneal ,τf inal if t > T anneal , (11) where τinit and τf inal are the initial and final temperature values, and Tanneal is the annealing duration. This curriculum-inspired strategy [40] enables broad exploration in early train-ing and focused optimization on difficult interactions in later stages, preventing the policy from being dominated by agents in simpler environments. The ego reward rie consists of several sub-reward components, that is, 
+
+rie = we,v rie,v + we,w rie,w + we,c rie,c + we,tp rie,tp ,rie,v = − |vi − vmax |
+
+vmax 
+
++ pe,v ,rie,w = X
+
+> j∈M iw
+
+− dth,w −
+
+q
+
+∆xi,j 2 + ∆ yi,j 2
+
+dth,w − dth,c 
+
+,rie,c = X
+
+> j∈M ic
+
+− dth,c −
+
+q
+
+∆xi,j 2 + ∆ yi,j 2
+
+dth,c 
+
++ pe,c 
+
+ ,rie,tp = sigmoid (vi − vth ) − 1. (12) where we,v , we,w , we,c , and we,tp are weighting parameters for speed, warning distance, collision penalty, and time penalty, respectively. The parameter vmax represents the prescribed maximum speed. The sets Miw and Mic denote vehicles within the warning and actual collision ranges, with distance thresholds dth,w and dth,c , respectively. The parameters pe,v 
+
+and pe,c are used to adjust the speed reward and collision penalty. The time penalty rie,tp penalizes vehicles with speeds below threshold vth to prevent lazy behavior. The global reward rg reflects the overall performance of all CAVs in terms of average speed: 
+
+rg = −
+
+> 1
+> n
+
+Pni=1 vi − vmax 
+
+vmax 
+
++ pg,v . (13) where pg,v is a parameter to adjust the global speed reward. 
+
+B. D-IADM Module 
+
+The D-IADM module enhances the actor’s local interaction perception by distinguishing CAV-CAV cooperative interac-tions from CAV-HDV observational interactions. This module consists of two key components: 1) the Trajectory-Aware Interaction Encoder (TAIE) that models the two interaction types with separate attention networks, and 2) the Proactive Safety-based Action Refinement (PSAR) module that applies rule-based corrections to reduce high-risk actions. The action memory mechanism incorporates both the actor-generated action and the PSAR-refined action into the next time step’s observation, providing the actor with a comprehensive record of both intended and executed decisions. 
+
+1) Trajectory-Aware Interaction Encoder (TAIE) 
+
+The purpose of TAIE module is to process each CAV’s local observations and extract key interaction features necessary for decision-making, as illustrated in Fig. 3. Each CAV’s local observation state includes its own state information, neigh-boring vehicle motion information, lane statistics, and static road structure information. The set of neighboring vehicles, denoted as Mis, contains six closest vehicles in the same and adjacent lanes. Considering the behavioral differences between HDVs and CAVs, we categorize neighboring vehicles into HDV sets Mis,H and CAV sets Mis,C . This classification enhances the model’s ability to capture interactions between CAVs and HDVs and reduces the bias. To illustrate the interaction modeling process, we take the extraction of HDV interaction features as an example. To this end, an interaction graph between CAV i and sur-rounding HDVs is constructed, which connects each CAV to its neighboring HDVs within a specified range. The HDV interaction graph is represented by Gis,H = (Vis,H , Eis,H ),where Vis,H = i ∪M is,H denotes the nodes and Eis,H stands for the edges connecting these nodes. Note that these edges only connect CAV i with its neighboring HDVs, and there are no connections among inter-HDVs. Denote mit = ( xit, y it, v it, θ it)
+
+as the state of vehicle i, where xit, yit, vit, and θit represent JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 7
+
+Fig. 3: Network framework of the TAIE. position, speed, and heading angle, respectively. The CAV-HDV layer input is composed of current and historical states of CAV i and its N is,H surrounding HDVs. The historical states are concatenated and embedded into node features 
+
+hH,j t ∈ RSH , which are then fed into a Multi-Head Graph Attention (MH-GAT) [41] to extract interaction features. The enhanced node feature ˆhH,i t for CAV i is obtained by aggregating adjacent features weighted across all B attention heads: 
+
+ˆhH,i t = σ
+
+ 1
+
+B
+
+> B
+
+X
+
+> b=1
+
+X
+
+> j∈M is,H
+
+αbij W bhH,j t
+
+ , (14) where αij is the attention weight quantifying the relative importance of surrounding HDV j to CAV i, computed as: 
+
+αij = exp( LeakyReLU (ˆ a[W hH,i t ∥W hH,j t ])) 
+
+P
+
+> k∈M is,H
+
+exp( LeakyReLU (ˆ a[W hH,i t ∥W hH,k t ])) 
+
+(15) with W being the weight matrix and ˆa a single-layer feed-forward network followed by LeakyReLU nonlinearity and softmax normalization. This aggregation produces a rich rep-resentation of the HDV interaction dynamics around CAV i.A similar process is performed to generate the CAV in-teraction graph. Unlike the HDV graph, the CAV graph additionally incorporates the previous decision information 
+
+ait−1 of each CAV, yielding CAV interaction features f C,i t .This design reflects the key difference: CAV-CAV interac-tions involve shared decision information, while CAV-HDV interactions rely on observed trajectory patterns. Additionally, local traffic context information (lane statistics Fego t , Flef t t ,
+
+Fright t and static road structure Fstatic ) is processed through an MLP to obtain the context embedding f dt,i t . Finally, the HDV interaction embedding, CAV interaction embedding, and local traffic context embedding are combined in an MLP-based fusion layer, forming the comprehensive observation embedding feature f it at time step t.
+
+2) Proactive Safety-based Action Refinement (PSAR) 
+
+Algorithm 1 Proactive Safety-based Action Refinement (PSAR) 
+
+Require: Actor action ˆait ∈ { 0, 1, 2, 3, 4}; states of ego and surrounding vehicles;  
+
+> 1:
+
+Distance thresholds dLC,min ≤ dsafe < d warn < d att ;TTC thresholds τsafe <τ warn <τ att ; 
+
+> 2:
+
+Risk (d0, τ 0) ≡ | di,k t,long | ≤ d0 ∧ 0 < TTC i,j t ≤ τ0 (for the relevant vehicle pair in the current context); 
+
+Ensure: Refined action ait 
+
+> 3:
+
+ait ← ˆait 
+
+> 4:
+
+if ait ∈ { 1, 2} then  
+
+> 5:
+
+blc ← 0; 
+
+> 6:
+
+if target-lane front vehicle j exists then  
+
+> 7:
+
+if di,j t,long ≤ dLC,min or Risk (dsafe , τ safe ) then  
+
+> 8:
+
+ait ← 0 ▷ Cancel-LC  
+
+> 9:
+
+else if Risk (dsafe , τ att ) or Risk (datt , τ safe ) then  
+
+> 10:
+
+blc ← min( |∆vi,j t,long |, b max ) ▷ Decel-LC  
+
+> 11:
+
+end if  
+
+> 12:
+
+end if  
+
+> 13:
+
+if target-lane rear vehicle k exists and ait̸ = 0 then  
+
+> 14:
+
+if |di,k t,long | ≤ dLC,min or Risk (dsafe , τ safe ) then  
+
+> 15:
+
+ait ← 0 ▷ Cancel-LC  
+
+> 16:
+
+else if [Risk (dsafe , τ att ) or Risk (datt , τ safe )] and 
+
+blc ̸ = 0 then  
+
+> 17:
+
+ait ← 0 ▷ Cancel-LC  
+
+> 18:
+
+end if  
+
+> 19:
+
+end if  
+
+> 20:
+
+end if  
+
+> 21:
+
+if ait ∈ { 0, 3, 4} then  
+
+> 22:
+
+if front vehicle j exists then  
+
+> 23:
+
+if di,j t,long ≤ dwarn and TTC i,j t >0 then  
+
+> 24:
+
+ait ← 4; ▷ Force-Brake  
+
+> 25:
+
+else if di,j t,long ≤ dsafe or (di,j t,long ≤ dwarn and 
+
+ait=3 ) then  
+
+> 26:
+
+ait ← 0 ▷ Suppr-Accel  
+
+> 27:
+
+else if Risk (datt , τ warn ) then  
+
+> 28:
+
+ait ← 4; ▷ Force-Brake  
+
+> 29:
+
+else if Risk (datt , τ att ) and ait=3 then  
+
+> 30:
+
+ait ← 0 ▷ Suppr-Accel  
+
+> 31:
+
+end if  
+
+> 32:
+
+end if  
+
+> 33:
+
+end if  
+
+> 34:
+
+return ait
+
+PSAR is a rule-based action refinement layer, which takes the actor-proposed action ˆait ∈ Ai as input and outputs a refined action ait. Relative longitudinal gap di,j t,long and Time-To-Collision (TTC) TTC i,j t to the relevant surrounding vehicles serve as risk indicators. 
+
+di,j t,long = ( xjt − xit − Lveh ) cos θit − W iveh 
+
+2 | sin θit|JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 8
+
+Fig. 4: Improvement of TTC. 
+
+Algorithm 2 Decentralized Interaction-Adaptive Decision-Making (D-IADM) for CAVs  
+
+> 1:
+
+Initialize: Local observations o10, . . . , o n 
+
+> 0
+
+, done = False  
+
+> 2:
+
+for t = 1 to L do  
+
+> 3:
+
+Update observations o1 
+
+> t
+
+, . . . , o nt 
+
+> 4:
+
+for i = 1 to n do  
+
+> 5:
+
+Obtain HDV interaction features f H,i t using MH-GAT  
+
+> 6:
+
+Obtain CAV interaction features f C,i t using MH-GAT  
+
+> 7:
+
+Obtain context-aware traffic features f dt,i t using MLP  
+
+> 8:
+
+Fuse features to get comprehensive observation f it
+
+using MLP  
+
+> 9:
+
+Concatenate f it with the last action ait−1 
+
+> 10:
+
+Generate action ˆait using GRU and decision layer  
+
+> 11:
+
+if ˆait violates TTC/gap safety rules then  
+
+> 12:
+
+Apply heuristic correction to obtain refined action ait (PSAR)  
+
+> 13:
+
+else  
+
+> 14:
+
+Maintain action ait = ˆ ait 
+
+> 15:
+
+end if  
+
+> 16:
+
+end for  
+
+> 17:
+
+Execute actions a1 
+
+> t
+
+, . . . , a nt and receive rewards 
+
+r1 
+
+> t
+
+, . . . , r nt 
+
+> 18:
+
+if collision occurs or all vehicles exit the road then  
+
+> 19:
+
+done = True  
+
+> 20:
+
+break  
+
+> 21:
+
+end if  
+
+> 22:
+
+end for 
+
+TTC i,j t = di,j t,long 
+
+∆vi,j t,long 
+
+, j ∈ M is
+
+∆vi,j t,long = vit| cos θit| − vjt | cos θjt |
+
+where W iveh denotes the width of CAV i, and ∆vi,j t,long 
+
+represents the longitudinal velocity difference between CAV i
+
+and its surrounding vehicle j ∈ M is, taking into account the vehicles’ heading angles. PSAR applies four action refinements:  
+
+> •
+
+Cancel-LC : Cancels the planned lane-change action;  
+
+> •
+
+Decel-LC : Maintains the lane-change intent while apply-ing deceleration;  
+
+> •
+
+Force-Brake : Overrides the longitudinal command with deceleration;  
+
+> •
+
+Suppr-Accel : Suppresses an acceleration command. The complete triggering conditions and speed-reduction for-mulations are provided in Algorithm 1. Both the actor-generated action ˆait and the PSAR-refined action ait are incorporated into the next time step’s observation as action memory. By retaining both actions, the actor can perceive how its intended decision was modified by the safety module, track-ing the discrepancy between planned and executed behaviors throughout training. In summary, the process of D-IADM for CAVs in mixed traffic is given in Algorithm 2 .
+
+C. Centralized Interaction-Enhanced Critic (C-IEC) 
+
+The C-IEC module is designed to enhance the critic’s global traffic understanding capability. C-IEC explicitly models how vehicle interactions influence traffic dynamics, enabling more accurate value estimation that provides clearer guidance for policy updates. The key insight is that by understanding the relationship between interactions and traffic evolution, the critic can better assess whether a local cooperative action contributes to global traffic improvement. The C-IEC module achieves this through its core component, the Integrated Traffic Dynamics Representation (ITDR) module, which constructs a global vehicle interaction graph and employs cross-attention mechanisms to capture the causal relationship between interac-tions and traffic dynamics. The ITDR output is then processed through a GRU to capture temporal dependencies, followed by a fully connected layer that outputs value function predictions to guide actor updates. 
+
+Fig. 5: Network framework of the ITDR. The ITDR module analyzes the relationship between ve-hicle interactions and traffic evolution by processing three distinct information layers: (a) static road structure Fstatic ,(b) dynamic traffic information (global lane statistics, CAV and HDV states), and (c) vehicle interaction information. The first two layers are processed through dedicated MLPs and concatenated to form the traffic feature f tf t .JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 9
+
+For the third layer, vehicle interaction information is pro-cessed through a GAT to extract global interaction features. A global vehicle interaction graph, denoted as Gglobal = ( V, E),is constructed, where V represents the nodes for all vehicles and E stands for the edges connecting these nodes. Here, only adjacent vehicles are connected, i.e., E = {(i, j )|i ∈V, j ∈ M is}. Each vehicle node’s state mit = ( xit, y it, v it, θ it)
+
+is embedded into node features hit ∈ RSN , which are fed into the GAT to extract global interaction features −→
+
+h it ∈ RSN . The attention weight αij from node i to node j is calculated as follows: 
+
+αij = exp( LeakyReLU (−→a [W hit∥W hjt ])) 
+
+P 
+
+> k∈M is
+
+exp( LeakyReLU (−→a [W hit∥W hkt ])) (16) where W is the weight matrix, −→a is a single-layer feedforward neural network, followed by LeakyReLU nonlinearity and softmax normalization. The enhanced node feature −→
+
+h it for node i at time t is the weighted sum of all neighboring features: 
+
+−→
+
+h it = σ
+
+ X
+
+> j∈M is
+
+αij W hjt
+
+ , (17) where −→
+
+h t = [ −→
+
+h it]i∈V denotes the stacked matrix of enhanced node features for all vehicles i ∈ V . To capture how vehicle interactions influence traffic evolution, a multi-head cross-attention mechanism is applied with traffic feature f tf t as Query and interaction feature −→
+
+h t as Key and Value. The attention output for each head h is: Attention (Qh, K h, V h) = softmax 
+
+ QhKTh
+
+√dk
+
+
+
+Vh, (18) Here dk is the key dimension, and Qh, Kh, Vh are obtained via learned projections: 
+
+Qh = f tf t W hQ, Kh = −→
+
+h tW hK , Vh = −→
+
+h tW hV , (19) with W hQ, W hK , and W hV being the projection matrices for head 
+
+h. The outputs of all H heads are concatenated and linearly projected: MultiHead (Q, K, V ) = WO [head 1; head 2; . . . ; head H ] ,
+
+(20) where head h = Attention (Qh, K h, V h) and WO is the output projection matrix. Through this mechanism, ITDR captures how vehicle in-teractions influence traffic evolution. Unlike TAIE’s local per-spective, ITDR provides the critic with a global view of vehicle interactions and traffic dynamics, enabling more accurate value estimation for guiding policy updates. V. E XPERIMENTS 
+
+A. Experimental Setup 
+
+The simulation environment is developed based on SUMO [42] and TransSimHub [43], a unified simulation platform for multi-modal perception and decision-making. The im-plementation of this research is developed based on the HARL codebase [44], and the project repository is avail-able at https://github.com/lzxphhh/DIACC.git .
+
+> (a) 25% reduction
+> (b) 50% reduction
+
+Fig. 6: Bottleneck settings with (a) 25% and (b) 50% lane reductions As illustrated in Fig. 6, the road network comprises 25% ca-pacity reduction segments, 50% capacity reduction segments, and multi-lane segments, forming a 1.3 km long-distance route with a maximum speed limit of 25 m/s. For generalization test-ing, an additional 1.3 km test map is designed with reduction segments positioned at different locations from the training map. HDVs employ the Intelligent Driver Model (IDM) [45] for longitudinal control and the LC2013 model [46] for lane-changing maneuvers. The experiment employs a systematic training and zero-shot testing framework to evaluate model performance across diverse traffic scenarios. During training, the scenario contains 25 vehicles with 10 CAVs (penetration rate 0.4) and 15 HDVs following the D1 driving style distribution specified in Table II. Three parameter sets represent aggressive, normal, and cautious driving behaviors: aggressive driving features shorter following distances and more frequent lane changes, while cautious driving involves longer following distances and fewer lane changes. Normal driving adopts default SUMO model parameters. TABLE II: HDV Driving Style Distributions.             
+
+> Name Aggressive Normal Cautious D1 0.2 0.6 0.2 D2 0.2 0.4 0.4 D3 0.4 0.4 0.2
+
+For zero-shot generalization testing, the trained model is evaluated on the test map with different reduction segment positions and under varied conditions: CAV penetration rates of 0.2 and 0.3, vehicle counts of 20, 25, 30 and 40, and HDV driving style distributions D2 and D3. These tests assess the model’s adaptability to unseen road configurations and traffic compositions. 
+
+1) Baseline Models 
+
+The comparative experiments encompass MAPPO-based base-line and ablation configurations:  
+
+> •
+
+Pure HDV scenario: All vehicles are HDVs utilizing the IDM+LC2013 model with SUMO’s safety mode enabled. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 10  
+
+> •
+
+SUMO cooperative scenario: CAVs are introduced ac-cording to penetration rate, employing the CACC model with highly cooperative lane-changing (lcCooperative=1).  
+
+> •
+
+MAPPO baseline scenario: CAVs are controlled by the vanilla MAPPO model.  
+
+> •
+
+Our models: Three MAPPO-based variants are included: 
+
+– DIACC (w/o PSAR): DIACC model without the PSAR action refinement module, used for ablation analysis. 
+
+– MAPPO-IADM: MAPPO model augmented with only D-IADM module. 
+
+– DIACC: MAPPO model incorporating both D-IADM and C-IEC modules with PSAR (our primary pro-posed model). In our experiments, we enabled the SUMO simulator’s safety mode for HDVs to prevent collisions among HDVs themselves, which would otherwise introduce bias into the evaluation results. 
+
+2) Training Parameters 
+
+We train the comparative models for 3 million steps in a dense mixed traffic bottleneck scenario with three random seeds. The training infrastructure adopts a distributed framework, collect-ing trajectory data in 20 parallel environments on CPUs, with a single GPU dedicated to policy learning. During training, transition data batches of size 32 are randomly sampled from the replay buffer and fed into the learner. Both actor and critic networks are optimized using the Adam optimizer with the learning rate of 5 × 10 −4 and discount factor of 0.99 .
+
+B. Results and Analysis 1) Training Performance 
+
+Figs. 7(a)–(c) compare the training dynamics of baseline and ablation models, including MAPPO, MAPPO-IADM, DIACC (w/o PSAR), and DIACC. As shown in the figures, DIACC achieves the lowest collision rate and highest reward values at convergence among all compared methods, validating the effectiveness of the full framework. MAPPO-IADM, which lacks C-IEC, reduces the collision rate more rapidly in early training, yet DIACC surpasses it in later stages. This behav-ior confirms that C-IEC, by providing more accurate value estimation through interaction-aware global representations in ITDR, guides policy refinement toward superior coordination once basic interaction patterns are established. DIACC also achieves faster and more stable collision rate reduction than DIACC (w/o PSAR), as PSAR filters high-risk exploratory actions via TTC- and gap-based rules, reducing destabilizing unsafe transitions in early training. Among all variants, vanilla MAPPO performs worst, failing to handle the complex inter-action dynamics inherent in mixed traffic. Figs. 7(d)–(f) examine the effect of the temperature param-eter τ by comparing the annealing strategy ( τinit = 2 →
+
+τf inal = 0 .05 over the first half of training as defined in Eq. (11)) against fixed-τ settings. The annealing strategy achieves the lowest collision rate and highest reward values at convergence, demonstrating that the curriculum-inspired schedule effectively balances broad exploration with focused optimization. Fixed τ = 0 .05 causes high training variance (wide shaded confidence intervals) and poor collision rate convergence, as the policy is directed toward difficult cases before basic coordination is established. With fixed τ = 2 
+
+or τ = 10 , the softmin weights become increasingly uniform across agents (as wi → 1/n when τ → ∞ ), reducing the attention directed toward interaction-intensive scenarios, and training performance degrades monotonically as τ increases. Figs. 7(g)–(i) examine the effect of the ego reward weight 
+
+we in Eq. (8), which balances local ego objectives and the global coordination reward. Among all evaluated settings, 
+
+we = 0 .6 achieves the best performance, attaining the lowest collision rate and highest reward values at convergence. With small we values ( we = 0 to 0.4), the ego reward contributes insufficiently to distinguish individual agent performance, preventing the policy from selectively directing learning to-ward interaction-intensive agents, and training performance degrades as we decreases. With large we values ( we = 0 .8
+
+or we = 1 .0), both settings yield lower performance than 
+
+we = 0.6, as the reduced weight on the global reward 
+
+rg causes each CAV to over-optimize its local objective, weakening cooperative coordination and driving the policy toward suboptimal solutions. 
+
+2) Testing Performance 
+
+Tables III and IV present comprehensive performance evalua-tion across 25% and 50% capacity reduction bottleneck scenar-ios, where N denotes the total number of vehicles traversing the bottleneck. Three metrics are evaluated: (1) Speed (m/s), measuring average speed and standard deviation to reflect traffic efficiency, (2) p(WEs), the probability of Waiting Events where vehicle speed falls below 3 m/s, and (3) p(SCEs), the probability of Safety-Critical Events including proximity violations (distance below minimum safety threshold), TTC below critical limit, collisions, and emergency braking [47]. Across both Table III and Table IV, DIACC consistently achieves optimal or near-optimal results in both efficiency (high speed and low p(WEs)) and safety (low p(SCEs)), confirming the effectiveness of the full architecture. Notably, DIACC reduces p(SCEs) to 0% across all five zero-shot scenarios in Table III, demonstrating that the complete frame-work effectively eliminates safety-critical events under diverse driving style distributions. MAPPO-IADM, which shares the same actor architecture but omits C-IEC, achieves competitive efficiency performance in Table III, even surpassing DIACC in certain scenarios (e.g., N=25, D1: 20.77 vs. 19.04 m/s, N=20, D1: 21.36 vs. 19.26 m/s). This indicates that the D-IADM actor design alone suffices for maintaining high effi-ciency in simple settings. However, MAPPO-IADM does not consistently achieve zero p(SCEs) in Table III and degrades substantially in the more demanding 50% reduction scenario, particularly in the N=30 and N=40 settings of Table IV, where DIACC demonstrates clear advantages in both efficiency and safety. These contrasting results corroborate the role of C-IEC, which supplies interaction-aware global value estimation during actor training to enable the learning of cooperative policies that the actor module alone cannot achieve in high-density, capacity-constrained scenarios. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 11                   
+
+> (a) Baseline – Collision Rate (b) Baseline – Global Reward (c) Baseline – Individual Reward
+> (d) τselection – Collision Rate (e) τselection – Global Reward (f) τselection – Individual Reward
+> (g) weselection – Collision Rate (h) weselection – Global Reward (i) weselection – Individual Reward
+
+Fig. 7: Integrated training-curve comparison. (a)–(c): baseline and ablation comparison. (d)–(f): softmin temperature τ selection. (g)–(i): ego reward weight we selection. 
+
+3) Cooperation Analysis 
+
+Fig. 8 presents the speed distribution of all methods across traffic scales and capacity-reduction scenarios, offering a dis-tributional perspective complementary to the aggregate metrics in Tables III and IV. In the box plot and Kernel Density Estimation (KDE) plots for N = 30 and N = 40 (Figs. 8(a)– (b)), DIACC achieves the highest median speed among all methods, with the most concentrated interquartile range ob-served under normal multilane and 25% capacity reduction conditions. This indicates that DIACC enables vehicles to maintain consistently high and stable speeds, with fewer low-speed oscillations than any baseline. The KDE plots for individual road segments (Figs. 8(c)–(h)) further confirm this pattern, showing that as capacity reduction increases from 25% to 50%, DIACC’s speed distribution retains the largest proportion in high-speed regions and the smallest in low-speed regions. This distributional advantage reflects DIACC’s dual-level interaction design, where D-IADM equips each actor with proactive interaction-adaptive decisions and C-IEC provides accurate global value estimation, jointly sustaining cooperative flow and suppressing speed oscillations as bottle-neck severity increases. 
+
+C. Discussions 
+
+Vehicle interactions fundamentally influence both individual vehicle movement and overall traffic evolution in mixed traffic environments. The DIACC strategy addresses this challenge through three complementary components within the MAPPO framework: 1) D-IADM augments the actor’s local interaction perception by distinguishing CAV-CAV cooperative interac-tions from CAV-HDV observational interactions, 2) C-IEC strengthens the critic’s global traffic understanding through JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 12 
+
+TABLE III: Performance Comparison in 25% Capacity Reduction Bottleneck Scenario. 
+
+Scenario Metric SUMO (Pure HDV) SUMO (Mixed Traffic) MAPPO-IADM DIACC 
+
+Training Scenario 
+
+N=25, ρ = 0 .4, D1 
+
+Speed (m/s) 16 .08 ± 7.94 17 .05 ± 7.24 (+6.0%) 20 .77 ± 2.88 (+29.2%) 19 .04 ± 6.19 (+18.4%) 
+
+p(WEs) 11 .20 ± 4.66% 8.80 ± 7.76% (-21.4%) 0.00 ± 0.00 % (-100.0%) 4.00 ± 0.00% (-64.3%) 
+
+p(SCEs) 7.20 ± 3.92% 6.40 ± 9.33% (-11.1%) 0.00 ± 0.00 % (-100.0%) 0.00 ± 0.00 % (-100.0%) 
+
+Zero-shot Testing Scenarios 
+
+N=25, ρ = 0 .4, D2 
+
+Speed (m/s) 14 .44 ± 8.74 14 .54 ± 9.07 (+0.7%) 20 .13 ± 4.62 (+39.4%) 19 .05 ± 6.61 (+31.9%) 
+
+p(WEs) 18 .40 ± 4.08% 11 .20 ± 3.92% (-39.1%) 4.00 ± 0.00 % (-78.3%) 4.00 ± 0.00 % (-78.3%) 
+
+p(SCEs) 6.40 ± 3.20% 5.60 ± 6.97% (-12.5%) 0.00 ± 0.00 % (-100.0%) 0.00 ± 0.00 % (-100.0%) 
+
+N=25, ρ = 0 .4, D3 
+
+Speed (m/s) 16 .48 ± 7.90 16 .12 ± 8.73 (-2.2%) 18 .86 ± 6.91 (+14.4%) 20 .47 ± 3.64 (+24.2%) 
+
+p(WEs) 11 .20 ± 5.31% 10 .61 ± 5.29% (-5.3%) 12 .00 ± 0.00% (+7.1%) 0.00 ± 0.00 % (-100.0%) 
+
+p(SCEs) 5.60 ± 6.97% 12 .42 ± 12 .31% (+121.7%) 8.00 ± 0.00% (+42.9%) 0.00 ± 0.00 % (-100.0%) 
+
+N=20, ρ = 0 .4, D1 
+
+Speed (m/s) 16 .26 ± 8.04 17 .54 ± 8.58 (+7.9%) 21 .36 ± 2.61 (+31.4%) 19 .26 ± 6.60 (+18.5%) 
+
+p(WEs) 15 .00 ± 5.48% 9.00 ± 2.00% (-40.0%) 0.00 ± 0.00 % (-100.0%) 5.00 ± 0.00% (-66.7%) 
+
+p(SCEs) 4.00 ± 8.00% 3.00 ± 6.00% (-25.0%) 0.00 ± 0.00 % (-100.0%) 0.00 ± 0.00 % (-100.0%) 
+
+N=30, ρ = 0 .3, D1 
+
+Speed (m/s) 15 .24 ± 8.26 16 .77 ± 7.42 (+10.1%) 18 .65 ± 5.19 (+22.4%) 18 .48 ± 5.20 (+21.3%) 
+
+p(WEs) 12 .00 ± 4.99% 7.33 ± 3.89% (-38.9%) 3.33 ± 0.00 % (-72.2%) 3.33 ± 0.00 % (-72.2%) 
+
+p(SCEs) 8.00 ± 7.77% 2.00 ± 4.00% (-75.0%) 1.33 ± 2.67% (-83.3%) 0.00 ± 0.00 % (-100.0%) 
+
+N=40, ρ = 0 .2, D1 
+
+Speed (m/s) 15 .03 ± 8.11 14 .52 ± 8.81 (-3.4%) 15 .63 ± 7.16 (+4.0%) 17 .24 ± 7.70 (+14.7%) 
+
+p(WEs) 10 .00 ± 3.16% 13 .00 ± 4.58% (+30.0%) 5.00 ± 0.00 % (-50.0%) 7.50 ± 0.00% (-25.0%) 
+
+p(SCEs) 8.00 ± 2.92% 15 .00 ± 8.51% (+87.5%) 0.00 ± 0.00 % (-100.0%) 0.00 ± 0.00 % (-100.0%) 
+
+TABLE IV: Performance Comparison in 50% Capacity Reduction Bottleneck Scenario. 
+
+Scenario Metric SUMO (Pure HDV) SUMO (Mixed Traffic) MAPPO-IADM DIACC 
+
+Training Scenario 
+
+N=25, ρ = 0 .4, D1 
+
+Speed (m/s) 10 .00 ± 7.30 14 .10 ± 6.52 (+41.0%) 17 .47 ± 6.65 (+74.8%) 17 .60 ± 7.77 (+76.0%) 
+
+p(WEs) 25 .60 ± 9.83% 13 .23 ± 7.97% (-48.3%) 6.00 ± 2.00 % (-76.6%) 6.80 ± 5.38% (-73.4%) 
+
+p(SCEs) 16 .40 ± 7.68% 7.60 ± 8.48% (-53.7%) 6.40 ± 7.84% (-61.0%) 0.00 ± 0.00 % (-100.0%) 
+
+Zero-shot Testing Scenarios 
+
+N=25, ρ = 0 .4, D2 
+
+Speed (m/s) 10 .55 ± 7.71 13 .21 ± 6.67 (+25.2%) 16 .47 ± 7.96 (+56.1%) 16 .59 ± 8.48 (+57.2%) 
+
+p(WEs) 23 .60 ± 9.37% 10 .90 ± 6.96% (-53.8%) 12 .00 ± 0.00% (-49.2%) 10 .00 ± 6.00 % (-57.6%) 
+
+p(SCEs) 8.80 ± 6.65% 3.67 ± 5.26 % (-58.3%) 8.00 ± 0.00% (-9.1%) 4.00 ± 4.00% (-54.5%) N=25, ρ = 0 .4, D3 
+
+Speed (m/s) 12 .65 ± 7.80 14 .98 ± 7.47 (+18.5%) 15 .32 ± 8.05 (+21.1%) 15 .90 ± 7.78 (+25.7%) 
+
+p(WEs) 16 .40 ± 5.20% 10 .03 ± 8.41% (-38.8%) 12 .00 ± 4.00% (-26.8%) 10 .00 ± 2.00 % (-39.0%) 
+
+p(SCEs) 9.20 ± 7.60% 3.20 ± 6.40 % (-65.2%) 14 .00 ± 2.00% (+52.2%) 8.00 ± 0.00% (-13.0%) N=20, ρ = 0 .4, D1 
+
+Speed (m/s) 11 .99 ± 7.64 14 .91 ± 6.30 (+24.3%) 17 .98 ± 5.78 (+50.0%) 17 .62 ± 7.61 (+46.9%) 
+
+p(WEs) 19 .00 ± 8.31% 10 .00 ± 4.47% (-47.4%) 5.00 ± 0.00 % (-73.7%) 7.50 ± 2.50% (-60.5%) 
+
+p(SCEs) 13 .00 ± 8.12% 7.50 ± 6.80% (-42.3%) 0.00 ± 0.00 % (-100.0%) 0.00 ± 0.00 % (-100.0%) 
+
+N=30, ρ = 0 .3, D1 
+
+Speed (m/s) 9.25 ± 7.36 10 .51 ± 6.79 (+13.6%) 11 .97 ± 8.10 (+29.4%) 14 .37 ± 8.61 (+55.3%) 
+
+p(WEs) 27 .67 ± 10 .96% 23 .67 ± 7.67% (-14.5%) 16 .00 ± 3.27% (-42.2%) 13 .33 ± 3.33 % (-51.8%) 
+
+p(SCEs) 20 .00 ± 6.50 % 20 .33 ± 8.62% (+1.7%) 29 .00 ± 7.75% (+45.0%) 20 .00 ± 10 .00%(+0 .0%) 
+
+N=40, ρ = 0 .2, D1 
+
+Speed (m/s) 8.40 ± 6.93 10 .49 ± 7.47 (+24.8%) 10 .84 ± 7.97 (+29.0%) 12 .68 ± 7.93 (+51.0%) 
+
+p(WEs) 30 .75 ± 9.94% 24 .25 ± 12 .70% (-21.1%) 22 .50 ± 10 .00% (-26.8%) 12 .25 ± 3.61 % (-60.2%) 
+
+p(SCEs) 19 .00 ± 7.60% 16 .00 ± 12 .31% (-15.8%) 23 .75 ± 11 .25% (+25.0%) 8.75 ± 4.37 % (-53.9%) 
+
+interaction-aware value estimation, and 3) the cooperative reward mechanism focuses learning on interaction-intensive scenarios through softmin aggregation with temperature an-nealing. The experimental results validate the effectiveness of these three contributions. The D-IADM module demonstrates its value in enhanc-ing local interaction perception for actor decision-making. Compared to the vanilla MAPPO baseline, MAPPO-IADM achieves more stable training convergence with lower collision rates, as shown in Figs. 7(a)–(c). In testing scenarios, MAPPO-IADM reduces the probability of waiting events p(WEs) 
+
+and safety-critical events p(SCEs) while improving average speeds across various traffic conditions (Tables III and IV). The differentiated modeling of CAV-CAV and CAV-HDV interactions enables each CAV to better understand the distinct behavioral patterns of surrounding vehicles, leading to more adaptive decision-making in complex traffic environments. The C-IEC module validates its contribution in enhanc-ing the critic’s global traffic understanding for more effec-tive policy guidance. The complete DIACC model outper-forms MAPPO-IADM particularly in high-density scenarios (N = 30 and N = 40 ), where the advantage becomes more pronounced as traffic complexity increases. In zero-shot testing conditions, DIACC demonstrates stronger generaliza-tion capability compared to MAPPO-IADM, indicating that the interaction-aware value estimation provides more robust guidance for policy learning. The ITDR module within C-IEC captures how vehicle interactions influence traffic dynamics, enabling the critic to provide more accurate value estimates that guide actor updates toward effective cooperative strategies. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 13                      
+
+> (a) N= 30 : Speed Distribution (b) N= 40 : Speed distributions
+> (c) N= 30 , Normal Multilane Segment (d) N= 30 , 25% Capacity Reduction (e) N= 30 , 50% Capacity Reduction
+> (f) N= 40 , Normal Multilane Segment (g) N= 40 , 25% Capacity Reduction (h) N= 40 , 50% Capacity Reduction
+
+Fig. 8: Speed distribution comparison under mixed-traffic scales and capacity-reduction scenarios. (a)–(b) Box plot and KDE of overall speed distributions. (c)–(h) KDE of speed distributions across different capacity-reduction scenarios. The reward design mechanism proves essential for learning in interaction-intensive scenarios. The temperature parameter analysis (Figs. 7(d)–(f)) shows that fixed τ values lead to either unstable convergence (small τ ) or failure to distinguish scenario difficulty (large τ ), while the annealing strategy from 
+
+τ = 2 to τ = 0 .05 achieves stable training with focused learning on challenging interactions. The ego reward weight analysis (Figs. 7(g)–(i)) indicates that we = 0 .6 to 0.8 provides optimal balance between local and global reward signals. These findings confirm that softmin aggregation effectively directs learning attention toward agents facing complex inter-action scenarios, ensuring comprehensive policy improvement across diverse traffic conditions. However, there is still considerable room for improvement in the adaptability and robustness of the models in this study. In our subsequent work, we plan to:  
+
+> •
+
+Develop lightweight trajectory prediction modules to en-hance the accuracy of safety assessment calculations.  
+
+> •
+
+Further explore prediction-based MARL models with improved generalization capabilities to better adapt to larger-scale traffic systems.  
+
+> •
+
+Expand the dual-interaction-aware training framework to diverse traffic scenarios and establish a unified cross-scenario cooperative control framework. VI. C ONCLUSION 
+
+Cooperative control of CAVs in mixed traffic environments faces a fundamental tension between decentralized decision-making and global traffic optimization, further complicated JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 14 
+
+by the unpredictable behavior of HDVs. This paper addresses these challenges through the DIACC strategy, which augments the MAPPO framework with dual-interaction-aware capabili-ties. The proposed approach makes three technical contributions that work in concert. First, the D-IADM module enables each CAV to perceive and respond to the distinct behavioral charac-teristics of surrounding vehicles by separating the modeling of CAV-CAV collaborative interactions and CAV-HDV adaptive interactions. Second, the C-IEC module equips the critic with a deeper understanding of how vehicle interactions shape traffic evolution, resulting in more informative value estimates that guide actor policy updates during training. Third, the reward design mechanism ensures that learning prioritizes scenarios where coordination is most challenging, preventing agents in simpler traffic regions from dominating the training process. Experimental validation confirms the effectiveness of these contributions, demonstrating that throughput efficiency is im-proved under the premise of reduced safety-critical events across diverse traffic conditions. Furthermore, DIACC main-tains this superiority in zero-shot scenarios, demonstrating the generalization capability enabled by interaction-aware learning. Future work will focus on extending the theoretical analysis and investigating the scalability of the framework in larger-scale mixed traffic systems and more diverse traffic scenarios. VII. APPENDIX REFERENCES [1] A. Katriniok, B. Rosarius, and P. M¨ ah¨ onen, “Fully distributed model predictive control of connected automated vehicles in intersections: Theory and vehicle experiments,” IEEE Transactions on Intelligent Transportation Systems , vol. 23, no. 10, pp. 18288–18300, 2022. [2] X. He, J. Wu, Z. Huang, Z. Hu, J. Wang, A. Sangiovanni-Vincentelli, and C. Lv, “Fear-neuro-inspired reinforcement learning for safe autonomous driving,” IEEE Transactions on Pattern Analysis and Machine Intelli-gence , vol. 46, no. 1, pp. 267–279, 2024. [3] D. Xu, P. Liu, H. Li, H. Guo, Z. Xie, and Q. Xuan, “Multi-view graph convolution network reinforcement learning for CAVs cooperative control in highway mixed traffic,” IEEE Transactions on Intelligent Vehicles , vol. 9, no. 1, pp. 2588–2599, 2024. [4] D. Chen, A. Srivastava, and S. Ahn, “Harnessing connected and au-tomated vehicle technologies to control lane changes at freeway merge bottlenecks in mixed traffic,” Transportation Research Part C: Emerging Technologies , vol. 123, p. 102950, 2021. [5] M. ˇCiˇ ci´ c, X. Xiong, L. Jin, and K. H. Johansson, “Coordinating vehicle platoons for highway bottleneck decongestion and throughput improvement,” IEEE Transactions on Intelligent Transportation Systems ,vol. 23, no. 7, pp. 8959–8971, 2022. [6] Y. Li, B. Pan, Z. Chen, and L. Xing, “Developing a dynamic speed control system for mixed traffic flow to reduce collision risks near freeway bottlenecks,” IEEE Transactions on Intelligent Transportation Systems , 2023. [7] Y. Du, M. A. Makridis, C. M. Tamp` ere, A. Kouvelas, and W. Shang-Guan, “Adaptive control with moving actuators at motorway bottlenecks with connected and automated vehicles,” Transportation Research Part C: Emerging Technologies , vol. 156, p. 104319, 2023. [8] H. Ding, L. Zhang, J. Chen, X. Zheng, H. Pan, and W. Zhang, “MPC-based dynamic speed control of cavs in multiple sections upstream of the bottleneck area within a mixed vehicular environment,” Physica A: Statistical Mechanics and its Applications , vol. 613, p. 128542, 2023. [9] C. Wang, Y. Xu, J. Zhang, and B. Ran, “Integrated traffic control for freeway recurrent bottleneck based on deep reinforcement learning,” 
+
+IEEE Transactions on Intelligent Transportation Systems , vol. 23, no. 9, pp. 15522–15535, 2022. [10] M. Li, Z. Li, S. Wang, and S. Zheng, “Enhancing cooperation of vehicle merging control in heavy traffic using communication-based soft actor-critic algorithm,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 6, pp. 6491–6506, 2023. [11] D. Chen, M. R. Hajidavalloo, Z. Li, K. Chen, Y. Wang, L. Jiang, and Y. Wang, “Deep multi-agent reinforcement learning for highway on-ramp merging in mixed traffic,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 11, pp. 11623–11638, 2023. [12] L. Li, W. Zhao, C. Wang, A. Fotouhi, and X. Liu, “Nash double Q-based multi-agent deep reinforcement learning for interactive merging strategy in mixed traffic,” Expert Systems with Applications , vol. 237, p. 121458, 2024. [13] X. Hu and J. Sun, “Trajectory optimization of connected and au-tonomous vehicles at a multilane freeway merging area,” Transportation Research Part C: Emerging Technologies , vol. 101, pp. 111–125, 2019. [14] J. Ying and Y. Feng, “Infrastructure-assisted cooperative driving and intersection management in mixed traffic conditions,” Transportation Research Part C: Emerging Technologies , vol. 158, p. 104443, 2024. [15] S. Huang, D. Sun, and M. Zhao, “Distributed MPC-based hierarchical cooperative control for mixed vehicle groups with T-CPS in the vicinity of traffic signal light,” IEEE Transactions on Intelligent Transportation Systems , 2024. [16] K. Hou, F. Zheng, X. Liu, and G. Guo, “Cooperative on-ramp merging control model for mixed traffic on multi-lane freeways,” IEEE Transac-tions on Intelligent Transportation Systems , vol. 24, no. 10, pp. 10774– 10790, 2023. [17] J. Shi, K. Li, C. Chen, W. Kong, and Y. Luo, “Cooperative merging strategy in mixed traffic based on optimal final-state phase diagram with flexible highway merging points,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 10, pp. 11185–11197, 2023. [18] S. Jing, F. Hui, X. Zhao, J. Rios-Torres, and A. J. Khattak, “Cooperative game approach to optimal merging sequence and on-ramp merging control of connected and automated vehicles,” IEEE Transactions on Intelligent Transportation Systems , vol. 20, no. 11, pp. 4234–4244, 2019. [19] J. Ding, L. Li, H. Peng, and Y. Zhang, “A rule-based cooperative merging strategy for connected and automated vehicles,” IEEE Transactions on Intelligent Transportation Systems , vol. 21, no. 8, pp. 3436–3446, 2020. [20] L. Li, C. Qian, J. Gan, D. Zhang, X. Qu, F. Xiao, and B. Ran, “DCoMA: A dynamic coordinative merging assistant strategy for on-ramp vehicles with mixed traffic conditions,” Transportation Research Part C: Emerging Technologies , vol. 165, p. 104700, 2024. [21] K. Sun, S. Gong, Y. Zhou, Z. Chen, X. Zhao, and X. Wu, “A multi-vehicle cooperative control scheme in mitigating traffic oscillation with smooth tracking-objective switching for a single-vehicle lane change scenario,” Transportation Research Part C: Emerging Technologies ,vol. 159, p. 104487, 2024. [22] Y. Zhang, W. Macke, J. Cui, S. Hornstein, D. Urieli, and P. Stone, “Learning a robust multiagent driving policy for traffic congestion reduction,” Neural Computing and Applications , pp. 1–14, 2023. [23] M. Li, Z. Cao, and Z. Li, “Augmented mixed vehicular platoon control with dense communication reinforcement learning for traffic oscillation alleviation,” IEEE Internet of Things Journal , 2024. [24] M. Bouton, A. Nakhaei, K. Fujimura, and M. J. Kochenderfer, “Cooperation-aware reinforcement learning for merging in dense traffic,” in 2019 IEEE Intelligent Transportation Systems Conference (ITSC) ,pp. 3441–3447, IEEE, 2019. [25] A. Irshayyid, J. Chen, and G. Xiong, “A review on reinforcement learning-based highway autonomous vehicle control,” Green Energy and Intelligent Transportation , vol. 3, no. 4, p. 100156, 2024. [26] T. Chu, J. Wang, L. Codec` a, and Z. Li, “Multi-agent deep reinforcement learning for large-scale traffic signal control,” IEEE Transactions on Intelligent Transportation Systems , vol. 21, no. 3, pp. 1086–1095, 2020. [27] M. Wang, Y. Chen, Y. Kan, C. Xu, M. Lepech, M.-O. Pun, and X. Xiong, “Traffic signal cycle control with centralized critic and decentralized actors under varying intervention frequencies,” IEEE Transactions on Intelligent Transportation Systems , vol. 25, no. 12, pp. 20085–20104, 2024. [28] C. Spatharis and K. Blekas, “Multiagent reinforcement learning for autonomous driving in traffic zones with unsignalized intersections,” 
+
+Journal of Intelligent Transportation Systems , vol. 28, no. 1, pp. 103– 119, 2024. [29] Y. Hu, A. Nakhaei, M. Tomizuka, and K. Fujimura, “Interaction-aware decision making with adaptive strategies under merging scenarios,” in 
+
+2019 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pp. 151–158, IEEE, 2019. [30] J. Yang, J. Zhang, and H. Wang, “Urban traffic control in software defined internet of things via a multi-agent deep reinforcement learning JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 15 
+
+TABLE V: Notations (organized by categories). 
+
+Symbol Definition Indexes and Sets 
+
+i, j Vehicle indices (e.g., for CAVs/HDVs) 
+
+t Time step index 
+
+l Lane index 
+
+n Number of CAVs ( |N | )
+
+N Set of CAVs in the mixed traffic 
+
+S Global state space 
+
+A Joint action space 
+
+O Joint observation space 
+
+Mis Neighboring vehicles of vehicle i
+
+Miw , Mic Vehicles within warning / collision ranges 
+
+Mis,H , Mis,C Neighboring HDVs / CAVs 
+
+N is,H/C Number of surrounding HDVs or CAVs of CAV i
+
+Gis,H/C HDV/CAV interaction graph for CAV i
+
+Vis,H/C , Eis,H/C Nodes / edges in HDV/CAV interaction graph 
+
+Gglobal Global vehicle interaction graph 
+
+V, E Nodes / edges in global interaction graph 
+
+Variables (States, Actions, Observations, etc.) 
+
+st, ait, oit Global state; action and observation of vehicle i at time t
+
+˜oit+1 Augmented observation with ˆait and ait
+
+mit = ( xit, y it, v it, θ it) Vehicle i’s state (position, speed, heading, etc.) 
+
+(∆ xi,j t , ∆yi,j t ) Relative position of vehicle j w.r.t. vehicle i
+
+∆vi,j t Relative speed of vehicle j w.r.t. vehicle icj Type of vehicle j (CAV/HDV) 
+
+nl, D l, v l, ρ l Number of vehicles, density, average speed, and CAV penetration in lane lrie, r g , r done Ego reward, global reward, completion reward 
+
+rie,v , r ie,w , r ie,c , r ie,tp Ego reward components (speed, warning, collision, time) 
+
+wi Softmin weight for agent i
+
+¯re Softmin-aggregated ego reward 
+
+Fego t , Flef t t , Fright t , Fstatic Lane stats and static road structure info TTC i,j t , d i,j t,long , ∆vi,j t,long Time-to-collision, minimum longitudinal head-to-tail distance and longitudinal relative speed 
+
+αij Attention / importance coefficient between nodes i and j
+
+ˆait, a lat , a long Actor command and its lateral / longitudinal components 
+
+hH,i t , f H,i t , ˆhH,i t HDV node features, interaction features, and enhanced node features 
+
+f C,i t CAV interaction features 
+
+f dt,i t , f it , f dt Local context, fused observation, global dynamic features 
+
+hit, −→
+
+h it Global graph node features and enhanced node features 
+
+Qh, K h, V h Query, key, and value in attention mechanism 
+
+−→a , ˆa Single-layer feedforward networks (used for attention or node update) 
+
+Parameters (Constants, Hyperparameters, Functions) 
+
+R Reward function 
+
+P (st+1 |st, a 1 
+
+> t
+
+, . . . , a nt ) State transition probability 
+
+γ Discount factor 
+
+πθ Policy with parameter θJ(πθ ) Expected cumulative reward 
+
+Vϕ Centralized critic 
+
+L Horizon length (episode steps) 
+
+LCLIP , L V , V CLIP PPO clipped objectives and value prediction 
+
+rit(θ) Probability ratio (new vs. old policy) 
+
+ϵ Clipping Hyperparameter (PPO) 
+
+ˆAt, δ t Advantage estimator and TD error 
+
+λ Generalized Advantage (GAE) parameter 
+
+T Episode length in GAE 
+
+we, w g Weights for ¯re and rg
+
+we,v , w e,w , w e,c , w e,tp Weights for ego reward components 
+
+τ Temperature parameter for softmin aggregation 
+
+τinit , τ f inal Initial and final temperature for annealing 
+
+Tanneal Annealing period (half of total training steps) 
+
+vmax Prescribed maximum speed 
+
+dth,w , d th,c Distance thresholds (warning / collision) 
+
+vth Speed threshold for penalty tuning 
+
+pe,v , p e,c , p g,v Reward bias terms 
+
+Lveh , W iveh Vehicle length and width 
+
+SH , S N Hidden-layer sizes (e.g., for GAT or MLP) 
+
+W, W Q, W K , W V , W O , d k Attention projection matrices and key dimension 
+
+B, H Number of attention heads (GAT / cross-attention) 
+
+σ, σ (·) Entropy weight and activation function JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 16 
+
+approach,” IEEE Transactions on Intelligent Transportation Systems ,vol. 22, no. 6, pp. 3742–3754, 2020. [31] H. Huang, Z. Hu, M. Li, Z. Lu, and X. Wen, “Cooperative optimization of traffic signals and vehicle speed using a novel multi-agent deep reinforcement learning,” IEEE Transactions on Vehicular Technology ,2024. [32] ´A. Madridano, A. Al-Kaff, D. Mart´ ın, and A. De La Escalera, “Tra-jectory planning for multi-robot systems: Methods and applications,” 
+
+Expert Systems with Applications , vol. 173, p. 114660, 2021. [33] R. Bautista-Montesano, R. Galluzzi, K. Ruan, Y. Fu, and X. Di, “Au-tonomous navigation at unsignalized intersections: A coupled reinforce-ment learning and model predictive control approach,” Transportation Research Part C: Emerging Technologies , vol. 139, p. 103662, 2022. [34] C. Yu, X. Wang, X. Xu, M. Zhang, H. Ge, J. Ren, L. Sun, B. Chen, and G. Tan, “Distributed multiagent coordinated learning for autonomous driving in highways based on dynamic coordination graphs,” IEEE Transactions on Intelligent Transportation Systems , vol. 21, no. 2, pp. 735–748, 2020. [35] S. K. S. Nakka, B. Chalaki, and A. A. Malikopoulos, “A multi-agent deep reinforcement learning coordination framework for connected and automated vehicles at merging roadways,” in 2022 American Control Conference (ACC) , pp. 3297–3302, IEEE, 2022. [36] F. A. Oliehoek, C. Amato, et al. , A concise introduction to decentralized POMDPs , vol. 1. Springer, 2016. [37] C. Yu, A. Velu, E. Vinitsky, J. Gao, Y. Wang, A. Bayen, and Y. Wu, “The surprising effectiveness of PPO in cooperative multi-agent games,” 
+
+Advances in Neural Information Processing Systems , vol. 35, pp. 24611– 24624, 2022. [38] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, “Prox-imal policy optimization algorithms,” arXiv preprint arXiv:1707.06347 ,2017. [39] K. Cho, B. Van Merri¨ enboer, C. Gulcehre, D. Bahdanau, F. Bougares, H. Schwenk, and Y. Bengio, “Learning phrase representations using rnn encoder-decoder for statistical machine translation,” arXiv preprint arXiv:1406.1078 , 2014. [40] Y. Bengio, J. Louradour, R. Collobert, and J. Weston, “Curriculum learning,” Proceedings of the 26th Annual International Conference on Machine Learning , pp. 41–48, 2009. [41] P. Veliˇ ckovi´ c, G. Cucurull, A. Casanova, A. Romero, P. Lio, and Y. Bengio, “Graph attention networks,” in International Conference on Learning Representations , 2018. [42] P. A. Lopez, M. Behrisch, L. Bieker-Walz, J. Erdmann, Y.-P. Fl¨ otter¨ od, R. Hilbrich, L. L¨ ucken, J. Rummel, P. Wagner, and E. Wießner, “Mi-croscopic traffic simulation using SUMO,” in 2018 21st International Conference on Intelligent Transportation Systems (ITSC) , pp. 2575– 2582, IEEE, 2018. [43] M. Wang, Y. Chen, Y. Cai, A. Pang, Y. Xie, Z. Ma, C. Xu, K. Jiang, D. Wang, L. Roullet, C. S. Chen, Z. Cui, Y. Kan, M. Lepech, and M.-O. Pun, “TranSimHub: A unified air-ground simulation plat-form for multi-modal perception and decision-making,” arXiv preprint arXiv:2510.15365 , 2025. [44] J. G. Kuba, R. Chen, M. Wen, Y. Wen, F. Sun, J. Wang, and Y. Yang, “Trust region policy optimisation in multi-agent reinforcement learning,” 
+
+arXiv preprint arXiv:2109.11251 , 2021. [45] M. Treiber and A. Kesting, “Traffic flow dynamics,” Traffic Flow Dynamics: Data, Models and Simulation, Springer-Verlag Berlin Hei-delberg , pp. 983–1000, 2013. [46] J. Erdmann, “Sumo’s lane-changing model,” in Modeling Mobility with Open Data: 2nd SUMO Conference 2014 Berlin, Germany, May 15-16, 2014 , pp. 105–123, Springer, 2015. [47] W. Zhou, X. Wang, Y. Glaser, X. Wu, and X. Xu, “Developing an improved automatic preventive braking system based on safety-critical car-following events from naturalistic driving study data,” Accident Analysis & Prevention , vol. 178, p. 106834, 2022. PLACE PHOTO HERE 
+
+Zhengxuan Liu received the B.E. and M.S. degrees from Tianjin University, Tianjin, China in 2016 and 2019, respectively. From 2019 to 2021, she worked as an EEA Engineer at CATARC (Tianjin) Automotive Engineering Research Institute Co.,Ltd., specializing active safety domain. She is currently pursuing the Ph.D. degree in control science and engineering with the School of Electrical and Infor-mation Engineering. Her current research interests include cooperative control and security issue for mixed traffic system. PLACE PHOTO HERE 
+
+Yuxin Cai received B.E. degree from Nanyang Technological University (NTU), Singapore in 2022. Now she is a PhD student at School of Mechanical and Aerospace Engineering, NTU, Singapore. Her main research interests are reinforcement learning, multi-robot cooperation and foundation models. PLACE PHOTO HERE 
+
+Yijing Wang received her M.S. degree in control theory and control engineering from Yanshan Uni-versity and the Ph.D. degree in control theory from Peking University, China, in 2000 and 2004, respec-tively. In 2004, she joined the School of Electri-cal and Information Engineering, Tianjin University, where she is a full professor. Her research interests are analysis and control of switched/hybrid systems, and robust control. PLACE PHOTO HERE 
+
+Xiangkun He (Senior Member, IEEE) is currently a UESTC100 Young Professor at the University of Electronic Science and Technology of China. Previously, he was a Research Fellow at Nanyang Technological University, Singapore, and served as a Senior Research Scientist at Huawei Noah’s Ark Lab from 2019 to 2021. He earned his Ph.D. in 2019 from the School of Vehicle and Mobility at Tsinghua University. He has authored over 60 papers and holds 8 granted patents. His research interests include reinforcement learning, trustworthy AI, autonomous vehicles, and robotics. He has received many awards and honors, selectively including the Tsinghua University Outstanding Doctoral Dissertation Award in 2019, Best Paper Finalist at IEEE ICMA 2020, Huawei Major Technological Breakthrough Award in 2021, Best Paper Runner-Up Award at CVCI 2022, and Runner-Up in the Intelligent Algorithm Final of the 2022 Alibaba Global Future Vehicle Challenge. He serves as a reviewer for over 50 renowned journals and conferences. PLACE PHOTO HERE 
+
+Chen Lv (Senior Member, IEEE) received the Ph.D. degree from the Department of Automotive Engi-neering, Tsinghua University, China, in 2016. From 2014 to 2015, he was a joint Ph.D. Researcher with the EECS Department, University of California, Berkeley. He is currently an Associate Professor with Nanyang Technology University, Singapore. His research focuses on advanced vehicles and hu-man–machine systems, where he has contributed over 100 papers and received 12 granted patents in China. He received many awards and honors, including the Highly Commended Paper Award of IMechE U.K. in 2012, the Japan NSK Outstanding Mechanical Engineering Paper Award in 2014, the Tsinghua University Outstanding Doctoral Thesis Award in 2016, the IEEE IV Best Workshop/Special Session Paper Award in 2018, the Automotive Innovation Best Paper Award in 2020, the winner of Waymo Open Dataset Challenges at CVPR 2021, and the Machines Young Investigator Award in 2022. He serves as an Associate Editor for IEEE Transactions on Intelligent Transportation Systems, IEEE Transactions on Vehicular Technology, and IEEE Transactions on Intelligent Vehicles; and a Guest Editor for IEEE Intelligent Transportation Systems Magazine, IEEE/ASME Transactions on Mechatronics, and Applied Energy. PLACE PHOTO HERE 
+
+Zhiqiang Zuo (Senior Member, IEEE) received the M.S. degree in control theory and control engi-neering in 2001 from Yanshan University and the Ph.D. degree in control theory in 2004 from Peking University, China. In 2004, he joined the School of Electrical and Information Engineering, Tianjin University, where he is a full professor. From 2008 to 2010, he was a Research Fellow in the Department of Mathematics, City University of Hong Kong. From 2013 to 2014, he was a visiting scholar at the University of California, Riverside. His research interests include nonlinear control, robust control, multi-agent systems and cyber-physical systems. Dr. Zuo is an associate editor of the Journal of the Franklin Institute (Elsevier).

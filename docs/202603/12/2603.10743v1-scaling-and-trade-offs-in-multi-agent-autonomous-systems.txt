@@ -1,0 +1,854 @@
+Title: Scaling and Trade-offs in Multi-agent Autonomous Systems
+
+URL Source: https://arxiv.org/pdf/2603.10743v1
+
+Published Time: Thu, 12 Mar 2026 01:13:07 GMT
+
+Number of Pages: 15
+
+Markdown Content:
+> 1
+
+# Scaling and Trade-offs in Multi-agent Autonomous Systems 
+
+Abram H. Clark, Liraz Mudrik, Colton Kawamura, Nathan C. Redder, João P. Hespanha, and Isaac Kaminer 
+
+Abstract—Designing autonomous drone swarms is hampered by a vast design space spanning platform, algorithmic, and numerical‑strength choices. We perform large‑scale agent‑based simulations in three canonical scenarios: swarm‑on‑swarm bat-tle, cooperative area search with attrition, and pursuit of scattering targets. We demonstrate that dimensional‑analysis and data‑scaling, established techniques in physical sciences, can be leveraged to collapse performance data onto scaling functions that are mathematically simple, yet counterintuitive and therefore difficult to predict a priori. These scaling laws reveal success-failure boundaries, including sharp break points. Additionally, we show how this technique can be used to quantify trade‑offs between agent count and platform param-eters such as velocity, sensing or weapon range, and attrition rate. Furthermore, we show the benefits of embedding an optimal path planning loop within this framework, which can qualitatively improve the scaling laws that govern the outcome. The methods we demonstrate are highly flexible and would enable rapid, budget‑aware sizing and algorithm selection for large autonomous swarms. Index Terms—swarms; trade-offs; adversarial autonomy 
+
+I. Introduction Drone swarms are groups of autonomous vehicles that coordinate to achieve goals [1]. Technological improve-ments in computer processing, drone-to-drone communi-cation, and energy storage density [2] have made larger swarms more plausible. However, designing and fielding large swarms requires answers to many design problems, such as which drones would be most suitable, the best cooperative algorithm to use, and the minimum number of drones required. Financial considerations may also play some role. Thus, drone-swarm design naturally involves questions about scaling and trade-off behavior to determine opti-mal algorithms or platform specifications—such as speed, weapon range, or communication range—or to address financial or technological limitations associated with dif-ferent platform specifications. For example, a fixed budget may allow the construction of many slow, cheap drones or a few fast, expensive drones. Algorithm A may be found to perform best for the large swarm of slow drones, 
+
+> A. H. Clark and C. Kawamura are with the Department of Physics, Naval Postgraduate School, Monterey, CA, 93943. I. Kaminer and L. Mudrik are with the Department of Mechanical and Aerospace Engineering, Naval Postgraduate School, Monterey, CA, 93943. N. C. Redder was with the Department of Physics, Naval Post-graduate School, Monterey, CA, 93943. J. Hespanha is with the Department of Electrical and Computer Engineering, University of California at Santa Barbara, Santa Bar-bara, CA 93106.
+
+and algorithm B may work best for the small swarm of fast drones, with an overall better performance for the small swarm of fast drones using algorithm B. Therefore, designing and fielding an optimal drone swarm requires mapping out how some performance metric depends on a potentially large number of parameters as well as discrete algorithmic choices. Additionally, the dependence of the performance metric on any individual parameter might be complicated and not easily guessed [3]–[5]. For instance, the performance may include a “scaling break point,” where the change in the number of drones in a swarm leads to a saturation or even a decrease in the performance [3]. For example, crowding may inhibit performance in a foraging problem [6]. An-other example is minimum resource allocation, e.g., the minimum number of drones required to succeed in an adversarial engagement [7]. As we show, predicting where these scaling break points occur is often impossible using intuition or simple calculation. These scaling break points will likely vary with other parameter values, such as drone speed or sensing range. In this paper, we demonstrate how dimensional analysis and data-scaling —established techniques in physical sci-ences [8]–[11]—can be leveraged to obtain functions that relate the performance of a swarm to all the underlying parameter values. These functions are often mathemati-cally simple, but they involve emergent functional forms (like power-law functions with nontrivial exponents) and are therefore difficult or impossible to guess. We also show how this approach naturally answers the questions of scaling and trade-off behavior above, including the location of scaling break points and how they depend on other parameter values. Although the technique we show can be used on real-world data, we use computer simulations to generate large data sets involving different algorithms and wide variation in input parameters. We study three different scenarios: one, where red and blue swarms both try to kill each other using simple swarm rules; two, where a swarm of agents searches an area under the presence of attrition (via random failures or some active threat); and three, where a swarm must visit some number of scattering targets. We emphasize that the scaling laws derived from these simulations are mathematical properties of the models themselves; validating the underlying dynamics against hardware experiments is an important but separate re-search question. Finally note that some of the present authors’ previous 
+
+> arXiv:2603.10743v1 [eess.SY] 11 Mar 2026 2
+
+works have approached swarm engagements from the perspective of an optimization problem [12]–[16]. These studies assumed specific models for dynamics and weapons and showed that optimal trajectories could be formulated using direct methods of optimal control. This is done by formulating a performance metric (e.g., the survival probability of one’s own drones or the total time needed to accomplish one’s goals) and then using standard methods to find drone trajectories that maximize the performance metric. In these studies, the drones were not responding in real-time to an evolving scenario but flying pre-planned trajectories as determined by the optimization algorithm. We apply optimization to one of our three case studies, showing that (1) scaling analysis can still be applied to analyze the performance of optimal paths and (2) optimization can categorically improve the performance of a swarm. II. Data Scaling and Dimensional Analysis In this section, we describe the basic problem of obtain-ing a performance metric and discuss how dimensional analysis and data-scaling can be applied. We start by assuming that, for a given algorithm and certain type of drone, there is a quantifiable performance metric P
+
+that depends on all continuously varying parameters, which represent platform specifications of the drones. For example, for algorithm A and parameters p1, p2, etc., then we can in principle write P = fA(p1, p2, ... ), where fA is some function to be determined. For algorithm B, there may be some different function such that P = fB(p1, p2, ... ). These functions may or may not bear any resemblance to each other. Determining the function that relates P to the in-puts {pn} appears daunting. Systems comprised of large numbers of interacting objects (like drone swarms) often display emergent behavior, meaning behavior that is not obvious or easily guessed from the individual components or their interactions [17]–[19]. Thus, mathematically re-lating performance metrics to input parameters requires running a very large number of scenarios, where all parameters are varied and the performance metrics are measured. If the drone behavior is deterministic, then P
+
+can be measured for many combinations of {pn}. If the drone behavior includes some randomness, then P can still be obtained by ensemble averaging, assuming the underlying probability distributions can be approximated. This is often infeasible experimentally, but computer simulations are well suited for such a task. The results can be compared with experimental ground-truth. In this study, we use computer simulations, but our approach here can be easily applied to experimental data assuming it can be obtained. Therefore, assuming P can be computed for many scenarios, varying the parameter values, the remaining task is to obtain or at least approximate the function 
+
+P = f ({pn}). Such a task arises often in physical sciences, such as in fluid mechanics or soft matter physics. The form of the function f , as well as the way the parameters 
+
+{pn} appear in the function, often gives significant insight into the emergent features of the problem. The point of this paper is to demonstrate how this function f can be found for drone simulations, guided by dimensional analysis, in order to answer many of the issues raised in the introduction (e.g., trade-offs and scaling break-points). The first point to make is that there is a mathematical guarantee about the maximum number of unique argu-ments to f . This theorem is called the Buckingham-π
+
+theorem [8]–[11]. This theorem can be formally proven [11], [20], but we will simply state the results here. The first result is that P = f ({pn}) cannot depend on the values of parameters directly but on the values of dimensionless combinations of parameters, called dimensionless groups or π groups. The second result is that there is a maximum number of independent dimensionless groups k, given by the difference of the total number of parameters n in the problem and the number of physical dimensions d, i.e., 
+
+k = n − d. Note that k is invariant regardless of which specific repeating variables are chosen to construct the π-groups; different choices yield algebraically distinct groups that span the same space and produce equivalent scaling relations. Note that the dimensions here are physical di-mensions like mass, length, and time (in which case, d = 3), not spatial dimensions. Obtaining the π groups can be done by picking one parameter for each physical dimension and using those parameters to nondimensionalize all other parameters. There should then be some functional relation that relates the output π group, π1, to all input π groups, 
+
+π2 through πk,
+
+π1 = f (π2, ..., π k) (1) This method is common in fluid mechanics [21], [22], granular flow [23], [24], and other nonlinear dynamics problems [25]. One classic example involves the drag force 
+
+Fd and Reynolds number Re . For a sphere of diameter 
+
+D moving at velocity V through a viscous fluid with density ρ and dynamic viscosity η, we want to write 
+
+Fd = f (D, V, ρ, η ). There is one output (Fd) and four input parameters ( D, V, ρ, and η), so n = 5 and d = 3
+
+(mass, length, and time), implying k = 2. One possibility for the two dimensionless groups is π1 = Fd/ρ V2 D2 and 
+
+π2 = Re = ρVD /η , from which the theorem implies 
+
+Fd
+
+ρV2 D2 = f
+
+( ρVD 
+
+η
+
+)
+
+, (2) where f is often called the drag coefficient Cd (up to a geometrical factor). Thus, the relationship between these five parameters must fit into the form of Eq. (2). Another example is a sheared granular material [23], where the desired output is the shear stress τ required for a given strain rate ˙γ, confining pressure p, grain size d,grain elastic modulus E and grain mass density ρ. These are six parameters, with three dimensions, meaning there are three dimensionless groups: τ/ p, ˙γd √ρ/ p, and E/p.So, τ/ p = f (˙ γd √ρ/ p, E/p). However, when E ≫ p, as is common in nature, f becomes independent of E/p. This insensitivity to one or more of the dimensionless groups is common. 3
+
+The Buckingham-π theorem thus provides a guide in searching for mathematical relations between input and output parameters for a complex process. The function 
+
+f (π2, ..., π k) often turns out to be easy to interpret, and, while not guaranteed by the theorem, many of the inputs 
+
+π2 through πk can often be combined and further simplified or even neglected. This often requires trial-and-error combined with some intuition, as we show in the case studies below. Adversarial swarm engagements necessarily involve a number of parameters involving physical units like mass 
+
+M, length L, and time T (e.g., velocity has units of LT −1)or without units (e.g., number of drones or probability parameters have no units, −). In the examples we study here, we will use: numbers of drones N ([N] = −); velocities 
+
+V ([V] = LT −1); ranges R for sensors or weapons ( [R] = L); rates λ for either weapons or some other kind of attrition ([λ] = T −1); and an acceleration time scale τ ([τ] = T ). Here, [A] means “the units of A”, and subscripts may refer to different kinds of drones (e.g., Nd will be the number of defenders). The scenario in question should also have some kind of performance metric, such as a total time ttot 
+
+([ttot ] = T ) or the average success probability P ([P] = −). Dimensionless parameters like N or P form their own pi -groups, and dimensioned parameters like V or τ should be combined into dimensionless ratios. One interesting feature that is not guaranteed by the theorem, but that appears in the scenarios we consider is that a performance metric can be defined for π1, and then 
+
+π1 can be written as function of a single quantity that depends on the size of the swarm N as well as all other π
+
+groups. As we show, this quantity can be interpreted as an effective size of the swarm. When this quantity is large, the swarm is successful; when the quantity is small, the swarm is unsuccessful. Additionally, the functional form of f as well as the way that all π groups appear in f is emergent, meaning it is not easily guessed from the basic rules of the simulations. Instead, it arises from complex, many-body interactions during the engagements, which similarly occurs for groups of animals [19], [26], or phase transitions [27], [28]. III. Methods To demonstrate how data scaling and dimensional analysis are useful in swarm scenarios, we show three case studies. In each of the three case studies, we define a per-formance metric and vary multiple parameters to obtain 
+
+P({pn}). We then consider how to form dimensionless π-groups from the set of pn. We show how the data can often be collapsed onto a single curve, relating P to some fairly simple function of all the parameters. The first case study involves two adversarial swarms attacking each other. A red (attacking) swarm of Na agents flies directly at a high-value unit. A blue (defending) swarm of Nd agents is launched from the high-value unit to intercept the red swarm. Each agent is equipped with weapons, which we model as simple attrition-rate functions that depend on the relative distance between any given pair of red and blue agents. Agents are killed randomly using Monte Carlo methods. We define the per-formance metric P as the ensemble-averaged probability of survival of any individual agent from the red swarm (P = 0 means blue wins, P > 0 means red wins). We vary the rates of fire, λa and λd, and the ranges, Ra and Rd of the weapons, and we find that a straightforward (but non-intuitive) formula can be found for P in terms of Ra/Rd and 
+
+λa/λ d, which can then be used to determine the minimum size of the blue swarm required for a successful mission. The second case study is a search problem, where a group of N agents coordinate to search a given area A. The agents divide up the search area into different sub-sectors and search their sub-sector before returning to base. We include random attrition of agents with a constant attrition rate λ, which could be from an active threat or simply due to random failures. We study cases with and without communication, where agents can intermittently share data with nearby agents. We define the performance metric P as the percent of the desired area that has been searched and had its data reported back to base. We vary the ranges of sensing, Rs, and communication, Rc, as well as A and λ. We find that the presence of communication between agents qualitatively changes the scaling. The third case study involves coordinated pursuit of Na
+
+“attacking” targets by Nd “defending” agents. All targets scatter in random directions with randomized velocities, maintaining a constant velocity and bearing in time. At least one pursuing agent must visit each target, and we define the performance metric P as the total time required to visit all targets. We use an auctioning algorithm, where the target that is farthest from the point at which the targets originated is the highest priority and is assigned the closest defender; all other attackers are then assigned based on priority and nearest defender. We vary the numbers Na and Nd, the minimum range R that a defender must approach an attacker to visit it, the velocity ratio v
+
+of defenders relative to attackers, and the time scale τ for defenders to approach their asymptotic velocity. In this case of two swarms with competing but highly asymmetric goals, we also observe interesting nonlinear scaling in the parameters. We use agent-based (meaning we resolve the position and velocity of every agent at all times), written in MAT-LAB, consisting of two components. First, the dynamics of each agent are modeled. In general, we do this by numerically integrating Newton’s equation of motion. In the second case study (underwater search mission), all drone paths are preplanned, meaning there is no need to explicitly integrate a second-order differential equation. However, for the general case, where the forces on each agent consist of a thrust force toward a so-called “virtual leader”, which is essentially the coordinates where the agent wants to go, as well as additional forces that arise due to interactions with other drones. The velocity of each agent is limited by a drag-like term, such that a maximum velocity Va or Vd is asymptotically approached. Second, in addition to the dynamics of agents, we keep track of the set 4
+
+of surviving attackers S a and the set of surviving defenders 
+
+S d. At the beginning of all simulations, all Na attackers are included in S a and all Nd defenders are included in S d.Attackers and defenders are removed randomly from S a
+
+and S d based on attrition functions, as discussed below. The most general form for the equations of motion are, for attacker imi ¨ri = Ki
+
+ri − r(i)
+
+> vl
+
+|ri − r(i) 
+
+> vl
+
+| −Bi ˙ri +
+
+∑ 
+
+> k∈Sa
+
+Faa (ri −rk)+
+
+∑ 
+
+> l∈Sd
+
+Fad (ri −rl), (3) or defender jm j ¨r j = K j
+
+r j − r( j)
+
+> vl
+
+|r j − r( j) 
+
+> vl
+
+| − Bj ˙r j +
+
+∑ 
+
+> k∈Sa
+
+Fda (r j − rk) +
+
+∑ 
+
+> l∈Sd
+
+Fdd (r j − rl)
+
+(4) Here, subscripts or superscripts i, j, k, and l refer to attacker i or k and defender j or l, dots denote time derivatives, m is the inertial mass, r is position, K is a thrust force magnitude, rvl is the position of a virtual leader, and B is damping parameter. Faa (ri−rk) is a pseudo-force due to an interaction with the k-th attacker, and the sum of these pseudo-forces is interpreted by the drone as a thrust instruction. The other forces Fad , Fda , and Fdd are similar. In each sum over k and l, it is implied that the self-interaction force is set to zero for i = k or j = l. We note that, neglecting these interaction forces, V = K/B sets the typical velocity scale and τ = m/B sets a time scale for acceleration up to this velocity. Interaction pseudo-forces can cause the velocity to exceed the V. These equations represent a simplified dynamics model, but are sufficient to generate adversarial swarming engagements as well as demonstrate the scaling and trade-off techniques that are the focus of this paper. Equations (3) and (4) represent a system of Na + Nd
+
+second-order ordinary differential equations which may or may not be coupled together. At each time step, based on the values of the interaction forces and the position of the virtual leaders, the acceleration is calculated based on this equation, and we then numerically integrate using a modified velocity-Verlet algorithm with a time step ∆t,which we choose as sufficiently small that it does not affect our results. During the course of each time step in the simulation, we compute the survival probability Qi for attackers and 
+
+P j for defenders over that time step according to attrition rate functions ϕ. So, during a time step ∆t, the probability of survival PS j of agent j is 
+
+PS j =
+
+∏
+
+> k
+
+[1 − ϕ jk (ri − rl; λd, Rd)∆t], (5) where the product over k captures multiple sources of attrition and ϕ jk is the attrition rate on agent j due to source k. For the second case study (underwater search), there is only one source of attrition. For the first and third case studies, we use pairwise attrition functions ϕad (ri − rl), which specifies the attrition rate for attacker i due to defender l, or ϕda (r j − rk), which specifies the attrition rate for defender j due to attacker 
+
+k. Both of these attrition functions depend strictly on the instantaneous relative position of the two drones in question. So, the probability of survival Qi of attacker i is 
+
+Qi =
+
+∏ 
+
+> l∈Sd
+
+[1 − ϕ(il ) 
+
+> ad
+
+(ri − rl; λd, Rd)∆t], (6) and the probability of survival P j of defender j is 
+
+P j =
+
+∏ 
+
+> k∈Sa
+
+[1 − ϕ( jk ) 
+
+> da
+
+(r j − rk; λa, Ra)∆t]. (7) These functions ϕ will depend on the relative distance between enemies as well as the range R and rate of fire λ. For every agent at each time step, we generate a pseudo-random number in MATLAB using a uniform distribution between 0 and 1. If this number is greater than the survival probability Qi or P j, then that attacker or defender is removed from the simulation (i.e., from S a
+
+or S d), including all interactions in Eqs. (3) through (7). The forms for ϕi j are specified below, depending on the scenario. IV. Case Study 1: Swarm Collision with Mutual Attrition of Red and Blue A. Description of scenario and equations The first scenario we consider involves a collision of a red swarm and blue swarm, both governed by Leonard dynam-ics [13], [29], [30] involving cohesive interswarm potentials, further explained below. The engagement begins with the red swarm some distance L away from the high-value unit (HVU), where each red agent has a virtual leader centered at the HVU. The blue swarm, which is centered at the HVU, senses the red swarm and begins flying straight toward the center of mass of the red swarm. The red swarm agents also generate a pseudo-force that depends on the defenders’ positions, causing them to fly around the defending blue agents. All agents are equipped with weapons, modeled by smooth attrition functions, with adjustable rates of fire λa and λd (i.e., overall magnitude) and ranges Ra and Rd (i.e., a scale factor related to the distance between the two enemy drones). The goal of this case study is to understand trade-offs between the number of drones Na and Nd and the weapons parameters Ra, Rd,
+
+λa, and λd.Mathematically, we solve Eq. (3) for each attacker i,with r(i) 
+
+> vl
+
+= 0 (the position of the HVU) and Ki = Bi = mi =
+
+1. The intraswarm force F( j) 
+
+> a
+
+between attackers i and j is set to be [13], [29], [30] 
+
+Faa =
+
+  
+
+> rk−ri
+> |ri−rk|2
+
+(1 − d0 
+
+> |ri−rk|
+
+) , if |ri − rk| < d1,
+
+0 , if |r j − rk| ≥ d1. (8) The first term in this equation is an attractive term that pulls attacker i toward attacker j if d0 < |ri − r j| < d1; we set d0 = 2 and d1 = 3. The second term is a repulsive term that pushes attacker i away from attacker j if |ri − r j| < d0.For the attackers, we also include a force from defender k
+
+Fad =
+
+
+
+> rl−ri
+> |ri−rl|2
+
+(1 − dr
+
+> |ri−rl|
+
+) , if |ri − rl| < dr,
+
+0 , if |ri − rl| ≥ dr. (9) 5
+
+This force is repulsive for |ri − rl| < dr and zero otherwise. We set dr = 6, which causes the attackers to want to fly around the defenders with a characteristic range of 6 (arbitrary units). Defender dynamics are also solved using Eq. (4) for each defender j, with r( j) 
+
+> vl
+
+set as the average position of all the attackers (i.e., the center of the attacking swarm) and K j = Bj = m j = 1. The intraswarm force Fdd between defenders j and l is set to the same function as Faa ,
+
+Fdd =
+
+    
+
+> rk−rj
+> |rj−rk|2
+
+(
+
+1 − d0  
+
+> |rj−rk|
+
+)
+
+, if |r j − rk| < d1,
+
+0 , if |r j − rk| ≥ d1,
+
+(10) where d0 = 2 and d1 = 3 as before. There is no collision avoidance for defenders to attackers, i.e., Fda = 0.Attacker and defender weapons are both modeled us-ing a cumulative normal distribution function, Φ(z) =∫ z 
+
+> −∞
+> 1√2π
+
+e−ζ2/2dζ. We model attrition from defender l to attacker i as 
+
+ϕ(il ) 
+
+> ad
+
+=
+
+
+
+2λdΦ (− |ri−rl|
+
+> Rd
+
+) , if |ri − rl| = min  
+
+> k∈Sa
+
+(∥rk − rl|),
+
+0 , otherwise. (11) Note that the conditional statement is modeling targeting, where each defender chooses to target one attacker based solely on which attacker is closest. Similarly, we model attrition from attacker k to defender j as 
+
+ϕ( jk ) 
+
+> da
+
+=
+
+
+
+2λdΦ (− |r j−rk |
+
+> Rd
+
+) , if |r j − rk| = min  
+
+> l∈Sd
+
+(|rl − rk|),
+
+0 , otherwise, (12) where now each attacker chooses only to target a single defender, depending on which is closest. Agents are ran-domly removed from the simulation based on the forms of these attrition functions in combination with Eqs. (6) and (7). Initial conditions for the simulations are generated by placing a red swarm at a distance L from the HVU, placing a blue swarm at the HVU, and setting all survival probabilities to 1. The specific positions of the red and blue agents are generated randomly at points surrounding the starting positions for the swarms, and, for each result, we take the average of an ensemble of five initial conditions. We quantify the result of the simulation by the survival probability of the attackers, defined as the ratio of the number of alive attackers at the end of the simulation to 
+
+Na. We note that the survival probability of the HVU can also be tracked using an equation similar to Eq. (5). We have checked that our results are similar in this case. We choose Pa because it is both a good proxy for the HVU survival and a more sensitive measure of the success of the blue swarm (i.e., the HVU survival is zero if all blue agents are defeated, regardless of how many red agents survive). B. Results and analysis Results from a sample engagement are shown in Fig. 1, with parameter values of Na = Nd = 40 , λa = λd = 1,and Ra = Rd = 2. The red swarm is flying toward the HVU (black circle) and is met by the blue swarm. The red swarm’s collision avoidance causes it to spread out and fly around the blue swarm, and a tail-chase ensues. The engagement finishes with the red swarm destroying all blue agents as well as the HVU. Despite the fact that red and blue agents are identical in weapons, dynamics, and intra-swarm interactions, the fact that there is a difference in the inter-swarm dynamics (red avoids blue, blue does not avoid red) provides an asymmetrical advantage for the red swarm. This advan-tage is not obvious to predict without observing the emergent outcome of the engagement. Additionally, we note that the weapon ranges are similar to the d0, d1,and dr, which makes clear intuitive predictions difficult. We now demonstrate how scaling analysis can be useful in quantifying trade-offs among Nd, Na, λd, λa, Rd, and Ra
+
+regarding the outcome of this engagement. The first step is to identify a complete set of parameters that characterize an engagement. The output parameter to be studied is the probability of survival of an individual attacker, Pa, which can also be thought of as the ratio of the number of attackers surviving at the end of the engagement to the original number of attackers. If Pa > 0,then at least one attacker has made it to the base, and the mission has failed. We note that this parameter is also a π group, since it is already dimensionless. The input parameters to be varied here are Nd, Na, λd, λa, Rd, Ra;additionally, there are several parameters which will not be varied, which are K j, Bj, m j, Ki, Bi, mi, d0, d1, and dr. In total, these are 16 parameters, which can be used to write 13 dimensionless π groups. The Buckingham-π theorem only provides a guarantee that Pa can be expressed as a function of the remaining 12 dimensionless numbers, 
+
+Pa = f
+
+(
+
+Nd, Na, λd
+
+λa
+
+, Rd
+
+Ra
+
+, ... 
+
+)
+
+. (13) However, as discussed in Sec. II, it is often true that some parameters can be further combined and simplified, and the functional form of f can be expressed (at least in certain regions of the parameter space) using direct combinations or products of functions of the individual dimensionless groups. We find, in this case and the following case study, that the performance metric, in this case Pa, can be expressed as a function of Nd/Na,eff , where 
+
+Na,eff is an effective number of attackers which depends on both the number of attackers as well as the other parameters in the simulation. For example, increasing the attackers rate of fire causes Na,eff to increase. The rest of this section proceeds as follows. First, we show that the functional form Pa = f (Nd), with all other parameters fixed, is always well described by a curve that equals 1 for very small Nd and then drops to 0 when 
+
+Nd crosses some critical value, which is different for each set of parameters. We then use curve fitting to extract the characteristic value of Nd where f goes to zero for all sets of parameters, and we define that value as Na,eff .We then consider how Na,eff depends on all remaining parameters, finding that Na,eff ∝ Na(λa/λ d)α with α ≈ 0.6.6
+
+Fig. 1: Four snapshots from an engagement where attackers destroy defenders as well as the HVU. Parameter values are Na = Nd = 40 , λa = λd = 1, and Ra = Rd = 2 ∼ dr.The dependence on Ra and Rd is more complex and likely depends on dr, which was not explicitly varied. This gives 
+
+Pa as a simple but not intuitive function of the numbers of drones, the rates of fire, and the ranges of the weapons. (a) 
+
+(b) 
+
+Fig. 2: (a) Sample curves of Pa versus Nd for six com-binations of other parameters. (b) Pa versus Nd/Na,eff for the curves shown in panel (a), plus many more different combinations of parameter values. The color scheme is strictly based on Ra/Rd. Note that Na,eff is a different number for every curve. We first consider Pa as a function of Nd, holding Na,
+
+λd, λa, Rd, and Ra fixed; sample curves are shown in Fig. 2(a) for a few combinations of Na, λd, λa, Rd, and 
+
+Ra. Several features are immediately apparent from these curves. First, all curves look similar, in that they decrease from 1 to 0 as Nd is increased, suggesting that all curves could be collapsed onto a master curve when plotted using the right combination of parameters. As we show, this provides a convenient and concise way to analyze the trade-offs inherent to this type of problem. Second, the blue leftward triangles and the green circles have identical parameters except λa and λd, but with λa/λ d held constant. The resulting curves are nearly identical, confirming that this dimensionless ratio is dominant. Third, the red crosses (×) are very similar, despite having two different kinds of parameters varied (Ra and λa). This confirms that there are trade-offs between these parameters: in this case, increasing the range by a factor of 1.5 and decreasing the rate of fire by a factor of 2 yielded nearly identical results. The first feature discussed above, that all Pa(Nd) curves can be collapsed onto a master curve, is demonstrated as follows. We perform simulations with all combinations of 
+
+Nd = 30 , 50, 80, 100, 150, 200, and 400; Na = 50 , 75, and 100; λd = 0.5, 1, 1.5, and 2; λa = 0.5 and 1; Rd = 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 6, and 8. We obtain similar curves to those shown in Fig. 2(a), and we fit all data to a function of the form 
+
+Pa = 12
+
+[
+
+1 − tanh 
+
+(
+
+log Nd
+
+Na,eff 
+
+)] 
+
+. (14) The results of the analysis here are not sensitive to the form of this equation (i.e., using the hyperbolic tangent) is not crucial, provided it drops from 1 to 0 as its argument increases. Na,eff is unique to all other parameters, in general, but assuming it is known the data can be collapsed on the curve shown in Fig. 2(b). If a functional form (or an approximate form) for Na,eff were known in terms of all other parameters, then Eq. (13) would be specified and the problem would be solved. To determine how Na,eff depends on the remainder of the parameters, each one must be treated on a case-by-case basis. Guided by a Buckingham-π approach, we make two assumptions, both of which are justified by the data in Fig. 3 (as well as extensive other cases which are not shown). We first guess that λa and λd only affect 
+
+Na,eff as the dimensionless ratio λa/λ d. We also guess that 
+
+Na,eff ∝ Na and only consider the dependence of the ratio 
+
+Na,eff /Na on λd/λ a. Fig. 3 shows that Na,eff /Na = A ( λd
+
+> λa
+
+)α
+
+,where α ≈ 0.6 and A is an amplitude that depends on other parameters. A more precise value for α, as well as confidence bounds, could be obtained with a more detailed analysis. The red squares and blue stars shown in Fig. 3 show that A is independent of Na (justifying the assumption that Na,eff ∝ Na). Additionally, multiple values of λa and λd are included for each specific symbol 7
+
+type (e.g., green triangles) in Fig. 3, but all data collapse when plotted as a function of the ratio λa/λ d (justifying the assumption that only this ratio affects Na,eff , not the two parameters individually). Thus, A can be written as some function that depends on Ra and Rd, i.e., A(Rd, Ra).
+
+Fig. 3: Plots of Na,eff /Na versus λa/λ d for five different com-binations of parameter values. These curves demonstrate that Na,eff ∝ Na(λa/λ d)α, with α ≈ 0.6.Thus far, we have shown that Na,eff ≈
+
+A(Rd, Ra)Na(λd/λ a)α, where α ≈ 0.6. To characterize 
+
+A(Rd, Ra) we perform a best fit for A in this approximate equation by taking the mean of all data for each combination of Ra and Rd, denoted 
+
+A(Rd, Ra) ≈
+
+⟨ Na,eff 
+
+> Na
+
+( λa
+
+> λd
+
+)−α⟩
+
+. This quantity is plotted in Fig. 4, where panel (a) shows A as a function of the dimensionless ratio Rd/Ra for the three different values of Ra that we consider (4, 6, and 8). For Rd/Ra > 0.6, all curves collapse, demonstrating that Rd/Ra captures the changes in A for this regime. A best fit to the data in this regime returns A(Rd/Ra) ≈ 5e1.8Rd /Ra . The black line shown in Fig. 4 uses this functional form, divided by a factor of 1.5 for aesthetic purposes. However, for small Rd/Ra, these curves separate from each other, meaning that Rd/Ra is not the best dimen-sionless quantity in this regime. Fig. 4(b) shows the same data plotted as a function of Rd/dr (note that dr = 6 is not varied). This plot demonstrates that the rise in Na,eff for small Rd occurs independent of Ra. A complete analysis might involve varying dr, as well as other parameters in this scenario. To summarize, Fig. 2 shows that the success metric Pa
+
+(which we want to be zero, since all attackers should be killed) can be collapsed onto a single curve, where Pa = 0
+
+for Nd ≫ Na,eff and Pa = 1 for Nd ≪ Na,eff , with a crossover point at Nd ≈ Na,eff . Guided by Buckingham-π, we find that 
+
+Na,eff ≈ Na(λd/λ a)α A(Rd/Ra, Rd/dr), where A(Rd/Ra, Rd/dr) ≈
+
+5e−1.8Rd /Ra for Rd ≫ dr, but then increasing dramatically when Rd/dr < 0.4.(a) 
+
+(b) 
+
+Fig. 4: (a) A versus Rd/Ra for three values of Ra, where 
+
+Na,eff ∝ A (see text). (b) A versus Rd/dr for the same data. This form can be used to compare variation in each di-mensionless parameter. For example, increasing the num-ber of drones has a stronger effect (linear) than increasing the rate of fire (sublinear power law). Additionally, varying the ranges has a similar effect (albeit with a different functional form) to changes in the number of drones or the rate of fire. However, for sufficiently small Rd/dr, we find Na,eff rises sharply, multiplying the size of the swarm by a factor of 10 to 100. This means that there is a critical weapons range that is required for defenders, likely related to the avoidance distance of the attackers, which must be met before the defending swarm can be effective. The functions that model the attrition due to the weapons are all smooth, so this critical range requirement is not obvious a priori. Finally, we emphasize that this analysis is limited to the specific scenario laid out here (i.e., the differential equations governing the flight dynamics and the attrition modeling); however, the approach is straightforward to apply to any scenario where two swarms are engaged in an adversarial contest. To illustrate the practical utility of the scaling law derived above, consider a mission planner facing an attacking swarm of Na = 50 red agents with weapons parameters λa = 1 and Ra = 6. Two defending platform options are available: Option A offers λd = 2 and Rd = 4
+
+at a unit cost of CA; Option B offers λd = 1 and 
+
+Rd = 6 at a unit cost of CB. For each option, the planner computes Na,eff = Na(λd/λ a)α A(Rd/Ra) using the fitted 8
+
+formula and the values of α and A from this case study. The minimum number of defenders required for mission success is Nd ≈ 2 Na,eff , so the total procurement cost for each option is 2 Na,eff × CA,B. Evaluating these expressions is instantaneous once the scaling law has been derived, replacing the need for additional large-scale simulation sweeps for each design alternative. V. Case Study 2: Underwater Search Mission A. Scenario Description We consider an underwater search mission using N coop-erating autonomous underwater vehicles (AUVs) equipped with sonar with sensing range Rs. The AUVs have max-imum battery time of B and maximum speed of V.We assume attrition, either by direct threats, random mechanical failures, or some other mechanism. Thus, some of the AUVs will be lost, and the area searched by any lost AUV is not considered searched, unless it is shared with another AUV and thus reported back to base. Our central question is whether and to what degree communication between drones improves the total coverage of the area to be searched. We find that the presence of communication provides a significant improvement, and we demonstrate how the two curves (with and without communication) scale with N, Rs, V, attrition rate λ, search area A, and communication range Rc (assumed to be small to reduce the probability of detecting the AUVs). Fig. 5 presents a schematic overview of executing a cooperative underwater search mission using three AUVs. At the beginning of the scenario, the AUVs are placed at their base, some distance r from the search area 
+
+A,determined by angle θ and depth ∆. The AUVs then travel together from the base into a jump point. Each AUV is assigned an equal portion of the search area, and at this point, they approach their subsection. Each AUV scans its subsection using a “lawnmower” pattern, as shown in Fig. 5. We assume all communication is done at the boundaries between subsections, when neighboring drones are closest together. The point of closest approach is set by Rc, and the width between sweeps is equal to 
+
+2Rs, which guarantees the entire area is covered. Once the AUVs complete the search mission, they return to the jump point separately and then together to the base. If battery life is unlimited and there is no attrition of any kind, then the search area will always be com-pletely explored. However, in real-life scenarios, the AUVs are exposed to different threats. For example, in mine countermeasures missions, the AUVs might trigger the mines, or the wildlife might attack them when exploring the bottom of the ocean. Therefore, we also consider the possibility of an unexpected event that causes the death of one or more AUVs during the search mission. We model the event of losing an AUV as a Poisson process with parameter λ. If the AUVs do not share information, they cannot adapt to the unexpected changes in their nominal mission, as presented in Fig. 6(a), where the perfect coverage performance is reduced to 66% in the 
+
+Fig. 5: Schematic overview of a cooperative underwater search mission. presence of threats. However, when information is shared between the AUVs, they are able to adapt to a loss and rearrange their search pattern, as presented in Fig. 6(b). We assume that information sharing is instantaneous; in reality, there would be lags, where the fact that agent j is lost would be communicated gradually to the entire fleet, moving out one subsection in each direction on successive sweeps. 
+
+Fig. 6: Illustration of attrition effect over the search pattern. (a) Without information sharing. (b) With in-formation sharing. B. Results and analysis We first identify the complete set of parameters that characterize the search mission. We choose the mean percentage of covered area, PA, as the performance metric. The input parameters to be varied here are N, Rs, Rc, A,and λ. V is also used in the dimensional analysis but not 9
+
+directly varied. This makes seven total parameters ( PA,plus six input parameters). The parameters r, θ, and ∆
+
+are the geometric properties of the search area and will not be varied directly. We choose B sufficiently large that it does not affect our results (e.g., drones do not run out of batteries). The seven parameters that can be used to write five dimensionless π groups (since only length and time di-mensions are involved). The Buckingham-π theorem only provides a guarantee that PA can be expressed as afunction of the remaining four dimensionless numbers: N,
+
+Rc/Rs, A/Rs2, and V/λ Rs.
+
+PA = f
+
+(
+
+N, Rc
+
+Rs
+
+, ARs2 , V
+
+λRs
+
+)
+
+. (15) In this case, each AUV has a battery life of B = 10 hr. We vary the number of AUVs to be 4, 6, 8, 10 , 12 , 14 , 16 ,
+
+18 , and 20 , the sensing range to be 5, 10 , and 20 m, the communication range for the information sharing case is set to be 1 and 4 m, and the longitudinal attrition rate, 
+
+λ/ V, to be 4·10 −5, 6·10 −5, 8·10 −5, and 10 −4 1/m. The search area is distanced 2 km away from the base, ∆ = 1 km, and 
+
+θ is set to be 30 ◦, 60 ◦, and 90 ◦. For each of these values, we perform 10,000 simulation runs to get the mean coverage percentage. Therefore, we run 6.48 million simulations for the information sharing case and 3.24 million runs for the non-sharing case to get the following analysis. Fig. 7 exemplifies the effect of the number of AUVs over the total coverage percentage for different values of Rs, λ/ V, and θ. The upper graph shows the behavior when communication capabilities exist between the AUVs, and the lower graph shows the behavior when no such capability exists. The upper graph also includes the communication range of 1 m (solid lines) and 4 m (dashed lines), showing that Rc makes very little difference over the performance. We also notice different behaviors for different curves. For example, the blue line seems to increase linearly in this range of N, while the other lines become saturated near the 100% area. In the lower graph, we get significantly lower values for Pa than in the upper graph due to the lack of communication capabilities. The different curves behave differently. The black and magenta curves are steeper than the rest, while the blue curve increases moderately. Still, in this case, none of the curves get saturated. The behavior of all simulations is shown in the upper plot of Fig. 8, amounting to a total of 36 curves for each case of using communication (solid blue lines) or not (dashed red lines). This figure shows the different behaviors of the curves by using different scenario pa-rameters. We can also deduce the importance of adding communication capabilities, as we can clearly see the performance improvement that results from this. However, no clear behavior can describe all the presented curves. On the other hand, the curves in the lower plot of Fig. 8 do appear qualitatively similar in that they smoothly vary from 0 to 1 as the number of drones is increased. This strongly suggests that they could be scaled onto a single 4 6 8 10 12 14 16 18 20           
+
+> 020 40 60 80 100 With Communication
+> 46810 12 14 16 18 20
+> 020 40 60 80 No Communication
+
+Fig. 7: Sample curves of Pa versus N for six combinations of the other parameters with (upper figure) and with-out (lower figure) communication capabilities. The upper graph also shows the communication range of 0.5 m (solid lines) and 2 m (dashed lines), which are indistinguishable. curve if plotted in terms of the correct function of the parameters. Fig. 8 shows such a scaled plot, where Pa is plotted as a function of Neff , defined as 
+
+Neff =
+
+ 
+
+> VR s
+> λA
+
+(N − 1) , With com.  
+
+> VR s
+> λA
+
+N, No com. (16) We note that this parameter is simply a product of the three dimensionless parameters from above, neglecting the communication range: N, ARs2 , and V 
+
+> λRs
+
+. In particular, Neff = 
+
+> VR s
+> λA
+
+N = N( ARs2 )−1( V 
+
+> λRs
+
+).First, we can observe a clear performance dominance for the case where communication between AUVs is available over the case where it is not. The blue and red curves are similar, but sufficiently different that they cannot be collapsed onto each other. This highlights the categorical improvement that communication brings to this process. We also observe the break point for the case with communication capabilities around Neff = 1 where the steep increase in performance breaks and is followed by a saturated behavior near the 100% zone. In contrast, the case where communication capabilities are not available has a more moderate increase, which continues to increase after Neff = 1.Finally, we note that the battery life B was chosen to be sufficiently large not to matter (i.e., B was not included in the data scaling). If B were decreased, we might expect 10 4 6 8 10 12 14 16 18 20   
+
+> 020 40 60 80 100
+> 10 -1 10 010 1
+> 020 40 60 80 100
+
+Fig. 8: The upper plot presents Pa versus N for all simulated cases with communication enabled (solid blue lines) and disabled (dashed red lines). The many curves shown correspond to variations in all parameters, the values of which are given in the main text, showing that the performance curves have a similar shape for all param-eter combinations, but with significant horizontal shifts. The lower plot shows the same data, but with effective swarm size Neff on the horizontal axis, demonstrating excellent collapse onto two separate curves: one with communication and one without. For both communication cases, we consider unlimited battery time (x markers) and limited battery time (square markers); battery limitations only affect performance in extreme cases involving small swarms covering large areas. the dimensionless ratio BV (2 Rs)N/A to play a role, which can be thought as the maximum coverage area per drone, 
+
+2BVR s, times the number of drones N divided by the total area A to be searched. When this dimensionless number is much greater than 1, as it is for nearly all our simulations, then battery life is not expected to play a role. As this ratio becomes close to 1 or less than 1, it may play a dominant role. To emphasize this effect, we set B as an infinite number as presented in the results of this case in Fig. 8, which shows a very similar performance to the case used in the simulation for a limited but still greater than 
+
+1 for the dimensionless ratio of battery life. VI. Case Study 3: Scattering Red Swarm Our final case study is motivated by the Service Academies Swarm Challenge (SASC), a recent live-fly swarm exercise involving the US military service academies [7], [31]. Each team was provided a swarm of up to 25 drones, including model weapon systems, with objectives including trying to destroy an opposing 
+
+Fig. 9: A schematic of global targeting with intercept-based pursuit, where defenders fly toward an intercept point. team’s drones and control aerial territory [31]. Teams were provided with several drone targeting and control algorithms with varying features. One algorithmic feature was the targeting type: either local targeting, where each drone targeted the closest enemy, or global targeting, where targets were assigned by a global algorithm such that no two drones from the same swarm targeted the same enemy. Another feature involved the guidance law used to pursue the target (e.g., pursuit guidance, where 
+
+rvl is set to be the current position of the targeted enemy, versus an intercept-type guidance law, where rvl 
+
+is set at the point where the target enemy will be met). These features are illustrated in Fig. 9. Unsurprisingly, global targeting and intercept-based guidance improved performance, and the number of drones in the swarm played a major role in mission success. However, this still leaves unanswered all the questions related to trade-offs raised in the introductory sections and the previous case study. The cost, including the sheer amount of man-hours, is prohibitively high to run live-fly exercises with wide variations in numbers of drones and drone platform specifications. A. Scaling Analysis using SASC algorithms Thus, in this section, we consider scaling and trade-off behavior for an algorithm similar to the most effective algorithm from the SASC, where both global targeting and intercept-based guidance are used. We assume a simple scenario, where an attacking red swarm of Na agents is attacking an HVU and senses a defending blue swarm of 
+
+Nd agents located a distance D away. It then scatters, with each red agent moving with a constant random velocity 
+
+via, uniformly distributed from 0 < via < Va, with a constant random angle θ, where θ = 0 denotes the direction toward the HVU and θ is uniformly distributed over the range 
+
+−π/ 4 < θ < π/ 4. The blue swarm has weapons with range 
+
+R is then tasked with visiting each red agent in the shortest time possible. This is accomplished by assigning r( j) 
+
+> vl
+
+for each defender 
+
+k in a way that corresponds to the attacker j that it is pursuing (discussed further below), and then allowing the 11 
+
+trajectory to evolve according to Eq. (4). The weapons model for the defenders is set to be 
+
+ϕ jk (r j − rk) =
+
+
+
+∞ , if |r j − rk| < R,
+
+0 , if |r j − rk| ≥ R, (17) such that any attacker with the weapon’s radius R is immediately killed. Targets for blue agents are chosen globally according to the following procedure. Attackers are assigned a priority level based on their distance from the point at which they scattered. The attacker with the highest threat level is assigned the closest defender to it at that instant in time. Next, the attacker with the second-highest threat level is assigned the closest defender to it at that time, except for the previously assigned defender. This process is repeated such that each attacker is targeted by the closest defender to its position from the pool of unassigned defenders. In the case where there are more defenders than attackers remaining, defenders are assigned to the closest remaining attacker. Thus, multiple defenders do target the same attacker, but only in the case where there are more defenders than attackers. We note that such an algorithm requires perfect communication among all defenders or perfect knowledge of the entire scenario, such that each defender can run the algorithm independently and know what all other defenders would be doing. This process is repeated at every time step, meaning target assignments can (and do) change before the current target is destroyed. Once the targeting assignments are made, the second stage of each algorithm involves setting r( j) 
+
+> vl
+
+. We use something approximating proportional navigation, where the constant vector velocity of the targeted attacker and the maximum speed of the defender are used to calculate an intercept point, which we then assign to r( j) 
+
+> vl
+
+.This assignment is also done at every time step, such that if a defender’s velocity is not currently close to its maximum velocity, then r( j) 
+
+> vl
+
+will change with time. As the defenders velocity approaches its limiting maximum velocity, changes in r( j) 
+
+> vl
+
+with time become very small. In this scenario, it is impossible for the attackers to “win” in the sense that the defenders will eventually catch them, so we always have Pa = 0 at the end of the simulation. Thus, as a performance metric, we measure the total kill time tk required for all attackers to be destroyed. That is, the probability of survival Q j of each attacker 
+
+j computed using Eq. (17) must be zero at tk. Each measurement of tk shown for the remainder of the paper is an average over ten simulations in order to mitigate the effect of outliers due to the random initial velocities of the attackers. The goal of our analysis is to obtain a functional form for the average tk in terms of all parameters that go into the simulation, including the numbers of drones Na
+
+and Nd as well as the speed Vd and weapons range R of the defenders. The characteristic speed of attackers Va is held fixed, and we use the ratio v = Vd/Va below. Data for tk is visualized by fixing all characteristics about an engagement except Na, and plotting the kill time per attacker, tk/Na, is plotted as a function of Na for fixed other inputs. Such curves are shown in Fig. 10(a) for many different values of Nd, R, τ and Vd.(a) 
+
+(b) 
+
+Fig. 10: (a) tk/Na versus Na for simulations involving a large range of parameter values, with Va = 0.4; Nd = 24 ,32, and 48; R = 1.2 and 2.4; τ = 5 and 10; and Vd = 0.5,0.67, and 1. (b) The same data collapse when plotted as    
+
+> tkNd,eff vdN a
+
+versus Na/Nd,eff .We note that all curves shown in Fig. 10 have a similar shape: the kill time per attacker decreases with Na until a characteristic size of the attacking swarm, above which 
+
+tk/Na is approximately constant. This constant behavior corresponds to tk linearly proportional to the number of attackers. We define the value of Na that separates these two regimes as the effective size of the defending swarm, 
+
+Nd,eff . When Na < Nd,eff , the attacking swarm is “effectively smaller” than the defending swarm, and more attackers can be added without a proportional increase in tk. When 
+
+Na > Nd,eff , the attacking swarm is “effectively larger” than the defending swarm, and adding more attackers yields a proportional increase in tk.We note that overall magnitude of these curves as well as the value Nd,eff depend on defender and attacker swarm parameters. A key question that mission planners would want to answer for this particular algorithm is how to stay in the first regime, where Na < Nd,eff and the defending force has an advantage. Minimum resource allocation would correspond to analyzing an attacking 12 
+
+swarm and deploying the right number of defenders such that Na ≈ Nd,eff .Using a similar procedure to the one used in the first case study, we use scaling analysis to search for a formula relating the performance metric tk to all system parameters. To form dimensionless groups, we consider 
+
+tk, Na, Nd, Va, Vd, the characteristic acceleration time 
+
+τ for defenders, the defender weapon range R, and atypical length scale d for a total of eight parameters. We do not change any length scales in the system, so we assume d ≈ 1. Since there are two dimensions (length and time) represented in these parameters, there should be six dimensionless groups, which can be written as Na, Nd, tk Va 
+
+> d
+
+,
+
+v = Va/Vd, τVa 
+
+> d
+
+, and Rd
+
+To obtain a collapse using scaling analysis, a similar procedure is used to the first case study. We first fit the logarithm of the data for tk/Na versus Na using two linear functions, one for the downward sloping regime (where Na < Nd,eff ) and one for the constant regime (where Na > Nd,eff ). The intersection of these two lines is easily computed, which yields Nd,eff as a function of all dimensionless quantities. We vary each one systematically and find functions that approximately capture the depen-dence of each dimensionless quantity: we find that Nd,eff 
+
+is linearly dependent on R, depends on Nd as a power law with exponent 3/2, and is exponentially dependent on v
+
+and τ. Combining all, we obtain 
+
+Nd,eff = Nd3/2
+
+( Rd
+
+)
+
+e 4v 
+
+> 5
+
+e τVa  
+
+> 8d
+
+. (18) Of particular interest is the nonlinear scaling in Nd,compared with a linear scaling in the first case study. The nonlinearity may be caused by the asymmetry of the competing swarms’ goals (red swarm scatters, blue swarm chases). We find that plotting Na/Nd,eff on the horizontal axis approximately lines up all the crossover points. For the vertical axis, we seek to rescale tk/Na. First, instead of tk,we use the dimensionless quantity tk vd . We also postulate that Na should be replaced by Na/Nd,eff , suggesting that we should plot on the vertical axis the quantity tk Nd,eff vNad .Fig. 10 shows this quantity plotted versus Na/Nd,eff , which collapses the data reasonably well. This suggests that 
+
+tk ≈ NadNd,eff v f
+
+( Na
+
+Nd,eff 
+
+)
+
+(19) where the function f can be roughly approximated as 
+
+f (u) =
+
+
+
+u−α , if u < 1,
+
+u−β , if u > 1. (20) The exponent α ≈ 0.75 captures nearly all the data when 
+
+Na/Nd,eff < 1. For Na/Nd,eff > 1 the data are slightly more scattered, but β ≈ 0 could likely be used with good fidelity. Further work might examine how β depends on the dimensionless quantities in the system, but this is not addressed here since this study is primarily ademonstration of a method of analysis. Overall, the result of the analysis method we demonstrate here is a simple yet non-intuitive result that could only be obtained by a procedure like the one we show here. B. Scaling Analysis using Optimal Path Planning In the analysis introduced in the previous section every scenario studied required engaging every available defender. One may wonder, however, if this is really necessary, i.e., can the attackers be destroyed using a subset of the defenders available. In this section we demonstrate how the scaling analysis technique introduced in Section VI-A can be combined with optimization to determine the minimum number of defenders required to successfully destroy the attackers and to study the effectiveness of this approach. In this section we show that this problem can naturally be cast as an optimal path planning problem. First, we introduce the trajectory opti-mization formulation, we then present a scenario where non-optimized and optimized solutions are shown and, finally, we apply scaling analysis to rigorously compare the performance of the optimal solution with the reduced number of defenders engaged versus the non-optimal one. Let S d and S a denote the sets of defenders and attackers, with indices j ∈ S d and i ∈ S a. Defender trajectories are denoted by r j(t) over a free terminal time Tfinal .The quantity psurv  
+
+> i j
+
+denotes the probability that attacker 
+
+i survives defender j, defined via the survivability rate 
+
+ρsurv  
+
+> i j
+
+(t), and psurv  
+
+> i
+
+denotes the total survival probability of attacker i against all defenders. The paths for the defenders r j(t), ∀ j ∈ S d are obtained by solving the following multi-agent optimal path planning problem with variable termination time Tfinal , with given initial positions r j(0) , ∀ j ∈ S d:minimize J :=
+
+∑ 
+
+> j∈Sd
+
+ℓ j (21) w.r.t Tfinal , r j(t), ∀ j ∈ S d, t ∈ (0 , Tfinal ) (22) subject to ∥˙r j(t)∥ ≤ vmax , ∀ j ∈ S d, t ∈ (0 , Tfinal ) (23) 
+
+∥¨r j(t)) ∥ ≤ amax , ∀ j ∈ S d, t ∈ (0 , Tfinal ) (24) 
+
+psurv  
+
+> i
+
+≤ psurv max , ∀i ∈ S a, (25) where ℓ j, j ∈ S d denotes the path length for the jth defender 
+
+ℓ j B
+
+∫ Tfinal 
+
+> 0
+
+∥˙r j(t)∥dt ,
+
+which we use as a proxy for energy expenditure, since under bounded-speed and bounded-acceleration motion, the mechanical work scales linearly with traversed path length up to a constant factor; psurv  
+
+> i
+
+, i ∈ S a denotes the probability that the ith attacker will survive all defenders, given by 
+
+psurv  
+
+> i
+
+B
+
+∏ 
+
+> j∈Sd
+
+psurv  
+
+> i j
+
+, psurv  
+
+> i j
+
+= e− ∫ Tfinal 0 ρsurv  
+
+> i j (t)dt
+
+,13 
+
+where psurv  
+
+> i j
+
+is the probability that attacker i survives defender j and ρsurv  
+
+> i j
+
+(t) is the corresponding distance-dependent damage rate 
+
+P (attacker i survives defender j on interval (t, t + dt ))
+
+= ρsurv  
+
+> i j
+
+(t)dt + O(dt 2),
+
+that we assume to be of the form 
+
+ρsurv  
+
+> i j
+
+(t) B λi j Φ( Fi j − ai j ∥ri − r j∥2
+
+σi j 
+
+),
+
+where Φ(z) B ∫ z 
+
+> −∞
+> 1√2π
+
+e−ξ2/2dξ is the cumulative function for the standard normal distribution. The numerical solution to (21) relied on a finite dis-cretization of the (variable) horizon (0 , Tfinal ) into NT
+
+intervals, corresponding collocation points t0, t1, . . . , tNT
+
+separated by δt B Tfinal /NT . The velocities ˙r and accel-erations ¨r were approximated by forward finite differences 
+
+˙r j(t) ≈ r j(t + δt) − r j(t)
+
+δt , ¨r j(t) ≈ ˙r j(t + δt) − ˙r j(t)
+
+δt ,
+
+and all the integrals by finite sums, as in 
+
+ℓ j ≈
+
+> NT
+
+∑
+
+> k=0
+
+∥˙r j(δtk )∥δt. (26) For numerical stability, the survivability constraints in (25) were equivalently enforced in the logarithm domain, as in 
+
+log psurv  
+
+> i
+
+= −
+
+∑ 
+
+> j∈Sd
+
+∫ Tfinal 
+
+> 0
+
+ρsurv  
+
+> i j
+
+(t)dt ≤ log psurv max , ∀i ∈ S a,
+
+with the integrals approximated by finite differences. In addition, to avoid the lack of differentiability of the square-root needed to compute the norms in (26), we introduced slack variables ¯ℓ j,k subject to the (smooth) constraints 
+
+¯ℓ j,k ≥ 0, ¯ℓ2 
+
+> j,k
+
+≤ ˙r j(δtk )′ ˙r j(δtk ), (27) and replaced the optimization cost in (21) by 
+
+∑ j∈S d
+
+∑NT 
+
+> k=1
+
+¯ℓ j,k. At the minimum, the slack variables ¯ℓ j,k
+
+take the minimum value allowed by the constraints in (27), which turns out to be 
+
+¯ℓ j,k = ∥˙r j(δtk )∥,
+
+leading to the desired cost. The optimization solvers were generated by Casadi [32] using the IPOPT interior-point solver [33]. The numerical solutions to the optimal path planning problem introduced in (21 - 25) were initialized using defender trajectories developed in Section VI-A. The re-sulting solution used a subset of all the defenders available as shown in Fig. 11. In fact, in this case, the off-the-shelf solution used all 10 defenders, whereas the optimal solution used only five. We believe that the reduced number of defenders obtained is a direct consequence of the definition of the cost J in (21) and the introduction of the restriction on the maximum probability of survival of each attacker. Indeed, since the cost J is equal to the total distance traveled by all the defenders, using as few (a) 0 5 10 15 20 25 30 35 40 45 50 55 
+
+> 0510 15 20 25 30 35 40 45 50 55
+
+(b) 0 5 10 15 20 25 30 35 40 45 50 55 
+
+> 0510 15 20 25 30 35 40 45 50 55
+
+Fig. 11: (a) The initial engagement, using global target-ing with intercept-based pursuit, as shown in Fig. 9(c). Attackers’ positions are traced out with open circles, and defenders are dots connected by lines. The color scheme is random, used to distinguish different agents. (b) The engagement after optimization, as described in the text. Red circles indicate defenders that were assigned to stay at the base by the optimization algorithm. defenders as possible is a natural outcome of this choice. That this number is greater than zero is guaranteed by introducing a constraint on the maximum probability of survival of each attacker. Moreover, the optimizer solved the assignment and sequencing problems implicitly. In other words, the targets assigned to each defender and the sequence by which they should be approached was never explicitly included in the optimal path planning formulation (21 - 25). Finally, the outcome of each optimal engagement is the minimum number of defenders committed to neutralize all targets, denoted Nmin  
+
+> d
+
+. Using scaling analysis we have found that Nmin  
+
+> d
+
+increases with increasing Na and va,max 
+
+and decreases with increasing Rd. These are consistent 14 
+
+with physical intuition, i.e., more defenders are needed for more drones, for faster drones, and for a shorter range of the defenders’ weapons, as shown in Fig. 12. Interestingly, we observe that the number of deployed defenders Nmin  
+
+> d
+
+scales as N1/3 
+
+> a
+
+for the case where defenders use optimal path planning, compared with scaling of N2/3
+
+> a
+
+for the case where defenders use off-the-shelf algorithms. Specifically, the off-the-shelf case data suggests that the scaling breakpoint occurs when Na/Nd,eff ≈ 1, which by Eq. (18), corresponds to Nmin  
+
+> d
+
+≈ N2/3 
+
+> a
+
+. Thus, rather than for example simply reducing the number of required defenders by a fixed constant, optimization changed the underlying power-law scaling behavior from N2/3 
+
+> a
+
+to N1/3 
+
+> a
+
+.These results are included to make two narrowly defined observations: first, that the scaling framework can be used on optimized data, and second, that optimization may be able to dramatically improve defender effectiveness. The change in the scaling form from power 2/3 to power 1/3 represents a qualitative improvement in performance between the two algorithms. We contrast this with the performance curves in Fig. 10(a) all use different drone characteristics with the same algorithm, and they are all shifted by some constant but otherwise have the same scaling (i.e., the same slopes). On the other hand, Fig. 12 shows that optimization produces a more fundamental change to the performance curves, i.e., different slopes. We emphasize that optimization might significantly decrease computational efficiency and may not be possible in a real-time situation. 10 -1 10 0 10 1
+
+> 10 1
+
+Fig. 12: Scaling of deployed defenders Nd,deployed with with 
+
+Nav1.4
+
+> a,max
+
+R−1 
+
+> d
+
+. Marker color represents normalized attacker velocity va,max (blue to red) and defender range Rd (darker shades indicate larger Rd). VII. Conclusions This paper set out to tame the combinatorial design space of autonomous drone swarms by applying dimen-sional analysis and data‑scaling techniques, both of which are common in the hard physical sciences. We executed over two million agent‑based simulations in three bench-mark scenarios: a swarm‑on‑swarm battle, a cooperative area search subject to attrition, and a pursuit of scattering targets. In all cases, we used wide ranges of platform specifications, such as speed, sensing radius, weapon range, and attrition coefficients. By non‑dimensionalising the governing variables and rescaling the raw outcomes, we collapsed each multi‑parameter data cloud onto a single, interpretable curve. That curve is expressed through a closed‑form “effective‑swarm‑size” metric. These curves allow us to identify the scaling break points and obtain high-level findings that could be very useful to mission planners and design engineers. For example:  
+
+> •
+
+for the swarm-on-swarm battle, blue victory is achieved when the defender count satisfies Nd ≈
+
+2Na,eff , where Na,eff can be written in terms of dimen-sionless ratios of blue and red agent characteristics.  
+
+> •
+
+In search, full‑coverage time saturates once Neff ≈ 1,a threshold that shifts from 1.8 to 1.0 when limited inter‑agent communication is enabled, cutting the required AUV fleet by approximately 30%.  
+
+> •
+
+In pursuit, the “effective-swarm-size” metric predicts total time to chase down all agents, and embedding an optimal path planning loop within the framework improves qualitatively the defender requirement’s asymptotic scaling from N2/3 to N1/3 relative to attackers. In summary, we find that complex, seemingly mission-specific swarm behaviors can be analyzed with a single data-scaling framework. In all three cases we study, we find that the performance metric is governed by simple yet counterintuitive scaling laws, which is capable of mapping out the design space into regions of success and failure. While this method requires many simulations to be run over a wide range of parameters, this process can be done offline and is only a one-time cost for each type of scenario or engagement. The output is an analytical expression for performance, and evaluating these in real time is computationally trivial. We again emphasize that the reported scaling exponents and other details about the functional form could be measured more precisely, in the event that is beneficial. We also note that the exponent values are properties of the specific models studied and may differ if the underlying model assumptions change, though the dimensional analysis procedure itself remains applicable regardless. Similarly, the embedded optimal control results are included as a proof of concept; a system-atic statistical characterization of exponent uncertainty and a formal convergence or robustness analysis are left for future work. Finally, future work might study both the ensemble-average, as we have done here, as well as the typical deviation from the ensemble average, which might be important when noise or randomness is dominant. In-corporating realistic communication impairments, such as packet loss, delays, or limited bandwidth, would introduce additional dimensionless groups into the framework and 15 
+
+is also left for future work. VIII. Acknowledgements This research was funded by the Defense Advanced Research Projects Agency (DARPA) under grant number HR0011473967, by the Office of Naval Research, grant number N0001423WX01698, and by the Naval Research Program. The authors would like to thank Jeffrey Hafer-man for his help with high-performance computing at NPS. This project was supported in part by an ap-pointment to the NRC Research Associateship Program at the Naval Postgraduate School, administered by the Fellowships Office of the National Academies of Sciences, Engineering, and Medicine. References 
+
+[1] Z. Kallenborn, Are Drone Swarms Weapons of Mass Destruc-tion? U.S. Air Force Center for Strategic Deterrence Studies, Air University, Maxwell AFB, AL: U.S., 2020. [2] Z. Kallenborn and P. C. Bleek, “Swarming destruction: drone swarms and chemical, biological, radiological, and nuclear weapons,” The Nonproliferation Review, vol. 25, no. 5-6, pp. 523–543, 2018. [3] H. Hamann, T. Aust, and A. Reina, “Guerrilla performance analysis for robot swarms: Degrees of collaboration and chains of interference events,” in International Conference on Swarm Intelligence, pp. 134–147, Springer, 2020. [4] A. Ligot and M. Birattari, “On using simulation to predict the performance of robot swarms,” Scientific Data, vol. 9, no. 1, p. 788, 2022. [5] E. Debie, K. Kasmarik, and M. Garratt, “Swarm robotics: A survey from a multi-tasking perspective,” ACM Computing Surveys, vol. 56, no. 2, pp. 1–38, 2023. [6] K. Lerman and A. Galstyan, “Mathematical model of foraging in a group of robots: Effect of interference,” Autonomous robots, vol. 13, no. 2, pp. 127–141, 2002. [7] J. J. Dawkins, F. L. Crabbe, and D. Evangelista, “Deployment and flight operations of a large scale uas combat swarm: Results from darpa service academies swarm challenge,” in 2018 International Conference on Unmanned Aircraft Systems (ICUAS), pp. 1271–1278, 2018. [8] E. Buckingham, “On physically similar systems; illustrations of the use of dimensional equations,” Phys. Rev., vol. 4, pp. 345– 376, Oct 1914. [9] G. I. Barenblatt, Dimensional analysis. CRC Press, 1987. [10] J. C. Gibbings, Dimensional analysis. Springer Science &Business Media, 2011. [11] J. H. Williams, Dimensional Analysis. 2053-2563, Bristol, United Kingdom: IOP Publishing, 2021. [12] T. Tsatsanifos, A. H. Clark, C. Walton, I. Kaminer, and Q. Gong, “Modeling large-scale adversarial swarm engagements using optimal control,” in 2021 60th IEEE Conference on Decision and Control (CDC), pp. 1244–1249, IEEE, 2021. [13] C. Walton, I. Kaminer, Q. Gong, A. H. Clark, and T. Tsat-sanifos, “Defense against adversarial swarms with parameter uncertainty,” Sensors, vol. 22, no. 13, p. 4773, 2022. [14] H. Park, Q. Gong, W. Kang, C. Walton, and I. Kaminer, “Observability analysis of an adversarial swarm’s cooperation strategy,” in 2018 IEEE 14th International Conference on Control and Automation (ICCA), pp. 992–997, IEEE, 2018. [15] C. Walton, P. Lambrianides, I. Kaminer, J. Royset, and Q. Gong, “Optimal motion planning in rapid-fire combat sit-uations with attacker uncertainty,” Naval Research Logistics (NRL), vol. 65, no. 2, pp. 101–119, 2018. [16] T. Tsatsanifos, COMPUTATIONALLY EFFICIENT ALGO-RITHMS FOR OPTIMAL MOTION PLANNING AGAINST MULTI-DOMAIN SUPER SWARMS. PhD thesis, Dept. of Physics, Monterey, CA; Naval Postgraduate School, 2020. [17] D. Pines, “Emergent behavior in strongly correlated electron systems,” Reports on Progress in Physics, vol. 79, no. 9, p. 092501, 2016. [18] A. Zöttl and H. Stark, “Emergent behavior in active colloids,” Journal of Physics: Condensed Matter, vol. 28, no. 25, p. 253001, 2016. [19] D. H. Kelley and N. T. Ouellette, “Emergent dynamics of laboratory insect swarms,” Scientific reports, vol. 3, no. 1, p. 1073, 2013. [20] J. H. Evans, “Dimensional analysis and the buckingham pi the-orem,” American Journal of Physics, vol. 40, no. 12, pp. 1815– 1822, 1972. [21] N. Rott, “Note on the history of the reynolds number,” Annual review of fluid mechanics, vol. 22, no. 1, pp. 1–12, 1990. [22] P. Garaud, “Journey to the center of stars: the realm of low prandtl number fluid dynamics,” Physical Review Fluids, vol. 6, no. 3, p. 030501, 2021. [23] F. da Cruz, S. Emam, M. Prochnow, J.-N. Roux, and F. m. c. Chevoir, “Rheophysics of dense granular materials: Discrete simulation of plane shear flows,” Phys. Rev. E, vol. 72, p. 021309, Aug 2005. [24] N. Krizou and A. H. Clark, “Power-law scaling of early-stage forces during granular impact,” Phys. Rev. Lett., vol. 124, p. 178002, Apr 2020. [25] S. H. Strogatz, Nonlinear dynamics and chaos: with applications to physics, biology, chemistry, and engineering. CRC press, 2018. [26] H. Koorehdavoudi and P. Bogdan, “A statistical physics charac-terization of the complex systems dynamics: Quantifying com-plexity from spatio-temporal interactions,” Scientific Reports, vol. 6, no. 1, p. 27602, 2016. [27] P. Olsson and S. Teitel, “Critical scaling of shear viscosity at the jamming transition,” Physical Review Letters, vol. 99, no. 17, p. 178001, 2007. [28] J. D. Thompson and A. H. Clark, “Critical scaling for yield is independent of distance to isostaticity,” Physical Review Research, vol. 1, no. 1, p. 012002, 2019. [29] N. E. Leonard and E. Fiorelli, “Virtual leaders, artificial po-tentials and coordinated control of groups,” in Proceedings of the 40th IEEE conference on decision and control (Cat. No. 01CH37228), vol. 3, pp. 2968–2973, IEEE, 2001. [30] P. Ogren, E. Fiorelli, and N. E. Leonard, “Cooperative control of mobile sensor networks: Adaptive gradient climbing in a distributed environment,” IEEE Transactions on Automatic control, vol. 49, no. 8, pp. 1292–1302, 2004. [31] T. Brick, M. Lanham, A. Kopeikin, C. Korpela, and R. Morales, “Zero to swarm: Integrating suas swarming into a multi-disciplinary engineering program,” in 2018 International Con-ference on Unmanned Aircraft Systems (ICUAS), pp. 308–314, 2018. [32] J. A. Andersson, J. Gillis, G. Horn, J. B. Rawlings, and M. Diehl, “CasADi: a software framework for nonlinear op-timization and optimal control,” Mathematical Programming Computation, vol. 11, no. 1, pp. 1–36, 2019. [33] L. T. Biegler and V. M. Zavala, “Large-scale nonlinear program-ming using IPOPT: An integrating framework for enterprise-wide dynamic optimization,” Computers & Chemical Engineer-ing, vol. 33, no. 3, pp. 575–582, 2009.
