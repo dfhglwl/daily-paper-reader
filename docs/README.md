@@ -6,71 +6,73 @@
 </div>
 
 ## 每次日报
-- 最新运行日期：2026-03-11
-- 运行时间：2026-03-11 19:34:51 UTC
+- 最新运行日期：2026-02-11 ~ 2026-03-12
+- 运行时间：2026-03-12 10:37:22 UTC
 - 运行状态：成功
 - 本次总论文数：17
 - 精读区：6
 - 速读区：11
 
 ### 今日简报（AI）
-今日深度解析 17 篇前沿成果，重点攻克无人机（UAV）智能控制与大语言模型（
-- 详情：[/202603/11/README](/202603/11/README)
+本期精选 17 篇前沿成果，深度探讨强化学习在无人机敏捷机动与自动驾驶中的鲁棒性与适应性。
+重点关注结合时序逻辑（STL）的鲁棒控制及 MAVEN 元强化学习框架，它们为复杂动态环境下的精准飞行提供了新方案。
+建议深入研究如何利用世界模型与先验信息优化轨迹预测，以应对随机障碍带来的决策挑战。
+- 详情：[/20260211-20260312/README](/20260211-20260312/README)
 
 ### 精读区论文标签
-1. [Temporal Action Representation Learning for Tactical Resource Control and Subsequent Maneuver Generation](/202603/11/2602.18716v1-temporal-action-representation-learning-for-tactical-resource-control-and-subsequent-maneuver-generation)  
+1. [Conformal Signal Temporal Logic for Robust Reinforcement Learning Control: A Case Study](/20260211-20260312/2602.14322v1-conformal-signal-temporal-logic-for-robust-reinforcement-learning-control-a-case-study)  
+   标签：评分：9.0/10、query:uav-air-combat
+   evidence：具有安全规范的F-16航空机动强化学习控制
+2. [MAVEN: A Meta-Reinforcement Learning Framework for Varying-Dynamics Expertise in Agile Quadrotor Maneuvers](/20260211-20260312/2603.10714v1-maven-a-meta-reinforcement-learning-framework-for-varying-dynamics-expertise-in-agile-quadrotor-maneuvers)  
+   标签：评分：9.0/10、query:uav-air-combat
+   evidence：用于敏捷四旋翼机动的元强化学习
+3. [Homotopic information gain for sparse active target tracking](/20260211-20260312/2602.17926v1-homotopic-information-gain-for-sparse-active-target-tracking)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：战术机动生成的时序动作表示
-2. [Large Language Model-Assisted UAV Operations and Communications: A Multifaceted Survey and Tutorial](/202603/11/2602.19534v1-large-language-model-assisted-uav-operations-and-communications-a-multifaceted-survey-and-tutorial)  
+   evidence：利用运动模型进行主动目标跟踪和未来轨迹预测
+4. [Cooperative-Competitive Team Play of Real-World Craft Robots](/20260211-20260312/2602.21119v1-cooperative-competitive-team-play-of-real-world-craft-robots)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：LLM辅助无人机操作综述，包括集群协调和机动优化
-3. [Architecture and evaluation protocol for transformer-based visual object tracking in UAV applications](/202603/11/2603.03904v1-architecture-and-evaluation-protocol-for-transformer-based-visual-object-tracking-in-uav-applications)  
+   evidence：机器人协作-对抗多智能体强化学习
+5. [SAGE-LLM: Towards Safe and Generalizable LLM Controller with Fuzzy-CBF Verification and Graph-Structured Knowledge Retrieval for UAV Decision](/20260211-20260312/2602.23719v1-sage-llm-towards-safe-and-generalizable-llm-controller-with-fuzzy-cbf-verification-and-graph-structured-knowledge-retrieval-for-uav-decision)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：结合EKF和轨迹模型的无人机目标跟踪，应对平台动力学
-4. [Perception-Aware Time-Optimal Planning for Quadrotor Waypoint Flight](/202603/11/2603.04305v1-perception-aware-time-optimal-planning-for-quadrotor-waypoint-flight)  
+   evidence：基于大语言模型的无人机决策架构及安全验证
+6. [Beyond Scaling: Assessing Strategic Reasoning and Rapid Decision-Making Capability of LLMs in Zero-sum Environments](/20260211-20260312/2603.09337v1-beyond-scaling-assessing-strategic-reasoning-and-rapid-decision-making-capability-of-llms-in-zero-sum-environments)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：敏捷四旋翼飞行的时优轨迹规划
-5. [Robust Unscented Kalman Filtering via Recurrent Meta-Adaptation of Sigma-Point Weights](/202603/11/2603.04360v1-robust-unscented-kalman-filtering-via-recurrent-meta-adaptation-of-sigma-point-weights)  
-   标签：评分：8.0/10、query:uav-air-combat
-   evidence：用于非线性状态估计的鲁棒无迹卡尔曼滤波
-6. [Hierarchical Observe-Orient-Decide-Act Enabled UAV Swarms in Uncertain Environments: Frameworks, Potentials, and Challenges](/202603/11/2603.09191v1-hierarchical-observe-orient-decide-act-enabled-uav-swarms-in-uncertain-environments-frameworks-potentials-and-challenges)  
-   标签：评分：8.0/10、query:uav-air-combat
-   evidence：针对军事背景下无人机集群决策的分层OODA循环框架
+   evidence：零和环境下的战略推理与快速决策
 
 ### 速读区论文标签
-1. [NePPO: Near-Potential Policy Optimization for General-Sum Multi-Agent Reinforcement Learning](/202603/11/2603.06977v1-neppo-near-potential-policy-optimization-for-general-sum-multi-agent-reinforcement-learning)  
+1. [Curriculum Reinforcement Learning for Quadrotor Racing with Random Obstacles](/20260211-20260312/2602.24030v1-curriculum-reinforcement-learning-for-quadrotor-racing-with-random-obstacles)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：混合合作-对抗环境下的多智能体强化学习
-2. [Vector Field Augmented Differentiable Policy Learning for Vision-Based Drone Racing](/202603/11/2603.08019v1-vector-field-augmented-differentiable-policy-learning-for-vision-based-drone-racing)  
+   evidence：用于无人机敏捷机动的课程强化学习
+2. [A prior information informed learning architecture for flying trajectory prediction](/20260211-20260312/2603.06863v1-a-prior-information-informed-learning-architecture-for-flying-trajectory-prediction)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：用于无人机敏捷飞行与避障的可微策略学习
-3. [3D UAV Trajectory Estimation and Classification from Internet Videos via Language Model](/202603/11/2603.09070v1-3d-uav-trajectory-estimation-and-classification-from-internet-videos-via-language-model)  
+   evidence：基于Transformer的飞行物轨迹预测
+3. [DynVLA: Learning World Dynamics for Action Reasoning in Autonomous Driving](/20260211-20260312/2603.11041v1-dynvla-learning-world-dynamics-for-action-reasoning-in-autonomous-driving)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：无人机3D轨迹估计与类别信息
-4. [Robust Spatiotemporal Motion Planning for Multi-Agent Autonomous Racing via Topological Gap Identification and Accelerated MPC](/202603/11/2603.09188v1-robust-spatiotemporal-motion-planning-for-multi-agent-autonomous-racing-via-topological-gap-identification-and-accelerated-mpc)  
-   标签：评分：8.0/10、query:uav-air-combat
-   evidence：预测多智能体自主竞速中的对手行为
-5. [Heterogeneous Agent Collaborative Reinforcement Learning](/202603/11/2603.02604v1-heterogeneous-agent-collaborative-reinforcement-learning)  
+   evidence：在动作生成前预测世界动态以辅助决策
+4. [Optimal Take-off under Fuzzy Clearances](/20260211-20260312/2602.13166v1-optimal-take-off-under-fuzzy-clearances)  
    标签：评分：7.0/10、query:uav-air-combat
-   evidence：异构智能体协作强化学习
-6. [Generalized Per-Agent Advantage Estimation for Multi-Agent Policy Optimization](/202603/11/2603.02654v1-generalized-per-agent-advantage-estimation-for-multi-agent-policy-optimization)  
+   evidence：无人机混合避障与自适应决策
+5. [A Generalizable Physics-guided Causal Model for Trajectory Prediction in Autonomous Driving](/20260211-20260312/2602.13936v1-a-generalizable-physics-guided-causal-model-for-trajectory-prediction-in-autonomous-driving)  
    标签：评分：7.0/10、query:uav-air-combat
-   evidence：多智能体策略优化的单体优势估计
-7. [MMH-Planner: Multi-Mode Hybrid Trajectory Planning Method for UAV Efficient Flight Based on Real-Time Spatial Awareness](/202603/11/2603.02683v1-mmh-planner-multi-mode-hybrid-trajectory-planning-method-for-uav-efficient-flight-based-on-real-time-spatial-awareness)  
+   evidence：物理引导的智能体轨迹预测因果模型
+6. [GRAIL: Goal Recognition Alignment through Imitation Learning](/20260211-20260312/2602.14252v1-grail-goal-recognition-alignment-through-imitation-learning)  
    标签：评分：7.0/10、query:uav-air-combat
-   evidence：自主无人机飞行的多模式混合轨迹规划
-8. [Robust Tightly-Coupled Filter-Based Monocular Visual-Inertial State Estimation and Graph-Based Evaluation for Autonomous Drone Racing](/202603/11/2603.02742v1-robust-tightly-coupled-filter-based-monocular-visual-inertial-state-estimation-and-graph-based-evaluation-for-autonomous-drone-racing)  
+   evidence：利用模仿学习从演示轨迹中进行目标识别
+7. [A Comparison of Bayesian Prediction Techniques for Mobile Robot Trajectory Tracking](/20260211-20260312/2602.15354v1-a-comparison-of-bayesian-prediction-techniques-for-mobile-robot-trajectory-tracking)  
    标签：评分：7.0/10、query:uav-air-combat
-   evidence：极端机动下自主无人机竞速的状态估计
-9. [What Capable Agents Must Know: Selection Theorems for Robust Decision-Making under Uncertainty](/202603/11/2603.02491v1-what-capable-agents-must-know-selection-theorems-for-robust-decision-making-under-uncertainty)  
+   evidence：用于机器人轨迹跟踪的贝叶斯预测技术
+8. [SpecFuse: A Spectral-Temporal Fusion Predictive Control Framework for UAV Landing on Oscillating Marine Platforms](/20260211-20260312/2602.15633v1-specfuse-a-spectral-temporal-fusion-predictive-control-framework-for-uav-landing-on-oscillating-marine-platforms)  
+   标签：评分：7.0/10、query:uav-air-combat
+   evidence：无人机着陆的预测控制与运动预测
+9. [Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting](/20260211-20260312/2602.13802v1-cast-r1-learning-tool-augmented-sequential-decision-policies-for-time-series-forecasting)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：不确定性下鲁棒决策的预测性内部状态
-10. [Real-Time Generative Policy via Langevin-Guided Flow Matching for Autonomous Driving](/202603/11/2603.02613v1-real-time-generative-policy-via-langevin-guided-flow-matching-for-autonomous-driving)  
+   evidence：将时间序列预测作为序列决策问题
+10. [Removing Planner Bias in Goal Recognition Through Multi-Plan Dataset Generation](/20260211-20260312/2602.14691v1-removing-planner-bias-in-goal-recognition-through-multi-plan-dataset-generation)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：用于自主决策和控制的实时生成策略
-11. [cuNRTO: GPU-Accelerated Nonlinear Robust Trajectory Optimization](/202603/11/2603.02642v1-cunrto-gpu-accelerated-nonlinear-robust-trajectory-optimization)  
+   evidence：多智能体环境下的目标与规划识别，旨在减轻规划器偏差
+11. [ManeuverNet: A Soft Actor-Critic Framework for Precise Maneuvering of Double-Ackermann-Steering Robots with Optimized Reward Functions](/20260211-20260312/2602.14726v1-maneuvernet-a-soft-actor-critic-framework-for-precise-maneuvering-of-double-ackermann-steering-robots-with-optimized-reward-functions)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：用于自主系统的GPU加速非线性鲁棒轨迹优化
+   evidence：用于精确机动和自主控制的软演员-评论家框架
 
 
 <div class="dpr-home-promo-card">

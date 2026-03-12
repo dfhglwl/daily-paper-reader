@@ -1,0 +1,1123 @@
+Title: A Comparison of Bayesian Prediction Techniques for Mobile Robot Trajectory Tracking
+
+URL Source: https://arxiv.org/pdf/2602.15354v1
+
+Published Time: Wed, 18 Feb 2026 01:28:54 GMT
+
+Number of Pages: 36
+
+Markdown Content:
+# A Comparison of Bayesian Prediction Techniques for Mobile Robot Trajectory Tracking ∗
+
+J.L. Peralta-Cabezas, M. Torres-Torriti and M. Guarini-Hermann 
+
+Abstract 
+
+This paper presents a performance comparison of different estimation and prediction techniques applied to the problem of tracking multiple robots. The main performance criteria are the magnitude of the estimation or prediction error, the computational effort and the robustness of each method to non-Gaussian noise. Among the different techniques compared are the well known Kalman filters and their different variants (e.g. extended and unscented), and the more recent techniques relying on Sequential Monte Carlo Sampling methods, such as particle filters and Gaussian Mixture Sigma Point Particle Filter. KEYWORDS: Mobile Robot Tracking; latency compensation; Bayesian Prediction; Kalman Filtering; Monte Carlo Methods; Sigma-Point Filters       
+
+> Accepted in Robotica (Dec. 2007), vol. 26, n. 5, pp. 571–585 ©2008 Cambridge University Press.
+
+Cite DOI: https://doi.org/10.1017/S0263574708004153 
+
+# 1. Introduction 
+
+Filtering and prediction methods to accurately track multiple moving objects under noisy measurements, disturbances and model uncertainty have received much attention during the last decades in a wide variety of fields, such as aeronautics, defense, computer vision, robotics and economics, to name a few 1−8. It is a well-known fact that the ability of any control or decision system to meet its targets directly depends on accuracy of the measurements and the state estimation 9. On the other hand, when the measurements of the controlled variables 
+
+> ∗
+
+This work was supported by Conycit of Chile under Fondecyt Grant 11060251.  
+
+> Dept. of Electrical Engineering, Pontificia Universidad Cat´ olica de Chile, Vicu˜ na Mackenna 4860, Casilla 306-22, Santiago, Chile E-mail: {mtorrest }@ing.puc.cl
+> arXiv:2602.15354v1 [cs.RO] 17 Feb 2026
+
+are available with some delay, the ability to make accurate predictions of the measurements becomes particularly important in order to compensate the measurements’ latency 10 −12 .In view of the large number of existing approaches (see references in table 1) and the key role of filtering and estimation techniques for accurate tracking, it is important to identify those techniques that have the best performance, not only in terms of accuracy, but also in terms of their ability to handle non-Gaussian noise and their computational cost. The aim of the present work is thus to evaluate the performance of classic filtering techniques for trajectory prediction and perception-latency compensation, such as the Kalman Filter (KF) 15 and the Extended Kalman Filter (EKF) 16 , as well as more recent ones, such as the Unscented Kalman Filter (UKF) 17 , Particle Filtering (PF) 2 and other variants in the class of the so-called Sigma-Point Kalman Filters (SPKF) 10 ,18 ,19 . The prediction strategies compared in this paper, which are summarized in table 1, can be grouped into two main families: (i) the Kalman Filter based approaches 15 ,16 ,17 ,19 ,18 ,10 ,20 and (ii) the sequential sampling or Particle Filter based approaches 2,7,21 ,22 .
+
+Filter Abrev. Noise As-sumption Linearization Technique Reference 
+
+Extended Kalman Filter EKF Gaussian 1st Order Taylor 15 , 16 Unscented Kalman Filter UKF Gaussian None 17 Central Difference Kalman Filter CDKF Gaussian 2nd Order Stirling 18 Divided Difference 1st Order Kalman Filter DD1 Gaussian 1st Order Stirling 19 Divided Difference 2nd Order Kalman Filter DD2 Gaussian 2nd Order Stirling 19 Square Root Unscented Kalman Filter SRUKF Gaussian None 10 , 20 Square Root Central Difference Kalman Filter SRCDKF Gaussian 2nd Order Stirling 10 , 20 Generic Particle Filter PF none None 2, 7Sigma-Point Particle Filter SPPF Gaussian None (w/SRUKF), 2nd Order Stirling (w/SRCDKF) 21 Gaussian Mixture Sigma Point Particle Filter GMSPPF Gaussian None (w/SRUKF), 2nd Order Stirling (w/SRCDKF) 22 , 23 
+
+Table 1: Summary of Bayesian prediction techniques compared in the present work. Although there exist many studies and comparisons in the literature 3,10 ,18 ,24 ,25 ,26 , most of these compare just a few approaches and in general do not consider directly issues related to the 2robustness of the methods to non-Gaussian noise. The Gaussianity of the disturbances is a common assumption that often simplifies analytic developments, but is far from the actual characteristis of many real systems. In fact, some of the existing algorithms yield poor esti-mates or simply diverge when the Gaussianity assumption is not satisfied, while other require a significantly large computation time that may render them unpractical for real-time control and decision applications 10 . The KF and EKF are unarguably the most popular prediction approaches 2. However, both rely on a first order Taylor series approximation of the nonlinear state space model of the system. Furthermore, both assume that process and measurement noises are identically and independently Gaussian distributed. Because of these assumptions, the KF or EKF perform poorly when the system dynamics is highly nonlinear and the system noises are non-Gaussian. These limitations have motivated the development of the Sigma-Point Kalman Filters (SPKF) 10 and the rebirth of the computationally intensive Sequential Monte Carlo Sampling methods 7 aided by the availability of more powerful computers. The main contribution of this paper is the evaluation and comparison of the performance of the ten different filtering strategies listed in table 1 as applied to a non-linear system with measurements subject to non-Gaussian noise. The performance of each filter is measured in terms of the root mean squared-error of the filter’s prediction error, the filter’s effectiveness to handle non-Gaussian noise and its computational cost. Concisely, but in a precise manner, the paper also presents the general algorithm of the KF-based and the PF-based filtering approaches. The system employed as test bench is an ensemble of fast moving RoboCup F-180 robots 11 . The performance of the filters is first evaluated through numerical simulations of the robots’ trajectory prediction. The best performing approach is then tested with the real robots. In this context, the performance is discussed in terms of the ability of the estimation strategies to filter perception errors and compensate perception delays in real-time. The results are valuable not only to applications related to robotic soccer competitions, but to a wide range of fields characterized by non-linear dynamics/non-Gaussian disturbances that require accurate state trajectory predictions and the compensation of perception and computation delays. Examples of these fields include the process control industry 9, the visual tracking applications 27 ,28 and the autonomous localization and navigation 10 ,12 ,13 .The paper is organized as follows. Section 2 presents the mathematical background on which the KF-based and PF-based filtering approaches rely. The derivation of the kinematic and 3dynamic equations of a three-wheel omni-directional robot employed in the filters implementa-tion is presented in section 3. The testing methodology and results are presented in sections 4 and 5, respectively. The conclusions of this work and a discussion of some aspects concerning ongoing research are presented in section 6. 
+
+# 2. Bayesian Estimation 
+
+In order to define the problem of Bayesian estimation, let xk ∈ Rn denote the n-dimensional vector representing the state of some system at time tk = kT , k ∈ N, where T > 0 is the sampling period (assumed constant for simplicity of exposition), and consider the evolution of the state according to a discrete-time stochastic model equation :
+
+xk = fk−1(xk−1, u k−1, v k−1) (1) where fk−1 is a known function of the state xk−1, an m-dimensional input vector uk−1 ∈ Rm,whose purpose is to drive the state of the system, and an n-dimensional process noise vk−1 ∈ Rn
+
+that accounts for external disturbances and mismodelling effects. The function fk−1 is often nonlinear and also may be time-dependent. The optimal estimation problem consists in finding the best estimate of the state xk of the stochastic process (1) whose actual state cannot be directly observed, but can be inferred from the measurements of the system outputs yk ∈ Rp. The later are related to the system’s state by the so-called measurement equation , which is also known as sensor or observation model :
+
+yk = hk(xk−l, w k−l) (2) where hk is a known, possibly nonlinear and time-dependent, function of the state xk−l, at some time tk−l = ( k − l)T , and a p-dimensional measurement noise wk−l ∈ Rn vector that accounts for sensor noise and measurement uncertainties. Here l ∈ N represents a possibly non-zero delay introduced by limitations in the speed at which measurements can be acquired. In the Bayesian formulation, the optimal state estimate at time tk, often denoted by ˆ xk, is the one that maximizes the a posteriori conditional probability of the state having certain value given the system output measurements. More rigorously, if Ykdef 
+
+= {yi, i = 1 , 2, . . . , k }
+
+4denotes the set of all sensor measurements up to time tk, then the optimal state estimate in the Bayesian framework is the one that maximizes p(xk|Yk), or equivalently, that which minimizes the expected error between the actual state xk and the estimate ˆ xk. Such optimal estimate is uniquely specified by the conditional mean or minimum variance estimate (see Thm. 3.1, in reference 14) given by: ˆxkdef 
+
+= E [xk|Yk] = 
+
+Z
+
+xkp (xk|Yk) dx k (3) Central to the calculation of the optimal estimate is the calculation of the posterior probability density p(xk|Yk), which by Bayes’ rule can be computed recursively as new measurements arrive according to: 
+
+p (xk|Yk) = C · p (yk|xk) p (xk|Yk−1) (4) where 
+
+p (xk|Yk−1) = 
+
+Z
+
+p (xk|xk−1) p (xk−1|Yk−1) dx k−1
+
+and 
+
+C =
+
+Z 
+
+p (yk|xk) p (xk|Yk−1) dx k
+
+−1
+
+.
+
+If the process is governed by a linear stochastic difference (or differential) equation with Gaus-sian noises, then the optimal estimate (3) can be computed recursively using the well known Kalman Filter 15 ,14 . However, most real world systems are not linear and are subject to non-Gaussian noises. Thus analytical closed form expressions for the estimate (3) usually do not exist, not even in recursive form, and only suboptimal solutions may be computed to ap-proximate in some sense the optimal solution. Among these approximated solutions are the Extended Kalman Filter (EKF) 2,16 , Gaussian Sum Filters (GSF) 22 ,23 , Sigma-Point Kalman Filters (SPKF) 10 , and Sequential Monte Carlo (SMC) methods that give origin to the Particle Filter (PF) and its variants 2,21 −23 .
+
+2.1. Kalman Filter Approaches 
+
+The Kalman Filter (KF) and its extended version (EKF) are perhaps the most popular predic-tion approaches employed in a variety of tracking applications 2,14 ,15 ,16 . Both, the KF and the 5EKF, rely on a first order Taylor series approximation of the nonlinear state space model of the system, and assume that process and measurement noises are identically and independently Gaussian distributed. These assumptions allow the filters to be implemented in a relatively simple recursive way in terms of a state prediction step and an optimal estimate update or 
+
+correction step as shown in Algorithm 1. However, the main disadvantage of such filtering approaches is their inability to handle systems with non-Gaussian noises and highly nonlinear dynamics, often yielding diverging predictions of the system’s state. This has lead to the recent development of the so-called Sigma-Point Kalman Filters (SPKF) 10 , which include the UKF 17 , CDKF 18 , DD1 19 , DD2 19 , SRCDKF 10 and SRUKF 20 approaches. Some examples of their applications can be found in references 10 and 23. The SPKF filters do not require the calculation of the system’s Jacobians Fx, Fu, Fv (see Algorithm 1), instead samples (sigma points) are generated in a deterministic fashion so that some properties (such as first and second statistical moments) match those of the prior distri-bution. Each point undergoes a transformation determined by the system’s model equations or some approximation of the model. The properties of the posterior distribution are obtained from the properties of the transformed sigma points. The transformation in Julier’s UKF is given directly by the model equations, while Ito’s CDKF and Nørgaard’s DD2 employ a second order Stirling polynomial interpolation formula to approximate the model equations, thereby better retaining second order properties of the samples than the standard EKF and with a potentially smaller computational cost than that of the UKF. The difference between the DD1 and DD2 filters is in that the former simplifies the model approximation by using a first order Stirling polynomial interpolation formula instead of a second order one. This simplification allows for some computational time reductions at the expense of accuracy. Ito’s CDKF approach and Nørgaard’s DD1, DD2 approaches were developed independently, but are conceptually the same with minor implementation differences. Later Van der Merwe de-veloped the SRCDKF and SRUKF approaches, suggesting the use of the QR and Cholesky decomposition to compute the square root of the state covariance matrix Pk. The square root of Pk is required to generate the sigma points in the CDKF, DD1, DD2 or UKF approaches and is one of the most computationally expensive steps of the SPKF filters. Hence, SRCDKF and SRUKF aim at improving the speed and numerical stability of the CDKF and UKF by placing special attention to the efficient calculation of the square root of the state covariance 6matrix. It must be stressed that no random sampling is used by the SPKF approaches, despite their resemblance to a Monte Carlo method. Thus only a small number of samples are required to propagate means and covariances. Because of this, SPKF filters have much smaller computa-tional costs than filters based on Monte Carlo methods 10 . On the other hand, SPKF filters should yield smaller estimation errors than the EKF because of their better approximation of the system’s model equations and second order statistical moments. Much like the KF or EKF, the SPKF approaches cannot handle non-Gaussian noises effectively. The Particle Filters discussed next may overcome this disadvantage. 7Algorithm 1 : Extended Kalman Filter (EKF) 
+
+Initial Asumptions/Conditions :Initial state estimate: ˆx0 = E [x0]Initial state covariance: P0 = E
+
+h
+
+(x0 − ˆx0) ( x0 − ˆx0)T i
+
+Process noise covariance: Q0 = E
+
+h
+
+(v0 − ¯v0) ( v0 − ¯v0)T i
+
+Measurement noise covariace: R0 = E
+
+h
+
+(w0 − ¯w0) ( w0 − ˆw0)T i
+
+Iteration k : For k = 1 , 2, . . . , ∞
+
+1. Prediction Step :
+
+• Compute the process model Jacobians 
+
+Fxk = ∇xf |(ˆ xk−1,u k−1,¯vk−1), Fuk = ∇uf |(ˆ xk−1,u k−1,¯vk−1), Fvk = ∇vf |(ˆ xk−1,u k−1,¯vk−1),
+
+• Compute the predicted state mean and covariance State prediction: ˆx− 
+
+> k
+
+= f (ˆ xk−1, u k−1, ¯vk−1)State covariance prediction: P − 
+
+> k
+
+= Fxk Pk−1Fxk T + Fvk QkFvTk
+
+2. Correction Step :
+
+• Compute the observation model Jacobians 
+
+Hxk = ∇xh|(ˆx−   
+
+> k,¯wk
+
+), Hwk = ∇wh|(ˆx−   
+
+> k,¯wk
+
+)
+
+• Update the state estimate with the lastest observation (measurement update) Kalman gain: Kk = P − 
+
+> k
+
+HxTk
+
+ Hxk P − 
+
+> k
+
+HxTk + Hwk RkHwTk
+
+−1
+
+State estimate: ˆxk = ˆ x− 
+
+> k
+
++ Kk
+
+yk − h  ˆx− 
+
+> k
+
+, ¯wk
+
+ 
+
+State covariance: Pk = ( I − KkHxk ) P −
+
+> k
+
+2.2. Particle Filter Approaches 
+
+Particle Filters (PF) belong to the class of Sequential Monte Carlo (SMC) methods, which rely on the idea of recursively computing the posterior probability distributions using concepts of importance sampling and the approximation of distributions by discrete random measures (particles) from the space of unknown states 2,7,21 ,22 . The application of SMC methods dates back to the 1950’s 29 , even before the development of the KF, however it has not been until the 8last decade that PF have received significant attention 2,7,30 , mainly because the computational complexity involved demands adequate computing resources that did not exist before. The main steps of the PF computation are shown in Algorithm 2. Whereas KF/EKF and SPKF methods assume that noises are Gaussian and independently identically distributed (i.i.d.) in order to simplify the formulation of the optimal recursive Bayesian estimator, PF methods make no assumptions on the form of the probability densities. Moreover, the particles (samples) interact and thus PF methods may take into account the statistical dependence of the samples. Therefore, PF methods present a greater potential to successfully handle strongly nonlinear, non-Gaussian processes. The shortcoming of SMC approaches is the high computational effort that they require due to the large number of samples needed to obtain accurate state estimates. The number of samples may grow exponentially with respect to the dimension of the state space, especially for the standard PF 2. To overcome this disadvantage, several “hybrid” methods have been proposed to generate the particles and weights based on KF techniques and its extensions. These hybrid methods allow to obtain accurate state estimates without having to generate a large number of samples, but yet again do not perform well if noises do not conform to the Gaussian assumption. A method to deal with non-Gaussian noises by discarding only those measurements that are deemed unlikely to occur under the Gaussian noise assumption has been proposed by Brown-ing et al. 33 . The method is referred to as Improbability Filter (IF), and can be employed in combination with the KF or the PF methods that cannot handle non-Gaussian noises prop-erly. The next section briefly explains the IF because of its usefulness towards improving the estimates’ accuracy. 9Algorithm 2 : Particle Filter (PF) 
+
+Initialization :For i = 1 , 2, . . . , N draw samples (particles) x(i)0 from the prior p(x0). 
+
+Iteration k : For k = 1 , 2, . . . , ∞
+
+1. Importance Sampling Step :For i = 1 , 2, . . . , N :
+
+• Draw samples x(i) 
+
+> k
+
+∼ p
+
+
+
+xk|x(i)
+
+> k−1
+
+
+
+← f
+
+
+
+x(i)
+
+> k−1
+
+, u k−1, v (i)
+
+> k−1
+
+
+
+.
+
+• Evaluate the importance weights up to a normalizing constant: ˜w(i) 
+
+> k
+
+= w(i)
+
+> k−1
+
+p
+
+
+
+yk|x(i)
+
+> k
+
+
+
+= w(i)
+
+> k−1
+
+pw
+
+
+
+yk − h
+
+
+
+x(i)
+
+> k
+
+ 
+
+, asuming yk = h(xk) + wk, wk ∼ pw.
+
+• Normalize the importance weights: w(i) 
+
+> k
+
+= ˜w(i) 
+
+> k
+> PNj=1 ˜w(i)
+> k
+
+.
+
+2. Selection Step (Resampling) :
+
+• Multiply/suppress samples x(i) 
+
+> k
+
+with high/low importance weights w(i) 
+
+> k
+
+to obtain N
+
+random samples approximately distributed according to p(xk|Yk). 
+
+• For i = 1 , 2, . . . , N set w(i) 
+
+> k
+
+= N −1.
+
+3. Output :
+
+• Using the samples, the state estimate is calculated as the samples expected value ˆxk = E (xk|Yk) ≈ 1
+
+> N
+
+PNi=1 x(i) 
+
+> k
+
+.
+
+2.3. Improbability Filter 
+
+Browning’s Improbability Filter (IF) was proposed as a simple technique to prevent abnormal observations from degrading the state estimates while preserving a good filter response. The implicit assumption of this filter is that the measurements are locally Gaussian with mean given by the predicted measurement, ˆ yk = hk(ˆ xk, ¯wk), and measurement covariance matrix Sk =
+
+Hxk PkHxTk + Hwk RkHwTk . With this assumption, a criterion to discard unlikely measurements 10 is to reject those observations yk whose conditional probability of occurrence given ˆ yk and Sk:
+
+P (yk|ˆyk, S k) = 1(2 π |Sk|) n
+
+> 2
+
+· e− 12 (yk −ˆyk )T S−1    
+
+> k(yk−ˆyk)
+
+(5) falls below certain threshold. An equivalent criterion is to use the Mahalanobis distance 
+
+dM (yk; ˆ yk, S k) = ( yk − ˆyk)T S−1 
+
+> k
+
+(yk − ˆyk) (6) in order to discard those observations yk whose distance with respect to the predicted mea-surement ˆ yk exceeds a given threshold. If an observation is discarded, the Improbability Filter assumes that the predicted measurement is the correct measurement and no state update is performed. However, state covariances are updated through the dynamic update equation. If measurements are repeatedly rejected, the state covariances Pk will grow until observations be-come likely and are accepted. Furthermore, the large covariances will make the state estimate to converge immediately according to the new observations. 
+
+2.4. Differences between KF, PF and IF 
+
+Concisely, the difference between KF and PF approaches lies in the fact that KFs assume the noises have a Gaussian distribution and that the model can be reasonably approximated by a linear Taylor series approximation, while PF make no specific assumption about the distribu-tion of the process or measurement noises, nor they necessarily make any approximation of the model equations. This difference is reflected by the fact that the EKF uses the Jacobians of the system equations (1) and (2), (denoted by ∇ in Algorithm 1), to propagate the covariances that define the probability of the optimal state estimate ˆ xk, while the PF approaches propa-gate samples x(i) 
+
+> k
+
+with transition probability p
+
+
+
+xk|x(i)
+
+> k−1
+
+
+
+defined by the model equation (1) and the known statistics of the process noise vk−1. In simple terms, the PF requires generating a number N of possible states which, after undergoing a transformation defined by the model equation (1), allow to reconstruct the posterior probability (4) using importance weights that are calculated in terms of the measurements likelihood p(yk|x(i) 
+
+> k
+
+); (see Algorithm 2). The KF filters propagate only one state, whose probability of being the actual state is given by a Gaussian distribution with mean ˆ xk and covariance Pk resulting from the update equations; (see Algorithm 1). It is to be noted that the UKF algorithm involves analogous steps to those of Algorithm 1, but does not require the computation of the Jacobians because the 11 model equation (1) is employed to deterministically generate some samples that preserve first and second order statistics. Other SPKF algorithms, such as CDKF, DD1, DD2, SRCDKF, SRUKF are similar to UKF in the sense that the statistics information is also carried by a number of particles that are deterministically chosen, but also rely on first or second order model approximations. From an implementation perspective, the computational complexity of the KF approaches per recursion is of order O(n3 + m3 + 2 n2m + 2 nm 2 + c0), where n and m are the dimensions of the state space model and the measurement model, respectively 31 , and c0 is the cost of computing the gradients or model equations. On the other hand, the PF methods require have a computational complexity which is roughly of order O( 43 n3+2 n2)+ N ·O (4 n2+n+c1+c2+nc 3), where n is the dimension of the state space, N is the number of particles, c1 is the cost of the calculation of the likelihood function, c2 is the cost of the resampling step and c3
+
+is the complexity of the random number generator 32 . Assuming n = m, for large n the complexity of KFs is roughly O(6 n3), while that of PFs is O(4 N n 2) + O( 43 n3) >> O(6 n3)since N >> n . It is hard to make an exact comparison because the complexity may vary depending on the level of nonlinearity exhibited by the system equations and whether first or second order approximations are employed. However, it is to be noted that the main costs of the KF arise from the computation of the Riccati equation for matrix P − 
+
+> k
+
+due to the matrix multiplication Fxk Pk−1, which is O(2 n3). The general PF does not involve the matrix times matrix multiplication, instead only O(n2) matrix times vector multiplications 
+
+Fxk xk are required to generate the samples N times, with N several times larger than n. It is also worth pointing that even if the relationship between the theoretical complexity (expressed in terms of the number of floating-point operations) and the actual computation time is not straight forward because of the influence of memory locality and cache boundaries, the results nonetheless confirm that PF-based approachs are computationally more time consuming that KF-based methods. Finally, it must be noticed that the IF is not a recursive Bayesian estimator, but it exploits the assumption that the measurement noises are Gaussian to discard those measurements which deviate from the expected measurement and whose probability in the Gaussian sense is low given the knowledge of the updated measurement covariance. Using the IF in conjunction with KF, EKF or other SPKF approaches makes sense because the IF should be able to reject 12 measurements that are not Gaussian and that would otherwise deteriorate the prediction and update of the covariances. Since the PF methods do not require to assume Gaussian noises nor linear models, using the IF with the PF approaches should not offer any benefit and just increase the computational cost. 
+
+# 3. Omni-directional Robot Model 
+
+The performance of the filtering techniques mentioned in the previous section, as applied to the position tracking and prediction problem, is evaluated using a three-wheel omni-directional robot as test platform. It is worth pointing out that the particular choice of model does not limit the validity of the performance tests. If a robot with a different configuration is employed, then the model equations should be updated accordingly. The choice of the three-wheel configuration is based on the fact that: (i) it possesses a nonlinear dynamics which offers an adequate challenge to the filtering techniques, (ii) it is simple to control as there are less actuators, and (iii) it is the type of robot that is currently being employed by the PUC’s F-180 RoboCup team. The kinematic and dynamic model is presented next following the work by Liu et al. 34 ; for a detailed and rigorous derivation the reader is referred to the book by Angeles 35 . For clarity of exposition, the notation employed in the formulation of the robot’s model is summarized in table 2. The model equations are derived by expressing velocities and forces acting on the robot in terms of their components along the local coordinate system, {xr, yr}, which is fixed to the robot’s body as illustrated in fig. 1. Simple vector rotation operations allow to rewrite the robot’s kinematic and dynamic equations in terms of the global coordinate system, 
+
+{xw, yw}, which is fixed to the court as shown in fig. 2. The following simplifying assumptions regarding the system have been made: 1. The robot body only undergoes planar motion, and there is no wheel slippage, nor skidding. 2. Dynamic friction on the robot is negligible and only viscous friction in the motors and bearings is considered. 13 Symbol Description 
+
+Robot Parameters o1, o2, o3 rear, front-right and front-left wheels 
+
+m robot’s mass 
+
+I0 robot’s inertia moment 
+
+r wheel radius 
+
+L body radius 
+
+N gear ratio 
+
+J0 motor armature and wheel inertia moment 
+
+KT , KG, Ra, La motor constants (torque, EMF, resistance and inductance) 
+
+Robot Local Variables (Body Frame) xr, yr axes of the local coordinate frame fixed to the robot’s body 
+
+Fxr , F yr traction forces acting on the robot along xr and yr
+
+˙xr , ˙yr robot velocities along xr and yr
+
+τθ body rotation torque ˙θ robot’s heading rate of change 
+
+f1, f 2, f 3 traction forces of the wheels ˙ϕ1, ˙ϕ2, ˙ϕ3 angular velocities of the motors 
+
+u1, u 2, u 3 input voltages of the motors 
+
+Robot World Variables (Court Frame) xw, yw axes of the global coordinate frame fixed to the court 
+
+p = ( xw, y w) robot location 
+
+θ robot heading (defined as the angle between the robot’s yr axis and the global xw axis) 
+
+Table 2: Notation for the model equations of the three-wheel robot. 
+
+Figure 1: Robot coordinate frame {xr, xr} fixed to the robot’s body (local coordiantes) and the traction forces f1, f2 and f3 of the wheels. 14 Figure 2: World coordinate frame {xw, yw} fixed to the court (global coordinates) and two teams of RoboCup F-180 robots. 
+
+Figure 3: Forces acting on the robot and velocity components (see Table 2 for notation details). 3. The mass and moment of inertia of the wheels about the zr axis perpendicular to xr and 
+
+yr have been lumped into a mass term m and a general inertia I0.By considering these standard assumptions, additional uncertainty about the true model pa-rameters is introduced. However, this uncertainty is overcome by the estimation strategy. The increased uncertainty poses an additional desirable challenge to the algorithms that are to be evaluated in the following section. 15 3.1. Robot Kinematics 
+
+Defining the matrices 
+
+P0
+
+> def
+
+=
+
+
+
+sin( θ) cos( θ) 0
+
+− cos( θ) sin( θ) 00 0 1
+
+ , P1
+
+> def
+
+=
+
+
+
+1 0 L
+
+− sin( ψ) cos( ψ) L
+
+− sin( ψ) − cos( ψ) L
+
+ , with ψ = π
+
+6it is easy to verify from the geometry of the robot shown in fig. 1 and fig. 3, that the robot’s velocity components 
+
+h
+
+˙xr, ˙yr, ˙θ
+
+i
+
+in the local frame {xr, yr} are related to the wheel velocities according to: 
+
+P1vr = rN ˙ϕ (7) where vr =
+
+h
+
+˙xr, ˙yr, ˙θ
+
+iT
+
+, ˙ϕ =
+
+h ˙ϕ1, ˙ϕ2, ˙ϕ3
+
+iT
+
+. The kinematics equation defining robot’s velocity components vector in the global coordinates, vw, as a function of the wheels’ angular velocities is then given by: 
+
+vw = P0vr = rN P0P −11 ˙ϕ (8) 
+
+3.2. Robot Dynamics 
+
+Defining the robot’s generalized inertia matrix as: 
+
+I def 
+
+=
+
+
+
+m 0 00 m 00 0 I0
+
+
+
+and applying Newton’s Law in the body frame 
+
+I ˙vr = I ˙θzr × vrp + P T 
+
+> 1
+
+f (9) where vrp = ˙ xrxr + ˙ yryr is the velocity of the robot center of mass p in the xr and yr directions, and f = [ f1, f 2, f 3]T is the vector of net traction forces of the wheels. The dynamics of the DC motors is described by the equations: 
+
+J0 ¨ϕ = KT ia − b0 ˙ϕ − rN f (10) 
+
+u = Raia + La
+
+dia
+
+dt + KG ˙ϕ (11) 16 where ia = [ ia1, i a2, i a3] is the vector of armature currents, u = [ u1, u 2, u 3] is the vector of armature voltages. Considering that the time constant of the electrical equation is very small compared to that of the mechanical equation, it is possible to neglect the dynamics of the motors’ electrical circuits, i.e. dia/dt = 0, ia = ( u − KG ˙ϕ)/R a, and therefore it is possible to rewrite the motors’ mechanical equation (10) as: 
+
+J0 ¨ϕ = KT
+
+u − KG ˙ϕ
+
+Ra
+
+− b0 ˙ϕ − rN f (12) From (7), ˙ϕ = Nr P1vr and ¨ϕ = Nr P1 ˙vr, which replaced in (12) yield: 
+
+f = −a1P1 ˙vr + a2P1vr + a3u (13) where, 
+
+a1 = J0
+
+N 2
+
+r2 , a 2 = − N 2
+
+r2
+
+ KT KG
+
+Ra
+
++ b0
+
+
+
+, a 3 = KT NRar
+
+Finally, replacing (13) in (9) results in the following equation for the robot’s dynamics: 
+
+H ˙vr = ˙θzr × vrp + a2I−1P T 
+
+> 1
+
+P1vr + a3I−1P T 
+
+> 1
+
+u (14) with H def 
+
+=  I3 + a1I−1P T 
+
+> 1
+
+P1
+
+. Here, I3×3 denotes the 3 × 3 identity matrix. In vector form, equation (14) can be written as: 
+
+H
+
+
+
+¨xr
+
+¨yr
+
+¨θ
+
+ =
+
+
+
+˙θ ˙yr
+
+− ˙θ ˙xr
+
+0
+
+ + a2I−1P T 
+
+> 1
+
+P1
+
+
+
+˙xr
+
+˙yr
+
+˙θ
+
+ + a3I−1P T
+
+> 1
+
+
+
+u1
+
+u2
+
+u3
+
+ (15) 
+
+3.3. Linear Discrete-Time State Space Model 
+
+In order to formulate a discrete-time model for predicting the robot’s motion, let xkdef 
+
+=
+
+h
+
+xwk , y wk , θ k, ˙xrk, ˙yrk, ˙θk
+
+iT
+
+be the state vector that describes the robot’s motion at discrete time instants tk = kT , k = 0 , 1, 2, . . . , for some sampling period T > 0. It is assumed that the state of the robot is affected by an i.i.d. zero-mean disturbance vk with (constant) covariance 
+
+Qk = E  vkvTk
+
+. Linearization of the kinematic and dynamic equations (8) and (15) about a nominal state xekdef 
+
+= [ xwk , y wk , θ k, 0, 0, 0] T , followed by discretization with sampling period T
+
+allows to obtain the following difference equation defining the evolution of the robot’s state: 
+
+xk = Ak−1xk−1 + Bu k−1 + vk−1 (16) 17 with 
+
+Aj =
+
+ I3×3 P0 (θj ) T
+
+03×3 I3×3 + A22 T
+
+ , A 22 =
+
+ 
+
+> 3a2
+> 2m+3 a1
+
+0 00 3a2 
+
+> 2m+3 a1
+
+00 0 3a2
+
+> I0/L 2+3 a1
+
+ (17) and 
+
+B =
+
+ 03×3
+
+B2T
+
+ , B 2 = a3
+
+2m
+
+
+
+2 −1 −10 −√3 −√3
+
+> 2mL I0
+> 2mL I0
+> 2mL I0
+
+ . (18) Here 03×3 represents the 3 × 3 matrix of zeroes, while P0(θj ) is employed to emphasize the dependence of the rotation matrix P0 on the value of the heading angle θj . It is also important to point out that the inputs vector is actually defined as the vector of delayed armature voltages as uk = [ V1k−l , V 2k−l , V 3k−l ]T , where Vik−l , i = 1 , 2, 3, is the armature voltage of the i-th motor delayed l sampling periods. The delay l accounts for the system’s latency, mostly due to the delay arising in the image acquisition and segmentation process that is employed to obtain each measurement of the robot’s position and heading. The measurement model considers an observation vector given by: 
+
+yk = h (xk, w k) = [xwk + w1k , y wk + w2k , θ k + w3k ]T (19) where wik , i = 1 , 2, 3, are the measurement noises, which are assumed to be the mixture of a Gaussian and a non-Gaussian random process, i.e. wik = wgik + wnik , i = 1 , 2, 3, where wgik
+
+and wnik are the Gaussian and non-Gaussian components, respectively. The Gaussian process 
+
+wgk = wg 
+
+> 1k
+
+, w g 
+
+> 2k
+
+, w g
+
+> 3k
+
+T is assumed to be i.i.d. for all k ∈ N, with zero-mean and (constant) covariance matrix Rk = E(wgkwgkT ). The non-Gaussian process wnk = wn 
+
+> 1k
+
+, w n 
+
+> 2k
+
+, w n
+
+> 3k
+
+T takes values from a uniform distribution with a probability of occurrence at each instant k defined by a Bernoulli distribution. The discrete-time state-space model defined by equations (16) and (19) allows to generate the ideal and noisy trajectories for typical input commands applied to the robots during their operation. These trajectories will serve in the evaluation of the different filtering and prediction approaches as explained in the next sections. 18 4. Testing Platform and Methodology 
+
+This section briefly describes the general architecture of the RoboCup F-180 team of robots employed as testbed, the filter implementation and the testing methodology. 
+
+4.1. RoboCup F-180 System Architecture 
+
+The test bench system employed to assess the prediction capability of the filters is based on the simulation of motion tracking under noisy conditions of the three-wheel omnidirectional robot presented in the previous section. The best performing method is verified experimentally using real robots of the PUC RoboCup team. The team of five robots is controlled by a system whose architecture is illustrated in Fig. 4. As shown in Fig. 4, the vision system implemented in a standard PC receives images from a Samsung SCD107 digital video camera with a Sony VCL-0625 wide angle lens via an IEEE 1394 Firewire connection. The vision system extracts the position ( xw, y w) and heading θ of the robots using a standard color segmentation process. These measurements are then passed to the planning and control PC, which is responsible for filtering the measurements, predicting future states and generating motion commands aimed at driving certain robots to the ball and scoring. The filter is required to reduce robot misdetection and false positives that may occur due to fast motion and color confusion. The prediction of states is fundamental due to the unavoidable delays arising mainly from actuator response times, the computation time required by the vision and control system, as well as the communication bandwidth that limits data throughput. All these delays can add up to 160 ms, which are equivalent to missing 5 video frames for a standard 30 fps video camera. The total delay is non-negligible, especially when a robot reaches its maximum velocity of 1.25 m/s, as this implies that the robot’s displacement between one frame and the next processed one 160 ms later amounts to approximately 20 cm. This position difference is quite significant considering that the robot maximum diameter is 18 cm. For this reason, the planning and control system must receive an estimate of the future position of the robot corresponding to four frames time ahead, so that the planning and control system can issue adequate command decisions. 19 Figure 4: PUC’s RoboCup F-180 system architecture. 
+
+4.2. Filter Implementation 
+
+The filters were implemented using Matlab/Simulink ® and some modified functions of the ReBEL 36 and Kalmtool 37 Matlab ® toolkits designed to facilitate recursive Bayesian estimation and prediction calculations. The process noise covariance matrix was defined as Qkdef 
+
+= diag 
+
+
+
+σ2˙xw , σ 2˙yw , σ 2˙θ , σ 2¨xr , σ 2¨yr , σ 2¨θ
+
+
+
+,where diag( ·) stands for the diagonal matrix of its arguments. The standard deviations for the accelerations ¨ xr, ¨yr, ¨θ were chosen so that their values reflect the acceleration limits imposed by the motors and wheel slippage 33 . In a similar way, the values of the standard deviations for the velocities ˙ xw, ˙yw, ˙θ were defined as the largest change in velocity achievable over a sampling period T . It was verified experimentally, that the maximum robot linear acceleration was 1.5 m/s 2, therefore σ¨xr = σ¨yr = 2 m/s 2 is a reasonable choice to characterize the largest possible acceleration disturbance. The angular acceleration value is also chosen slightly above the maximum angular acceleration measured, setting σ¨θ = 2 rad/s . With a sampling period 
+
+T = 0 .0333 s, experimental verification lead to the following values for the velocities standard 20 deviations: σ ˙xw = σ ˙yw = 0 .067 m/s , σ ˙θ = 0 .2 rad/s .Similarly, the Gaussian measurement noise covariance matrix was defined as a diagonal matrix 
+
+Rkdef 
+
+= diag  σ2 
+
+> xw
+
+, σ 2 
+
+> yw
+
+, σ 2
+
+> θ
+
+ with σxw = σyw = 0 .005 m and σθ = 0 .020 rad experimentally determined. The position and heading measurements also affected by non-Gaussian noise generated from a uniform distribution that may produce an observation corresponding to an apparent instantaneous relocation of the robot to any position within the court and with a possible sudden change in heading. The initial value of the state vector is taken to be x0
+
+> def
+
+=
+
+h
+
+xw 
+
+> 0
+
+, y w 
+
+> 0
+
+, θ 0, ˙xr
+
+> 0
+
+, ˙yr
+
+> 0
+
+, ˙θ0
+
+iT
+
+= ¯xw 
+
+> 0
+
+, ¯yw 
+
+> 0
+
+, ¯θ0, 0, 0, 0T ,where ¯ xw 
+
+> 0
+
+, ¯yw 
+
+> 0
+
+, ¯θ0 denote the measured initial position and heading. The state covariance matrix is initialized with the value P0
+
+> def
+
+= Qk · T 2, which corresponds to the largest expected initial position and velocities deviation after one sampling period T = 0 .0333 s.
+
+4.3. Testing Methodology 
+
+The ability of the different filters to accurately predict the robot’s state at different time horizons is measured in terms of the error between the ideal (noise-free) trajectory and the estimated one. To this end, simulations were performed using six different reference trajec-tories, which are shown in Fig. 5 and that were generated using the noise-free version of the state space model of section 3.3. The trajectories comprehend different manoeuvres that are common in RoboCup F-180 competitions, including rectilinear and circular paths with differ-ent motion regimes, such as constant acceleration, constant velocity, constant rate of turning or their combination. The test trajectories are purposely constructed to provide challenging situations in which it is more difficult to track turns or sudden changes in direction. The trajectories employed here are not intended to be optimal trajectories, although our trajectory planner does solve an optimization problem in real-time to dynamically find the best path that avoids the robots of the other team. Twenty simulation runs were repeated for each of the six reference trajectories using a new random number generator seed each time. Figure 6 shows four of the twenty simulation runs corresponding to the reference trajectory in the first row, second column of fig. 5. In the noisy trajectories of fig. 6, it is possible to appreciate the non-Gaussian noise in the observations 21 due to erroneous detections, which appear as sudden jumps in the measured location of the robot. Each trajectory simulation represents 20 seconds of motion with measurement sampling frequency of 30 Hz (corresponding to the frame-grabber 30 fps acquisition rate), and thus each simulation results in 601 trajectory points. The root mean squared error (RMSE) of the position ep =
+
+q 1
+
+> N
+
+PNk=1 (ˇ xwk − ˆxwk )2 + (ˇ ywk − ˆywk )2
+
+(i.e. Euclidean distance between a reference position (ˇ xw, ˇyw) and the estimated position (ˆ xw, ˆyw)) and the RMSE of the heading angle eθ =
+
+q 1
+
+> N
+
+PNk=1 (ˇθk − ˆθk)2 (where ˇθk is the ref-erence heading) are calculated for each of the simulation runs, and then averaged to assess the quality of the estimation resulting from the different filters. With the exception of the Particle Filter, which makes no assumption about Gaussianity of the measurements, all filters were evaluated with and without a cascaded Improbability Filter in order to verify possible improvements achievable with this scheme for rejecting non-Gaussian disturbances. The per-formance of each filter is also measured in terms of its computation time, which is expressed in relative terms with respect to the fastest filter. Expressing computation time in relative terms is more useful than presenting absolute time amounts because absolute computation times may further decrease in the future with the availability of new computing hardware. However, the relative computational complexity and hence, the relative computation time, should be independent of the hardware’s computational power at equal levels of parallelization. Testing of the best performing algorithm identified through the simulations was carried out using our F-180 robots as final validation step. The best filter was implemented using Vi-sual C++ and the Bayesian Filtering Library 38 . Different predefined elliptical and rectilinear trajectories were generated by the planning and control system for the practical experiment. Non-Gaussian noise was deliberately generated by placing in the court a decoy robot with sim-ilar color patches moving along a trajectory that intersects the path of robot being tracked. Even if the likelihood of an erroneous identification is small provided an adequate illumination and image acquisition rate, in actual competitions erroneous identification does occur in part due to particular positions that the fastly moving robots may assume with respect to the field lines, the ball or other robots. Therefore, in order to test the filter under an extreme situation, it is desirable to force the occurrence of non-Gaussian noise using a decoy robot to distract the tracker. The next section presents and discusses the simulation and practical results obtained. 22 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Ideal Trajectory x^w [m] y^w [m] 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Ideal Trajectory x^w [m] y^w [m] 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Ideal Trajectory x^w [m] y^w [m] 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Ideal Trajectory x^w [m] y^w [m] 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Ideal Trajectory x^w [m] y^w [m] 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Ideal Trajectory x^w [m] y^w [m] Figure 5: Six different reference trajectories employed in the simulations. 23 0 1 2 3         
+
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> 3
+> 3.5
+> 4
+> 4.5
+> Noisy Trajectory x^w [m] y^w [m] 0123
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> 3
+> 3.5
+> 4
+> 4.5
+> Noisy Trajectory x^w [m] y^w [m] 0123
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> 3
+> 3.5
+> 4
+> 4.5
+> Noisy Trajectory x^w [m] y^w [m] 0123
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> 3
+> 3.5
+> 4
+> 4.5
+> Noisy Trajectory x^w [m] y^w [m]
+
+Figure 6: Examples of the measured noisy trajectory corresponding to trajectory in the first row, second column of fig. 5 for different noise realizations. 
+
+# 5. Experimental Results 
+
+The average position and heading RMSE obtained with the different filters for 1, 4 and 8 frame prediction horizons are presented in tables 3, 4 and 5, respectively. The 1, 4 and 8 frame periods correspond to 0.033, 0.133, 0.267 seconds, respectively, since the sampling period 
+
+T = 1 /30 seconds is defined by the standard frame rate of the video camera. Tables 3, 4 and 5 include RMSE values for the different filters tested with and without the Improbability Filter 24 (IF). As earlier mentioned, the IF is not employed with the Particle Filter (PF), because the PF does not require the Gaussian noise assumption and hence it should be able to reject non-Gaussian disturbances without necessitating the pre-filtering stage in the form of the IF. The PF was implemented with 600 particles. The relative computation time Tc/T cmin in tables 3, 4 and 5 is expressed relative to the fastest method, i.e. the computation time Tc required by each method is divided by the computation time of the fastest method Tcmin . The latter is a reasonable quantification of the relative computational complexity of the different filters implemented. For example, table 4 shows that the 4-frame ahead trajectory predictions using the PF took on average approximately 20.4 times longer than the same 4-frame ahead predictions using the EKF with the IF. As reference, the EKF 4-frame ahead prediction of the total 601 points of the robot’s trajectory took on average 789.84 ms running in Matlab 7.0 under Windows XP on a computer with an AMD Turion 64 bits processor and 1 GB RAM. This means that each 4-frames ahead prediction using the EKF takes approximately 1.31 ms (= 789 .84 /601 [ ms/cycle ]). Since this value is smaller than the 33.33 ms acquisition period, the EKF is a suitable candidate for real-time implementation. The numerical simulations also revealed that there is an extra 8.9% computational cost in the 1-frame ahead prediction when the EKF is used together with the IF. This extra computa-tional cost decreases to 6.3% and 5.3% for the 4 and 8-frame prediction horizons, respectively. For the most computationally demanding filter, the SPPF, the additional computational cost introduced by the IF is negligible and around 2.7% for the three prediction horizons. This is expectable because in the case of the SPPF its complexity makes its cost quite considerable with respect to the small cost of the simple IF. Tables 3 and 4 show that the smallest position RMSE for the 1 and 4-frame prediction is obtained with the PF. For the 8-frame ahead prediction, the results in table 5 indicate that the SPPF with IF yields slightly better results than the PF, however the SPPF with IF is 7.1 times computationally more demanding than the PF, and hence, the PF is still a better choice. Other filters that exhibit good accuracies in the position prediction were the GMSPPF and SPPF. However, these do not perform as well as the CDKF, SR-UKF or SR-CDKF for angle predictions 4 or 8-frames ahead. On the other hand, it is to be noted that the computational 25 demand of the PF is about five times greater per prediction cycle than that of the simpler EKF with IF. The latter offers the best trade-off between accuracy and speed. This is because the EKF with IF was ranked second or third in the 1, 4 or 8-frame prediction in terms of the position RMSE, yet it was ranked first in terms of computational speed. Table 3: Results for the 1-frame ahead prediction. 
+
+RMSE w/IF RMSE wo/IF Tc/T cmin Tc/T cmin 
+
+Filter Position [m] Heading [rad ] Position [m] Heading [rad ] w/IF wo/IF EKF 0.0048 b 0.2326 0.0229 b 0.2674 1.000 1.000 DD1 0.0434 0.1386 0.0491 c 0.1951 3.566 3.729 DD2 0.0342 0.1363 0.0491 0.1947 3.566 3.729 UKF 0.0379 0.0398 c 0.1101 0.1399 c 3.758 3.971 CDKF 0.0105 c 0.0518 0.1100 0.1398 b 3.727 3.960 SR-UKF 0.0397 0.0364 a 0.1099 0.1399 c 3.872 3.956 SR-CDKF 0.1656 0.0941 0.1099 0.1402 3.734 3.956 PF — — 0.0014 a 0.0327 a — 4.901 GMSPPF 0.0034 a 0.0392 b 0.0637 1.0703 31.973 33.855 SPPF 0.0690 0.1042 0.1103 0.1404 42.687 45.996 
+
+a = best, b = second best, c = third best result. 
+
+Table 4: Results for the 4-frame ahead prediction. 
+
+RMSE w/IF RMSE wo/IF Tc/T cmin Tc/T cmin 
+
+Filter Position [m] Heading [rad ] Position [m] Heading [rad ] w/IF wo/IF EKF 0.0234 b 0.2078 0.0478 b 0.2510 1.000 1.000 DD1 0.0548 0.1504 0.1232 0.1351 2.499 2.566 DD2 0.0658 0.1535 0.1232 0.1360 b 1.749 2.751 UKF 0.1187 0.0541 0.0617 c 0.2108 3.790 3.965 CDKF 0.0561 0.0325 a 0.0617 0.2115 3.594 3.756 SR-UKF 0.0515 c 0.0363 c 0.1232 0.1356 3.582 3.736 SR-CDKF 0.0618 0.0333 b 0.1231 0.1361 c 3.582 3.736 PF — — 0.0191 a 0.1189 a — 20.424 GMSPPF 0.0927 0.1353 0.1157 0.2110 112.630 116.457 SPPF 0.0192 a 0.1483 0.1160 0.2137 145.480 157.970 
+
+a = best, b = second best, c = third best result. 
+
+26 Table 5: Results for the 8-frame ahead prediction.                                                                               
+
+> RMSE w/IF RMSE wo/IF Tc/T cmin Tc/T cmin
+> Filter Position [m]Heading [rad ]Position [m]Heading [rad ]w/IF wo/IF EKF 0.0611 c0.2138 0.0828 b0.2577 1.000 1.000 DD1 0.0884 0.1541 0.0928 0.2145 2.220 2.261 DD2 0.0582 b0.1373 0.0927 c0.2143 2.210 2.261 UKF 0.0812 0.0784 0.1549 0.1402 c3.874 4.024 CDKF 0.1208 0.0400 a0.1549 0.1395 b3.561 3.696 SR-UKF 0.1151 0.0438 b0.1548 0.1389 a3.569 3.670 SR-CDKF 0.1468 0.0704 c0.1549 0.1404 3.569 3.670 PF ——0.0416 a0.3107 —28.757 GMSPPF 0.2269 0.4195 0.1316 0.4340 159.053 162.990 SPPF 0.0308 a0.3835 0.1318 0.4364 204.304 221.425
+> a= best, b= second best, c= third best result.
+
+Figure 7 shows one of the six noise-free reference trajectories (see fig. 5) employed in the simulations, while fig. 8 shows a noisy measurement corresponding to the trajectory in fig. 7. The 4-frame ahead predictions resulting from the application of the EKF without the IF and with the IF are shown in figures 9 and 10, respectively. It is possible to clearly see from the comparison of figures 9 and 10 that the prediction using the EKF with the IF to reject non-Gaussian noise is substantially better, while disastrous results are obtained with the EKF alone. In terms of the position and heading RMSE values presented in table 4, the PF is slightly better than the EKF with IF, however the PF is not capable of generating reasonably smoothed trajectories as can be appreciated from the comparison of figures 9 and 11. The EKF with the IF was chosen for validation using the robots in a real court because the EKF demonstrated a reasonable accuracy and smallest computational cost. Figure 12 shows the results of one of the tests in which the robot was programmed to follow a simple straight line parallel to the yw axis back and forth. The motion was repeated four times and lasted approximately 11 seconds. From fig. 12 it is possible to observe that the filter is capable of overcoming the non-Gaussian noise and track the programmed reference trajectory. It is to be noted that the zigzagging of the estimation about the reference trajectory is mainly due to the fact that the robot used for testing had low cost gearboxes and wheels, which generated a jerky motion difficult to control. 27 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Ideal Trajectory x^w [m] y^w [m] Figure 7: Noise-free reference trajectory. 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+Noisy Trajectory x^w [m] y^w [m] 
+
+Figure 8: Measured trajectory. 28 0 1 2 3
+
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> 3
+> 3.5
+> 4
+> 4.5
+> EKF : Prediction 4 frames x^w [m] y^w [m]
+
+Figure 9: Predicted trajectory 4-frames ahead using the EKF without the IF. 0 1 2 3
+
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> 3
+> 3.5
+> 4
+> 4.5
+> EKF : Prediction 4 frames x^w [m] y^w [m]
+
+Figure 10: Predicted trajectory 4-frames ahead using the EKF with the IF. 29 0 1 2 3
+
+0
+
+0.5 
+
+1
+
+1.5 
+
+2
+
+2.5 
+
+3
+
+3.5 
+
+4
+
+4.5 
+
+PF : Prediction 4 frames x^w [m] y^w [m] Figure 11: Predicted trajectory 4-frames ahead using the PF. 1 2 3 4 5 6 7 8 9 10          
+
+> 0
+> 0.5
+> 1
+> 1.5
+> Time [s] x^w [m]
+> Measure
+> Estimated
+> Ideal Trajectory
+> 12345678910
+> 0
+> 0.5
+> 1
+> 1.5
+> 2
+> 2.5
+> Time [s] y^w [m]
+> Measure
+> Estimated
+> Ideal Trajectory
+
+Figure 12: Trajectory components xw and yw of a real F-180 robot predicted 4-frames ahead using the EKF with the IF. 30 6. Conclusions and Future Work 
+
+The performance of ten different Bayesian filters was evaluated in terms of their ability to handle non-Gaussian noise and to make accurate state predictions. This work’s contribution is in the identification of the best filtering techniques capable of handling non-Gaussian dis-turbances or noise with a comparatively low computational effort in order to make accurate state predictions. The ability to make a good prediction of a system’s state, rather than to simply obtain a good state estimate at the current time, is fundamental in many autonomous systems applications that involve expensive computations to perform perception, control and decision tasks. Such expensive computations introduce delays that limit response times of the closed-loop system. Therefore, accurate state predictors become essential to cope with the delays. The filtering techniques evaluated have been proposed during the last decades, however no exhaustive comparison was found in the literature. Some of the techniques belong to the family of the Kalman filter and its modifications, while other to the family of Sequential Monte Carlo sampling schemes. A third group is composed by hybrid filters, which combine the Kalman filtering approaches with Sequential Monte Carlo techniques. The results obtained indicate that in general both the simple EKF with the IF and the PF yield accurate predictions. However, the PF requires a significantly larger computational effort. This larger computational cost could nevertheless be decreased by sacrificing accuracy if the number of particles in the PF implementation is reduced. The PF implemented in the simulations used 600 particles and had a slightly better accuracy than that of the EKF with the IF, however the PF was about 5 times slower than the EKF with IF per sampling period. This means that for prediction horizons of n sampling periods, the PF would take 5 n times longer than the simpler EKF with IF. Some other methods evaluated also satisfy the accuracy requirements of the application presented, but their computational complexity and comparatively smaller accuracy makes them a less reasonable choice. In particular, the GMSPPF and SPPF are computationally expensive and less suitable for applications requiring online filtering. Future availability of more powerful computers may allow to reduce the computation time required by these methods, however their advantages in the context of tracking multiple robots is not clear. 31 It is also worth noting that the inclusion of the Improbability Filter allows for significant prediction improvements in all the different filters implemented that assume Gaussian noises (all filters except for the Particle Filter). A minor drawback of the Improbability Filter is that it requires the appropriate threshold value to be found empirically. On the other hand, the right tuning of the hybrid SPKF combined with SMC sampling methods may be very difficult because a slight modification of the filter parameters may result in non positive-definite state covariance matrices. This is because the sigma points are deterministically calculated in terms of the square root of the weighted state covariance matrix 10 . The approaches preserve the first two statistical moments of a not necessarily Gaussian distribution and ensure that the predicted covariance stays semi-positive definite, unlike previous methods which could yield negative definite predicted covariances. However, the choice of the filter parameters and the numerical round-off errors that accumulate throughout the simulation may render the predicted covariance matrix to be not strictly positive definite. In such a case, it may not be possible to compute the matrix square root, even if the numerically efficient Cholesky factorization 39 is employed. To overcome this problem, the state covariance matrix was reset whenever it became non-positive definite. However, this action also limits the performance of the hybrid approaches. Future work considers the implementation of multiple hypothesis tracking methods to increase the robustness of the planning and control system that drives the team of robots, the devel-opment of techniques for automatically adjusting the IF parameters so as to maximize the rejection of false positives, and the comparison of the Bayesian methods with non-Bayesian techniques, such as approaches based on neural networks. 
+
+# Acknowledgements 
+
+This project has been supported by the National Commission for Science and Technology Research of Chile (Conicyt) under Fondecyt Grant 11060251. 32 References 
+
+1. S. Thrun, W. Burgard, D. Fox, Probabilistic Robotics (MIT Press, Cambridge, MA, 2005). 2. B. Ristic, S. Arulampalam and N. Gordon, Beyond the Kalman Filter: Particle Filters for Tracking Applications (Artech House, Norwood, MA, 2004). 3. Special Issue on Sequential State Estimation, Proceedings of the IEEE 92 (3), (2004). 4. M.-C. Tsai, K.-Y. Chen, M.-Y. Cheng and K. C. Lin, “Implementation of a real-time moving object tracking system using visual servoing,” Robotica 21 (6), 615–625 (2003). 5. C. Hue, J.P. Le-Cadre and P. Perez, “Sequential Monte Carlo methods for multiple target tracking and data fusion,” IEEE Trans. Signal Processing 50 (2), 309–325 (2002). 6. M. Orton and W. Fitzgerald, “A Bayesian approach to tracking multiple targets using sensor arrays and particle filters,” IEEE Trans. Signal Processing 50 (2) 216–223 (2002). 7. A. Doucet, S. Godsill and C. Andrieu, “On sequential Monte Carlo sampling methods for Bayesian filtering,” Statistics and Computing 10 (3), 197–208 (2000). 8. Y. Bar-Shalom and X. Rong Li, Estimation and Tracking: Principles, Techniques, and Software (Ybs Publishing, 1998). 9. F. Askary, N. T. Sullivan, “Importance of measurement accuracy in statistical pprocess control,” Proc. SPIE Metrology, Inspection, and Process Control for Microlithography XIV (N. T. Sullivan ed.) 3998 , (2000) 546–554. 10. R. van der Merwe, E. A. Wan and S. Julier, “Sigma-Point Kalman Filters for Nonlinear Estimation and Sensor-Fusion: Applications to Integrated Navigation”, Proceedings of the AIAA Guidance, Navigation and Control Conference , (2004) 5120. 11. A. Gloye, M. Simon, A. Egorova, F. Wiesel, O. Tenchio, M. Schreiber, S. Behnke and R. Rojas, Predicting away robot control latency , (Technical Report B-08-03, Freie Uni-versit¨ at Berlin, Fachbereich Mathematik und Informatik, 2003). 12. D. Bouvet and G. Garcia, “GPS latency identification by Kalman filtering,” Robotica 
+
+18 (5), 475–485 (2001). 33 13. F. Donoso-Aguirre, J.-P. Bustos-Salas, M. Torres-Torriti and A. Guesalaga, “Mobile robot localization using the Hausdorff distance,” To appear in Robotica, published online by Cambridge University Press, 12 Jul 2007 .14. B.D.O. Anderson and J.B. Moore, Optimal Filtering , (Dover Publications, Mineola, NY, 2005). 15. R.E. Kalman, “New approach to linear filtering and prediction problems,” Trans. of the ASME – Journal of Basic Engineering , 82 , 34–45 (1960). 16. A. H. Jazwinski, Stochastic Processes and Filtering Theory , (Academic Press, 1970). 17. S. J. Julier and J.K. Uhlmann, “A new extension of the Kalman filter to nonlinear sys-tems,” Proceedings of AeroSense: The 11th International Symposium on Aerospace/Defence Sensing, Simulation and Controls , Orlando, Florida, (1997). 18. K. Ito and K. Xiong, “Gaussian filters for nonlinear filtering problems,” Proceedings of the IEEE International Conference on Robotics and Automation 45 (5), (2000) 910–927. 19. M. Nørgaard, N.K. Poulsen and O. Ravn, “New developments in state estimation for nonlinear systems,” Automatica 36 (11), 1627–1638 (2000). 20. R. Van-der-Merwe and E. Wan, “The Square-Root Unscented Kalman Filter for state and parameter estimation,” Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing 6, (2001) 3461–3464. 21. R. Van-der-Merwe, A. Doucet, N. de Freitas and E. Wan, “The Unscented Particle Filter,” In: Advances in Neural Information Processing Systems (T. K. Leen, T. G. Dietterich and V. Tresp eds.), 584–590 (MIT Press, Cambridge, MA, 2000). 22. R. Van-der-Merwe and E. Wan, “Gaussian mixture Sigma-Point Particle Filters for se-quential probabilistic inference in dynamic state-space models,” Proceedings of the In-ternational Conference on Acoustic, Speech and Signal Processing (2003) 701–704. 23. J.H. Kotecha and P.M. Djuric, “Gaussian sum Particle Filtering for dynamic state space models,” Proceedings of IEEE International Conference on Acoustics, Speech, and Signal Processing 2001 (2001) 3465–3468. 34 24. N. Cui, L. Hong, J. R. Layne, “A comparison of nonlinear filtering approaches with an application to ground target tracking,” Signal Processing, Elsevier , 85 (8), 1469–1492 (2005). 25. R. Wright, S. R. Maskell, M. Briers, “Comparison of Kalman-based methods with Par-ticle Filters for raid tracking”, Practical Bayesian Statistics 5 , (2003). 26. D. C. K. Yuen, B. A. MacDonald, “A comparison between Extended Kalman Filtering and Sequential Monte Carlo techniques for simultaneous localisation and map-building,” 
+
+Proceedings of the 2002 Australasian Conference on Robotics and Automation (2002) 111–116. 27. E. V. Cuevas, D. Zald´ ıvar, and R. Rojas, Kalman filter for vision tracking , (Techni-cal Report B-05-12, Freie Universit¨ at Berlin, Fachbereich Mathematik und Informatik, 2005). 28. E. V. Cuevas, D. Zald´ ıvar, and R. Rojas, Particle filter for vision tracking , (Techni-cal Report B-05-13, Freie Universit¨ at Berlin, Fachbereich Mathematik und Informatik, 2005). 29. N. Metropolis and S. Ulam, “The Monte Carlo method,” Journal of the American Sta-tistical Association , 44 (247), 335–341 (1949). 30. N. J. Gordon, D. J. Salmond and A. F. M. Smith, “Novel approach to nonlinear/non-Gaussian Bayesian state estimation,” IEE Proc. F 140 (2), 107–113 (1993). 31. M. J. Goris, D. A. Gray, I. M. Y. Mareels, “Reducing the computational load of a Kalman filter,” IEE Electronics Letters 33 (18), 1539–1541 (1997). 32. R. Karlsson, T. Sh¨ on, F. Gustafsson, “Complexity analysis of the marginalized particle filter,” IEEE Transactions on Signal Processing 53 (11), 4408–4411 (2005). 33. B. Browning, M. Bowling and M. Veloso, “Improbability filtering for rejecting false pos-itive,” Proceedings of the IEEE International Conference on Robotics and Automation ,(2002) 3038–3043. 35 34. Y. Liu, X. Wu, J. Zhu and J. Lew, “Omni-directional mobile robot controller design by trajectory linearization,” Proceedings of the 2003 American Control Conference 4,(2003) 3423–3428. 35. J. Angeles, Fundamentals of Robotic Mechanical Systems: Theory, Methods, and Algo-rithms , (3 rd ed., Springer, 2006). 36. R. van der Merwe, ReBEL: Recursive Estimation Bayesian Library , (OGI School of Science & Engineering, Oregon Health & Science University (OHSU), 2002-2006) 
+
+http://choosh.cse.ogi.edu/rebel/ , visited on February 2006. 37. M. Nørgaard, Kalmtool: version 2 ,
+
+http://www.iau.dtu.dk/research/control/kalmtool.html 
+
+Ole Ravn and Niels Kjølstad Poulsen, KalmTool: versions 3, 4 ,
+
+http://server.oersted.dtu.dk/www/or/kalmtool/ , visited February 2006, (Depart-ment of Mathematical Modelling, Department of Automation, Ørsted - Danmarks Tekniske Universitet, 1998-2006). 38. K. Gadeyne, BFL: Bayesian Filtering Library (Department of Mechanical Engineering, Katholieke Universiteit Leuven, Belgium, 2001-2006) 
+
+http://www.orocos.org/bfl , visited on February 2006. 39. W. H. Press, S. A. Teukolsky, W. T. Vetterling and E. P. Flannery, Numerical Recipes in C: The Art of Scientific Computing , (2 nd ed., Cambridge University Press, MA, 1992). 36

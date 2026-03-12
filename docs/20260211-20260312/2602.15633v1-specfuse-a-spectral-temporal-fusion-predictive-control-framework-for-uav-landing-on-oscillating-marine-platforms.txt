@@ -1,0 +1,611 @@
+Title: SpecFuse: A Spectral-Temporal Fusion Predictive Control Framework for UAV Landing on Oscillating Marine Platforms
+
+URL Source: https://arxiv.org/pdf/2602.15633v1
+
+Published Time: Wed, 18 Feb 2026 01:52:24 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# SpecFuse: A Spectral-Temporal Fusion Predictive Control Framework for UAV Landing on Oscillating Marine Platforms 
+
+Haichao Liu, Yufeng Hu, Shuang Wang, Kangjun Guo, Jun Ma, Senior Member, IEEE , and Jinni Zhou 
+
+Abstract —Autonomous landing of Uncrewed Aerial Vehicles (UAVs) on oscillating marine platforms is severely constrained by wave-induced multi-frequency oscillations, wind disturbances, and prediction phase lags in motion prediction. Existing methods either treat platform motion as a general random process or lack explicit modeling of wave spectral characteristics, leading to suboptimal performance under dynamic sea conditions. To address these limitations, we propose SpecFuse: a novel spectral-temporal fusion predictive control framework that integrates frequency-domain wave decomposition with time-domain recur-sive state estimation for high-precision 6-DoF motion forecasting of Uncrewed Surface Vehicles (USVs). The framework explicitly models dominant wave harmonics to mitigate phase lags, refining predictions in real time via IMU data without relying on complex calibration. Additionally, we design a hierarchical control ar-chitecture featuring a sampling-based HPO-RRT* algorithm for dynamic trajectory planning under non-convex constraints and a learning-augmented predictive controller that fuses data-driven disturbance compensation with optimization-based execution. Extensive validations (2,000 simulations + 8 lake experiments) show our approach achieves a 3.2 cm prediction error, 4.46 cm landing deviation, 98.7%/87.5% success rates (simulation/real-world), and 82 ms latency on embedded hardware, outperforming state-of-the-art methods by 44%–48% in accuracy. Its robustness to wave-wind coupling disturbances supports critical maritime missions such as search and rescue and environmental monitor-ing. All code, experimental configurations, and datasets will be released as open-source to facilitate reproducibility. 
+
+Index Terms —Uncrewed aerial vehicle, spectral-temporal fu-sion, motion prediction, trajectory planning, model predictive control 
+
+I. I NTRODUCTION 
+
+Autonomous landing of Uncrewed Aerial Vehicles (UAVs) on oscillating marine platforms is a critical capability for mar-itime missions such as search and rescue, offshore equipment inspection, and emergency material delivery. However, this task is severely challenged by wave, induced multi-frequency oscillations, random wind disturbances, and significant phase lags in motion prediction, key bottlenecks that degrade landing precision and even lead to mission failure or UAV damage in real-world sea conditions [1]–[3]. The robotic systems leverage the UAVs’ agility and aerial perspective alongside the USVs’ extended operational range and payload capacity. Nevertheless, considering the endurance constraints of UAVs, the ability to autonomously land on USVs is critical for prolonged missions. 
+
+Haichao Liu, Yufeng Hu, Shuang Wang, Kangjun Guo, and Jinni Zhou are with The Hong Kong University of Science and Technol-ogy (Guangzhou), Guangzhou 511453, China (e-mail: {hliu369, yhu444, swang449, kguo886 }@connect.hkust-gz.edu.cn; eejinni@hkust-gz.edu.cn). Jun Ma is with The Hong Kong University of Science and Technology (Guangzhou), Guangzhou 511453, China, and also with The Hong Kong University of Science and Technology, Hong Kong SAR, China (e-mail: jun.ma@ust.hk). Learning -Augmented Control  
+
+> Velocity Matching
+> Disturbance Compensation
+> UAV
+> USV
+> USV Attitude Prediction
+> Dynamic Trajectory Planning
+> Spectral -Temporal Fusion
+> Wave Frequency Decomposition
+> Real -time IMU Correction
+> Sampling -based HPO -RRT*
+
+(a) Operational Schematic Diagram 0 20 40 60 80 100      
+
+> Success Rate (%)  98.8%
+> 89.1%
+> 83.0%
+> 77.8%
+> Overall Performance
+> Proposed
+> FFT-KF [17]
+> MPC-VIO [15]
+> NMPC [13]
+> Ours FFT-KF
+> 0
+> 2
+> 4
+> 6
+> 3.2
+> 5.7
+> Prediction Error e p(cm)
+> Ours FFT-KF
+> 0.0
+> 2.5
+> 5.0
+> 7.5
+> 10.0
+> 4.8
+> 9.3
+> Landing Deviation Δ p(cm)
+> Ours FFT-KF
+> 0
+> 20
+> 40
+> 60
+> 80
+> 100
+> 82
+> 105
+> Latency (ms)
+
+(b) Quantitative Performance Fig. 1. Overview of the UAV-USV maritime rescue operation. The proposed SpecFuse framework (spectral-temporal fusion + learning-augmented control) enables the UAV to predict the USV’s 6-DoF motion (50Hz) and adjust trajectories dynamically, ensuring precise landing (<5 cm deviation) for medical resupply missions. 
+
+This cooperative task requires precise coordination, yet the dynamic nature of open water environments—characterized by wave-induced oscillations and wind perturbations—introduces significant challenges [4]–[6]. To address these difficulties, extensive research has been conducted on dynamic landing control and motion prediction. Traditional methods rely on stochastic estimation or model predictive control (MPC) to handle platform oscillations; however, these approaches often treat motion as a random process and ignore wave spec-tral characteristics, resulting in unavoidable phase lags. Con-versely, while deep learning-based predictors improve general-ization, they typically suffer from high computational latency, making them incompatible with embedded UAV hardware. 
+
+> arXiv:2602.15633v1 [cs.RO] 17 Feb 2026
+
+For instance, Fig. 1 illustrates a schematic of a UAV-USV system for collaborative rescue operations (e.g., autonomous medical resupply to injured survivors) in dynamic marine en-vironments, where the UAV must land on an oscillating marine platform experiencing rapid pitch and roll oscillations due to disturbances like wave action and strong wind. UAV landing in dynamic marine environments has been an active research area, with recent advancements focusing on the following three aspects. (1) Real-time trajectory planning under dynamic disturbances [7]–[10] solves the challenge of adapting to the USV’s motion. (2) Sensor fusion for active perching [11]– [15] enhances the UAV’s ability to accurately localize and land on moving platforms. (3) Motion prediction under wave effects [16], [17] provides foresight into the USV’s future states, enabling proactive adjustments to the UAV’s trajectory. While recent advancements like CurviTrack [18] and MPC-ABCO [19] have demonstrated promising results in controlled environments, they often struggle to adapt to the high uncer-tainty of open-water operations. Specifically, existing methods cannot simultaneously mitigate phase lags from wave oscilla-tions, ensure real-time performance on embedded hardware, and maintain robustness against wind-wave coupling distur-bances. Traditional stochastic estimators [20] or deep learning-based predictors [21] frequently treat platform motion as a general random process. This oversight fails to account for the underlying spectral characteristics of ocean waves, resulting in significant tracking errors when the USV encounters multi-frequency oscillations or rapid phase variations [10], [17]. To fill this gap, we propose SpecFuse, a novel spectral-temporal fusion predictive control framework for robust UAV landing on oscillating marine platforms. Unlike methods rely-ing solely on reactive control or short-term estimation, Spec-Fuse leverages a dual-domain architecture: it decomposes mo-tion signals into fundamental spectral components to capture long-term wave periodicities, while simultaneously utilizing a recursive estimator to correct for transient, wind-induced perturbations in the time domain. This integration effectively eliminates phase lag during multi-axis oscillations, enabling precise, computationally efficient trajectory adjustments suit-able for embedded systems. The main contributions are summarized as follows:  
+
+> •
+
+A spectral-temporal motion forecasting framework that integrates frequency-domain wave decomposition with recursive state estimation, explicitly modeling dominant wave harmonics to minimize phase lag on oscillating marine platforms.  
+
+> •
+
+A hierarchical control architecture utilizing a learning-augmented predictive control scheme, which fuses data-driven disturbance rejection with optimization-based tra-jectory tracking to ensure precise descent under non-convex constraints.  
+
+> •
+
+Validation through extensive simulations and field exper-iments in varying sea states, demonstrating superior land-ing success rates and prediction robustness on oscillating platforms compared to existing state-of-the-art methods. II. R ELATED WORKS 
+
+Recent advancements in UAV-USV collaborative systems have primarily focused on three critical areas: real-time plan-ning under dynamic disturbances, sensor fusion for active perching, and motion prediction under wave effects. 
+
+A. Real-Time Planning under Dynamic Disturbances 
+
+Real-time trajectory planning under dynamic disturbances is essential for UAV landing on wave-affected platforms [22]. Existing approaches are broadly categorized into heuristic search-based methods, hierarchical optimization strategies, and rolling horizon frameworks. Heuristic search algorithms, such as the local map search by Chen and Gesbert [7], prioritize efficiency but struggle with highly non-periodic wave motions. Hierarchical optimization strategies [8] decompose complex planning but often lack explicit modeling of wave distur-bances. Rolling horizon frameworks [9] enable continuous replanning but may assume quasi-static platform dynamics, failing to accommodate subsecond-scale inclination changes. Wave-induced motion prediction is a key enabler for such planning. Recent work by Liu et al. [10] combined spectral analysis with adaptive filtering, achieving high accuracy and low latency. While this provides a foundation, it does not fully address the integration of spectral characteristics into a multi-resolution planning architecture. 
+
+B. Sensor Fusion for Active Perching 
+
+In the domain of sensor fusion for active perching, various strategies have been explored. Bio-inspired control [11] and Nonlinear optimization [12], [19], [23] have shown success in robotics but face reduced effectiveness in outdoor cross-winds or when encountering multiple obstacles. Advances in localization, such as VINS-Mono [13] and lightweight depth estimation networks [14], must trade off millimeter-level accuracy with high computational latency or robustness to illumination changes. Similarly, moving platform tracking systems [15] have demonstrated successful landings but can exhibit significant overshoots and sensor fusion latency during sudden maneuvers. 
+
+C. Attitude Prediction under Wave Effects 
+
+Accurate prediction of wave or uncrewed vessel attitude is crucial for developing control strategies. While Fourier transforms have been applied to predict short-term wave be-havior [16], these predictions often show phase misalignment over extended periods. Optimization-based methods have been proposed for landing on ships in rough seas [17], [18], achieving strong short-term correlation, but prediction accu-racy degrades progressively in forecasts beyond one second. Notably, many existing models employing spectral methods for state prediction face challenges in achieving sufficient alignment of phase and amplitude, which is a critical factor limiting prediction accuracy. While significant progress has been made, challenges remain in accurately predicting multi-axis oscillations and rapid phase variations caused by wind-wave coupling. Our work builds on these advancements by Platform Motion Prediction   
+
+> Trajectory Planner
+> UAV Plant
+> Spectral Decomp.
+> Recursive Estimator
+> Learning-Augmented Controller
+> Actuators & Dynamics
+> Onboard Sensors
+> Constraints Handling
+> HPO-RRT* Optimization
+> Problem Formulation
+> State Estimator
+> Platform Data
+> Freq. Comp. ˆxUSV ucmd
+> rUAV
+> Motion Forecast
+> rref
+> rUAV
+> Fig. 2. Proposed control architecture. The Motion Prediction module forecasts the platform’s state, while the Learning-Augmented controller utilizes multi-source feedback to command the UAV actuators.
+
+integrating UAV landing path planning with oscillating marine platform attitude prediction using a spectral-temporal fusion approach, enabling real-time trajectory adjustments based on accurate motion forecasts. III. M ETHODOLOGY 
+
+The overall architecture of our aerial system in dynamic marine environments is illustrated in Fig. 2. As illustrated in Algorithm 1, the system operates through a closed-loop archi-tecture where IMU/GNSS data from the oscillating platform is continuously fed into a motion prediction module (Sec-tion III-A). This module generates 6-DoF motion estimates at a frequency of 50 Hz, which are then used by the trajectory planner (Section III-B) to dynamically adjust the UAV’s flight path. The execution controller (Section III-C) implements the optimized trajectory using learning-based regression and receding horizon optimization algorithms. 
+
+A. Motion Prediction for Oscillating Marine Platforms 
+
+This module estimates the platform’s 6-DoF motion in real time by fusing frequency-domain spectral decomposition with adaptive recursive estimation. This approach leverages the quasi-periodicity of hydrodynamic wave interactions, where dominant energy frequencies remain stationary during the short landing window. While a formal topological proof is omitted, the estimator’s convergence is practically secured by the bounded nature of wave amplitudes and the contraction properties of the update law. This enables accurate 50 Hz motion forecasting, which is critical for compensating wave-induced oscillations.+4The prediction process follows three core steps: Spectral Decomposition extracts amplitude A,phase φ, and frequency f by decomposing wave signals into harmonic components. Recursive State Estimation utilizes previous spectral results as a prior model and refines them using real-time IMU data to obtain filtered wave parame-ters. Conditioned Prediction leverages the refined parameters 
+
+A, f, φ to forecast future deck attitudes over the planning horizon. 
+
+1) Spectral Decomposition of Wave Motion: Since the 6-DoF attitude of the oscillating platform can be decomposed into independent components in each direction [24], we take the signal of the component roll around the x-axis as an example for prediction. First, to determine the periodicity of the signal, we take a segment ∆t ahead of the current signal time t as a measure of periodicity, i.e., T = [ t − ∆t, t ], and traverse the previous signals to judge which moment T ∈ T 
+
+of the signal has the strongest similarity to this segment. The Euclidean distance of the time series is used to determine this similarity [25]. Consider a time series T1 containing K sampling points prior to the prediction start time point T . We find a segment of time series T2 that also contains K sampling points and is most similar in shape to time series T1. The difference between the two curves is measured by the Euclidean distance: 
+
+Eu dist (T1i, T 2i) = |T1i(y) − T2i(y)|, (1) where T˙i denotes the i-th sampling point in time series T .The average Euclidean distance over K sampling points is calculated as: 
+
+Eu dist = 1
+
+k
+
+> K
+
+X
+
+> i=1
+
+Eu dist (T1i, T 2i). (2) The variance of the Eu dist is recorded as σK (Eu dist ):
+
+σK (Eu dist ) = 1
+
+k
+
+> K
+
+X
+
+> i=1
+
+ Eu dist (T1i, T 2i) − Eu dist 
+
+2 . (3) A smaller value of σK
+
+ Eu dist 
+
+ indicates a greater degree of similarity between T1 and T2. The spectral decomposition is then expressed as: 
+
+X(k) =  
+
+> N−1
+
+X
+
+> n=0
+
+x(n)e−j2πkn/N , k = 0 , 1, . . . , N − 1, (4) where X(k) is the discrete transform of the signal x(n), and 
+
+N is the number of samples. The transform is computed for the time-series signal within the interval [T, t ]. To mitigate the influence of noise, frequency components with an amplitude 
+
+A less than 0.02 Amax are omitted. This filtered result is then used to construct the prediction model for the signal after time t. The underlying premise of this method is the assumed stationarity or periodicity of the signal, which implies that the filtered spectrum of the segment [T, t ] is a faithful representation of the signal’s spectral content for t′ > t .
+
+2) Recursive State Estimation: We estimate the state using the roll direction signal [26]. This signal is mathemati-cally modeled as a superposition of independent sinusoidal components (sine waves), where the signal is defined as: 
+
+Ai sin(2 πf i(t) + φi), i = 1 , 2, 3..., N . In this model, each component i is considered an independent harmonic oscillator. The instantaneous state of each oscillator, vi, which comprises its position and velocity, and its dynamics (time derivative), 
+
+v′
+
+> i
+
+, are defined as follows: 
+
+vi =
+
+ Ai sin(Φ) 2πf iAi cos(Φ) 
+
+
+
+, (5) 
+
+v′ 
+
+> i
+
+=
+
+ 0 1
+
+−(2 πf i)2 0
+
+| {z }
+
+> B(i)
+
+vi, (6) where Ai and fi are the parameters derived from the spectral analysis. The observation information is the IMU attitude and angular velocity. This forms the basis of the adaptive recursive estimation process. The full state vector ˆx (as seen in Eq. 7) is con-structed by augmenting the individual state vectors vi for all N components, and the full state transition model A is a block-diagonal matrix composed of the individual B(i)
+
+matrices. This design assumes the sinusoidal components are independent and allows the estimator to refine the amplitude and phase of each component in real-time. The core estimation process involves the steps of prediction and measurement update. Note taht the measurement update incorporates the IMU observations to refine the state estimate. The state prediction can be expressed as: 
+
+ˆxk|k−1 = Aˆxk−1|k−1 + Bu k−1. (7) In addition, covariance prediction is given by: 
+
+Pk|k−1 = AP k−1|k−1AT + Q. (8) The measurement update at step k is defined as: 
+
+
+
+yk = zk − H ˆxk|k−1
+
+Sk = HP k|k−1HT + RKk = Pk|k−1HT S−1
+
+> k
+
+ˆxk|k = ˆ xk|k−1 + Kkyk
+
+Pk|k = ( I − KkH)Pk|k−1,
+
+(9) where ˆx represents the state estimate; P is the estimate covariance matrix; A and B are the state transition and control-input models, respectively, with u being the control vector; Q
+
+is the process noise covariance; z is the measurement vector, which yields the measurement residual y; H is the observation model; R is the measurement noise covariance; and K is the computed gain. 
+
+3) Condition Prediction: Given the last observation time 
+
+tobs , the execution of the state estimator, as defined by (7) to (9), provides the current state parameters Aj,i (tobs ) and 
+
+φj,i (tobs ). These resulting values are then used, in conjunc-tion with spectral characteristics, to model and describe the subsequent wave propagation state: 
+
+Φi(tobs ) = arctan 
+
+ 2πf i[vi]1,1
+
+[vi]2,1
+
+
+
+, (10) and 
+
+Ai(tobs ) = [vi]1,1
+
+sin (Φ i(tobs )) . (11) The calculated parameters can then be used to make predic-tions for moments t < t obs :
+
+b(t) = 
+
+> N
+
+X
+
+> i=1
+
+Ai(tobs ) sin[2 πf i(t − tobs ) + φi(tobs )] . (12) The application of this technique facilitates the prediction of the oscillating marine platform’s future movement over a brief time horizon. 
+
+Algorithm 1 Predictive-Coordination of Robust Landing Con-trol on Oscillating Marine Platforms 
+
+Require: UAV state s0 = [ x0, y 0, z 0, ˙x0, ˙y0, ˙z0, ϕ 0, θ 0, ψ 0],Platform motion data DUSV , environmental parameters 
+
+E 
+
+> 1:
+
+Initialization:  
+
+> 2:
+
+Ai, f i, φ i ← SpectrumDecomp (DUSV ). 
+
+> 3:
+
+dsafe ≥ 0.5 m , ϕ, θ ∈ [−45 ◦, 45 ◦]. 
+
+> 4:
+
+Prediction Phase:  
+
+> 5:
+
+DUSV ← IMU/GNSS.  
+
+> 6:
+
+DUSV = PNi=1 Ai sin(2 πf it + φi). 
+
+> 7:
+
+ˆxt = RecursiveEst (Ai, f i, φ i, D USV ). 
+
+> 8:
+
+ˆxt = [ˆ x, ˆy, ˆz, ˆϕ, ˆθ, ˆψ]. 
+
+> 9:
+
+Trajectory Planning Phase:  
+
+> 10:
+
+Traj ← HPO-RRT* (s0, ˆxt). 
+
+> 11:
+
+Traj = arg min u
+
+R tf 
+
+> t0
+
+L(s, u ) dt . 
+
+> 12:
+
+Traj ← Traj + ∆ Traj (ˆ xt). 
+
+> 13:
+
+Execution Phase:  
+
+> 14:
+
+min w,ξ 12 ∥w∥2 + C Pni=1 (ξi + ξ∗ 
+
+> i
+
+). 
+
+> 15:
+
+u∗ = arg min u
+
+R tf 
+
+> t0
+
+L(s, u ) dt . 
+
+> 16:
+
+Pconf ≥ 80% , Vbatt ≥ 21 .0 V . 
+
+> 17:
+
+Fail-Safe Mechanism:  
+
+> 18:
+
+if Pconf < 80% or Vbatt < 21 .0 V then  
+
+> 19:
+
+Trigger emergency hover: ˙x = ˙ y = ˙ z = 0 . 
+
+> 20:
+
+end if  
+
+> 21:
+
+Landing:  
+
+> 22:
+
+˙xUAV = ˙ xUSV , ˙yUAV = ˙ yUSV . 
+
+> 23:
+
+zUAV → zUSV . 
+
+> 24:
+
+return Successful landing. 
+
+B. SE(3) Trajectory Planning for the UAV 
+
+The trajectory planner employs the HPO-RRT* algo-rithm [27] to generate SE(3) trajectories optimized for dy-namic environments. The planner dynamically adjusts trajecto-ries based on real-time motion predictions, ensuring collision-free and time-efficient paths. An SE(3) trajectory can be rep-resented as a function τ (t) that maps time t to a configuration in the special Euclidean group: 
+
+τ (t) = 
+
+R(t) p(t)0 1
+
+
+
+, (13) where R(t) ∈ SO (3) is the rotation matrix and p(t) ∈ R3 is the translation vector. For SE(3) motion planning, we implement a time-optimal point-mass model trajectory planning approach that considers the UAV’s rotational dynamics and physical constraints [28]. The goal is to generate a trajectory that is both time-efficient and safe. The point-mass model is defined by the following state variables: 
+
+s = [ x, y, z, ˙x, ˙y, ˙z, ϕ, θ, ψ ]T , (14) where x, y, z are the position coordinates, ˙x, ˙y, ˙z are the veloc-ity components, and ϕ, θ, ψ are the roll, pitch, and yaw angles, respectively. The trajectory planning problem is formulated as an optimization problem: 
+
+min 
+
+> u
+
+Z tf
+
+> t0
+
+L(s, u) dt 
+
+s.t. ˙s = f (s, u),g(s, u) ≤ 0,
+
+(15) where u is the control input, L(s, u) is the cost function, 
+
+f (s, u) is the system dynamics, and g(s, u) represents the physical and safety constraints. To solve this optimization problem, we use a sequential quadratic programming (SQP) approach that iteratively refines the trajectory while ensuring feasibility. The HPO-RRT* algorithm extends the Probabilistic Roadmap (PRM) method by incorporating heuristic sam-pling and optimization. It features a hierarchical architecture with three core components: Threat prediction utilizes the learning-based model to predict platform and obstacle motion, updating the dynamic obstacle map in real time. Dynamic path planner employs the Improved Time-Based RRT* to generate initial paths that minimize time while avoiding colli-sions with predicted obstacles. Trajectory optimizer refines the initial path using a Low-Cost Path Optimizer that performs both coarse and fine optimizations to ensure smoothness and feasibility. The three components work synergistically to produce optimal trajectories in dynamic environments: The cost function for the Improved Time-Based RRT* is defined as: 
+
+Ctotal = αt + βd + γm, (16) where t is path time, d denotes path length, m represents safety margin, and α, β, γ are their respective weighting parameters. This formulation enables the generation of a time-efficient and safe path for the UAV. The cost function for the overall trajectory optimization can also be formulated as: 
+
+J(τ ) = 
+
+Z tf
+
+> t0
+
+ uT Qu + vT Rv  dt, (17) subject to key operational constraints. These include thrust limits of umax = 15 N per motor, safety margins requiring a minimum distance of ≥ 0.5 m from the platform deck, and physical bounds restricting pitch and roll angles to ±45 ◦.These constraints are formulated as: 
+
+
+
+∥p(t) − pUSV (t)∥ ≥ 0.5 m
+
+|ϕ(t)| ≤ 45 ◦
+
+|θ(t)| ≤ 45 ◦
+
+∥u(t)∥ ≤ 15 N(18) where u is the control input, v is the velocity, Q and R are positive definite weighting matrices, pUSV is the position of the platform, and ϕ and θ are the pitch and roll angles. 
+
+C. Execution Controller for the UAV 
+
+This module implements a hybrid control strategy com-bining learning-based velocity matching and receding horizon control. The learning model minimizes the tangential relative speed between the UAV and oscillating platform, while the receding horizon optimizer handles the UAV’s attitude and position during the final descent. 
+
+1) Learning-Based Velocity Matching: To minimize the tangential relative speed between the UAV and the platform, we employ a data-driven regression model with mixed kernel functions [29]. This method enables precise prediction of the platform’s motion, which is critical for adjusting the UAV’s approach velocity to match the movement during the final approach phase. The model is formulated as follows: 
+
+min 
+
+> w,b,ξ,ξ ∗
+
+12 ∥w∥2 + C
+
+> n
+
+X
+
+> i=1
+
+(ξi + ξ∗ 
+
+> i
+
+),
+
+s.t. yi − wT ϕ(xi) − b ≤ ϵ + ξi,wT ϕ(xi) + b − yi ≤ ϵ + ξ∗ 
+
+> i
+
+,ξi, ξ ∗ 
+
+> i
+
+≥ 0, for i = 1 , . . . , n, 
+
+(19) where w is the weight vector, ξ and ξ∗ are slack variables, C is the regularization parameter, ϵ is the insensitive loss parameter, 
+
+ϕ(x) is the kernel function, and yi is the target output. To improve prediction accuracy, we use a mixed kernel function that combines the radial basis function (RBF) kernel and the polynomial kernel: 
+
+ϕ(x) = α · RBF (x) + (1 − α) · Polynomial (x), (20) where α is a weighting parameter that balances the contribu-tions of the two kernels. This hybrid kernel allows the regres-sor to capture both the nonlinear dynamics of the platform motion and the local geometric features of the trajectory. The predicted motion is used to adjust the UAV’s velocity vector, ensuring that the tangential relative speed is minimized during the final approaching period. 
+
+2) Receding Horizon Descent Control: The receding hori-zon formulation involves minimizing the cost function: 
+
+Jr,u =
+
+> Np−1
+
+X
+
+> k=0
+
+
+
+∥r(t + kT s) − rref (t + kT s)∥2
+
+> Q
+
++ ∥∆u(t + kT s)∥2
+
+> R
+
+
+
++ ∥r(t + NpTs) − rref (t + NpTs)∥2 
+
+> P
+
+.
+
+(21) Therefore, the corresponding optimization problem can be expressed as: 
+
+min  
+
+> u
+
+Jr,u,
+
+s.t. r(t + ( k + 1) Ts) = f (r(t + kT s), u(t + kT s)) ,
+
+umin ≤ u(t + kT s) ≤ umax ,
+
+∆umin ≤ ∆u(t + kT s) ≤ ∆umax ,
+
+for k = 0 , . . . , N p − 1.
+
+(22) where r is the state vector, u is the control input, Ts is the sampling time, Np is the prediction horizon, rref is the Fig. 3. Numerical validation in simulation of adaptive trajectory planning for UAV/USV cooperative landing under high-fidelity marine disturbances. The blue line represents the UAV’s planned trajectory, while the square platform with coordinate axes indicates the pose of the oscillating marine platform. TABLE I SIMULATION PERFORMANCE COMPARISON WITH CHALLENGING MARINE                                                    
+
+> DISTURBANCES
+> Method ep(cm )↓∆p(cm )↓SR ↑Latency (ms )↓
+> FFT-KF [16] 5.7 ±1.4 9.3 ±2.5 89.1% 105 ±4MPC-VIO [14] 6.4 ±1.9 11.8 ±3.3 83.0% 118 ±3NMPC [12] 8.9 ±2.8 14.1 ±4.1 77.8% 142 ±5Proposed 3.2 ±0.6 4.8 ±1.1 98.8% 82 ±2
+
+reference trajectory, f is the system dynamics function, and 
+
+∆u is the control input increment. IV. E XPERIMENTAL RESULTS AND ANALYSIS 
+
+To validate the proposed predictive-coordination approach for the landing control of UAVs onto oscillating marine plat-forms operating in dynamic conditions, a comprehensive eval-uation encompassing both simulations and real-world experi-ments was conducted under challenging scenarios. The eval-uation strategy comprises distinct components: High-fidelity simulation studies to establish performance baselines and facilitate comparative analysis against existing landing control methodologies; and Challenging outdoor lake experiments 
+
+serving to test the system’s robustness and operational efficacy within unstructured, real-world maritime environments. 
+
+A. Simulation Results 1) Experimental Setup and Baselines: The simulation en-vironment was developed within Gazebo. Wave disturbances were generated utilizing the Joint North Sea Wave Project (JONSWAP) spectrum [30]. The specific parameters were configured to represent challenging maritime conditions, de-fined by a significant wave height of Hs = 1.8 m and a peak period of Tp = 6 .5 s. Wind disturbances were modeled using the Dryden turbulence model [31], which provided a realistic representation of atmospheric conditions. The model was parameterized with a mean wind velocity of vmean = 8 m/s and a turbulence intensity (standard deviation) of σ = 2 .5 m/s. We compared our proposed method against three baselines: the frequency-domain FFT-KF [16], a nonlinear model pre-dictive control ( NMPC ) [12], and a visual-inertial odometry-enhanced MPC-VIO [14].                 
+
+> TABLE II COMPUTATIONAL EFFICIENCY ANALYSIS ON EMBEDDED HARDWARE
+> Module Latency ( ms )Peak RAM ( MB )
+> Spectral Prediction 34.2 82 HPO-RRT* Planning [27] 41.7 157 Learning-Based Velocity Control 6.1 29 Total System 81.9 268 FOV of the UAV
+> Landing USV
+> Wave -generating Vehicle
+> UAV
+> Fig. 4. Experimental setup in the outdoor environment. A wave-generating vehicle follows a predefined trajectory around the USV, with the UAV’s field of view indicated.
+
+2) Performance and Baseline Comparison: We evaluate the performance of each method based on 2,000 simulated landing trials in terms of prediction accuracy ep = 1
+
+> T
+
+PTt=1 ∥ˆxt −xt∥2,landing deviation ∆p = ∥Pland − Ptarget ∥2, success rate, and computational latency. The success criteria were defined as achieving a landing positional deviation of less than 5cm and an attitude error of less than 10 ◦. The computational efficiency was assessed based on the total system latency when executed on an embedded platform, i.e., NVIDIA Jetson Orin NX. As shown in Table I, SpecFuse demonstrates superior per-formance under high-fidelity marine disturbances. By coupling spectral analysis with learning-augmented control, the system achieves a prediction error ( ep) of 3.2 cm and a landing deviation ( ∆p) of 4.8 cm. This represents a reduction in error of 44% and 48%, respectively, compared to the second-best baseline, FFT-KF. While NMPC and MPC-VIO strug-gle with coupled, non-periodic disturbances, our dual-domain architecture maintains a 98.8% success rate and the lowest computational latency (82 ms), validating its readiness for real-time embedded deployment. Table II provides a granular breakdown of the computational footprint on the NVIDIA Jetson Orin NX. Although the sampling-based HPO-RRT* planner is the primary resource consumer, the Learning-Based Velocity Control remains highly efficient (6.1 ms), facilitating rapid control loop updates during the critical final descent. With a total system latency of 81.9 ms and a modest 268 MB peak RAM footprint, the frame-work stays well within embedded hardware constraints. This enables a response rate significantly faster than the dominant wave period, ensuring stability. Qualitatively, Fig. 3 illustrates the adaptive planner dynamically adjusting to wave-induced motions to maintain a safe landing trajectory. TABLE III CALCULATED ENVIRONMENTAL PARAMETERS FOR OUTDOOR LAKE                                   
+
+> EXPERIMENTS
+> No. Mean Wind Max Wind Wave Height No. Mean Wind Max Wind Wave Height
+> (m/s)(m/s)(m)(m/s)(m/s)(m)17.2 9.4 1.5 57.5 9.2 1.6 28.1 10.2 1.7 610.5 12.7 2.0 36.8 8.9 1.4 78.7 10.9 1.8 49.3 11.8 1.9 813.2 15.6 2.3
+
+Despite the system’s high reliability, a forensic analysis of the 27 failure instances (1.3% of the total trials) reveals distinct operational boundaries. The failures were predomi-nantly categorized into two modes: Wind shear transients 
+
+(gusts > 15 m/s), which accounted for 63% of failures, and 
+
+High-frequency resonance (> 3 Hz oscillations), accounting for 28%. The susceptibility to extreme wind shear suggests occasional excursions beyond the UAV’s thrust saturation limits, while the resonance failures indicate rare scenarios where the wave frequency exceeded the effective bandwidth of the spectral prediction module. These findings informed the safety protocols for real-world validation, establishing strict cut-off thresholds for environmental conditions during field experiments. 
+
+B. Real-World Experimental Results 1) Experimental Setup: To quantify the sim-to-real gap and validate system robustness, experiments were conducted using a custom 40 cm quadrotor platform equipped with a Livox Mid-360 LiDAR and an NVIDIA Jetson Orin NX. The validation strategy focused on unstructured field trials where a 5.5-m speedboat was deployed to generate non-periodic, high-energy wakes, illustrated in Fig. 4. The environmental parameters, wind speed and wave height, encountered during the outdoor lake trials were estimated in real time from the onboard IMUs of the UAV and the USV, respectively (see Table III). This highly dynamic, non-periodic environment rig-orously tested the framework’s performance against complex, multi-source wave spectra, pushing the operational envelope near the identified simulation failure thresholds. 
+
+2) Outdoor Lake Experiments: As summarized in Table IV, the system achieved an 87.5% success rate (7 of 8 trials) in the unstructured lake environment. The single failed trial is further investigated in Section IV-B3. Despite the introduction of non-periodic boat wakes and natural wind gusts, the frame-work maintained a low mean landing deviation of 4.46 cm .This performance underscores the robustness of the spectral-temporal pipeline against unmodeled disturbances. Notably, in Trial 3, the prediction module sustained high accuracy, 91.0% in roll and 90.3% in pitch, demonstrating effective generalization. A representative landing trial is illustrated in Fig. 5. The third-person perspective in Fig. 5(a) depicts the UAV’s stable approach and final descent onto the moving USV while navigating wake-induced disturbances from asecondary vessel. Simultaneously, the onboard camera view in Fig. 5(b) validates the perception system’s resilience; it   
+
+> (a) Third-person view (b) First-person view Fig. 5. Autonomous UAV landing on an oscillating marine platform in an outdoor lake environment. The left column displays the third-person view with the UAV highlighted by red circles, while the right column shows the corresponding onboard downward-facing camera views of the landing target.
+
+maintains continuous tracking of the deck-mounted AprilTag fiducial marker throughout the sequence. This ensures high-precision relative state estimation despite significant multi-axis platform oscillations, specifically pitching and rolling motions. 
+
+3) Performance Limits and Safety Verification: The sole failure (Trial 8) occurred under extreme conditions (15.6 m/s wind, Hs = 2.3 m), where instantaneous wave dynamics saturated the UAV’s thrust control authority. This boundary case identifies the operational ceiling of our modeling trade-off between computational efficiency and high-frequency noise rejection. Crucially, as the deck inclination surpassed the 35 ◦
+
+safety threshold, the fail-safe logic triggered a hover maneuver, validating the system’s safety-critical robustness. V. C ONCLUSION 
+
+This study establishes a robust prediction-driven control paradigm for autonomous UAV landing on oscillating ma-rine platforms, effectively bridging the gap between spectral motion analysis and real-time trajectory optimization. Ex-tensive maritime validation confirms the system’s reliability, demonstrating over 90% prediction accuracy and sub-100 ms latency even under stochastic wave disturbances. Beyond the immediate landing task, this research advances safety assur-ance methodologies for coupled dynamic systems by explicitly defining operational boundaries within the frequency domain. TABLE IV REAL -WORLD LANDING RESULTS IN OUTDOOR LAKE 
+
+EXPERIMENTS 
+
+No. Pred. Err. Land. Dev. Land. Time Succ. 
+
+1 3.1 cm 4.2 cm 22.3 s ✓
+
+2 3.9 cm 5.1 cm 23.1 s ✓
+
+3 2.8 cm 3.8 cm 21.9 s ✓
+
+4 3.6 cm 4.7 cm 22.8 s ✓
+
+5 3.0 cm 4.0 cm 22.5 s ✓
+
+6 4.2 cm 5.4 cm 23.4 s ✓
+
+7 2.9 cm 3.9 cm 22.0 s ✓
+
+8* 3.5 cm 4.6 cm — ×
+
+Mean 3.5 cm 4.46 cm 22.59 s 87.5%  
+
+> *
+
+Detailed failure analysis is provided in Section IV-B3. 
+
+Future work will prioritize enhancing scalability and environ-mental adaptability; specifically, we aim to implement FPGA-based acceleration and physics-informed learning to tackle Sea State 5 conditions [32], while extending the framework to support distributed multi-UAV coordination for complex amphibious missions. REFERENCES [1] J. Li, G. Zhang, X. Zhang, and W. Zhang, “Integrating dynamic event-triggered and sensor-tolerant control: Application to USV-UAVs cooper-ative formation system for maritime parallel search,” IEEE Transactions on Intelligent Transportation Systems , vol. 25, no. 5, pp. 3986–3998, 2023. [2] X. Xiao, J. Dufek, T. Woodbury, and R. Murphy, “UAV-assisted USV visual navigation for marine mass casualty incident response,” in 2017 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , 2017, pp. 6105–6110. [3] R. Kuntz Rangel, J. L. Freitas, and V. Antˆ onio Rodrigues, “Development of a multipurpose hydro environmental tool using swarms, UAV and USV,” in 2019 IEEE Aerospace Conference , 2019, pp. 1–15. [4] J. Mao, S. Nogar, C. M. Kroninger, and G. Loianno, “Robust active vi-sual perching with quadrotors on inclined surfaces,” IEEE Transactions on Robotics , vol. 39, no. 3, pp. 1836–1852, 2023. [5] J. Ji, T. Yang, C. Xu, and F. Gao, “Real-time trajectory planning for aerial perching,” in 2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , 2022, pp. 10 516–10 522. [6] Y. Gao, X. Deng, and W. Fang, “Dynamic modeling and flight per-formance analysis of quadrotor UAV under wind field disturbances,” in 2023 IEEE International Conference on Unmanned Systems (ICUS) ,2023, pp. 240–245. [7] J. Chen and D. Gesbert, “Efficient local map search algorithms for the placement of flying relays,” IEEE Transactions on Wireless Communi-cations , vol. 19, no. 2, pp. 1305–1319, 2020. [8] J. Cao, Z. Yang, S. Tian, H. Li, R. Jin, R. Yan, and X. Chen, “Biprobes blade tip timing method for frequency identification based on active aliasing time-delay estimation and dealiasing,” IEEE Transactions on Industrial Electronics , vol. 70, no. 2, pp. 1939–1948, 2023. [9] Y. Zeng, R. Zhang, and T. J. Lim, “Wireless communications with unmanned aerial vehicles: opportunities and challenges,” IEEE Com-munications Magazine , vol. 54, no. 5, pp. 36–42, 2016. [10] R. Xu, Z. Jiang, B. Liu, Y. Wang, and H. Qian, “Confidence-aware object capture for a manipulator subject to floating-base disturbances,” 
+
+IEEE Transactions on Robotics , vol. 40, pp. 4396–4413, 2024. [11] C. Wang, J. Wang, Z. Ma, M. Xu, K. Qi, Z. Ji, and C. Wei, “Integrated learning-based framework for autonomous quadrotor UAV landing on a collaborative moving ugv,” IEEE Transactions on Vehicular Technology ,vol. 73, no. 11, pp. 16 092–16 107, 2024. [12] I. K. Erunsal, A. Martinoli, and R. Ventura, “Decentralized nonlinear model predictive control for 3d formation of multirotor micro aerial vehicles with relative sensing and estimation,” in 2019 International Symposium on Multi-Robot and Multi-Agent Systems (MRS) , 2019, pp. 176–178. [13] T. Qin, P. Li, and S. Shen, “Vins-mono: A robust and versatile monocular visual-inertial state estimator,” IEEE Transactions on Robotics , vol. 34, no. 4, pp. 1004–1020, 2018. [14] X. Zhen, Z. Deng, B. Lou, L. Hou, and L. Wei, “Autonomous navigation algorithm of monocular UAV based on depth estimation and robust vio,” in 2024 11th International Forum on Electrical Engineering and Automation (IFEEA) , 2024, pp. 1167–1172. [15] K.-W. Chiang, G.-J. Tsai, Y.-H. Li, and N. El-Sheimy, “Development of lidar-based UAV system for environment reconstruction,” IEEE Geo-science and Remote Sensing Letters , vol. 14, no. 10, pp. 1790–1794, 2017. [16] M. Zhang, Q. Li, X. Meng, Y. He, and H. Luo, “Wave compensator design based on adaptive FFT prediction algorithm and h ∞ filtering,” in 
+
+2018 IEEE International Conference on Mechatronics and Automation (ICMA) , 2018, pp. 45–50. [17] P. M. Gupta, E. Pairet, T. Nascimento, and M. Saska, “Landing a UAV in harsh winds and turbulent open waters,” IEEE Robotics and Automation Letters , vol. 8, no. 2, pp. 744–751, 2023. [18] P. M. Gupta, O. Proch´ azka, T. Nascimento, and M. Saska, “Curvitrack: Curvilinear trajectory tracking for high-speed chase of a USV,” IEEE Robotics and Automation Letters , vol. 10, no. 4, pp. 3932–3939, 2025. [19] H. Li, L. Qiang, Z. Wu, J. Chen, Y. Sun, and X. Li, “Mpc-abco: An mpc-based adaptive bezier curve optimization framework for uav-ugv cooperative landing,” IEEE Robotics and Automation Letters , 2025. [20] Q. Zhang, W. Ouyang, J. Han, Q. Cai, M. Zhu, and Y. Wu, “An immediate update strategy of multi-state constraint kalman filter for visual-inertial odometry,” IEEE Robotics and Automation Letters , 2025. [21] H. Zheng, Z. Tan, J. Wang, and M. Tavakoli, “Adaptive trajectory learning with obstacle awareness for motion planning,” IEEE Robotics and Automation Letters , 2025. [22] B. Convens, K. Merckaert, M. M. Nicotra, and B. Vanderborght, “Safe, fast, and efficient distributed receding horizon constrained control of aerial robot swarms,” IEEE Robotics and Automation Letters , vol. 7, no. 2, pp. 4173–4180, 2022. [23] H. Liu, K. Chen, Y. Li, Z. Huang, M. Liu, and J. Ma, “UDMC: Unified decision-making and control framework for urban autonomous driving with motion prediction of traffic participants,” IEEE Transactions on Intelligent Transportation Systems , vol. 26, no. 5, pp. 5856–5871, 2025. [24] Z. Ying, Z. Lizhen, Y. Jiajia, and W. Jiafen, “Analysis of geometric parameters error and simulation of six-degree-of-freedom industrial robot,” in 2024 4th International Signal Processing, Communications and Engineering Management Conference (ISPCEM) , 2024, pp. 23–26. [25] M. D. Malkauthekar, “Analysis of euclidean distance and manhattan distance measure in face recognition,” in Third International Conference on Computational Intelligence and Information Technology (CIIT) , 2013, pp. 503–507. [26] B. Poudel, P. Aslami, T. Aryal, N. Bhujel, A. Rai, M. Rauniyar, H. M. Rekabdarkolaee, U. Tamrakar, T. M. Hansen, and R. Tonkoski, “Com-parative analysis of state and parameter estimation techniques for power system frequency dynamics,” in 2022 International Symposium on Power Electronics, Electrical Drives, Automation and Motion (SPEEDAM) ,2022, pp. 754–761. [27] J. Chen and J. Yu, “An improved path planning algorithm for UAV based on RRT,” in 2021 4th International Conference on Advanced Electronic Materials, Computers and Software Engineering (AEMCSE) , 2021, pp. 895–898. [28] S. Xu, J. Qi, M. Wang, and C. Wu, “Perception-aware trajectory planning of quadrotor in se(3),” in 2023 42nd Chinese Control Conference (CCC) ,July 2023, pp. 4542–4548. [29] P. Anand, S. Jain, and R. Mishra, “Huber svr-based hybrid models for significant wave height forecasting using buoy sensors,” IEEE Sensors Letters , vol. 7, no. 12, pp. 1–4, 2023. [30] J. G. Rueda-Bayona, A. Guzm´ an, and J. J. Cabello Eras, “Selection of jonswap spectra parameters during water-depth and sea-state transitions,” 
+
+Journal of Waterway, Port, Coastal, and Ocean Engineering , vol. 146, no. 6, p. 04020038, 2020. [31] J. Ko, B. J. German, and J. Rauleder, “Wind effects on urban air mobility noise during landing procedures,” Aerospace Science and Technology ,p. 110878, 2025. [32] E. M. Bitner-Gregersen, S. Dong, T. Fu, N. Ma, C. Maisondieu, R. Miyake, and I. Rychlik, “Sea state conditions for marine structures’ analysis and model tests,” Ocean Engineering , vol. 119, pp. 309–322, 2016.

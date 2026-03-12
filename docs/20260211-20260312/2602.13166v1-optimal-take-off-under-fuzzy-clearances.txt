@@ -1,0 +1,198 @@
+Title: Optimal Take-off under Fuzzy Clearances
+
+URL Source: https://arxiv.org/pdf/2602.13166v1
+
+Published Time: Mon, 16 Feb 2026 02:08:59 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# Optimal Take-off under Fuzzy Clearances 
+
+Hugo Henry 1[0009 −0001 −2530 −3521] , Arthur Tsai 2[0009 −0009 −0002 −4735] , and Dr. Kelly Cohen 3[0000 −0002 −8655 −1465] 
+
+University of Cincinnati, Cincinnati OH 45221, USA 
+
+henryho@mail.uc.edu tsaiti@mail.uc.edu cohenky@ucmail.uc.edu 
+
+Abstract. This paper presents a hybrid obstacle-avoidance architecture that integrates Optimal Control under clearance with a Fuzzy Rule-Based System (FRBS) to enable adaptive constraint handling for un-manned aircraft. Motivated by the limitations of classical optimal con-trol under uncertainty and the need for interpretable decision-making in safety-critical aviation systems, we design a three-stage Takagi–Sugeno– Kang fuzzy layer that modulates constraint radii, urgency levels, and activation decisions based on regulatory separation minima and air-worthiness guidelines from FAA and EASA. These fuzzy-derived clear-ances are then incorporated as soft constraints into an optimal control problem solved using the FALCON toolbox and IPOPT. The frame-work aims to reduce unnecessary recomputations by selectively activat-ing obstacle-avoidance updates while maintaining compliance with avia-tion procedures. A proof-of-concept implementation using a simplified aircraft model demonstrates that the approach can generate optimal trajectories with computation times of 2–3 seconds per iteration in a single-threaded MATLAB environment, suggesting feasibility for near real-time applications. However, our experiments revealed a critical soft-ware incompatibility in the latest versions of FALCON and IPOPT, in which the Lagrangian penalty term remained identically zero, preventing proper constraint enforcement. This behavior was consistent across sce-narios and indicates a solver–toolbox regression rather than a modeling flaw. Future work includes validating this effect by reverting to earlier software versions, optimizing the fuzzy membership functions using evo-lutionary methods, and extending the system to higher-fidelity aircraft models and stochastic obstacle environments. 
+
+Keywords: Safety · Avionics · Detect and Avoid · Optimal Control ·
+
+Fuzzy Clearances · AI · Explainable AI · Responsible AI. 
+
+# 1 Introduction 
+
+Control systems have been in the work for decades, especially in complex en-gineering domains such as flight mechanics, with fly-by-wire implemented since the 1970s for the military and 1988 for civil aircraft. Those control systems  
+
+> arXiv:2602.13166v1 [cs.AI] 13 Feb 2026 2H. Henry et al.
+
+encompass every domain, such as aerodynamics with surface control or ther-modynamics and fluid flow, with the example of the FADEC (Full Authority Digital Engine Control). As the distribution of automated systems grows in or-der to reduce the pilot’s load, the question of efficiency arises, for that multiple applications have been developed, such as linear regulators, and then H∞, while finally arriving at the notion of Optimal Control [2]. However, this optimality is very fragile to uncertainty and noise; therefore, the notion of optimality under clearance has been created to maintain safety and bounds to the system [1]. But clearances and constraints may not be absolute or have varying degrees of importance to the control system, depending on time. Therefore, we wished to explore the combination of fuzzy decision making for adaptive constraints and creating an equivalent of a detect and avoid system while assuming perfect de-tection conditions (that assumption is detailed in part 4.1). In this paper, we will explore what happens when we couple the world of optimal control with fuzzy-based clearances and constraints. The choice of a Fuzzy system as the de-cision layer was made due to the airworthiness for autonomous airborne systems [15]. The use case presented in this research is a take-off situation with varying number of obstacles, the methodology presented is a global control technique but for the sake of memory usage, we opted to look at a short time problem. 
+
+# 2 Methodology 
+
+For this paper, we base the theory on the book published by Joseph Z. Ben Asher et al. [1] and apply a dynamic fuzzy system in tandem with the Optimal control offline solver Falcon.m made by TUM [7]. The creation of the Fuzzy Rule-Based System (FRBS) is based on actual Airworthiness Directives (AD/SB), Advisory circulars (AC), and other regulations from the authorities, mainly the Federal Aviation Agency (FAA) and the European Union Aviation Safety Agency (EASA). The method of validation of the model will be purely theoretical, given the low-fidelity aircraft model used to design the system (model given by the Falcon.m library, lightly modified for constraints) [7]. 
+
+# 3 Optimal Control under Clearance 
+
+Consider an UAV taking off and climbing to its desired cruise altitude by fol-lowing an optimal path. This optimal path represents the safest, smoothest, and most cost-efficient route to reach a target destination under ideal conditions. However, the sky is not always empty. Other air vehicles may share the same airspace, and flocks of birds may appear unexpectedly. Assuming that these ob-stacles are unaware of the presence of our UAV, and that our UAV is equipped with perfect radar, it is our responsibility to ensure deconfliction with these ob-stacles, maintain safe separation from them, and guarantee absolute safety. This nonlinear clearance problem in continuous time can be transcribed to a finite-dimensional optimization problem. There are multiple approaches that could be implemented to solve this optimal control clearance problem. One option would Optimal Take-off under Fuzzy Clearances 3
+
+be to employ a receding horizon optimal control strategy to generate a colli-sion free trajectory. Another is to predict the future position of the obstacle using a Kalman filter based static solver to better account for uncertain obstacle motion. The third option is the combination of these two methods. However, the combined approach is expected to be significantly more computationally in-tensive, which may limit its suitability for real-time onboard implementation. In order to solve this problem, we use the Falcon.m [7] toolbox from TUM, a static solver that compute one configuration (phase) at a time. This allow us to solve the problem pointwise by operating on a sequence of phases with static constraints. However, it is still not a time reactive dynamic solver, which can create conflicts with obstacles juxtaposed near the endpoints of phases. In con-trast, our objective is a time dependent obstacle avoidance system that regularly updates obstacle positions and danger zones. Therefore, the states of moving ob-stacles must be updated at each time step, and the optimal trajectory must be regenerated accordingly to ensure continuous safety, proper deconfliction, and adherence to the required clearance margins throughout the flight. This poses a new challenge. The system may repeatedly rerun the optimization and regen-erate the same trajectory even when no new obstacles are present or when the previously added constraint is no longer relevant, resulting in unnecessary com-putational effort and redundant recalculations. To further address this issue and improve the overall efficiency and robustness of the system, a fuzzy-logic-based decision-making layer is introduced in the next section. 
+
+# 4 Fuzzy Clearances 
+
+To make the system more efficient and robust, we introduce a first-order Takagi-Sugeno-Kang (TSK) FRBS. The fuzzy inference system evaluates the parameters of each detected obstacle given by the perfect radar and determines whether it should be treated as an active constraint in the optimal control problem through a three-stage process: fuzzification, rule-based inference, and defuzzification. The rule base is designed in accordance with existing aviation regulations to ensure that all decisions are operationally meaningful and compliant with safety stan-dards. By embedding expert knowledge into its rule base, the fuzzy layer provides graded and interpretable [13] decisions regarding threat severity and required clearance levels. This design ensures that the overall system remains flexible, resilient to uncertainty, and capable of intelligently adapting its constraints be-fore the optimal solver recomputes a safe trajectory. It should be noted that the membership functions presented in the following section have not been optimized and are therefore intended to serve as a hot start for subsequent optimization processes, such as Genetic Algorithms (GA). 
+
+4.1 Application of Fuzzy Sets to constraints 
+
+For this specific problem setup, four parameters of each detected object are nor-malized and used as inputs to the fuzzy inference system: type, size Si, position 4 H. Henry et al. 
+
+in the global frame, and velocity in the global frame. The fuzzy inference archi-tecture consists of three fuzzy subsystems, each with two inputs and one output that determines, respectively, the radius of the constraint Ri, the level of urgency 
+
+Ui, and the activation of optimal path recalculation. The inputs to the radius of the constraint fuzzy subsystem are the object type and the object size. The type 
+
+input has two membership functions: air vehicle and bird (Figure 1). The size 
+
+input has three membership functions: Small , Medium , and Large (Figure 2). The rule-based reasoning of this subsystem is inspired by air traffic management guidelines and operational judgment, and can be described as follows, for an Air vehicle: vertical separation, obtained by assigning different levels selected from the table of cruising levels in Appendix 3 to the Annex to Implementing Reg-ulation (EU) No 923/2012 [14], except that the correlation of levels to track as prescribed therein shall not apply whenever otherwise indicated in appropriate aeronautical information publications or ATC clearances. The constraints will appear not closer than 1000 m from the end of the runway, given that the aircraft is subject to the separation minima under ATS surveillance systems during take off. In a real airport setting, the transition time is usually around 15 to 30 sec-onds which at take off speed are equivalent to 2-3 kms, therefore by taking 1km, we ensure that we are in the specifications. The vertical separation minimum shall be a nominal 300 m (1,000 ft) up to and including FL-410 and a nominal 600 m (2,000 ft) above that level. Geometric height information shall not be used to establish vertical separation, moreover, the horizontal separation needs to be at least 3nauticalmile = 5556 m [5] Birds: given by the FAA [6], we know that a specialized avian radar is capable of detecting a single duck-sized target at a maximum radius of 6 km and can follow a total of 1000 targets and segregate them if they are more than 50 m from each other. Therefore, let’s consider the following bird flock size range : 
+
+– Let us consider that each bird is a perfect closed ball in R3 of radius R > ϵ > 1 so that Sni=1 Bi ⊂ BR pairwise disjoint. 
+
+– Let us assume a Kepler maximum density repartition in R3 with ϕmax = 
+
+> 32
+
+π ≈ 0.74 so that R ≥ 25( 1000  
+
+> ϕmax
+
+)1/3 = 277 m
+
+Under these approximations, we can say that the bird detection size range would be a ball of radius 277 ≥ ϵ ≥ 1 at a maximum of 6 km ahead. The four rules of the radius of the constraint fuzzy set are summarized as follows : (1) If Type is air vehicle and Si is Small , Medium , or Large , then the radius of 
+
+Ri = 5556 m (2) If Type is bird and Si is Small , then the radius of Ri = 2 .5 ∗ Si + 100 m
+
+(3) If Type is bird and Si is Medium , then the radius of Ri = 2 .5 ∗ Si + 200 m
+
+(4) If Type is bird and Si is Large , then the radius of Ri = 2 .5 ∗ Si + 300 m
+
+The inputs to the urgency fuzzy subsystem are the distance and the closing rate between the UAV and a detected object. The distance D is computed from the relative position vector Rp, while the closing rate CR is obtained from the dot product of the relative position vector Rp and the relative velocity vector Optimal Take-off under Fuzzy Clearances 5
+
+Rv , normalized by the distance. The distance variable is described using three membership functions: Small , Medium , and Large (Figure 3). The closing rate 
+
+is represented by four membership functions: Further , Closing Slow , Closing Medium , and Closing Fast (Figure 4). The control surfaces of the Urgency Fig. 7 and constraint Activation Fig. 8. From these control surfaces, it is evident that the Activation is non-monotonic and therefore requires refinement through an optimization process, using either gradient-based or evolutionary methods. UAV position: P0 = [ x0, y 0, z 0]
+
+Detected object position: Pi = [ xi, y i, z i]
+
+RP i = [ xi − x0, y i − y0, z i − z0] (1) 
+
+Di = p(xi − x0)2 + ( yi − y0)2 + ( zi − z0)2 (2) UAV velocity: V0 = [ u0, v 0, w 0]
+
+RV i = [ ui − u0, v i − v0, w i − w0] (3) 
+
+CR i = RP i · RV i 
+
+Di
+
+(4) The four rules of the radius of the constraint fuzzy set are summarized as follows: (1) If Di is Large and CR i is Further , then Ui = 0 
+
+(2) If Di is Large and CR i is Closing Slow , then Ui = 0 .5
+
+(3) If Di is Large and CR i is Closing Medium , then Ui = 0 .5
+
+(4) If Di is Large and CR i is Closing Fast , then Ui = 2 
+
+(5) If Di is Medium and CR i is Further , then Ui = 0 .5 ∗ Di
+
+(6) If Di is Medium and CR i is Closing Slow , then Ui = 0 .5 ∗ Di + 2 
+
+(7) If Di is Medium and CR i is Closing Medium , then Ui = 0 .5 ∗ Di + 3 
+
+(8) If Di is Medium and CR i is Closing Fast , then Ui = 0 .5 ∗ Di + 4 
+
+(9) If Di is Small and CR i is Further , then Ui = 0.1 
+
+> Di
+
++ 1 .5
+
+(10) If Di is Small and CR i is Closing Slow , then Ui = 0.1 
+
+> Di
+
+− 2.5 ∗ CR i + 4 
+
+(11) If Di is Small and CR i is Closing Medium , then Ui = 0.1 
+
+> Di
+
+− 3 ∗ CR i + 4 .5
+
+(12) If Di is Small and CR i is Closing Fast , then Ui = 0.1 
+
+> Di
+
+− 5 ∗ CR i + 5 
+
+The inputs to the activation fuzzy subsystem are the outputs of the previous fuzzy subsystems, Ri and Ui. The radius input is described by three membership functions: Small , Medium , and Large (Figure 5). Similarly, the urgency input is described by three membership functions: Low , Medium , and High (Figure 6). The rules of the activation fuzzy subsystem are summarized as follows: (1) If Ri is Small and Ui is Low , then the activation is 0 (2) If Ri is Small and Ui is Medium , then the activation is 0 (3) If Ri is Small and Ui is High , then the activation is 1 (4) If Ri is Medium and Ui is Low , then the activation is 0 (5) If Ri is Medium and Ui is Medium , then the activation is 1 6 H. Henry et al. 
+
+(6) If Ri is Medium and Ui is High , then the activation is 1 (7) If Ri is Large and Ui is Low , then the activation is 0 (8) If Ri is Large and Ui is Medium , then the activation is 1 (9) If Ri is Large and Ui is High , then the activation is 1       
+
+> Fig. 1. Object Type Membership Fig. 2. Object Size Membership
+> Fig. 3. Object Distance Membership Fig. 4. Object Closing-rate Membership
+
+4.2 Adaptation for optimal control 
+
+In the process of using FRBS to reduce the computational load of recalculation of the path and add dynamism to the constraints, we use the Falcon.m toolbox as said in part 3, and consider the following costs: 
+
+– A linear cost toward the final time Optimal Take-off under Fuzzy Clearances 7      
+
+> Fig. 5. Constraint Radius Membership Fig. 6. Urgency Membership
+> Fig. 7. Urgency control surface Fig. 8. Activation control surface
+
+– A Lagrangian penalty encompassing all the violations of the constraints de-termined by the FIS In order for the problem to be solvable, a Lagrangian cost as been chosen to rep-resent the soft constraint, which, as opposed to a hard constraint, allows viola-tions with a cost. Indeed, if hard constraints were implemented, the solver might generate a trajectory, but the update of the constraint might make the initial position of the problem formulation immediately juxtaposed to said constraint, making the problem unsolvable. Moreover, we consider no-go zones according to the Air traffic management guidelines, which are crisp changes in distanc-ing before and after specific points. One of those being the Radar enabled zone addressed in part 4.1. We did not try to implement those change in definitions which could be the object of another FIS. As such, we see here the necessity of soft constraints, even though for safety purposes, the penalty can be near infinite if violated, creating a virtual hard constraint. The concept of the implementation is shown in the flowchart (Figure 9). This structure and the modus operandi used underline the need for a decision making system reducing the computational load, indeed, since we recompute the whole phase every fixed timestep, we need to make sure our system is efficient enough to reduce this time step as much as possible. 8 H. Henry et al. 
+
+Fig. 9. Path optimization Flowchart Optimal Take-off under Fuzzy Clearances 9
+
+4.3 Results and discussion 
+
+We first implemented the concept using a highly simplified aircraft model pro-vided as an example within the FALCON toolbox. This initial abstraction, al-though not representative of realistic aircraft dynamics, served as a demonstrator to validate the methodology before transitioning to a more accurate state-space model of a different aircraft. Notably, even at this early stage, each optimization run required only 2–3 seconds in a single-threaded MATLAB environment, indi-cating promising potential for real-time or near real-time implementation once the framework is fully optimized. After establishing this baseline, we integrated the fuzzy reasoning layer, resulting in the constraint-activation behavior illus-trated in Fig. 12. Under these conditions, the solver produced a feasible optimal trajectory, however, further inspection revealed an unexpected issue. Specifically, the Lagrangian contribution to the cost function was identically zero throughout all simulations. As a result, obstacle-related constraints were effectively ignored by the optimizer, independent of the fuzzy layer’s decisions. This can be ob-served in Fig. 11, where the cost decreases linearly with the estimated time-to-arrival but shows no nonlinear variations or increases associated with Lagrange multiplier activity. Consequently, the resulting trajectories remained unchanged across runs, even when obstacle motions were varied (see Fig. 10). To diagnose the problem, we examined the underlying optimization tools. The system relied on the FALCON toolbox (TUM) combined with IPOPT for nonlinear optimal control. When using the most recent versions of these components (IPOPT and FALCON v1.32), we consistently observed the degenerate zero-Lagrangian be-havior described above. Such behavior is incompatible with the structure of the formulated Optimal Control Problem and therefore suggests a software level incompatibility or regression rather than an error in the modeling framework.      
+
+> Fig. 10. aircraft Trajec-tory and obstacles
+> Fig. 11. Cost of the opti-mization
+> Fig. 12. Obstacle activa-tion 10 H. Henry et al.
+
+# 5 Conclusion and Future Work 
+
+Throughout this paper, we have presented a concept that is deeply rooted in real-world practice through its adherence to aviation regulations and air traf-fic management guidelines. The proposed optimal rerouting system is expected to operate with an update interval on the order of 2–3 seconds, based on the results obtained with the fully integrated FRBS and optimal control system. Under the assumption of the perfect radar, the FRBS is explicitly constructed in accordance with official separation standards and performs as intended, en-suring that its behavior is transparent, explainable, and directly traceable to regulatory requirements. During the development of the system, we relied on the FALCON toolbox (TUM) together with IPOPT for nonlinear optimization. During integration of the latest releases of these software components, we en-countered an unexpected incompatibility: the Lagrangian cost reported by the solver remained identically zero across all iterations, regardless of the problem configuration. This behavior is inconsistent with the structure of our optimal control formulation and therefore indicates a disruption in the solver–toolbox interaction rather than a modeling error. To verify that the anomaly was at-tributable to software rather than to our methodology, we will revert to earlier versions of both FALCON and IPOPT to confirm that the issue is introduced by recent software changes rather than by the proposed FRBS decision making architecture in future work. It is also expected to extend the study by adopting a higher fidelity model and integrating the FRBS with a Genetic Algorithm to op-timize the membership functions, thereby enhancing overall system performance, guaranteeing output monotonicity, and improving resilience to noise. Lastly, the robustness of the system to changing constraints will be assessed through Monte Carlo simulations, and the performance will be benchmarked against other anti-collision systems used at lower distances, such as Convolutional Neural Networks, full fuzzy controllers or reinforcement learning models. 
+
+# Acknowledgments 
+
+The authors extend their sincere gratitude to the members of the AI Bio Lab at the University of Cincinnati for their invaluable discussions and collaborative efforts that facilitated the realization of this work. Optimal Take-off under Fuzzy Clearances 11 
+
+# References 
+
+1. J. Z. Ben-Asher and J. Diepolder, Clearance of Flight Control Laws: Optimal Con-trol Approach , American Institute of Aeronautics and Astronautics, Reston, Vir-ginia, 2025, pp. i–xv. 2. D. G. Hull, Optimal Control Theory for Applications , Springer, New York, 2003. 3. D. E. Cox, GTM DesignSim: The Generic Transport Model , NASA Lang-ley Research Center, Hampton, Virginia, 2008. https://github.com/nasa/GTM_ DesignSim 
+
+4. P. Montarnal, Nonlinear Aircraft Dynamics and PIO Project Report, Depart-ment of Automotive and Aeronautical Engineering, Hamburg University of Ap-plied Sciences, Hamburg, Germany, 2009. https://www.fzt.haw-hamburg.de/ pers/Scholz/arbeiten/TextMontarnal.pdf 
+
+5. EASA, Easy Access Rules for Air Traffic Management/Air Naviga-tion Services (Regulation (EU) 2017/373) , Annex IV — Part-ATS, European Union Aviation Safety Agency, Cologne, Germany, 2017. 
+
+https://www.easa.europa.eu/en/document-library/easy-access-rules/ online-publications/easy-access-rules-atm-ans-regulation-eu?page=24 
+
+6. FAA, Airport Avian Radar Systems , Advisory Circular 150/5220-25, Fed-eral Aviation Administration, Washington, D.C., 2010. https://www.faa.gov/ documentlibrary/media/advisory_circular/150_5220_25.pdf 
+
+7. M. Rieck, M. Bittner, B. Grüter, J. Diepolder, P. Piprek, C. Göttlicher, F. Schwaiger, B. Hosseini, F. Schweighofer, T. Akman, and F. Holzapfel, FALCON.m version 1.32 , Institute of Flight System Dynamics, Technical University of Munich, Munich, Germany, 2024. http://www.falcon-m.com 
+
+8. FAA, Introduction to TCAS II Version 7.1 , Federal Aviation Administra-tion, Washington, D.C., 2011. https://skybrary.aero/sites/default/files/ bookshelf/3340.pdf 
+
+9. EASA, AMC-20 Amendment 15: General Acceptable Means of Compliance for Airworthiness of Products, Parts and Appliances , European Union Aviation Safety Agency, Cologne, Germany, 2018. https://www.easa. europa.eu/en/document-library/easy-access-rules/online-publications/ easy-access-rules-acceptable-means?page=25 
+
+10. MLEAP Consortium, EASA Research - Machine Learning Application Ap-proval (MLEAP) Final Report , European Union Aviation Safety Agency, Cologne, Germany, 2024. https://www.easa.europa.eu/sites/default/files/ dfu/mleap-d4-public-report-issue01.pdf 
+
+11. EASA, Easy Access Rules for Initial Airworthiness and Envi-ronmental Protection (Regulation (EU) No 748/2012) , European Union Aviation Safety Agency, Cologne, Germany, 2025. https: //www.easa.europa.eu/en/document-library/easy-access-rules/ easy-access-rules-initial-airworthiness-and-environmental 
+
+12. T. Arnett, N. Ernest, B. Kunkel, and H. Boronat, “Formal Verification of a Ge-netic Fuzzy System for Unmanned Aerial Vehicle Navigation and Target Capture in a Safety Corridor,” In: Fuzzy Information Processing 2020 , Springer, Cham, Switzerland, 2022, https://doi.org/10.1007/978-3-030-81561-5_30 
+
+13. L. Pickering, The lenses of interpretability: A framework for investigating the interpretability of learned models , Ph.D. dissertation, University of Cincinnati, Cincinnati, Ohio, 2025. https://etd.ohiolink.edu/acprod/odb_etd/ws/send_ file/send?accession=ucin1758113264855659&disposition=inline 12 H. Henry et al. 14. European Union, “Commission Implementing Regulation (EU) No 923/2012: Ap-pendix 3 to the Annex”, Official Journal of the European Union , Brussels, Belgium, 2012. https://eur-lex.europa.eu/eli/reg_impl/2012/923/oj/eng 
+
+15. H. Henry, B. Dogga, N. Ernest, and K. Cohen, “Fuzzy logic enabled assured au-tonomy for air traffic control”, Manuscript #56, In: 2025 Joint IFSA/NAFIPS Conference , Banff, Alberta, Canada, 2025

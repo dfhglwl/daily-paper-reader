@@ -1,0 +1,778 @@
+Title: Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting
+
+URL Source: https://arxiv.org/pdf/2602.13802v1
+
+Published Time: Tue, 17 Feb 2026 01:46:51 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+# Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting 
+
+## Xiaoyu Tao 
+
+State Key Laboratory of Cognitive Intelligence, University of Science and Technology of China Hefei, Anhui Province, China txytiny@mail.ustc.edu.cn 
+
+## Mingyue Cheng 
+
+State Key Laboratory of Cognitive Intelligence, University of Science and Technology of China Hefei, Anhui Province, China mycheng@ustc.edu.cn 
+
+## Chuang Jiang 
+
+State Key Laboratory of Cognitive Intelligence, University of Science and Technology of China Hefei, Anhui Province, China jiangchuang@mail.ustc.edu.cn 
+
+## Tian Gao 
+
+State Key Laboratory of Cognitive Intelligence, University of Science and Technology of China Hefei, Anhui Province, China ustc25gt@mail.ustc.edu.cn 
+
+## Huanjian Zhang 
+
+State Key Laboratory of Cognitive Intelligence, University of Science and Technology of China Hefei, Anhui Province, China zhjustc@mail.ustc.edu.cn 
+
+## Yaguo Liu 
+
+State Key Laboratory of Cognitive Intelligence, University of Science and Technology of China Hefei, Anhui Province, China ygliu@mail.ustc.edu.cn 
+
+Abstract 
+
+Time series forecasting has long been dominated by model-centric approaches that formulate prediction as a single-pass mapping from historical observations to future values. Despite recent progress, such formulations often struggle in complex and evolving settings, largely because most forecasting models lack the ability to au-tonomously acquire informative evidence, reason about potential future changes, or revise predictions through iterative decision processes. In this work, we propose Cast-R1, a learned time series forecasting framework that reformulates forecasting as a sequen-tial decision-making problem. Cast-R1 introduces a memory-based state management mechanism that maintains decision-relevant information across interaction steps, enabling the accumulation of contextual evidence to support long-horizon reasoning. Build-ing on this formulation, forecasting is carried out through a tool-augmented agentic workflow, in which the agent autonomously interacts with a modular toolkit to extract statistical features, in-voke lightweight forecasting models for decision support, per-form reasoning-based prediction, and iteratively refine forecasts through self-reflection. To train Cast-R1, we adopt a two-stage learning strategy that combines supervised fine-tuning with multi-turn reinforcement learning, together with a curriculum learning scheme that progressively increases task difficulty to improve pol-icy learning. Extensive experiments on multiple real-world time series datasets demonstrate the effectiveness of Cast-R1. We hope this work provides a practical step towards further exploration of agentic paradigms for time series modeling. 1 
+
+> 1Our code is available at https://github.com/Xiaoyu-Tao/Cast-R1-TS. Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+> Conference acronym ’XX, Woodstock, NY
+> ©2018 Copyright held by the owner/author(s). Publication rights licensed to ACM. ACM ISBN 978-1-4503-XXXX-X/2018/06 https://doi.org/XXXXXXX.XXXXXXX
+
+Keywords 
+
+Time Series Forecasting, Sequential Decision Making, Agentic Sys-tems, Reinforcement Learning 
+
+ACM Reference Format: 
+
+Xiaoyu Tao, Mingyue Cheng, Chuang Jiang, Tian Gao, Huanjian Zhang, and Yaguo Liu. 2018. Cast-R1: Learning Tool-Augmented Sequential De-cision Policies for Time Series Forecasting. In Proceedings of Make sure to enter the correct conference title from your rights confirmation email (Conference acronym ’XX). ACM, New York, NY, USA, 16 pages. https: //doi.org/XXXXXXX.XXXXXXX 
+
+1 Introduction 
+
+Time series forecasting [ 15 ] plays a critical role in many real-world applications, such as energy management, healthcare monitoring, and financial analysis, where predictions support operational de-cision making under changing conditions. Unlike commonly used benchmarks, real-world time series exhibit evolving trends [ 36 ], dis-tribution shifts [ 20 ], and external disturbances [ 33 ] that cannot be inferred from historical data alone, requiring forecasting methods to reason over both past observations and contextual features. Numerous prior efforts has been devoted [ 5], spanning statis-tical methods [ 4 ], classical machine learning models [ 22 ], deep learning approaches [ 9], and more recently foundation models [ 35 ]and large language models (LLMs) [ 8, 21 , 27 ]. These efforts have substantially advanced the field, leading to improved predictive accuracy and broad applicability across domains. However, despite their methodological diversity, most existing approaches adopt a common model-centric formulation [ 7] that implicitly assumes the forecasting task is fully defined before prediction begins. Under this paradigm [ 42 ], both the input features and the forecasting model are determined before prediction, and forecasting reduces to a fixed, single-pass mapping from historical observations to future values. Such a paradigm leaves limited room for dynamically constructing and revising the information used for prediction as new context becomes available, thereby constraining the ability to reason about evolving conditions, adapt to distributional shifts, or iteratively refine predictions when initial forecasts are uncertain [11].  
+
+> arXiv:2602.13802v1 [cs.LG] 14 Feb 2026 Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al.
+
+In practice, effective time series forecasting rarely follows a single-pass procedure [ 43 ]. Instead, experienced practitioners treat forecasting as a sequential decision process. They examine his-torical patterns and contextual information, identify informative features, select forecasting models, and reason over intermedi-ate results to assess forecast reliability. As new contextual evi-dence emerges, predictions are often revised, highlighting that high-quality forecasting involves a series of interdependent deci-sions rather than a one-shot model inference. Motivated by this observation, we argue that time series forecasting should be viewed as a sequential decision-making problem, in which feature prepara-tion, reasoning-based prediction, and forecast revision are treated as learnable decisions within a unified process. While conceptually appealing, realizing such a formulation as a fully trainable learning-based system remains challenging. Recent advances in LLMs have demonstrated strong capabilities in multi-step decision making, including tool invocation and context-dependent reasoning, sug-gesting a promising foundation for addressing this challenge. A natural direction is therefore to instantiate sequential forecasting as an agentic process, in which forecasting decisions are carried out through iterative interaction, reasoning, and revision. However, translating sequential decision-based forecasting into a fully trainable agentic system poses several fundamental chal-lenges [ 13 ]. First, effective forecasting requires a well-structured decision workflow that decomposes forecasting into a sequence of meaningful and interdependent decisions [ 42 ], such as feature preparation, model selection, prediction generation, and revision. Designing such a workflow is non-trivial, as it must be sufficiently flexible to capture diverse forecasting behaviors while remaining simple enough to be learned effectively. Second, this workflow de-pends on a set of tool capabilities [ 37 ], such as feature extraction, diagnostic analysis, and forecasting model invocation. Developing a useful tool engine that exposes appropriate interfaces and sup-ports effective coordination across workflow steps remains a key practical challenge. Third, even with a well-defined workflow and tool support, learning an effective decision policy to coordinate these components remains difficult. Such a policy needs to reason over intermediate states maintained across decision steps, select ap-propriate actions, and adapt its decisions based on feedback, while maintaining training stability and learning efficiency. To address the challenges outlined above, we propose Cast-R1, a learned agentic time series forecasting framework that reformulates forecasting as a sequential decision-making problem. Cast-R1 is designed to align with expert forecasting practices while remaining fully trainable within a unified learning framework. A core design of Cast-R1 is a memory-based state management mechanism that maintains decision-relevant context across forecasting steps, en-abling the accumulation of contextual evidence and past decisions over long horizons. With this memory-based state management in place, Cast-R1 performs forecasting through a tool-augmented agentic workflow operating over a modular toolkit, which provides reusable capabilities for feature extraction, diagnostic analysis, and forecasting model invocation. Within this workflow, the forecasting system autonomously constructs context through tool interactions, adaptively selects forecasting models for decision support, reasons about potential future dynamics, and refines predictions through self-reflection. To learn effective multi-step forecasting policies, Cast-R1 adopts a two-stage learning strategy that combines su-pervised fine-tuning and multi-turn reinforcement learning. Su-pervised fine-tuning initializes the system with basic forecasting competence and stable tool-usage behaviors, while multi-turn rein-forcement learning further optimizes long-horizon decision policies. In addition, Cast-R1 incorporates a curriculum learning scheme that progressively increases task difficulty, improving training stability and learning efficiency under complex sequential decision settings. Our main contributions can be summarized as follows: 
+
+• We reformulate time series forecasting as a sequential decision-making problem, moving beyond conventional model-centric, single-pass prediction paradigms. 
+
+• We propose Cast-R1, a learned agentic forecasting frame-work that integrates a memory-based state management mechanism with a tool-augmented decision workflow. 
+
+• We develop a two-stage learning strategy that combines su-pervised fine-tuning with multi-turn reinforcement learning to train long-horizon forecasting policies. 
+
+• Extensive experiments on real-world datasets demonstrate the effectiveness of the proposed framework across diverse forecasting scenarios. 
+
+2 Related Work 
+
+This section reviews related work along two complementary direc-tions: advances in time series forecasting methods, and develop-ments in agentic and decision-making systems. 
+
+2.1 Advances in Time Series Forecasting 
+
+Time series forecasting has been studied extensively, giving rise to a wide range of methods spanning statistical models, classical ma-chine learning, and deep learning. Early statistical approaches [ 12 ,34 ], such as autoregressive and state-space models, provide foun-dational formulations with clear assumptions and interpretability. Building on these foundations, learning-based methods—including recurrent neural networks [ 29 ], temporal convolutional networks [ 5], and Transformer-based architectures [ 26 ]—have improved forecast-ing performance by enhancing representation capacity and scalabil-ity. More recently, foundation models [ 1] and large-scale pre-trained architectures [ 38 ] have further advanced time series forecasting by leveraging large datasets and unified modeling frameworks, demon-strating strong generalization across tasks and domains. Beyond modeling historical observations alone, many studies have explored incorporating additional information into forecasting [ 14 ]. Multi-variate forecasting methods capture dependencies among correlated time series, while context-aware approaches integrate auxiliary sig-nals such as calendar features, events, and external variables [ 18 ]. These extensions have broadened the applicability of forecasting models and enabled accurate predictions in complex settings. De-spite their diversity, most existing forecasting methods share a common predictive formulation: future values are inferred from a fixed set of historical observations, optionally augmented with predefined contextual inputs, through a single inference step once the model and inputs are specified. This model-centric, single-pass formulation has been widely adopted across statistical, learning-based, and large-scale models, serving as a unifying abstraction for time series forecasting. Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Look -back      
+
+> Window
+> Noise Filter
+> (High PE, High MSE)
+> Reasoning Band
+> (Low PE, High MSE)
+> Foundation Band
+> (Low PE, Low MSE)
+> Robustness Band
+> (High PE, Low MSE)
+> PE
+> Teacher MSE
+> Permutation
+> Entropy(PE)
+> Teacher MSE
+
+Contextual Input    
+
+> date time
+> 2015 -06 -09 00:00:00
+> 2015 -06 -09 01:00:00
+> Time Stamps
+> Task Prompts
+
+Feature Extraction 
+
+> Basic Statics
+> Data Quality
+> Channel Dynamics
+> Forecast Residuals
+> Event Summary
+
+Model Prediction          
+
+> Statistical Model
+> Deep Learning Model
+> Foundation Model
+> Tool
+> Call Feature
+> Extraction Model
+> Selection Initial
+> Forecast
+> Training Data
+> Instruction
+> You are an Expert Forecasting
+> Agent specializing in agentic
+> sequential decision -making .
+> Task
+> Invoke tools for evidence , select
+> models adaptively , and refine
+> forecasts through self -reflection.
+> <tool_call >
+> <think>
+> <answer>
+> </ tool_call >
+> </think>
+> </answer>
+> Thinking …
+> Tool output
+
+…   
+
+> <think> </think> Thinking …
+> Final predict
+
+Teacher -forcing Model  
+
+> Response
+> Rollout Group
+> Rewards Advantages
+
+Reinforced 
+
+Model 
+
+> Predicted Window
+
+Predicted Output 
+
+> <think>Okay, let me look at
+> the model predictions and the
+> historical data to see if they
+> make sense.</think>
+> Explanation
+> Prediction
+> Answer
+> Filter
+> Results
+> Evaluation
+
+Iterative Refinement 
+
+> w State
+
+s: 
+
+y extracted. 
+
+ry: 
+
+ormance logs. 
+
+Time       
+
+> State
+> Memory Update
+> State
+> Initialization State Memory State
+> Memory Update State
+> Memory Update
+> Predictions
+> Constraints Check
+> Results Refinement
+> Feedback Generation
+
+Action 𝑘  State 𝑘 
+
+His 𝑘 + 1
+
+Action 𝑘  State 𝑘 
+
+His 𝑘 +1 
+
+Figure 1: Overview of the Cast-R1 framework for agentic time series forecasting. 
+
+2.2 Agentic and Decision-Making Systems 
+
+Research on agentic and decision-making systems has a long history in artificial intelligence, particularly in the context of reinforcement learning and sequential decision optimization [ 21 ]. Classical rein-forcement learning methods focus on learning policies that map states to actions in dynamic environments, and have been suc-cessfully applied to a wide range of control and decision-making problems. These approaches provide a principled framework for handling sequential decisions, long-term objectives, and delayed feedback. More recently, agent-based systems have been extended to incorporate richer perception, reasoning, and interaction capa-bilities. Advances in representation learning and large language models have enabled agents to perform multi-step reasoning, inter-act with external tools, and execute complex workflows [ 32 ]. Tool-augmented agents and reasoning-oriented systems have demon-strated strong performance in tasks such as question answering, code generation, and planning, where agents iteratively gather in-formation, invoke tools, and refine intermediate results [ 39 ]. In parallel, several studies have explored learning-based approaches for decision-making in data-driven settings, including adaptive model selection, automated machine learning, and policy learning over structured action spaces [ 3 ]. These methods demonstrate the potential of learning policies to coordinate multiple components within a unified framework, but are mainly explored in domains with well-defined states, actions, and evaluation signals. These methods highlight the potential of learning policies that coordinate multiple components or actions within a unified framework. 
+
+3 The Proposed Cast-R1 
+
+As shown in Figure 1, this section presents Cast-R1, a learned agen-tic time series forecasting framework that reformulates forecasting as a sequential decision-making problem and realizes forecasting through a tool-augmented agentic workflow. We first introduce the sequential forecasting formulation, followed by a memory-based state management mechanism that maintains decision-relevant in-formation across steps. We then describe the modular toolkit and agentic workflow that support multi-step decision making, and fi-nally detail the learning and training strategy, that enables Cast-R1 to learn effective decision policies for accurate forecasting. 
+
+3.1 Sequential Forecasting Formulation 
+
+We formulate time series forecasting as a sequential decision-making problem , in which forecasting is carried out through a sequence of interdependent decisions rather than a single predictive step. A fore-casting episode is defined as follows. Given a historical time series 
+
+x1: 𝑡 and optional contextual information c𝑡 , the objective is to gen-erate accurate forecasts for future time steps x𝑡 +1: 𝑡 +𝐻 over a fixed prediction horizon 𝐻 . Instead of directly mapping historical inputs to future values in a single pass, forecasting proceeds over a finite se-quence of decision steps indexed by 𝑘 = 1, . . . , 𝐾 . At each step 𝑘 , the forecasting process observes a state 𝑠 𝑘 that summarizes the informa-tion currently available for decision making. This state may include historical observations, contextual features, intermediate analysis results, and information derived from previous decisions, providing a compact representation of the forecasting context at step 𝑘 . Based on the observed state, an action 𝑎 𝑘 is selected from a structured ac-tion space. Actions are designed to advance the forecasting process and may involve performing data analysis or feature extraction, invoking forecasting models, updating intermediate predictions, or revising previously generated forecasts. Through these actions, the forecasting process incrementally refines its understanding of the data and its predictions across decision steps. A forecasting episode terminates when a final forecast is produced or when a predefined stopping condition is satisfied. The overall forecasting process is illustrated in Figure 1. The objective of the sequential Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al. Instruction  State 1 LLM  Action 1                     
+
+> Action 𝑘
+> State 𝑘 Memory
+> Action
+> k
+> State
+> k+1LLM Tookit
+> Instruction His 2LLM Action 2State 2
+> Instruction His kAction 𝑘 State 𝑘 LLM
+> Step 1
+> Step 2
+> Step 𝑘
+
+# … 
+
+> His 𝑘 +1
+
+Figure 2: Memory-based state management mechanism in Cast-R1 for multi-step forecasting decisions. 
+
+decision process is to produce accurate and reliable forecasts. This objective can be formalized either as minimizing forecasting er-ror over the prediction horizon or, equivalently, as maximizing a reward function that reflects forecasting accuracy across decisions. 
+
+3.2 Memory-based State Management 
+
+To instantiate the abstract state 𝑠 𝑘 defined in the sequential forecast-ing formulation, we introduce a memory-based state management mechanism that maintains decision-relevant information across forecasting steps. As illustrated in Figure 2, the goal of this mech-anism is to provide a structured representation of the forecasting context, enabling the decision process to reason over long hori-zons and to incorporate evidence accumulated from prior inter-actions [ 24 ]. At each decision step 𝑘 , the state 𝑠 𝑘 is constructed from a memory structure M𝑘 that stores heterogeneous informa-tion generated throughout the forecasting process. This memory may include historical observations and contextual signals, out-puts from statistical analyses, intermediate forecasting results, as well as records of previously executed actions. Rather than treating the state as a raw concatenation of all available information, the proposed mechanism organizes and summarizes these elements into a compact representation that emphasizes information most relevant for subsequent action selection. The memory is updated incrementally as the forecasting process unfolds. After an action 
+
+𝑎 𝑘 is executed at step 𝑘 , newly generated information (e.g., tool outputs) is written into the memory, while outdated or less relevant content may be summarized, compressed, or selectively retained. Through this update process, the memory produces an updated history representation that is incorporated into the next state 𝑠 𝑘 +1,allowing the state to evolve dynamically as new evidence becomes available while preserving continuity with prior decisions. By de-coupling state management from individual decision actions , the proposed mechanism separates what information is retained from 
+
+how decisions are made . This design avoids repeatedly re-injecting raw information at each decision step, reduces redundancy, and facilitates long-horizon reasoning under partial observability. 
+
+3.3 Toolkit Design and Implementation 
+
+To support sequential decision making in agentic time series fore-casting, Cast-R1 is equipped with a modular toolkit that exposes expert-level analytical and forecasting operations as callable actions. Rather than hard-coding a fixed processing pipeline, the toolkit defines a structured action space that allows the forecasting sys-tem to actively acquire information, assess data characteristics, and generate predictions through adaptive tool interactions. 
+
+Data Quality Assessment. Before acquiring analytical evidence, the forecasting system first examines the condition of the observed data. To support this process, the toolkit provides data quality assessment tools that characterize missing values, saturation effects, constant or abnormal channels, and other indicators related to data integrity. These diagnostic signals enable the agent to reason about potential data issues and their implications for subsequent analysis and modeling decisions, allowing later forecasting steps to adapt accordingly rather than blindly relying on raw observations. 
+
+Global Statistical Characterization. To obtain an overall under-standing of the input series, the toolkit includes tools for extracting global statistical characteristics. These tools summarize central ten-dency, dispersion, correlation structure, frequency-domain proper-ties, and variability patterns of the time series, providing a coarse but informative global profile. Such global statistics serve as a prior for subsequent action decisions, including whether more detailed analysis is necessary. 
+
+Structural and Dynamic Analysis. Beyond global properties, ef-fective forecasting requires understanding how time series evolve over time. The toolkit therefore provides tools for analyzing within-series dynamics, including change point detection, trend and slope variation analysis, identification of stable segments, and detection of local extrema. These analyses characterize non-stationarity, regime shifts, and local temporal patterns, providing structured signals that inform subsequent forecasting decisions under evolving conditions. 
+
+Event-level Summarization. To support higher-level reasoning, the toolkit further includes event summarization tools that abstract time series behavior into coarse semantic patterns, such as rising, declining, stable, or oscillatory regimes. By summarizing the preva-lence and dominance of these patterns over different segments, these tools bridge low-level numerical signals and high-level behav-ioral understanding, providing interpretable evidence for reasoning-based forecasting and trend assessment. 
+
+Model Adequacy and Residual Diagnostics. Before committing to more complex forecasting strategies, the forecasting process may evaluate whether simple baseline models sufficiently explain the observed data. Residual diagnostic tools assess model adequacy by analyzing residual distributions, autocorrelation patterns, ex-treme deviations, and tail behaviors. These diagnostic signals in-form subsequent modeling decisions, indicating whether additional modeling capacity or further refinement is warranted. 
+
+Forecasting Model Invocation. Finally, the toolkit exposes fore-casting models as first-class actions through a unified prediction in-terface. Multiple forecasting models with complementary inductive biases are provided, including models specialized for local pattern modeling, long-range dependency capture, cross-variable interac-tion, linear trend extrapolation, and noisy or irregular data. By treating forecasting models as tools rather than fixed components, Cast-R1 enables adaptive and state-aware model selection condi-tioned on the maintained state, allowing the forecasting process to Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+leverage specialized predictive capabilities without committing to a single model a priori. 
+
+3.4 Tool-augmented Agentic Workflow 
+
+Cast-R1 performs time series forecasting through a tool-augmented agentic workflow , in which forecasting is realized as a sequence of structured decisions over multiple interaction turns rather than a single inference step. Given a multivariate time series within a look-back window, the forecasting system incrementally constructs context, generates predictions, and refines results through step-wise reasoning and tool interaction. The overall workflow follows a preparation–forecasting–refinement pattern that mirrors expert forecasting practice. At the beginning of the workflow, the system receives histori-cal observations together with optional contextual inputs, which form the initial state. Conditioned on this state, it first performs a planning step to determine an information acquisition strategy, including which feature extraction tools to invoke. Guided by this plan, the system autonomously calls relevant tools, which may be executed in parallel when applicable. These tools produce struc-tured summaries that characterize statistical properties, temporal patterns, and potential non-stationarity in the input series. The resulting tool outputs are integrated into the maintained state, yielding an updated representation that combines raw observations with tool-derived evidence. Conditioned on the updated state, Cast-R1 performs adaptive model selection by invoking one of several forecasting models ex-posed as tools. The selected model produces an initial forecast, which is incorporated into the state as intermediate predictive ev-idence, allowing the forecasting process to leverage specialized predictive capabilities without committing to a fixed model a pri-ori. Building on this updated state representation, the system then conducts reasoning-based forecasting to generate a candidate pre-diction for the target horizon. The generated prediction is written back to the state and evaluated to determine whether further re-finement is required. If revision is triggered, the system performs a final refinement step that adjusts and strengthens the predicted results based on the accumulated evidence. 
+
+3.5 Learning and Training Strategy 
+
+Learning an effective forecasting framework requires not only accu-rate prediction capability, but also the ability to perform tool usage, model invocation, and prediction revision within the proposed agentic workflow. To this end, Cast-R1 adopts a two-stage learn-ing strategy that progressively equips the system with forecasting competence and sequential decision-making capability. 
+
+3.5.1 Supervised Fine-Tuning. The first training stage initializes Cast-R1 through supervised fine-tuning, equipping the forecasting system with basic forecasting competence and stable tool-usage behaviors. Rather than directly optimizing long-horizon decision policies, this stage focuses on learning local decision patterns that allow the proposed workflow to be executed reliably. Specifically, supervised fine-tuning is performed on curated decision trajec-tories that demonstrate reasonable sequences of tool invocation, model selection, and prediction generation under different fore-casting scenarios. These trajectories are constructed using existing forecasting heuristics and rule-based strategies, and provide step-level supervision for action selection conditioned on intermediate states. Through this process, the system learns how to interpret tool outputs, maintain internal state representations, and produce coher-ent intermediate decisions. This supervised initialization provides a strong behavioral prior that significantly stabilizes subsequent reinforcement learning. It ensures that the system can correctly invoke tools, generate valid intermediate predictions, and maintain consistent state transitions before being exposed to long-horizon optimization objectives. 
+
+3.5.2 Multi-turn Reinforcement Learning. After supervised fine-tuning, Cast-R1 is further optimized using multi-turn reinforcement learning [ 6 , 31 ] to learn effective long-horizon decision policies within the proposed forecasting workflow. This stage focuses on improving how the forecasting system coordinates planning, tool usage, model invocation, and prediction revision across multiple decision steps, moving beyond the locally reasonable behaviors ac-quired during supervised training. To optimize such long-horizon and delayed decision processes, we adopt group relative policy op-timization (GRPO) [ 25 ]. GRPO updates the policy by contrasting the relative performance of multiple sampled decision trajectories within each forecasting episode, enabling stable and efficient learn-ing under sparse and delayed feedback. 
+
+Multi-view Reward Design. Reinforcement learning in Cast-R1 is guided by an episode-level, multi-view reward that evaluates the quality of the final forecast from multiple complementary perspec-tives. After each forecasting episode terminates, the predicted fu-ture sequence is compared against the ground-truth values, and a scalar reward is computed by aggregating several evaluation com-ponents with predefined weights. The primary reward component measures forecasting accuracy using the mean squared error (MSE), which is normalized and log-transformed to stabilize training and reduce sensitivity to scale variations. To encourage forecasts that capture meaningful temporal structures beyond point-wise accu-racy, additional reward terms assess the consistency of predicted trend and seasonal components, as well as the alignment of local turning points, allowing small temporal deviations within a toler-ance window. In addition, auxiliary constraints are incorporated to regularize the decision process, including format validity and output length consistency, which penalize invalid or incomplete predictions. All reward components are combined into a single scalar signal and applied only at the end of each decision sequence. This delayed reward design encourages optimization of the entire forecasting workflow—spanning information acquisition, model selection, and refinement—rather than focusing on individual inter-mediate decisions. 
+
+Curriculum Learning. Cast-R1 adopts a curriculum learning strat-egy [ 41 ] during reinforcement learning that organizes training sam-ples according to forecasting difficulty. Task difficulty is assessed along two complementary dimensions: model-based prediction diffi-culty and data-intrinsic complexity . Prediction difficulty is measured by the forecasting error of a reference teacher model, while data complexity is quantified using normalized permutation entropy to capture temporal irregularity and stochasticity in the input series. Based on these criteria, training samples are grouped into multiple Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al. 
+
+difficulty bands, ranging from highly regular and easily predictable sequences to structurally complex or noisy cases. Training pro-ceeds in a staged manner: the forecasting system is first exposed to samples with low intrinsic complexity and low prediction difficulty, then to samples with higher prediction difficulty but preserved structural regularity, and finally to samples with increased stochas-ticity and noise. By progressively increasing both predictive and structural difficulty, this curriculum structures the learning process from simpler to more challenging forecasting settings, supporting the acquisition of long-horizon decision behaviors under diverse data conditions. 
+
+4 Experiments 
+
+In this section, we first introduce the experimental settings and then present experimental results, ablation studies, and case analyses to evaluate the proposed framework. 
+
+4.1 Experimental Settings 
+
+Datasets. Table 1 summarizes the statistics of the real-world time series datasets used in our experiments, covering multiple appli-cation domains, temporal resolutions, and forecasting horizons. Specifically, the ETT benchmark [ 44 ] includes electricity trans-former measurements collected at both hourly and 15-minute reso-lutions, exhibiting pronounced long-range temporal dependencies. In addition, the Wind [ 17 ] dataset contains high-frequency renew-able energy generation data sampled at 15-minute intervals. For short-term forecasting, NP, PJM, BE, FR, and DE are electricity price datasets from the electricity price forecasting (EPF) bench-mark [ 16 ], each consisting of hourly price series from different regional power markets and mainly used for short-horizon fore-casting. Overall, these datasets span diverse domains, sequence lengths, variable dimensions, and temporal frequencies, enabling a comprehensive evaluation of forecasting performance. Detailed dataset descriptions are provided in the Appendix. 
+
+Table 1: Statistics of diverse real-world time series datasets.                                     
+
+> Dataset Domain Length Variables Frequency
+> ETTh1 & ETTh2 Electricity 17,420 71 hour ETTm1 & ETTm2 Electricity 69,680 715 mins Wind Energy 48,673 715 mins BE Energy 14,496 31 hour DE Energy 14,496 31 hour FR Energy 14,496 31 hour NP Energy 14,496 31 hour PJM Energy 14,496 31 hour
+
+Baselines. We compare Cast-R1 against a diverse set of rep-resentative baselines, grouped into four categories for compre-hensive evaluation. Statistical methods include ARIMA [ 12 ] and Prophet [ 28 ], which model temporal patterns based on classical assumptions and trend decomposition. Deep learning–based ap-proaches comprise PatchTST [ 23 ], iTransformer [ 19 ], TimeXer [ 30 ], ConvTimeNet [ 9], and DLinear [ 40 ], leveraging Transformer, CNN, and MLP architectures to capture temporal dependencies. Foun-dation models include Chronos-2 [ 1] and TimesFM [ 10 ], which provide large-scale pretrained representations for time series fore-casting. LLM-based forecasting methods include OFA [ 45 ], Time-LLM [ 14 ], and TimeReasoner [ 8 ], which adapt the LLM to time series forecasting through alignment, prompting, and reasoning mechanisms. Further implementation details are provided in the Appendix for reproducibility and fair comparison. 
+
+Implementation Details. We utilize Qwen3-8B [ 2] as the backbone foundation model for Cast-R1, using four NVIDIA A800 GPUs with 80GB memory per device. In the SFT stage, we fine-tune the model for 1 epoch with a learning rate of 1.0×10 −5 on 200 curated samples. The subsequent RL stage employs the GRPO algorithm, configured with a learning rate of 1.0 × 10 −6, global batch size of 64, group size 
+
+𝐺 = 8, generation temperature 1.0, and maximum prompt/response lengths of 8192 and 4096 tokens, respectively. For comparison, deep learning baselines are trained using the Adam optimizer following official configurations. Experimental settings are unified across all methods: for long-term forecasting, both look-back and horizon are set to 96; for short-term tasks, the look-back is 168, and the horizon is 24. We adopt the mean squared error (MSE) and mean absolute error (MAE) as metrics. 
+
+4.2 Main Results 
+
+Table 2 summarizes the forecasting performance across diverse real-world benchmarks under both short-term and long-term settings. Overall, Cast-R1 achieves consistent improvements over existing methods. Notably, it obtains the lowest MSE scores on all evalu-ated datasets and ranks first or second in the majority of MAE metrics, outperforming a wide range of statistical methods, deep learning baselines, and foundation models. Specifically, compared to representative deep learning baselines, Cast-R1 demonstrates effectiveness on short-term electricity price benchmarks. These datasets are characterized by high volatility and irregular tempo-ral patterns. The performance gains suggest that the sequential decision-making formulation allows the agent to refine predictions effectively when facing dynamic changes, addressing the limitations of single-pass neural predictors. In comparison with foundation models and LLM-based approaches, Cast-R1 achieves lower pre-diction errors on complex long-horizon datasets. While pretrained foundation models benefit from extensive general knowledge, their inference processes are typically static. In contrast, Cast-R1 learns a policy to adaptively select forecasting actions, which allows for bet-ter alignment with temporal regimes. Furthermore, Cast-R1 attains more stable performance across benchmarks compared to TimeRea-soner. This stability is likely attributable to the agent-centric state abstraction, where the dynamic memory mechanism facilitates ef-fective credit assignment across forecasting steps. These results empirically validate that reformulating time series forecasting as an agent-centric sequential decision process contributes to accurate and reliable forecasting performance. 
+
+4.3 Ablation Studies 
+
+4.3.1 Ablation Study of Forecasting Toolkit. To evaluate the impact of the tool-augmented workflow, we conduct a component-wise ablation study in Table 3, comparing the full framework against variants lacking feature extraction and model prediction capabili-ties. As shown in the table, removing the Feature Extraction module Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+Table 2: Overall forecasting performance on benchmark datasets. Lower values indicate better performance. The best results are highlighted in bold, and the second-best are underlined.                                                                                                                                                                                                                                                                                                  
+
+> Model ETTh1 ETTh2 ETTm1 ETTm2 Wind BE DE FR NP PJM MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE ARIMA 10.879 2.429 12.567 3.248 9.898 2.513 22.527 4.325 2166.64 28.767 869.444 13.549 362.487 11.150 963.997 13.224 55.507 4.116 149.281 8.481 Prophet 46.697 4.592 23.525 5.212 12.225 3.554 31.525 6.299 8071.24 56.059 749.864 14.988 340.371 12.238 1024.401 14.422 40.754 3.941 53.777 5.739 PatchTST 9.300 1.638 11.358 2.008 5.838 1.397 16.386 1.945 2024.83 20.465 512.834 10.400 201.705 8.029 807.512 8.287 29.428 3.474 27.164 4.103 iTransformer 7.505 1.513 10.161 1.930 5.771 1.460 12.751 1.661 1591.64 18.186 645.760 14.375 265.310 11.230 824.473 12.618 34.591 4.039 53.751 5.501 ConvTimeNet 8.032 1.439 18.072 2.578 6.358 1.252 12.253 2.057 1660.13 18.343 668.275 10.804 198.431 9.405 789.035 8.993 29.903 3.365 34.638 4.313 TimeXer 8.765 2.204 13.798 2.663 4.387 2.554 14.136 3.113 2063.99 31.914 772.704 12.286 222.798 10.274 803.202 9.483 32.052 3.490 34.283 4.252 DLinear 8.506 2.239 12.347 2.558 5.525 2.372 15.272 2.509 2169.82 29.325 739.149 12.590 239.753 10.619 787.498 9.735 37.287 3.896 40.562 4.508 Chronos-2 9.397 2.250 16.729 2.820 4.414 1.323 24.440 2.117 1764.15 17.182 497.075 11.129 211.205 8.584 812.732 8.423 30.804 3.155 29.697 3.712
+> TimesFM 8.096 2.223 9.932 2.231 5.996 2.012 15.232 2.114 1445.52 20.898 502.345 11.284 212.005 10.032 852.003 9.932 30.557 4.667 30.978 5.001 OFA 14.528 4.797 26.227 9.883 10.024 2.771 21.551 5.523 2044.332 26.557 621.548 13.665 275.331 14.235 1004.898 13.505 43.227 8.887 44.669 8.790 TimeLLM 10.523 3.332 15.527 4.337 5.137 1.668 16.001 3.352 1524.75 18.775 523.552 10.997 232.875 9.927 825.667 10.975 35.486 5.221 31.998 6.023 TimeReasoner 7.965 1.945 11.212 2.551 6.864 2.552 17.003 4.278 1662.55 22.559 549.797 11.976 286.667 15.223 903.977 15.997 46.998 6.661 35.778 7.727
+> Ours 6.062 1.320 8.405 1.747 3.465 1.160 11.181 1.581 1331.51 16.125 473.427 10.332 183.781 7.400 776.898 8.105 24.750 3.255 26.905 3.877
+
+Table 3: Ablation study of key components on representative datasets. We compare the full model against variants without feature extraction and without model prediction. The best results are highlighted in bold. 
+
+Variant ETTh1 ETTm1 Wind DE NP PJM MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE w/o Feature Extraction 7.145 1.988 4.979 1.548 1743.431 23.122 194.672 9.864 28.714 4.260 30.641 4.251 w/o Model Prediction 15.993 3.385 13.134 3.792 4047.163 32.674 564.157 25.784 64.813 8.969 91.122 17.142 
+
+Cast-R1 (Full) 6.062 1.320 3.465 1.160 1331.513 16.125 183.781 7.400 24.750 3.255 26.905 3.877 NP PJM ETTh ETTm 
+
+0
+
+20 
+
+> MSE
+
+(a) 
+
+> w/ Memory
+> w/o Memory
+
+NP PJM ETTh ETTm 
+
+0
+
+25 
+
+50 
+
+> MSE
+
+(b) 
+
+> Full Model
+> w/o SFT
+> w/o RL
+
+NP PJM ETTh ETTm 
+
+0
+
+20 
+
+> MSE
+
+(c) 
+
+> w/ curriculum RL
+> w/o curriculum RL
+
+NP PJM ETTh ETTm 
+
+0
+
+20 
+
+> MSE
+
+(d) 
+
+> Qwen3 1.7B
+> Qwen3 4B
+> Qwen3 8B
+
+Figure 3: Performance comparison of ablation studies and analysis. Impact of (a) dynamic memory, (b) training strategies (SFT vs. RL), and (c) curriculum learning. (d) Scalability analysis across different backbone model sizes. 
+
+leads to a noticeable decline in forecasting accuracy across all bench-marks. This degradation suggests that without diagnostic tools to characterize data properties, the agent lacks the necessary context to perform optimal planning and adaptive model selection. Fur-thermore, the exclusion of Model Prediction tools results in a more severe performance drop, with forecasting error increasing drasti-cally on complex datasets like Wind and PJM. This confirms that while the agent’s reasoning capabilities are essential for orchestra-tion, they cannot fully replace specialized forecasting models; the agent relies on these models as executable tools to generate precise numerical values. The superior performance of the full Cast-R1 verifies that integrating diagnostic insight with adaptive model invocation is synergistic and essential for robust forecasting. 
+
+4.3.2 Ablation Study of State Management. To show the contri-bution of the memory component, we compare the forecasting performance of the full Cast-R1 against the variant without dy-namic memory in Figure 3 (a). As observed in the bar charts, the removal of the memory module leads to a consistent increase in forecasting error across all evaluated datasets, from the volatile NP and PJM to the long-term ETTh and ETTm. This performance degradation indicates that without an explicit memory mechanism, the agent struggles to maintain a coherent context over the se-quential decision-making process. The dynamic memory serves as a compact state abstraction, enabling the agent to retain criti-cal historical information and perform effective credit assignment across multiple reasoning steps. In contrast, the stateless variant fails to capture long-range dependencies in the reasoning trajectory, resulting in suboptimal action selection. 
+
+4.3.3 Ablation Study of Learning Strategies. To verify the necessity of the proposed two-stage training paradigm, we analyze the final performance in Figure 3 (b) and training dynamics in Figure 4 (a). We observe that omitting the reinforcement learning stage causes the most significant performance drop, confirming that adaptive tool selection is primarily acquired through reward optimization. Furthermore, skipping supervised fine-tuning also leads to subop-timal results. As illustrated in the learning curves, the combined Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al. 
+
+Table 4: Ablation study of reward function components on representative datasets. Variant ETTh1 ETTm1 Wind MSE MAE MSE MAE MSE MAE w/o Length Pen. 6.10 1.93 3.98 1.38 1576 22.4 w/o Pred. Error 13.44 2.83 12.73 2.68 3147 32.3 w/o Trend/Seas. 8.45 2.35 6.68 1.61 1831 25.2 w/o Struct. Align. 7.85 2.03 5.98 1.48 1745 24.8 
+
+Cast-R1 (Full) 6.06 1.32 3.47 1.16 1331 16.1 
+
+approach initiates training with a higher reward score compared to the cold start of pure reinforcement learning. This indicates that supervised imitation serves as a crucial warm-start mechanism that accelerates convergence. Thus, combining supervised initialization with reinforcement-based refinement is essential for achieving op-timal forecasting accuracy, indicating that neither stage alone is sufficient to fully internalize task-specific decision policies. 
+
+4.3.4 Ablation Study of Curriculum Learning. To validate the effec-tiveness of the training strategy, Figure 3 (c) compares the perfor-mance of Cast-R1 when trained with the curriculum reinforcement learning mechanism versus when trained without it. As illustrated in the bar charts, the exclusion of the curriculum learning strat-egy results in higher forecasting errors across all datasets, with the performance gap being particularly pronounced on complex benchmarks like PJM. This phenomenon can be attributed to the uneven difficulty distribution inherent in real-world time series data. Without progressive guidance, premature exposure to highly non-stationary samples destabilizes policy optimization. By orga-nizing training from easy to hard, the curriculum allows the agent to master fundamentals before tackling complex scenarios, ensuring robust convergence and generalization. 
+
+4.4 Exploration Analysis 
+
+4.4.1 Impact of Reward Design. To understand the contribution of different reward components to the agent’s policy optimization, we performed an ablation study by removing specific terms from the reward function, as shown in Table 7. The most significant perfor-mance drop occurs when the prediction error reward is removed, resulting in a drastic surge in forecasting error across the evalu-ated datasets. This result confirms that the immediate feedback based on forecasting accuracy serves as the primary guidance sig-nal, steering the agent towards the fundamental goal of minimizing residuals. Furthermore, removing the structural alignment reward or the trend and seasonality reward also leads to a notable deterio-ration in performance. This indicates that these auxiliary rewards act as effective shaping signals, encouraging the agent to respect the intrinsic physical properties and temporal patterns of the time series. Finally, the exclusion of the length penalty results in a degra-dation, suggesting that encouraging efficient reasoning paths helps prevent the agent from taking redundant actions. Overall, these results demonstrate that while prediction accuracy constitutes the core optimization signal, carefully designed auxiliary rewards are crucial for stabilizing training and guiding policy learning. Steps            
+
+> 02040608010 0
+> Reward Score
+> 0. 2
+> 0. 4
+> 0. 6
+> 0. 8
+> 1. 0
+> 1. 2
+> (a) RL vs. SFT + RL
+> Steps
+> 020 40 60 80 100
+> Reward Score
+> 0. 2
+> 0. 4
+> 0. 6
+> 0. 8
+> 1. 0
+> 1. 2
+> (b)Model Scaling
+
+Figure 4: Visualization of training curves. (a) SFT initializa-tion accelerates convergence compared to Pure RL. (b) Larger backbone models consistently yield higher reward scores. Feature Extraction                                                                                                                                                                                                            
+
+> Task :Given ahistorical lookback window of 168 hours, the agent is required to generate areliable forecast for the next 24 -hour horizon, handling the distinct hourly seasonality
+> Data Characteristics :The input time series exhibits high volatility and non -stationarity .It frequently presents abrupt regime changes driven by market demand dynamics
+> Input Stream :The agent receives the raw historical sequence (e .g.,2015 -06 -09 ... )as the initial state, requiring it to parse the underlying temporal patterns before acting
+> Pattern Recognition :The identification of a
+> dominant "Rise" pattern establishes agrounded
+> evidence base for the subsequent adaptive
+> model routing
+> Initial Output :Raw output shows asharp morning
+> surge .Though directionally correct, it requires
+> physical validation
+> Model Selection
+> Critical Reflection :Flags the morning spike as an
+> artifact exceeding historical MAD volatility thresholds
+> Reflection and Prediction
+> Tool Execution :Adopting a"stop -and -look"
+> strategy, the agent executes diagnostic tools
+> (e .g.,extract_basic_statistics )to mitigate
+> hallucinations caused by context deficiency
+> Statistical Insight :Analysis reveals aMAD of
+> 9.06 and multiple structural changepoints,
+> quantitatively confirming the series' high
+> volatility and non -stationarity
+> Strategic Reasoning :Rejects traditional methods due
+> to oscillations ;prioritizes foundation models for zero -
+> shot robustness
+> Model Selection :Routes to Chronos -2,yielding a
+> forecast with valid trends but aggressive fluctuations
+> Synthesizing the extracted
+> features, the agent
+> dynamically selects the
+> most suitable model to
+> handle the identified data
+> irregularities
+> In the final stage, the
+> agent engages in self -
+> correction, validating
+> the preliminary
+> forecast against
+> historical constraints
+> to ensure plausibility
+> Final Delivery :Refined output preserves the trend while
+> aligning magnitudes with history for robustness
+> Constraint Enforcement :Enforces physical consistency
+> by smoothing the ramp -up and attenuating the peak
+> Initialized as aspecialized forecaster for
+> complex hourly electricity prices
+
+Figure 5: Qualitative case study. The agent leverages statis-tical diagnosis, adaptive model routing to Chronos-2, and self-reflection to mitigate volatility. 
+
+4.4.2 Impact of Base Model Scaling. To investigate how the ca-pacity of the foundation model affects the agent’s performance, we evaluated Cast-R1 using Qwen3 backbones of varying sizes: 1.7B, 4B, and 8B. As illustrated in Figure 3 (d) and Figure 4 (b), we observe a clear monotonic trend where forecasting errors decrease, and reward accumulation improves as the model size increases. Specifically, the Qwen3-8B variant not only achieves the lowest final MSE across all datasets but also consistently maintains higher reward scores throughout the training steps compared to the 1.7B counterpart. This performance gain can be attributed to the emer-gent reasoning and instruction-following capabilities inherent in larger language models. A more capable backbone enables the agent to execute the perception-action loop more precisely—selecting the most appropriate tools based on statistical features, adhering to strict formatting constraints, and performing more reliable self-reflection. These results suggest that the effectiveness of the fore-casting agent is not solely defined by the framework design but also scales directly with the intelligence of the underlying LLM. 
+
+4.5 Case Study 
+
+To demonstrate the effectiveness of Cast-R1, we present a case study on volatile electricity price forecasting as shown in Figure 5. It begins the workflow with feature extraction by autonomously calculating the mean absolute deviation to quantitatively confirm the high volatility and non-stationarity of the input series. Based on this diagnostic evidence, the agent proceeds to Model Rout-ing and strategically selects the Chronos-2 foundation model to capture the complex rising trend that traditional methods often fail to model. Although the initial forecast correctly identifies the Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+general direction, it contains aggressive fluctuations and an unreal-istic morning spike. Crucially, the agent performs self-correction during the reflection and output stage by validating the prediction against historical constraints. It subsequently refines the output by smoothing the ramp-up and attenuating the peak, thereby ensuring physical consistency and demonstrating the ability of Cast-R1 to emulate expert reasoning in dynamic environments. 
+
+5 Conclusion 
+
+In this work, we proposed Cast-R1, a learned agentic time series forecasting framework that reformulates forecasting as a sequen-tial decision-making problem rather than a single-pass prediction task. By modeling information preparation, reasoning-based predic-tion, and forecast refinement as interconnected decisions, Cast-R1 offers a principled alternative to conventional model-centric ap-proaches. This formulation is realized through memory-based state management, a tool-augmented decision workflow, and a two-stage learning strategy combining supervised fine-tuning and multi-turn reinforcement learning. Extensive experiments on real-world time series datasets demonstrate consistent improvements over strong baselines, validating the effectiveness of sequential decision mak-ing and tool-augmented forecasting in practical scenarios. More broadly, this work highlights time series forecasting as an adap-tive, decision-centric process and motivates further exploration of learning-based frameworks that align expert practices with train-able sequential decision-making systems. Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al. 
+
+References 
+
+[1] Abdul Fatir Ansari, Oleksandr Shchur, Jaris Küken, Andreas Auer, Boran Han, Pedro Mercado, Syama Sundar Rangapuram, Huibin Shen, Lorenzo Stella, Xiyuan Zhang, et al . 2025. Chronos-2: From univariate to universal forecasting. arXiv preprint arXiv:2510.15821 (2025). [2] Jinze Bai, Shuai Bai, Yunfei Chu, Zeyu Cui, Kai Dang, Xiaodong Deng, Yang Fan, Wenbin Ge, Yu Han, Fei Huang, et al . 2023. Qwen technical report. arXiv preprint arXiv:2309.16609 (2023). [3] Mitra Baratchi, Can Wang, Steffen Limmer, Jan N Van Rijn, Holger Hoos, Thomas Bäck, and Markus Olhofer. 2024. Automated machine learning: past, present and future. Artificial intelligence review 57, 5 (2024), 122. [4] George E. P. Box, Gwilym M. Jenkins, Gregory C. Reinsel, and Greta M. Ljung. 2015. Time Series Analysis: Forecasting and Control (5 ed.). Wiley. [5] Mingyue Cheng, Zhiding Liu, Xiaoyu Tao, Qi Liu, Jintao Zhang, Tingyue Pan, Shilong Zhang, Panjing He, Xiaohan Zhang, Daoyu Wang, et al . 2025. A Com-prehensive Survey of Time Series Forecasting: Concepts, Challenges, and Future Directions. Authorea Preprints (2025). [6] Mingyue Cheng, Jie Ouyang, Shuo Yu, Ruiran Yan, Yucong Luo, Zirui Liu, Daoyu Wang, Qi Liu, and Enhong Chen. 2025. Agent-r1: Training powerful llm agents with end-to-end reinforcement learning. arXiv preprint arXiv:2511.14460 (2025). [7] Mingyue Cheng, Xiaoyu Tao, Qi Liu, Ze Guo, and Enhong Chen. 2026. Posi-tion: Beyond Model-Centric Prediction–Agentic Time Series Forecasting. arXiv preprint arXiv:2602.01776 (2026). [8] Mingyue Cheng, Jiahao Wang, Daoyu Wang, Xiaoyu Tao, Qi Liu, and Enhong Chen. 2025. Can slow-thinking llms reason over time? empirical studies in time series forecasting. arXiv preprint arXiv:2505.24511 (2025). [9] Mingyue Cheng, Jiqian Yang, Tingyue Pan, Qi Liu, Zhi Li, and Shijin Wang. 2025. Convtimenet: A deep hierarchical fully convolutional model for multivariate time series analysis. In Companion Proceedings of the ACM on Web Conference 2025 . 171–180. [10] Abhimanyu Das, Weihao Kong, Rajat Sen, and Yichen Zhou. 2024. A decoder-only foundation model for time-series forecasting. In Forty-first International Conference on Machine Learning .[11] Lu Han, Han-Jia Ye, and De-Chuan Zhan. 2024. The capacity and robustness trade-off: Revisiting the channel independent strategy for multivariate time series forecasting. IEEE Transactions on Knowledge and Data Engineering 36, 11 (2024), 7129–7142. [12] Rob J Hyndman and Yeasmin Khandakar. 2008. Automatic time series forecasting: the forecast package for R. Journal of statistical software 27 (2008), 1–22. [13] Chuang Jiang, Mingyue Cheng, Xiaoyu Tao, Qingyang Mao, Jie Ouyang, and Qi Liu. 2025. Tablemind: An autonomous programmatic agent for tool-augmented table reasoning. arXiv preprint arXiv:2509.06278 (2025). [14] Ming Jin, Shiyu Wang, Lintao Ma, Zhixuan Chu, James Y Zhang, Xiaoming Shi, Pin-Yu Chen, Yuxuan Liang, Yuan-Fang Li, Shirui Pan, et al . 2024. Time-LLM: Time Series Forecasting by Reprogramming Large Language Models. In The Twelfth International Conference on Learning Representations .[15] Xiangjie Kong, Zhenghao Chen, Weiyao Liu, Kaili Ning, Lechao Zhang, Syauqie Muhammad Marier, Yichen Liu, Yuhao Chen, and Feng Xia. 2025. Deep learning for time series forecasting: a survey. International Journal of Machine Learning and Cybernetics (2025), 1–34. [16] Jesus Lago, Grzegorz Marcjasz, Bart De Schutter, and Rafał Weron. 2021. Fore-casting day-ahead electricity prices: A review of state-of-the-art algorithms, best practices and an open-access benchmark. Applied Energy 293 (2021), 116983. [17] Yan Li, Xinjiang Lu, Yaqing Wang, and Dejing Dou. 2022. Generative time series forecasting with diffusion, denoise, and disentanglement. Advances in Neural Information Processing Systems 35 (2022), 23009–23022. [18] Chenxi Liu, Qianxiong Xu, Hao Miao, Sun Yang, Lingzheng Zhang, Cheng Long, Ziyue Li, and Rui Zhao. 2025. Timecma: Towards llm-empowered multivariate time series forecasting via cross-modality alignment. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 39. 18780–18788. [19] Yong Liu, Tengge Hu, Haoran Zhang, Haixu Wu, Shiyu Wang, Lintao Ma, and Mingsheng Long. 2024. iTransformer: Inverted Transformers Are Effective for Time Series Forecasting. In The Twelfth International Conference on Learning Representations .[20] Zhiding Liu, Mingyue Cheng, Zhi Li, Zhenya Huang, Qi Liu, Yanhu Xie, and Enhong Chen. 2023. Adaptive normalization for non-stationary time series fore-casting: A temporal slice perspective. Advances in Neural Information Processing Systems 36 (2023), 14273–14292. [21] Yucong Luo, Yitong Zhou, Mingyue Cheng, Jiahao Wang, Daoyu Wang, Tingyue Pan, and Jintao Zhang. 2025. Time Series Forecasting as Reasoning: A Slow-Thinking Approach with Reinforced LLMs. arXiv preprint arXiv:2506.10630 (2025). [22] Ricardo P Masini, Marcelo C Medeiros, and Eduardo F Mendes. 2023. Machine learning advances for time series forecasting. Journal of economic surveys 37, 1 (2023), 76–111. [23] Yuqi Nie, Nam H. Nguyen, Phanwadee Sinthong, and Jayant Kalagnanam. 2023. A Time Series is Worth 64 Words: Long-term Forecasting with Transformers. In 
+
+International Conference on Learning Representations .[24] Tingyue Pan, Jie Ouyang, Mingyue Cheng, Qingchuan Li, Zirui Liu, Mingfan Pan, Shuo Yu, and Qi Liu. 2026. PaperScout: An Autonomous Agent for Academic Paper Search with Process-Aware Sequence-Level Policy Optimization. arXiv preprint arXiv:2601.10029 (2026). [25] Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, YK Li, Yang Wu, et al . 2024. Deepseekmath: Pushing the limits of mathematical reasoning in open language models. arXiv preprint arXiv:2402.03300 (2024). [26] Xiaoming Shi, Shiyu Wang, Yuqi Nie, Dianqi Li, Zhou Ye, Qingsong Wen, and Ming Jin. 2025. Time-MoE: Billion-Scale Time Series Foundation Models with Mixture of Experts. In The Thirteenth International Conference on Learning Repre-sentations .[27] Xiaoyu Tao, Shilong Zhang, Mingyue Cheng, Daoyu Wang, Tingyue Pan, Bokai Pan, Changqing Zhang, and Shijin Wang. 2025. From values to tokens: An llm-driven framework for context-aware time series forecasting via symbolic discretization. arXiv preprint arXiv:2508.09191 (2025). [28] Sean J Taylor and Benjamin Letham. 2018. Forecasting at scale. The American Statistician 72, 1 (2018), 37–45. [29] Yuyang Wang, Alex Smola, Danielle Maddix, Jan Gasthaus, Dean Foster, and Tim Januschowski. 2019. Deep factors for forecasting. In International conference on machine learning . PMLR, 6607–6617. [30] Yuxuan Wang, Haixu Wu, Jiaxiang Dong, Guo Qin, Haoran Zhang, Yong Liu, Yunzhong Qiu, Jianmin Wang, and Mingsheng Long. 2024. Timexer: Empowering transformers for time series forecasting with exogenous variables. Advances in Neural Information Processing Systems 37 (2024), 469–498. [31] Zihan Wang, Kangrui Wang, Qineng Wang, Pingyue Zhang, Linjie Li, Zhengyuan Yang, Xing Jin, Kefan Yu, Minh Nhat Nguyen, Licheng Liu, et al . 2025. Ragen: Understanding self-evolution in llm agents via multi-turn reinforcement learning. 
+
+arXiv preprint arXiv:2504.20073 (2025). [32] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi, Quoc V Le, Denny Zhou, et al . 2022. Chain-of-thought prompting elicits reasoning in large language models. Advances in neural information processing systems 35 (2022), 24824–24837. [33] Andrew Robert Williams, Arjun Ashok, Étienne Marcotte, Valentina Zantedeschi, Jithendaraa Subramanian, Roland Riachi, James Requeima, Alexandre Lacoste, Irina Rish, Nicolas Chapados, et al . 2024. Context is key: A benchmark for forecasting with essential textual information. arXiv preprint arXiv:2410.18959 
+
+(2024). [34] Peter R Winters. 1960. Forecasting sales by exponentially weighted moving averages. Management science 6, 3 (1960), 324–342. [35] Gerald Woo, Chenghao Liu, Akshat Kumar, Caiming Xiong, Silvio Savarese, and Doyen Sahoo. 2024. Unified training of universal time series forecasting transformers. (2024). [36] Haixu Wu, Jiehui Xu, Jianmin Wang, and Mingsheng Long. 2021. Autoformer: De-composition transformers with auto-correlation for long-term series forecasting. 
+
+Advances in neural information processing systems 34 (2021), 22419–22430. [37] Xingjian Wu, Junkai Lu, Zhengyu Li, Xiangfei Qiu, Jilin Hu, Chenjuan Guo, Christian S Jensen, and Bin Yang. 2026. TimeART: Towards Agentic Time Series Reasoning via Tool-Augmentation. arXiv preprint arXiv:2601.13653 (2026). [38] Hao Xue and Flora D Salim. 2023. Promptcast: A new prompt-based learning paradigm for time series forecasting. IEEE Transactions on Knowledge and Data Engineering 36, 11 (2023), 6851–6864. [39] Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik R Narasimhan, and Yuan Cao. 2022. React: Synergizing reasoning and acting in language models. In The eleventh international conference on learning representations .[40] Ailing Zeng, Muxi Chen, Lei Zhang, and Qiang Xu. 2023. Are transformers effective for time series forecasting?. In Proceedings of the AAAI conference on artificial intelligence , Vol. 37. 11121–11128. [41] Aohan Zeng, Xin Lv, Qinkai Zheng, Zhenyu Hou, Bin Chen, Chengxing Xie, Cunxiang Wang, Da Yin, Hao Zeng, Jiajie Zhang, et al . 2025. Glm-4.5: Agentic, reasoning, and coding (arc) foundation models. arXiv preprint arXiv:2508.06471 
+
+(2025). [42] Xiaohan Zhang, Tian Gao, Mingyue Cheng, Bokai Pan, Ze Guo, Yaguo Liu, and Xiaoyu Tao. 2025. AlphaCast: A Human Wisdom-LLM Intelligence Co-Reasoning Framework for Interactive Time Series Forecasting. arXiv preprint arXiv:2511.08947 (2025). [43] Haokun Zhao, Xiang Zhang, Jiaqi Wei, Yiwei Xu, Yuting He, Siqi Sun, and Chenyu You. 2025. Timeseriesscientist: A general-purpose ai agent for time series analysis. 
+
+arXiv preprint arXiv:2510.01538 (2025). [44] Haoyi Zhou, Shanghang Zhang, Jieqi Peng, Shuai Zhang, Jianxin Li, Hui Xiong, and Wancai Zhang. 2021. Informer: Beyond efficient transformer for long se-quence time-series forecasting. In Proceedings of the AAAI conference on artificial intelligence , Vol. 35. 11106–11115. [45] Tian Zhou, Peisong Niu, Liang Sun, Rong Jin, et al . 2023. One fits all: Power general time series analysis by pretrained lm. Advances in neural information processing systems 36 (2023), 43322–43355. Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+A Detailed Dataset Descriptions 
+
+We evaluate Cast-R1 on a diverse collection of real-world time series datasets spanning energy economics, industrial monitoring, and renewable energy generation. The datasets are categorized into short-term electricity price forecasting (EPF) benchmarks and long-term time series forecasting (LTSF) benchmarks. 
+
+A.1 Short-term Electricity Price Forecasting 
+
+We utilize five widely adopted datasets from the electricity price forecasting benchmark established by Lago et al. [ 16 ]. These datasets represent different regional day-ahead markets, each with a sam-pling frequency of 1 hour. The task is to forecast day-ahead prices (24 steps) using historical observations and exogenous variables. 
+
+• NP (Nord Pool): Represents the Nordic electricity market. The dataset includes hourly electricity prices, along with ex-ogenous forecasts for grid load and wind power generation. 
+
+• PJM (Pennsylvania-New Jersey-Maryland): Sourced from the PJM Interconnection in the United States. It contains zonal electricity prices for the Commonwealth Edison (COMED) zone, alongside system-wide load forecasts and specific zonal load forecasts. 
+
+• BE (Belgium): Represents the Belgian electricity market. It includes hourly prices supplemented by national load fore-casts and generation forecasts from the neighboring French grid. 
+
+• FR (France): Represents the French electricity market. The dataset comprises hourly prices, grid load forecasts, and domestic generation forecasts. 
+
+• DE (Germany): Represents the German electricity market. It records hourly prices and includes exogenous forecasts for zonal load (Amprion TSO area), as well as wind and solar power generation. 
+
+A.2 Long-term Time Series Forecasting 
+
+For long-horizon forecasting tasks, we employ benchmarks that exhibit complex temporal dependencies and high volatility. 
+
+• ETT (Electricity Transformer Temperature): The ETT benchmark [ 44 ] consists of data collected from electricity transformers over two years. The target variable is the Oil Temperature (OT), which serves as a critical indicator of transformer safety. We use two variants: 
+
+– ETTh1: Sampled at a 1-hour frequency. It contains the target OT and six distinct power load features (HUFL, HULL, MUFL, MULL, LUFL, LULL). 
+
+– ETTm1: Sampled at a 15-minute frequency, containing the same set of load features but with higher temporal resolution, capturing more granular fluctuations. 
+
+• Wind: This dataset [ 17 ] represents renewable energy gener-ation from a wind farm. It contains the actual wind power output (target) and six meteorological covariates: Direct Ra-diation, Wind Direction (80m), Wind Speed (80m), Temper-ature (2m), Relative Humidity (2m), and Precipitation. The data is sampled at 15-minute intervals, presenting challenges related to high stochasticity and weather-dependency. 
+
+B Detailed Baseline Descriptions 
+
+We evaluate Cast-R1 against a diverse set of representative base-lines, ranging from classical statistical methods to state-of-the-art foundation models. 
+
+Statistical Methods. 
+
+• ARIMA [ 12 ]: A classic statistical method that models tempo-ral patterns using autoregression, differencing, and moving averages to capture linear dependencies. 
+
+• Prophet [ 28 ]: An additive regression model designed for business time series, which effectively decomposes data into trends, seasonality, and holiday effects. 
+
+Deep Learning Baselines. 
+
+• DLinear [40 ]: A simple yet effective MLP-based model that utilizes a decomposition layer to handle trend and seasonal components separately. 
+
+• PatchTST [ 23 ]: A Transformer-based model that introduces channel independence and patch-based tokenization to cap-ture local semantic information and reduce computational complexity. 
+
+• iTransformer [ 19 ]: An inverted Transformer architecture that embeds the whole time series of each variate as a to-ken and applies attention mechanisms across multivariate channels. 
+
+• TimeXer [ 30 ]: An advanced Transformer framework de-signed to effectively empower time series forecasting by incorporating and aligning exogenous variables. 
+
+• ConvTimeNet [ 9 ]: A deep hierarchical fully convolutional network that captures multi-scale temporal patterns through adaptive segmentation and deformable patching. 
+
+Foundation Models. 
+
+• Chronos-2 [ 1]: A probabilistic foundation model that treats time series forecasting as a language modeling task. It quan-tizes time series values into a fixed vocabulary and employs a group attention mechanism to enable zero-shot forecasting across univariate and multivariate settings. 
+
+• TimesFM [10 ]: A decoder-only foundation model developed by Google, pretrained on a massive corpus of over 100 billion real-world and synthetic time points. It utilizes a patch-based architecture to capture long-range temporal dependencies and enables accurate zero-shot forecasting across diverse domains. 
+
+LLM-based Methods. 
+
+• OFA (One Fits All) [ 45 ]: A generalized framework that leverages frozen pre-trained language models (e.g., GPT-2) for time series analysis. It adapts the LLM to forecasting tasks by fine-tuning only specific layers (such as positional embeddings and normalization layers) while keeping the self-attention and feedforward networks frozen. 
+
+• Time-LLM [ 14 ]: A comprehensive framework that aligns time series modalities with the text space of LLMs using reprogramming techniques and prompt-as-prefix strategies. 
+
+• TimeReasoner [8]: An approach that leverages the reason-ing capabilities of LLMs to infer temporal dynamics and causal relationships within the time series data. Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al. 
+
+Table 5: Summary of real-world time series datasets used in the experiments. The table details the domain, sampling frequency, variable dimensions, forecasting setting, and specific content of each dataset. Dataset Domain Freq. Task Vars. Description NP Energy 1 h Short-term Multivariate Nord Pool market prices with load and wind forecasts. 
+
+PJM Energy 1 h Short-term Multivariate PJM (ComEd) prices with system and zonal load forecasts. 
+
+BE Energy 1 h Short-term Multivariate Belgian market prices with load and generation forecasts. 
+
+FR Energy 1 h Short-term Multivariate French market prices with load and generation forecasts. 
+
+DE Energy 1 h Short-term Multivariate German market prices with load, wind, and solar forecasts. 
+
+ETTh1 Industrial 1 h Long-term Multivariate Transformer oil temperature and 6 power load load features. 
+
+ETTm1 Industrial 15 min Long-term Multivariate Transformer oil temperature and 6 power load features. 
+
+Wind Energy 15 min Long-term Multivariate Wind power generation and 6 meteorological features. 
+
+C Detailed Implementation Settings 
+
+In this section, we provide the comprehensive configuration details for reproducing our experiments, including the backbone model specifications, training hyperparameters for both the Supervised Fine-Tuning (SFT) and Reinforcement Learning (RL) stages, and the setup for baseline comparisons. 
+
+C.1 Model and Computational Environment 
+
+We utilize **Qwen3-1.7B** as the backbone foundation model for the Cast-R1 framework. The model is implemented using the PyTorch framework and the Hugging Face Transformers library. All experi-ments, including training and inference, are conducted on a single NVIDIA RTX 4090D GPU (24GB VRAM). To optimize memory effi-ciency during the RL stage, we employ gradient checkpointing and BF16 precision. 
+
+C.2 Training Protocol 
+
+Our training pipeline consists of two distinct phases: Supervised Fine-Tuning (SFT) and Multi-turn Reinforcement Learning via Group Relative Policy Optimization (GRPO). 
+
+Stage I: Supervised Fine-Tuning (SFT).. In this stage, we construct a lightweight, high-quality instruction tuning dataset comprising 200 curated samples. These samples demonstrate the optimal exe-cution path of the tool-augmented workflow, including correct tool invocation formats and reasoning traces. We fine-tune the back-bone model for 1 epoch using the AdamW optimizer to align the model with the agentic format. 
+
+Stage II: Reinforcement Learning (RL).. The RL stage is designed to optimize the long-horizon forecasting policy. We employ the GRPO algorithm, which stabilizes training by estimating baselines from group scores rather than a separate critic network. We set the group size 𝐺 = 8, meaning 8 trajectories are sampled for each input query to compute the relative advantage. The generation temperature is set to 1.0 to encourage diverse exploration during sampling. Table 6 summarizes the specific hyperparameters used in both stages. 
+
+Table 6: Hyperparameter settings for Cast-R1 training. Hyperparameter SFT Stage RL Stage (GRPO) 
+
+Base Model Qwen3-1.7B Precision BF16 Optimizer AdamW AdamW Learning Rate 1.0 × 10 −5 1.0 × 10 −6
+
+LR Scheduler Cosine Cosine Epochs 1 1Global Batch Size 16 64 Group Size ( 𝐺 ) - 8Max Prompt Length 4096 8192 Max Response Length 2048 4096 Temperature - 1.0 KL Coefficient ( 𝛽 ) - 0.04 Gradient Accumulation 1 4
+
+C.3 Baseline Implementation 
+
+For fair comparison, all deep learning baselines (e.g., iTransformer, PatchTST, TimeXer) are implemented using their official codebases. We train these models using the Adam optimizer with an initial learning rate of 10 −3 or 10 −4 as per their recommended configu-rations, utilizing early stopping with a patience of 3 to prevent overfitting. Input data is standardized using Z-score normalization (zero mean and unit variance) before feeding into the networks, and the outputs are denormalized back to the raw scale for evaluation. 
+
+C.4 Forecasting Task Configuration 
+
+We evaluate performance across two distinct forecasting settings. The input-output lengths are unified across all methods to ensure a fair benchmark: 
+
+• Short-term Forecasting (EPF): – Datasets: NP, PJM, BE, FR, DE. 
+
+– Look-back Window ( 𝐿 ): 168 hours (7 days). 
+
+– Prediction Horizon ( 𝐻 ): 24 hours (1 day). 
+
+• Long-term Forecasting (LTSF): – Datasets: ETTh1, ETTm1, Wind. 
+
+– Look-back Window ( 𝐿 ): 96 time steps. 
+
+– Prediction Horizon ( 𝐻 ): 96 time steps. Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Ours  ARIMA  Prophet  PatchTST 
+
+iTransformer  ConvTimeNet  DLinear  TimeXer 
+
+Chronos  TimesFM  TimeLLM  TimeReasoner 
+
+Figure 6: Visual comparison on a volatile snapshot. While statistical baselines (e.g., Prophet) yield smoothed patterns and deep learning models (e.g., iTransformer) suffer from phase lag, Cast-R1 accurately tracks abrupt structural shifts and complex seasonality, maintaining high fidelity to the ground truth. 
+
+C.5 Evaluation Metrics 
+
+To preserve the physical significance of the forecasting results, all metrics are calculated on the raw data scale (without normaliza-tion). We employ Mean Squared Error (MSE) and Mean Absolute Error (MAE) as the primary evaluation metrics: 
+
+MSE = 1
+
+𝐻 
+
+> 𝐻
+
+∑︁ 
+
+> 𝑖 =1
+
+(𝑦 𝑖 − ˆ𝑦 𝑖 )2, MAE = 1
+
+𝐻 
+
+> 𝐻
+
+∑︁ 
+
+> 𝑖 =1
+
+|𝑦 𝑖 − ˆ𝑦 𝑖 | (1) where 𝑦 𝑖 represents the ground truth value and ˆ𝑦 𝑖 represents the predicted value at step 𝑖 .
+
+D Memory Update and Management D.1 State Update and Prompt Assembly 
+
+Cast-R1 maintains a persistent memory to support sequential deci-sion making across multiple interaction turns. Rather than treating the prompt as a static container of all available information, the system explicitly separates memory storage from prompt construc-tion , and dynamically assembles the prompt based on the current task progress. The memory consists of two main components: 
+
+• Analysis History : structured outputs produced by feature extraction and diagnostic tools, including statistical sum-maries, structural indicators, and event-level abstractions. 
+
+• Prediction Results : intermediate forecasts generated by invoked forecasting models. These memory components are incrementally updated as the agent interacts with tools and forecasting models, and are reused across subsequent decision turns. At each decision turn, the system first determines the current forecasting stage based on the memory status, specifically whether feature analysis results and prediction results are already avail-able. According to this status, the system dynamically constructs a prompt by selectively injecting relevant memory contents and enforcing stage-specific action constraints. This design ensures that the agent receives sufficient contextual evidence for informed deci-sion making, while avoiding redundant or unnecessary information in the prompt. To control context length under long time series inputs, raw historical observations are progressively truncated as the work-flow advances. In early turns, full historical data are provided to support comprehensive feature analysis and diagnostics. In later Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al. 
+
+Table 7: Ablation study of reward function components on representative datasets. Variant ETTh1 ETTm1 Wind MSE MAE MSE MAE MSE MAE 
+
+w/o Length Pen. 6.10 1.93 3.98 1.38 1576 22.4 w/o Pred. Error 13.44 2.83 12.73 2.68 3147 32.3 w/o Trend/Seas. 8.45 2.35 6.68 1.61 1831 25.2 w/o Struct. Align. 7.85 2.03 5.98 1.48 1745 24.8 
+
+Cast-R1 (Full) 6.06 1.32 3.47 1.16 1331 16.1 Table 8: Ablation study of training strategies. We compare the full Cast-R1 (SFT+RL) against variants excluding the Re-inforcement Learning phase (w/o RL) or the Supervised Fine-Tuning phase (w/o SFT). Variant NP PJM ETTh ETTm MSE MAE MSE MAE MSE MAE MSE MAE                         
+
+> w/o RL 54.631 4.846 71.004 5.950 11.856 2.486 12.022 3.598 w/o SFT 26.343 3.418 28.742 4.012 6.478 2.168 5.014 1.481
+> Cast-R1 (Full) 24.750 3.255 26.905 3.877 6.062 1.320 3.465 1.160
+
+turns—especially during the final reflection and output stage—only a truncated window of recent observations is included, together with accumulated high-level summaries stored in memory. This strategy enables efficient context usage while preserving continuity and traceability across decision steps. 
+
+D.2 Stage-aware Prompt Construction 
+
+The prompt assembly in Cast-R1 follows a progress-aware strat-egy that dynamically adapts to the current decision stage of the forecasting process. 
+
+• Feature Extraction Stage (Turn 1). If no analysis history exists, the constructed prompt includes the full historical time series and explicit instructions restricting the admissible actions to feature extraction and diagnostic tools only. 
+
+• Prediction Stage (Turn 2). If analysis history is available but no prediction result has been generated, the prompt includes the historical data together with the accumulated analysis history, and restricts actions to forecasting model invocation. 
+
+• Reflection and Output Stage (Turn 3). If both analysis history and prediction results are available, the prompt in-cludes a truncated window of historical data, the analysis history, and the prediction results, and restricts actions to reasoning, refinement, and final output generation. This staged prompt construction implicitly defines a structured sequential decision process and regularizes the agent’s behavior by limiting the admissible action space at each interaction turn. 
+
+Table 9: Detailed ablation study on the curriculum learning strategy. Variant NP PJM ETTh ETTm MSE MAE MSE MAE MSE MAE MSE MAE                 
+
+> w/o Curriculum RL 34.474 4.102 29.164 4.004 8.764 2.012 5.143 1.443
+> Cast-R1 (Full) 24.750 3.255 26.905 3.877 6.062 1.320 3.465 1.160
+
+Table 10: Impact of backbone model scaling on forecasting performance. Backbone NP PJM ETTh ETTm MSE MAE MSE MAE MSE MAE MSE MAE                         
+
+> Qwen3-1.7B 33.195 4.536 31.887 5.178 10.684 1.512 8.137 1.572 Qwen3-4B 24.750 3.255 29.626 3.877 7.514 1.451 4.141 1.487
+> Qwen3-8B 22.512 3.007 26.905 3.745 6.062 1.320 3.465 1.160
+
+D.3 Visualization Analysis 
+
+To further assess the model’s adaptability to real-world non-stationarity, Figure 6 visualizes the forecasting results of Cast-R1 alongside rep-resentative baselines on a challenging time series segment charac-terized by high volatility and irregular structural shifts. As observed, the ground truth series presents a distinct daily seasonality superimposed with an abrupt downward spike around step 120-130, followed by a volatile recovery. Statistical methods 
+
+such as Prophet and ARIMA fail to capture these local dynamic changes, producing rigid periodic predictions that completely miss the sharp trough. Deep learning baselines , including PatchTST and iTransformer, capture the general trend but exhibit noticeable 
+
+phase lag and smoothing effects , failing to reach the true depth of the trough or the height of the subsequent peaks. Foundation and LLM-based models (e.g., Chronos, TimeLLM) show improved reactivity but suffer from signal noise and instability, leading to disjointed prediction curves. In contrast, Cast-R1 demonstrates superior alignment with the ground truth. It not only accurately captures the timing and magni-tude of the sudden drop but also preserves the fine-grained volatility during the recovery phase. This qualitative superiority validates that the agentic workflow—empowered by diagnostic reasoning and adaptive model selection—can effectively dynamically adjust its forecasting strategy to match the evolving data distribution, overcoming the "inertia" often seen in static, single-pass predictors. 
+
+E Detailed Experimental Results 
+
+In this section, we provide the comprehensive numerical results for the ablation studies discussed in the main text. While the main paper primarily visualizes the Mean Squared Error (MSE) trends via bar charts to highlight performance gaps, the tables below include both MSE and Mean Absolute Error (MAE) metrics. These detailed values further validate the robustness of Cast-R1 across different evaluation criteria. 
+
+E.1 Reward Function Analysis 
+
+Table 7 presents the detailed breakdown of the reward function ablation on representative datasets. Consistent with the analysis Cast-R1: Learning Tool-Augmented Sequential Decision Policies for Time Series Forecasting Conference acronym ’XX, June 03–05, 2018, Woodstock, NY 
+
+Table 11: Ablation study of specific feature extraction tools. We evaluate the impact of removing individual diagnostic tools from the agent’s toolkit. Variant ETTh1 NP MSE MAE MSE MAE                         
+
+> w/o Basic Stats 9.814 2.384 36.781 4.715 w/o Channel Dynamics 7.012 1.532 24.711 3.386 w/o Residual Diagnostics 6.543 1.341 23.774 3.335 w/o Data Quality 6.942 1.574 23.557 3.227 w/o Event Patterns 7.571 1.642 27.154 3.646
+> Cast-R1 (Full) 6.062 1.320 22.512 3.007
+
+in the main text, the removal of any individual reward compo-nent—whether it be the length penalty, prediction error term, or structural alignment—results in a degradation of performance. No-tably, the MAE metrics mirror the MSE trends, confirming that the composite reward design effectively guides the agent toward generating both accurate and structurally valid forecasts. 
+
+E.2 Training Strategy and Curriculum Learning 
+
+We further provide the exact numerical comparisons for the training strategies and curriculum learning mechanisms in Table 8 and Table 9, respectively. The results demonstrate that the full Cast-R1 (SFT+RL with Curriculum) consistently achieves the lowest errors across all datasets. Specifically, the MAE data corroborates the finding that removing the RL phase leads to the most significant performance drop, followed by the exclusion of SFT initialization. Similarly, the curriculum learning strategy is shown to be crucial for stability, with the MAE metrics reflecting the same positive impact observed in the MSE charts. 
+
+E.3 Model Scaling Results 
+
+Finally, Table 10 lists the detailed forecasting performance across different backbone sizes (1.7B, 4B, and 8B). The data reveals a clear monotonic improvement: as the model size increases, both MSE and MAE decrease significantly across all datasets. This quantitative evidence supports the conclusion that larger foundation models provide superior reasoning capabilities, which directly translate into more accurate time series forecasts. 
+
+E.4 Detailed Toolkit and Component Analysis 
+
+In addition to the high-level framework analysis, we conduct a granular ablation study to evaluate the contribution of specific tools and agentic components. Table 11, Table 12, and Table 13 detail the performance impact on representative short-term (NP) and long-term (ETTh1) benchmarks. 
+
+Feature Extraction Tools. Table 11 demonstrates that Basic Sta-tistics tools (e.g., MAD, mean) are the most critical for diagnostic reasoning, as their removal causes the largest error increase (MSE +63% on NP). This confirms that statistical context is fundamental for the agent to detect non-stationarity. 
+
+Table 12: Ablation study of specific forecasting model tools. This table shows the performance degradation when a spe-cific expert model is removed from the candidate pool. Variant ETTh1 NP MSE MAE MSE MAE 
+
+w/o ARIMA 6.614 1.413 24.788 3.334 w/o Chronos2 8.414 1.622 55.418 7.097 w/o PatchTST 14.261 3.014 37.191 4.277 w/o iTransformer 13.512 2.825 30.387 4.054 
+
+Cast-R1 (Full) 6.062 1.320 22.512 3.007 Table 13: Ablation study of agent cognitive components. "w/o Planning" denotes removing the chain-of-thought reasoning, and "w/o Refine" denotes removing the self-correction step. Variant ETTh1 NP MSE MAE MSE MAE 
+
+w/o Planning 18.184 3.914 38.540 5.549 w/o Refine 9.142 1.542 25.413 3.841 
+
+Cast-R1 (Full) 6.062 1.320 22.512 3.007 
+
+Model Prediction Tools. Table 12 reveals that while deep learning models like PatchTST and iTransformer are important, the founda-tion model Chronos2 plays a pivotal role in handling high volatility. Removing Chronos2 results in a drastic performance drop on the volatile NP dataset (MSE jumps from 22.5 to 55.4), highlighting its effectiveness in zero-shot regime adaptation. 
+
+Agent Components. Table 13 validates the agent’s cognitive work-flow. The Planning module is essential; without it, the agent de-grades to a random trial-and-error process, leading to the worst performance. The Refine mechanism also contributes significantly by smoothing artifacts and ensuring physical consistency, reducing MSE by approximately 3.1 on ETTh1. 
+
+E.5 Prompt Design and Agent Instructions 
+
+To effectively bridge the gap between the generalist capabilities of foundation models and the rigorous demands of professional time series forecasting, we design a structured, multi-turn prompt engineering framework that orchestrates the agent’s cognitive workflow, as detailed in Strategy Box 1. Unlike standard zero-shot prompting which often suffers from hallucination in complex rea-soning tasks, our protocol imposes a strict "Stop-and-Look" strategy that emulates the decision-making process of a human expert. The interaction begins with Role Conditioning and Context Prim-ing , where the agent is explicitly initialized with domain-specific knowledge regarding non-stationarity and market volatility, acti-vating its latent understanding of heavy-tailed distributions. We then enforce a rigorous three-stage interaction pipeline: First, a 
+
+Diagnostic Perception phase (Turn 1) mandates the exclusive use Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Xiaoyu Tao et al. 
+
+Agentic Forecasting Prompt 
+
+Role & Context: You are a specialized time series forecasting agent dedicated to Electricity Price Forecasting (EPF). The target data exhibits strong daily/weekly seasonality, high volatility, and frequent price spikes driven by market supply-demand dynamics. The environment is non-stationary and heavy-tailed, requiring adaptive strategies over short-to-medium horizons. 
+
+Turn 1 (Diagnostic Phase): Execute a “Stop-and-Look” strategy. You are strictly restricted to Feature Extraction tools to diagnose the current regime. 
+
+• extract_basic_statistics : Analyze distribution (median, MAD) and spectral features. 
+
+• extract_within_channel_dynamics : Detect changepoints, entropy, and slopes. 
+
+• extract_data_quality & event_summary : Identify saturation, dropouts, or specific segment patterns (e.g., Rise/Oscillation). 
+
+Constraint: Do NOT call prediction functions in this turn. 
+
+Turn 2 (Model Routing): Based on the “Analysis History” from Turn 1, dynamically select the optimal forecaster via 
+
+predict_time_series :
+
+• PatchTST: For local temporal patterns with long-range dependencies. 
+
+• iTransformer: When cross-channel dependency is dominant. 
+
+• ARIMA: For regimes with linear trends and stable seasonality. 
+
+• Chronos2: For handling irregular, noisy, or zero-shot scenarios. 
+
+Turn 3 (Refinement & Output): Synthesize the extracted features and model predictions. Engage in a reflective loop to refine unreasonable artifacts (e.g., negative prices or impossible spikes). 
+
+Critical Constraints: Adhere to a strict multi-turn protocol. The final response must contain ONLY the following tags with no surrounding text: 
+
+• <think> : Internal reflection on feature consistency and adjustments. 
+
+• <answer> : The final serialized timestamp-value pairs. 
+
+of feature extraction tools—such as statistical profiling and change-point detection—effectively decoupling the interpretation of data dynamics from the prediction task to ensure grounded reasoning. Second, the Adaptive Strategy Execution phase (Turn 2) lever-ages these diagnostic insights to dynamically route the forecasting task to the most appropriate expert model, for instance, dispatching stable linear trends to ARIMA while reserving complex, high-entropy regimes for the Chronos2 foundation model. Finally, a Reflection and Refinement loop (Turn 3) serves as a critical quality assurance mechanism, where the agent reviews the generated forecast against historical constraints to smooth out unrealistic artifacts (e.g., nega-tive prices or impossible spikes). To guarantee deployment stability and interpretability, the entire process is encapsulated within a rigorous XML-based output format, isolating the reasoning trace within <think> tags and the numerical output within <answer> 
+
+tags, thereby facilitating reliable automated parsing.

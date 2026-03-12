@@ -1,0 +1,585 @@
+Title: Homotopic information gain for sparse active target tracking
+
+URL Source: https://arxiv.org/pdf/2602.17926v1
+
+Published Time: Mon, 23 Feb 2026 01:15:19 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+> 1
+
+# Homotopic information gain for sparse active target tracking 
+
+Jennifer Wakulicz, Ki Myung Brian Lee, Teresa Vidal-Calleja, Robert Fitch 
+
+Abstract —The problem of planning sensing trajectories for a mobile robot to collect observations of a target and predict its future trajectory is known as active target tracking. Enabled by probabilistic motion models, one may solve this problem by exploring the belief space of all trajectory predictions given future sensing actions to maximise information gain. However, for multi-modal motion models the notion of information gain is often ill-defined. This paper proposes a planning approach designed around maximising information regarding the target’s homotopy class, or high-level motion. We introduce homotopic information gain, a measure of the expected high-level trajectory information given by a measurement. We show that homotopic information gain is a lower bound for metric or low-level information gain, and is as sparsely distributed in the environment as obstacles are. Planning sensing trajectories to maximise homotopic information results in highly accurate trajectory estimates with fewer mea-surements than a metric information approach, as supported by our empirical evaluation on real and simulated pedestrian data. 
+
+Index Terms —Informative path planning; Probability and Statistical Methods; Planning, Scheduling and Coordination; Motion and Path Planning 
+
+I. I NTRODUCTION 
+
+Active target tracking is the task of choosing informative sensing actions or policies regarding a time-evolving target of interest such that an estimate of its state can be accurately maintained [1–3]. When the state under estimation is the target’s full trajectory, active target tracking has important applications in robotics problems such as surveillance, search and rescue and human-robot or multi-robot coordination. Solving the active target tracking problem requires ad-dressing two challenges: trajectory prediction – to predict where the target likely will be in the future, and information gathering – to decide at which location and time to observe the target to maximise understanding of its trajectory. Trajectory prediction models are well studied, capturing a broad range of dynamics from linear with unknown components [4], to more general non-linear dynamics [5, 6], even incorporating contextual constraints into learned models [7–9]. Yet, from the sensing robot’s perspective, no matter how accurate a motion model is, the target’s future trajectory is still stochastic in nature. Planning where to visit to observe the target is therefore 
+
+Jennifer Wakulicz is with the Australian Centre for Robotics, School of Aerospace, Mechanical and Mechatronic Engineering, University of Sydney, Camperdown, 2006, NSW, Australia (email: jennifer.wakulicz@sydney.edu.au). Ki Myung Brian Lee is with the Department of Electrical and Computer Engineering, UC San Diego, 9500 Gilman Drive, La Jolla, CA 92093-0411, USA (email: kmblee@ucsd.edu). Robert Fitch and Teresa Vidal-Calleja are with the School of Mechanical and Mechatronics Engineering, University of Technology Sydney, Ultimo, 2007, NSW, Australia (email: {rfitch, Teresa.Vidal-Calleja }@uts.edu.au). 
+
+Fig. 1: Heatmaps showing visitation frequency at sensing locations for the active target tracking problem on the ATC dataset. A conventional tracking approach (left) is compared to the sparse homotopic approach proposed in this paper (right). With our proposed approach, the sensing robot is only concerned with how a target manoeuvres around obstacles, reducing planning and sensing resources while still producing accurate estimates of the target trajectory. a problem marred with uncertainty. If the predictive motion model provides trajectory estimates represented as probability distributions, referred to as beliefs, the sensing robot can reason under this uncertainty directly by planning in the space of possible future outcomes, known as the belief space. To plan informative sensing trajectories in belief space the robot must search for sensing actions that lead to beliefs of minimal uncertainty. However, exploring belief spaces is noto-riously challenging. They are of high dimension and transitions between beliefs given sensing actions are stochastic [10]. The value of a sensing action can therefore typically only be esti-mated by estimating the expected information gain it provides. This requires evaluating information-theoretic cost functions that can be computationally expensive or even intractable. For example, multi-modal or multi-expert beliefs such as those in [6, 8, 9], while producing more accurate predictions than their single-mode counterparts, often have no analytic form for information gain. For multi-modal beliefs modeled by Gaussian mixture models (GMMs), approximations and upper bounds for information gain have been derived [11, 12]. How-ever, these approximations often require pairwise calculations between components, becoming cumbersome to evaluate for large models. In this paper we propose to solve the active target track-ing problem in the high-level belief space admitted by the hierarchical GMM developed in [9]. Here the authors present a model that predicts the homotopy class of a given agent’s trajectory. The homotopy class of a trajectory captures its high-level motion, i.e., whether it turns left or right at an obstacle. The probabilistic homotopy prediction, which we refer to as a homotopic belief, is then fed to a GMM to produce low-
+
+> arXiv:2602.17926v1 [cs.RO] 20 Feb 2026 2
+
+level trajectory predictions. Thus, we propose to plan sensing trajectories in the space of homotopic beliefs. As the homotopy class of a trajectory is a discrete random variable with a countable set of outcomes, the associated belief space is discrete and low-dimensional. Moreover, since the homotopy class of a target is determined by how it manoeuvres around obstacles, information in the homotopic belief space is as sparsely distributed as obstacles are. We show that planning over this sparse, discrete latent belief space therefore allows for efficient active target tracking. Furthermore, we derive a connection between homotopic information gain and metric information gain guaranteeing that planning in the homotopic belief space provides high-quality metric or low-level information, maintaining accurate trajectory estimates despite the computational advantage. Our sparse and accurate active target tracking approach thus opens exciting avenues for overcoming resource constraints in multi-target or multi-task problems. The contributions of this paper are summarised as follows.  
+
+> •
+
+The proposal and construction of homotopic information gain as a metric for planning informative sensing trajec-tories for active target tracking.  
+
+> •
+
+Theoretical analysis demonstrating homotopic informa-tion gain is a lower bound for metric information gain.  
+
+> •
+
+An online planning framework for solving the active target tracking problem using our proposed homotopic information gain.  
+
+> •
+
+Evaluation and testing of the proposed information gain and planning framework on simulated and real pedestrian datasets with varying complexity. Moreover, code will be open-sourced. II. R ELATED WORK 
+
+A. Homotopy classes in robotics 
+
+In robotics, it is often useful to classify a mobile agent’s motion into high-level categories. For example, a description of an external agent turning left or right around an obstacle can be enough information for an autonomous robot to plan a non-colliding path. In topology, the homotopy class of an agent’s path captures precisely this information. Two paths τ1, τ2 in a topological space D with common start and ending points belong to the same homotopy class if there exists a continuous transformation or deformation from one to the other [13]. For example, paths τ1 and τ2 in Fig. 2 are homotopic – there is a continuous transformation between them illustrated with dotted paths. However, τ1 and τ2 are not homotopic to τ3
+
+as any deformation requires moving through the obstacle O
+
+and breaking continuity. Obstacles therefore induce non-trivial homotopy classes, and split the possible ways an agent can move through an environment into abstract motion classes. To illustrate this, in Fig. 2a the obstacle O induces homotopy classes of trajectories that move ‘above’, ‘below’, and wind around the obstacle. Such abstraction of the high-level motions available to an agent is a powerful tool for navigation, planning and prediction tasks often encountered in robotics. Homotopy classes provide the ability to reason over a diverse set of paths when performing robotic path planning. Maintaining diversity in path planning can be beneficial in dynamic applications, allowing the robot to switch between paths rather than re-plan new ones when mission definitions are changed. This becomes particularly useful when path planning for autonomous navigation in environments where other dynamic agents are present. In [14, 15], an optimal tra-jectory from each homotopy class is maintained online to plan fast and decisive collision-free navigation through dynamic spaces. Alternatively, with knowledge of the diverse set of options, one can constrain the planning problem to a specific homotopy class or exclude specific classes. For example, in [16] a homotopy-aware A* variant is developed, allowing one to find the optimal path for any chosen homotopy class through discretised space. Similar homotopy-aware extensions of classical sampling-based planners PRM and RRT have also been developed to this end in [17–19]. Abstracting trajectories into high-level motions lends itself naturally to trajectory prediction, a task relevant to robotics problems such as navigation, search and rescue and human-robot interaction. Predictive models that provide multiple predictions of an agent’s future path with varying likelihoods such as [6, 8] capture the multi-modal nature of an agent’s possible future paths, showing greater prediction accuracy over single-mode approaches [20–22]. Homotopy classes provide a natural language to describe the multi-modal nature of an agent’s future trajectories. In [23, 24], a homotopy-informed clustering method is developed to identify high-level motion primitives through environments, represented as vector flow fields that are then used for prediction. In [9] a homotopic GMM is proposed, where each GMM component represents a homotopy class in the training data and weights are fused with homotopic predictions for improved pedestrian prediction. 
+
+B. Informative path planning for active target tracking 
+
+Active target tracking utilises predictive motion models to plan sensing trajectories that improve a robot’s estimate of the target’s location or trajectory. Where state estimates are for-mulated and maintained probabilistically, approaches to active target tracking commonly involve planning in belief space. Probabilistic estimates are referred to as beliefs, giving not just the state estimate but also the uncertainty in the estimate. Then, rather than planning sensing actions in physical space, one can plan to ‘visit’ beliefs with minimal uncertainty. For targets whose motion models can be sufficiently de-scribed by linear dynamics with additive Gaussian noise, a Kalman filter provides the tools required for belief space planning. Here, the belief space is Gaussian – all estimates are Gaussian distributions, defined solely by the most likely state estimate and the corresponding covariance given a sensing location. To predict a belief at a future sensing location, the Kalman update equations are readily available. The ease of navigating Gaussian belief spaces make Gaussian and most-likely estimate assumptions widely popular in active target tracking literature [25–31]. Recovering Gaussian belief space planning in scenarios with non-linear target and sensing dy-namics is made possible via the extended Kalman filter as in [32–34]. In cases where noise is also non-Gaussian, beliefs can instead be approximated via sampling using particle filters [35–37]. 3       
+
+> (a) Paths of equal ( τ1,τ2)and differing ( τ3) homotopy classes.
+> (b) Construction of h(γ) = (1 ,2,−2) by following γas it crosses rays emanating from obstacles.
+
+Fig. 2: Illustrations of homotopy classes and h-signature calculation. [9] Multi-modal or multi-hypothesis models improve the accu-racy of trajectory prediction and are thus powerful tools for active target tracking. However, they can be overwhelming in belief space planning scenarios. With each measurement and belief update, the number of possible motion hypotheses grows. There has been plentiful work on addressing this combinatorial expansion for beliefs represented by GMMs, involving merging or pruning components at each fusion step [38–42]. Simplistic solutions fix the number of possible motion hypotheses to a constant number. Then, a component-wise belief update can be performed via standard Gaussian conditioning as in [9, 20]. With manageable multi-hypothesis belief spaces, optimal sensing trajectories for active target tracking can be posed as those that maximally reduce the expected uncertainty or en-tropy in the resulting belief, as in single-hypothesis cases [28, 43]. However, for multi-hypothesis beliefs such as GMMs, the notion of entropy is not analytically defined [44] and so approximations must be made. There are many proposed ap-proximations [12, 45]. In [12], for example, bounds for mixture entropy are given via calculation of pairwise distances between components. Still, for large GMMs with many components a pairwise calculation can become computationally expensive. In this paper, we instead propose to plan sensing trajectories that reduce the expected homotopic uncertainty to hone in on a single, true hypothesis of a pedestrian whose trajectory is modeled by the homotopic GMM proposed in [9]. III. B ACKGROUND AND PROBLEM FORMULATION 
+
+A. The h-signature as a homotopy invariant 
+
+Homotopy invariants are signatures of paths that remain unchanged for any path within the same homotopy class. That is, for two paths τ1 and τ2, the homotopy invariants h(τ1),
+
+h(τ2) of each path are equal if and only if τ1 and τ2 are homo-topic. Such invariants are useful in robotics, as they avoid the requirement to check for existence of continuous transforms between paths. A commonly used homotopy invariant is the h-signature [13] for the ease of its calculation. The h-signature can be thought of as a ‘word’ constructed by following the path across obstacles. First, rays are drawn from a point within each obstacle to the boundary of the environment, ensuring no rays intersect one another. Each ray is given an arbitrary but unique ‘letter’ n, in this paper we choose letters corresponding to the enumeration of the obstacles. Then, by tracing a given path the word may be constructed, appending the letter ‘ n’ of a ray if the path crosses from left to right, and ‘ −n’ if the path crosses from right to left. For example, in Fig. 2b, the path γ crosses the first ray from left to right, then the second, before crossing the second ray again from right to left. The h-signature of γ is therefore ‘ (+1 , +2 , −2) ’. This can be further reduced by canceling adjacent identical letters with opposite sign, i.e. the reduced h-signature of γ is simply (+1) .The simple computation of h-signatures allows one to uniquely identify the high-level motion or homotopy class of any trajectories sharing common start and end points. How-ever, in robotics we must often reason with trajectories with varying endpoints. To overcome this limitation, the quotient map of a space is often taken, as in [23, 46]. The quotient map takes all boundary points of an environment to a common quotient point while preserving the topology of the space. Thus, any trajectories starting and ending on the boundary of the environment effectively begin and end on the quotient point and can be compared homotopy-wise with h-signatures. Here, paths transform into ‘loops’ beginning and ending at the quotient point, and the homotopy class captures the obstacles enclosed in the loop and the way in which the loop winds around them. 
+
+B. The homotopic belief space 
+
+In [9], the partial h-signature ρ is introduced to capture the high-level motion of an incomplete trajectory. It is calculated following the same process described in Section III-A, only on partially completed trajectories rather than full ones. As partial trajectories do not end on the quotient point, they are not true homotopy invariants, and are only used as a predictor for the full h-signature of a path. Furthermore, in an online context the partial h-signature cannot be directly observed but must instead be inferred from a sequence of measurements of the partially completed trajectory. The partial and full h-signatures are therefore treated as random variables. With an inferred partial h-signature, a probability dis-tribution over the possible future full h-signatures can be constructed using a probabilistic sequence completion frame-work such as a Variable Order Markov Process (VOMP). In particular, the conditional probability of a particular outcome 
+
+h∗ is given by 
+
+p(h = h∗ | ρ) = p(h∗)
+
+P 
+
+> h′∈H (ρ)\h∗
+
+p(h′) , (1) where H(ρ) is the set of full h-signatures compatible with 
+
+ρ and p(h∗), p(h′) are given by the VOMP. For a given partial h-signature ρ, compatible full h-signatures are those whose prefix is ρ, i.e., H(ρ) = {h | ∃ ρ′, h = ρρ ′}. We restrict the notion of compatibility to apply only to unreduced 
+
+h-signatures. Otherwise the process of reduction may be exploited to render all h-signatures compatible with a partial one. To improve computation time and prevent hallucination of the VOMP, we diverge from the methodology in [9] and further restrict H(ρ) to the set of h-signatures observed in the training data following the assumption that no out-of-distribution trajectories are present in the test set. Since p(h | ρ) is a probabilistic estimate of the homotopy class of a target’s trajectory, we henceforth refer to this distribution as the homotopic belief . In this paper we propose 4
+
+planning over the homotopic belief space to solve the active target tracking problem, formalised in the next section. 
+
+C. Problem formulation 
+
+Consider an agent traversing through a 2D environment D
+
+containing n obstacles O = {O 1, . . . , On}. The agent’s path 
+
+Y is a sequence of positions yt ∈ R2 at a sequence of time steps t ∈ [0 , T − 1] . That is, Y = {y0, . . . yT −1}. We assume that the agent begins and ends its path on the boundary δD of the environment. A mobile sensing robot with state xt ∈ R2 at time t is tasked with locating and measuring the agent’s state to build an accurate estimate of its full trajectory Y, both elapsed and future. The robot takes noisy measurements zt of the agent at time t following the sensor observation model 
+
+zt = yt + vt(xt), (2) where vt(xt) ∼ N (0, R(xt)) is additive measurement noise. To aid in reconstruction and prediction of Y, a dataset of K
+
+historical, fully observed trajectories Y = {Y1
+
+> obs
+
+, . . . , YK
+
+> obs
+
+} is assumed to be available for learning of a predictive motion model, as is full knowledge of obstacle locations. To study and compare homotopy classes of the historical trajectories, we must assume them to begin and end on boundary locations. More formally, the sensing robot is tasked with the follow-ing information gathering problem. 
+
+Problem 1. Given a planning horizon τ < ∞ and an initial belief over Y, choose a sequence of sensing locations σ =
+
+{x1, . . . , xτ } for the robot that maximises the information gain of the agent’s trajectory Y given the measurement set, or 
+
+σ∗ = arg max   
+
+> σ∈X τ
+
+I(Y; z1: τ | σ) (3) 
+
+where z1: τ = {z1, . . . , zτ } is the set of measurements taken up to time τ , and X τ is the set of all possible sensing sequences. 
+
+IV. H OMOTOPIC INFORMATION GAIN FOR ACTIVE TARGET TRACKING 
+
+Solving Problem 1 requires calculating the expected in-formation gain at future sensing locations. This is typically captured by calculating the Kullback-Liebler (KL) divergence between the trajectory belief before and after measurement, that is, between the prior and posterior probability distributions estimating the trajectory. The trajectory belief can be modeled and maintained by any probabilistic model. 
+
+A. Gaussian mixture models for trajectory belief modelling 
+
+To model low-level trajectories we adopt the homotopic GMM proposed in [9], where each Gaussian component models the motion of a unique homotopy class. The homotopic GMM gives probability distribution p(Y | h) over the full trajectory Y = {y0, . . . , yT −1} given h. To train the model training trajectories from historical dataset Y are clustered by 
+
+h-signature h′. Then, a Gaussian is fit to each cluster giving the following GMM 
+
+p(Y | h) = X
+
+> h′
+
+wh′
+
+N (μh′
+
+, Σh′
+
+), (4) where wh′
+
+, μh′
+
+∈ R2T and Σh′
+
+∈ R2T ×2T are the weight, mean vector and covariance respectively of homotopy class 
+
+h′. For cases where there is multi-modal low-level behaviour within one homotopy class (exemplified in Fig. 4f), NC
+
+components can be fit. This further increases the concentration of covering Gaussians, better constraining each Gaussian to a homotopy class. Where NC̸ = 0 , the above sum becomes a double sum over both h and c ∈ { 1, . . . , N C }.The GMM can be used to derive a probabilistic prediction of the trajectory given the measurements z1: t and corresponding partial h-signature ρt. As in [9], we treat the partial h-signature as a random variable conditionally independent of Y given the full h-signature h. Then, we can easily condition Eq. (4) on the partial h-signature as a weighted sum 
+
+p(Y | ρt) = X
+
+> h′∈H (ρt)
+
+p(Y | h′)p(h′ | ρt). (5) This amounts to simply scaling the weights of the GMM by the homotopic belief p(h | ρt) maintained by the VOMP. Then, to condition on the observed low-level measurements z1: t we use standard Gaussian conditioning [47, Section 8.1.3] to find the posterior mean ˆμ and covariance ˆΣ of each component, giving the posterior GMM 
+
+p(Y | ρt, z1: t) = X
+
+> h′∈H (ρt)
+
+ˆwh′
+
+N ( ˆ μh′
+
+, ˆΣh′
+
+), (6) with conditional weights 
+
+ˆwh′
+
+∝ wh′
+
+p(h′ | ρt)N (μh′
+
+, Σh′
+
++ σ2 
+
+> Z
+
+I), (7) followed by re-normalisation. With the homotopic GMM model in place the expected information gain given a sensing location can be used to plan sensing trajectories. However, there is no analytic form for information gain where the belief is represented by a GMM [44]. Approximations and upper bounds for these information gain measures exist [12, 45], requiring pairwise calculations between GMM components. For large search spaces and GMMs, the required computation time for these approximations can therefore prohibit solving Problem 1 in a feasible time. Rather than facing this challenge, we propose to instead plan over the homotopic belief space to maximise 
+
+homotopic information gain. 
+
+B. Homotopic information gain 
+
+We formulate and solve the active target tracking problem by planning sensing actions that capture homotopic informa-tion. That is, we propose the following problem. 
+
+Problem 2. Given a planning horizon τ < ∞ and an initial belief h over the h-signature of a trajectory Y, choose a sequence of sensing locations σ = {x1, . . . , xτ } for the sensing robot that maximises the information gain of the agent’s homotopy glass h given the measurement set, or 
+
+σ∗ = arg max   
+
+> σ∈X τ
+
+I(h; ρτ , z1: τ | σ) (8) 
+
+where z1: τ = {z1, . . . , zτ } is the set of measurements taken up to time τ , ρτ is the partial h-signature inferred from the measurement set, and X τ is the set of all possible sensing sequences. 5
+
+By solving Problem 2 rather than Problem 1, we aim to plan sensing trajectories that reduce uncertainty not in the target’s low-level trajectory, but in its more abstract high-level motion. This encodes some real-world intuition into our sensing policies: to track a target through a cluttered environment one might wait at a location where the target must make a high-level decision such as whether to move left or right around an obstacle. The information about a random variable gained from a measurement is captured by the KL divergence between the belief of the random variable before and after the measurement is taken. Here, the belief of the homotopy class of a path only changes when a measurement is taken that changes the inferred partial h-signature, that is, when a ray crossing is observed. The current partial h-signature can be inferred directly by tracing a rough path constructed from the measurement set. However, if measurements are very sparse, this can lead to inaccurate partial h-signatures. For a more rigorous approach, the homotopic belief bt at time t can be marginalised over possible partial h-signatures given the measurement set up to time t, that is, bt = P 
+
+> c
+
+p(ρt | c)p(h | ρt), where p(ρt | c) is the weight of the posterior Gaussian component c from which 
+
+ρt is extracted (Eq. (7)). With the partial h-signature inferred, the homotopic infor-mation gain is then the KL divergence between the current homotopic belief bt and the new homotopic belief bt+1 .
+
+DKL (bt, b t+1 ) = X
+
+> h′∈H (ρt+1 )
+
+p(h′ | ρt) log 
+
+ p(h′ | ρt)
+
+p(h′ | ρt+1 )
+
+
+
+.
+
+(9) Realistically, the future partial h-signature inferred from the measurement set z1: t+1 at a future time t + 1 given future sensing location xt+1 is not known due to sensing and modeling uncertainty. We must therefore calculate the expected information gain given a sensing location, that is, 
+
+I(h; ρt+1 , z1: t+1 | x1: t+1 ), as in Problem 2. More explicitly, we take the expectation of Eq. (9) over the possible future partial h-signatures ρt+1 and beliefs obtained from observing ray crossing ρt → ρt+1 ,
+
+I(h; ρt+1 , z1: t+1 | x1: t+1 ) = Eρt+1 [DKL (bt, b t+1 )] . (10) The expectation breaks down as follows, 
+
+Eρt+1 [DKL (bt, b t+1 )] = 
+
+X
+
+> c
+
+X
+
+> ρt+1
+
+p(c)p(ρt+1 | c)p(d | xt, c )DKL 
+
+ bt, b t+1 
+
+, (11) where p(ρt+1 | c) is the probability of ray crossing ρt → ρt+1 
+
+occurring at time t given a GMM component c, p(d | xt, c )
+
+is the probability of detecting the target at sensing location xt
+
+given c and p(c) is the weight of the component. The probability of a ray crossing ρt → ρt+1 occurring at time t given a GMM component c is found by evaluating the cumulative distribution function of the component density on either side of the appropriate ray at times t and t + 1 . The probability of detecting the target given the sensing location is modelled with a Bernoulli random field, where at each sensing location xt+1 the probability of detection is modelled by a Bernoulli random variable d.To model the success parameter of the Bernoulli distribution we introduce a probabilistic detection model that decays exponentially as the distance between the robot and the target increases, 
+
+p(d | xt+1 , yt+1 ) = A exp 
+
+
+
+− ∥xt+1 − yt+1 ∥2
+
+2r2
+
+
+
+, (12) where r is the sensing radius of the robot and A controls the peak of the model. However, since the target’s future state 
+
+yt+1 is unknown, marginalisation using the GMM is required to obtain a tractable result. The success parameter γc(xt+1 ) = 
+
+p(d = True | xt+1 , c ) is then for each GMM component c,
+
+γc(xt+1 ) = β exp 
+
+
+
+− 12 Θct+1 
+
+> T
+
+(r2I + Σ ct+1 )−1Θct+1 
+
+
+
+, (13) where μt+1 , Σct+1 are the mean and covariance of the GMM component c at t + 1 , Θct+1 = xt − μct+1 , and β = A ·
+
+(det(Σ cr−2 + I)) −1/2 is a normalisation factor. 
+
+C. Complexity analysis 
+
+Notably, the homotopic information gain is constructed from discrete sums and tractable cumulative distribution functions. At worst, the set Hρt+1 of full h-signatures compatible with a partial h-signature ρt+1 is the set of all possible h-signatures in the data. Then, the worst-case complexity of the homotopic information gain is O(M H 2), where M is the number of GMM components and H is the number of unique full h-signatures present in the training data. However, typically 
+
+Hρt+1 is a subset of all possible h-signatures and complexity is lower. 
+
+D. Theoretical analysis 
+
+As seen in Eq. (10), the sensing robot does not take measurements of the target’s partial h-signature ρt directly, but rather of the target’s position yt. Although one may consider sensor and filter designs that enable minimalist sensing of ρt
+
+and corresponding expected information gains directly (see for example [48, 49]), we wish to maintain measurements of position to help inform our overall estimate of the target’s trajectory Y. We merely plan over the homotopic belief space as a computationally sparse proxy for collecting information regarding Y. A natural question is then how much information in Y is collected when planning sensing policies to maximise information in h.One may expect that active target tracking using the ho-motopic information gain will prioritise high-level motion information only, ignoring the low-level information typically important for improving estimates of Y. However, the fol-lowing theorem establishes that when using the homotopic GMM in Eq. (4) to model and predict trajectories, maximising homotopic information gain simultaneously maximises low-level information gain in the original Problem 1. 
+
+Theorem 1. Homotopic information gain is a lower bound for low-level, metric information gain. That is, 
+
+I(h; ρt, z1: t | xt) ≤ I (Y; ρt, z1: t | xt), (14) 6
+
+where I(Y; ρt, z1: t) is the expected low-level information gained from measurements z1: t and partial h-signature ρt
+
+regarding the full trajectory Y .
+
+This statement follows from recognising that the h-signature is a function of the full trajectory Y. Then, an application of the data processing inequality [50] gives the result. Intuitively, this result reflects the fact that no pre-processing of raw data can ever increase information gain under any circumstances. We note that the above bound applies only when using the homotopic GMM to model Y, such that relevant topological information such as partial h-signature, obstacle numbers and locations are inherently present in the low-level model used to calculate metric information gain. V. P LANNING FRAMEWORK 
+
+With an understanding of the construction and nature of homotopic information gain, we now propose a framework for solving Problem 2. 
+
+A. Active target tracking as an orienteering problem 
+
+Due to the dynamic nature of the target, the information gain in Eq. (10) is also dynamic. At a given sensing location, the information gain is only high for the period of time that the target is likely to be observed there. We therefore formulate the active target tracking problem as an orienteering problem with time windows (OPTW) [51]. This formulation introduces flexibility in the time frame in which the sensing robot can visit a sensing location, allowing for small uncertainty in the target’s time-of-arrival at a sensing location to be handled. A solution to the OPTW problem selects locations to visit within pre-defined time windows and an order to visit them in such that time constraints are satisfied and the expected reward is maximised. To define the locations, time windows and reward of the OPTW, we compute the expected information gain at discrete sensing locations placed on a uniform grid for all times from the current to the final T = 100 in 1s intervals. A heatcube constructed with the homotopic information gain in Eq. (10) for the ATC dataset is depicted in Fig. 3a. The homotopic information gain is sparsely distributed in space and time – it is highest around the first obstacle during the time window that the target is likely to move past this obstacle. We further threshold the heatcube to keep only the highest values. For example, in Fig. 3b the heatcube is thresholded at 
+
+0.7 leaving only three sensing locations that persist along the time axis. The location of these remaining features together with the time windows during which they exist define the OPTW to be solved at each planning step. Heatcubes and OPTW definitions for other information gain metrics can be constructed in the same manner. The time complexity of construction is O(Tp ∗ S ∗ X) where X is the time complexity of the information gain calculation, S is the number of discrete sensing locations, and Tp is the remaining planning horizon. We construct and explore a search tree over possible paths to find a solution to the OPTW defined by an information gain heatcube. To this end, we initialise the root node of the tree as the robot’s initial state x0. Then, we simultaneously expand and explore the search tree for informative paths using a Monte Carlo Tree Search (MCTS) algorithm (Algorithm 1). MCTS 
+
+Algorithm 1 Monte Carlo Tree Search 
+
+Inputs: Root node v0, κ > 0. 
+
+> 1:
+
+while termination condition not met do  
+
+> 2:
+
+vl = SELECTION (v0) ▷ Eq. (15)  
+
+> 3:
+
+v∗ = EXPANSION (vl) 
+
+> 4:
+
+R = ROLLOUT (v∗) 
+
+> 5: BACKPROPAGATION
+
+(R) 
+
+> 6:
+
+return maximum expected reward child of v0 
+
+> (a) Full heatcube. (b) Thresholded heatcube.
+
+Fig. 3: Heatcubes of homotopic information gain at different sensing locations and times ( z-axis). Red line shows the test trajectory travelling upwards in time. efficiently explores the search tree by prioritising expansion of nodes according to their promise. With each iteration of the algorithm, a node is selected and expanded by adding a child node to the tree. A child node is added to the tree only if the sensing robot can travel from the parent node to the child before its associated time window closes. At each node v, the sensing location xt and the planned time of visit t are stored. The expected information gain or reward of the newly added node is estimated via a simulation or roll-out of a possible future sensing trajectory. The expected information gain R is then back-propagated and used in future iterations to calculate the promise of nodes for expansion. The notion of promise is captured by the upper confidence bound for trees (UCT) policy [52]. That is, a child node v′
+
+of parent node v is selected for expansion if it maximises the UCT, 
+
+UCT( v′) = R(v′)
+
+N (v′)
+
+| {z } 
+
+> exploitation
+
++κ
+
+s
+
+2 ln N (v)
+
+N (v′)
+
+| {z }
+
+> exploration
+
+, (15) where N (v) is the number of times the parent node has been visited, R(v′) is the cumulative reward and κ > 0 is a constant that dictates how much exploration is allowed. In the context of this active tracking problem, the cumulative reward is the sum of expected information gain over the planning horizon, precomputed in the construction of the heatcube. The sum of information gain along a trajectory calculated with a fixed belief overestimates the true information gain. However, since all roll-outs suffer overestimation and only the next sensing location is taken from the MCTS solution before replanning, the final information gained approximates the objective function well. Nevertheless, expansion is guided by balancing selection of nodes with high expected information 7
+
+gain and nodes that have not been visited often or at all (a node with N (v′) = 0 has infinite UCT). After a user-defined number of roll-outs to the end of the remaining planning horizon, the estimated maximally infor-mative next action is taken and a measurement is acquired. Then, the belief is updated and re-planning over an updated heatcube to solve a new OPTW is performed until the target trajectory terminates. 
+
+B. Online belief updates 
+
+Here we specify how the homotopic GMM is updated with online measurements. By introducing a sensing robot we introduce an added uncertainty: whether or not the target will be detected at xt and a measurement will be received. To adjust the belief updates accordingly, we scale the weights by the probability of detection in Eq. (13). That is, when the target is detected at xt, weights are updated as 
+
+ˆwh′
+
+∝ γh′
+
+(xt)wh′
+
+P (h | ρt)N (μh′
+
+, Σh′
+
++ σ2 
+
+> Z
+
+I), (16) where the hat ˆ(·) indicates a posterior quantity, p(h′ | ρt) is given by the homotopic belief and σZ is measurement noise variance, and when a target is not detected at a sensing location 
+
+xt,
+
+ˆwh′
+
+∝ (1 − γh′
+
+(xt)) wh′
+
+P (h′ | ρt)N (μh′
+
+, Σh′
+
+). (17) VI. E VALUATION OF HOMOTOPIC INFORMATION GAIN FOR ACTIVE TARGET TRACKING 
+
+We compare our proposed approach to a conventional infor-mation gathering approach, which aims to maximise the metric 
+
+or low-level information gain provided by measurements by maximising conditional entropy of the posterior GMM. We implement a naive measure of low-level information gain to avoid the overhead associated with the aforemen-tioned pairwise distance estimates of entropy [12]. That is, we implement the weighted sum of conditional entropies of each Gaussian in the measurement GMM scaled by the probability of detection at xt. The metric information gain used is therefore 
+
+I(yt; zt) = p(d | xt) · X
+
+> h
+
+ˆwht log det 
+
+ ˆΣht + Rh(xt)
+
+
+
+, (18) where Rh(xt) is the measurement noise covariance, modelled as a function of the distance between xt and the mean of component h. This simplification reduces the computational complexity of evaluating the metric information gain at a single location from O(M 2N 3) to O(M N 3), where M is the number of GMM components and N = 2 T is the size of Σt.Since many locations must be considered for many time steps during planning, this is a significant reduction, particularly when the GMM has many components. For each method three metrics are evaluated for comparison. First we consider the displacement error at each timestep, DE (t). This measures the average distance between the ground truth trajectory and the highest-weighted mean of the final posterior GMM after the active target tracking mission is complete. This is defined as DE (t) = || xt − ˆμc∗ 
+
+> t
+
+|| , (19)                 
+
+> Dataset Simulated TH ¨ OR ATC
+> O3456735
+> H46711 12 613
+
+TABLE I: The number of obstacles O and homotopy classes 
+
+H present in each dataset used for evaluation. where c∗ denotes the index of the component with the highest weight. To perform further evaluation we introduce a homotopic GMM conditioned on the full test trajectory, referred to as the ground truth GMM. Then, we evaluate the Kullback-Leibler divergence (KLD) between the weights of the ground truth GMM, ˆw(c,h ) 
+
+> T
+
+, and the weights of the partial posterior GMM ˆw(c,h )obs after each measurement is taken. This quantifies the high-level information gain of each approach on a per-measurement basis. KLD = X
+
+> c,h
+
+ˆw(c,h ) 
+
+> T
+
+(log ˆ w(c,h ) 
+
+> T
+
+− log ˆ w(c,h )obs ). (20) Finally, we study the low-level information gain per mea-surement by evaluating the mutual information between the ground truth GMM and the partial posterior GMM post measurement. To do so, we evaluate the variational upper bound on the mutual information between two GMMs pre-sented in [11]. For full posterior GMM f with weights and Gaussian components (wa, f a), and partial posterior GMM g
+
+with (wb, g b) this is given by 
+
+Dvar (f, g ) = X
+
+> a
+
+wa log 
+
+P 
+
+> a′
+
+wa′ exp( −DKL (fa, f a′ )) 
+
+P 
+
+> b
+
+wb exp( −DKL (fa, g b)) .
+
+(21) To evaluate the efficiency of our homotopic framework compared to the metric approach we study total runtime. Computation of the heatcubes used for the definition of the OPTW and reward function calculation is not constant at each re-planning step, as the planning horizon shortens as the trajectory progresses. Furthermore, MCTS compute time is not constant due to the dynamic search space dimension at each re-planning step. For fair comparison we therefore report the time taken for the entire tracking experiment to complete. All tests are run on an Intel 3.2GHz processor. 
+
+A. Datasets 
+
+We evaluate our methodology on both simulated and real pedestrian datasets, detailed below. The number of distinct homotopy classes H and obstacles O present in each dataset is tabulated in Table I. In all datasets, pedestrians begin and end on boundary points. All trajectories were interpolated over 100 discrete timesteps to fix the dimension of the GMM components and enable prediction of the full trajectory. To begin, we exclude the homotopy class passing under all obstacles from all datasets. The partial h-signature for this class remains empty for the whole trajectory as it does not pass any rays emanating from obstacles. This therefore results in no change in the homotopic belief output by the VOMP. Thus, comparing two identical beliefs when evaluating Eq. (10) results in zero homotopic information gain, limiting the use 8                    
+
+> (a) A simulated dataset with three obstacles of varying sizes.
+> (b) Full ATC dataset. The 5 obstacles present in the environment are filled in black [53].
+> (c) Full TH ¨ OR dataset with augmented trajec-tories [54].
+> (d) Homotopy classes present in the three obsta-cle simulated data. Two samples from each class are shown to illustrate multi-modal behaviour within homotopy classes. Colours indicate ho-motopy class.
+> (e) Homotopy classes present in the ATC dataset. Two samples from each class are shown to illustrate multi-modal behaviour within ho-motopy classes. Colours indicate homotopy class.
+> (f) Homotopy classes present in the TH ¨ OR dataset. Two samples from each class are shown to illustrate multi-modal behaviour within ho-motopy classes. Colours indicate homotopy class.
+
+Fig. 4: Left: one of the environments used to simulate pedestrian trajectories, here with three obstacles. Middle: The real pedestrian ATC mall dataset with five obstacles present. Right: the TH ¨ OR dataset with both real and augmented pedestrian trajectories with three obstacles present. of our method. To quantify the impact of the empty signature set on the performance of our framework we evaluate again on all datasets with the empty signature class re-introduced in Section VI-B4. 
+
+1) Simulated datasets: To test the scalability of our method, a series of simulated datasets were created using the crowd simulation engine in [55] with an increasing number of obstacles in the environment, ranging from 3 up to 7. In all simulated environments, the pedestrians enter the environment on the left boundary and exit on the right boundary, travelling from left to right. An example of one simulated environment is shown in Fig. 4a. The four distinct homotopy classes remaining are shown in Fig. 4d). For each dataset, 48 training trajectories per homotopy class were randomly selected to form a training set, and 12 from each were selected to build a test set. The number of components per homotopy class in the homotopic GMM was NC = 1 .
+
+2) ATC dataset: We evaluate on real world trajectories from the ATC shopping mall dataset [53] to test our approach on more accurate human walking behaviour. From the ATC dataset we extracted a subdomain of the full shopping mall en-vironment with 5 obstacles within. Then, trajectories that were fully contained within the chosen subdomain were selected from the dataset. As seen in Fig. 4b, the real-world data has more varied low-level motions than the simulated data. Here pedestrians travel in all directions rather than strictly from left to right. The 13 most frequent homotopy classes in the data are depicted in Fig. 4e, illustrating the diversity of high-level motions present in the dataset. We randomly selected 1300 train and 260 test trajectories from this set. The number of components per homotopy class in the homotopic GMM was 
+
+NC = 3 , resulting in a total of 39 components. 
+
+3) TH ¨ OR dataset: A dataset of real pedestrians navigating in all directions to and from fixed goals on the boundary of the environment is publicly available in [54]. We take the dataset with 3 obstacles for our evaluation. To increase the number of trajectories in the dataset and facilitate a test-train split, trajectories that navigate between 3 or more goals are split into sub-trajectories that only navigate between two goal locations. After this filtering, the number of trajectories in each distinct homotopy class is still small. We therefore augment the dataset with statistically similar trajectories by 9
+
+> (a) Frequency count of total measurements taken by each method per target tracking experiment.
+> (b) Displacement error. Solid line is the average displacement error. Shaded region shows the in-terquartile range.
+> (c) High-level (top) and low-level (bottom) infor-mation gained per measurement.
+
+Fig. 5: Results for active target tracking on the simulated pedestrian dataset with three obstacles. 
+
+> (a) Number of measurements taken per tracking experiment for each approach.
+> (b) The displacement error averaged over the full trajectory length for each simulated dataset.
+> (c) Total tracking experiment length for increasing number of obstacles in the simulated datasets.
+
+Fig. 6: Results for active target tracking on the simulated pedestrian datasets increasing number of obstacles. fitting a Gaussian process to original trajectories and sampling the resulting posterior. The resulting 288 trajectories in the training set are shown in Fig. 4c, with corresponding 6
+
+homotopy classes in Fig. 4f. 72 trajectories were saved for testing. This dataset contained the most multi-modal behaviour within homotopy classes of all datasets. More than topological complexity, this dataset has significant low-level complexity compared to the other datasets. Trajectories in this dataset also have high-frequency low-level variations, as seen in blue and orange sample trajectories in Fig. 4f. We therefore trained the homotopic GMM with NC = 4 components per class. 
+
+B. Results 1) Simulated datasets: Evaluation of the homotopic active target tracking approach against the metric on the 3 obstacle simulated dataset is shown in Fig. 5. In Fig. 5b, the average displacement error (ADE) over all test trajectories is plotted with the interquartile range. Viewed together with Fig. 5a we see our homotopic approach achieves competitive accuracy in terms of ADE with far fewer measurements than the metric ap-proach – taking a median of just 4 measurements compared to 7. The high-level information gained per measurement shown in Fig. 5c reflects that for low-complexity data, there is little uncertainty in the homotopy class of a trajectory. However, the low-level mutual information between the ground truth GMM and the posterior GMM for our homotopic approach reaches a lower value after only 4 measurements than the metric approach does in 9. This corroborates Theorem 1, showing that despite being designed to maximise high-level information, the homotopic planning approach collects highly informative measurements for low-level prediction as well. To study the scalability of our approach with increasing number of obstacles, a comparison of the runtime per test tra-jectory for each simulated dataset is shown in Fig. 6c. Here we see for an increasing number of obstacles and thus homotopy classes, the computation of our proposed approach does indeed increase, corroborating the analysis in Section IV-C. However, the runtime for the proposed approach even for H = 12 
+
+is still far less than the metric approach. Fig. 6a shows for each dataset the homotopic approach again takes far fewer measurements than the metric while maintaining impressive ADE in Fig. 6b, where the reported ADE is as in Eq. (19) but averaged over all time steps. For environments up to 6 obstacles, both methods were 
+
+100 % successful at completing a tracking experiment. We consider an experiment successful if the sensing robot mea-sures the agent at at least one location after the initial measurement at t = 0 . For the 6 obstacle environment, the homotopic approach is 99 % successful while the metric is 
+
+100 % successful. For the 7 obstacle environment, the success 10 
+
+> (a) Frequency count of total measurements taken by each method per target tracking experiment.
+> (b) Displacement error. Solid line is the average displacement error. Shaded region shows the in-terquartile range.
+> (c) High-level (top) and low-level (bottom) infor-mation gained per measurement.
+
+Fig. 7: Results for active target tracking on the ATC mall pedestrian dataset with five obstacles. 
+
+> (a) Frequency count of total measurements taken by each method per target tracking experiment.
+> (b) Displacement error. Solid line is the average displacement error. Shaded region shows the in-terquartile range.
+> (c) High-level (top) and low-level (bottom) infor-mation gained per measurement.
+
+Fig. 8: Results for active target tracking on the augmented TH ¨ OR pedestrian dataset with three obstacles. 
+
+Fig. 9: Total tracking experiment length for the real datasets. rates are 91 % for the homotopic and 100 % for the metric approach. This drop in success rate as the number of obstacles increases is due to the greater variance in trajectory lengths for datasets with more complex topological trajectories – it takes longer for a pedestrian to weave through many obstacles than it does to pass above them. Since we interpolate all trajectories such that they have a fixed number of timesteps 
+
+T = 100 , this introduces a large variance in the average velocity of trajectories in the dataset. As a result, there is great time uncertainty introduced to the OPTW problem that is not robustly handled in our framework. This disproportionately impacts the homotopic approach as the belief space is sparser than the metric, resulting in only a few sensing locations being considered over the uncertain time window. Meanwhile, the metric approach plans to take measurements densely in both space and time, essentially ‘following’ the agent rather than moving ahead and waiting at a future obstacle. 
+
+2) ATC dataset: Active target tracking results for the real pedestrian data is shown in Fig. 7. Again, utilising homotopic information gain in the active target tracking problem achieves competitive ADE with distinctly fewer measurements, as evidenced in Figs. 7a and 7b. Remarkably, the homotopic approach ADE in Fig. 7b is achieved with a median of 4 measurements compared to 9 for the metric approach. With this more complex dataset, each measurement provides more high-level information until the homotopy class is com-pletely determined, at which point the KLD converges to zero in Fig. 7c. Meanwhile, measurements collected by the metric approach do not necessarily elucidate the homotopy class of the trajectory giving belief updates that weigh incorrect motion hypotheses highly, resulting in higher KLD. By studying the mutual information measure in Fig. 7c together with Fig. 7b we again see that the homotopic approach is highly effective at collecting informative measurements for low-level prediction. The persistence of this result in this challenging real dataset is strong empirical corroboration of the bound in Theorem 1. An example test trajectory is shown in Fig. 10 to provide further intuition for how each information gain measure im-pacts active target tracking. In Figs. 10f to 10j, we see that the 11                             
+
+> (a) Ours t= 1 (b) Ours t= 35 (c) Ours t= 65 (d) Ours t= 80 (e) Ours t= 100
+> (f) Metric t= 1 (g) Metric t= 35 (h) Metric t= 65 (i) Metric t= 80 (j) Metric t= 100
+
+Fig. 10: Snapshots of predictions output by a homotopic GMM during an active target tracking experiment using homotopic information gain (a) - (e) and metric information gain (f) - (j). Black solid path is the elapsed ground truth test trajectory at the given time. Dotted path indicates future ground truth trajectory remaining. Coloured crosses denote all measurements taken by the sensing robot up to time t, where colours serve to differentiate between approaches (orange for the metric approach, blue for the homotopic approach). Shaded regions show the variance of the mean shown in solid colour, where colours differentiate GMM components. Transparency is proportional to component weight. metric approach takes a dense set of measurements distributed evenly along the length of the trajectory, attempting to collect as much positional information as possible. Meanwhile, the homotopic approach shown in Figs. 10a to 10e takes sparse measurements localised around obstacles in the environment. These behaviours generalise beyond this specific trajectory; in Fig. 1 a spatial heatmap of sensing locations is depicted reflecting the same. Our proposed homotopic approach thus visits a much sparser set of locations concentrated around obstacles, a direct result of planning with an information gain measure that is sparsely distributed in space. In Fig. 9 we see the influence this has on the time required to complete a successful mission. Runtime is vastly lower for our approach compared to the metric approach on this real dataset. The success rate of the homotopic approach for this dataset is 81 % while for the metric approach it is 95 %. In this dataset there is even greater time uncertainty and we see an impact on the success rate of the metric approach as well, supporting our intuition that this drawback is likely due to the shared planning framework more than the gain measure used. 
+
+3) TH ¨ OR dataset: Evaluation on the TH ¨ OR dataset is shown in Fig. 8. For this dataset we see the largest discrepancy between methods for the number of measurements taken in Fig. 8a. Due to the higher low-level trajectory complexity in this dataset, the metric information approach takes substan-tially more measurements in this dataset (a median of 22). On the other hand, as homotopic information gain is localised around obstacles the median number of measurements by our proposed approach is only 3. Still, the ADE in Fig. 8b for our method is competitive. We observe that both methods struggle to collect low-level information in Fig. 8c with the homotopic approach still outperforming the metric. Our approach again reduces high-level uncertainty at a faster rate than the metric. For experiments with 5 measurements the final KLD reported in Fig. 8c has a median of 0 but high variance, suggesting for some data points the final KLD is high. Investigation of these cases reveal a trend. The homotopic approach occasionally predicts h = (1 , 2) class trajectories to be h = (1 , 2, 3) when the trajectory is not measured passing below the third obstacle. Due to the high number of measurements taken, the posterior GMM obtained via the metric approach miscategorises the homotopy class of the final full trajectory less often. The success rate for both methods on the TH ¨ OR dataset is 100%. Comparison of runtime for each method is shown in Fig. 9. While our approach is still faster, here we see more competi-tive runtime for the metric approach than in other datasets. This is again due to the large low-level variance in the trajectories. Since the metric approach prioritises reducing this uncertainty, the resulting OPTW has a small search space concentrated in a tight region near the target’s last observed lo-cation. With a reduced search space MCTS finds the next best sensing location faster, reducing overall experiment length. 
+
+4) Empty signature ablation: The choice of homotopy invariant described in Section III-A limits our approach to work only on paths that cross obstacle rays. Paths that do not cross obstacle rays have h-signature h = () . For this class, the partial h-signature does not change throughout the tracking experiment and the homotopic belief output by the VOMP will be static for all time. The homotopic informa-tion gain therefore evaluates to zero, incorrectly indicating a lack of homotopic information. However, the robot’s sensing trajectory is guided by maximisation of expected homotopic 12 
+
+Fig. 11: Distributions of displacement errors averaged over the full trajectory length for each dataset with (labelled with ∅)and without the empty h-signature. 
+
+Fig. 12: Distributions of the number of measurements taken per tracking experiment for each dataset with (labelled with 
+
+∅) and without the empty h-signature. information gain, which is often non-zero due to uncertainty in measurements and the predicted next partial h-signature ρt+1 
+
+given sensing location xt+1 . Then, to investigate the impact of this theoretical inability to capture information gain where 
+
+h = () we study the ADE, number of measurements taken and success rate for all datasets where the empty h-signature class has been reintroduced. Results for all datasets with and without the empty h-signature class are shown in Fig. 11 and Fig. 12. Inclusion of this class does not change trends observed in ADE or the number of measurements for either approach significantly. The most significant impact of the h = () class is seen when inves-tigating the success rates of each approach, given in Table II. Interestingly, the success rate for the ATC dataset increases slightly when h = () is added. However, the increased ADE variance and vastly reduced number of measurements compared to the dataset without h = () indicates that the increase in ‘successful’ tracking experiments is due to the robot taking 2 measurements rather than 1 before failing to track the target. This results in miscategorisation of the final homotopy class and a much larger ADE. Nevertheless, in general success rate decreases when the h = () class is added, becoming more significant as the complexity of the dataset increases. This is due to the robot being unable to track the target after moving to an irrecoverable sensing position while planning under an incorrect homotopic belief.                                             
+
+> Datasets without h= ()
+> Sim-3 Sim-4 Sim-5 Sim-6 Sim-7 ATC TH ¨ OR Ours 100 100 100 99 91 81 100 Metric 100 100 100 99 98 95 100
+> Datasets with h= ()
+> Sim-3 ∅Sim-4 ∅Sim-5 ∅Sim-6 ∅Sim-7 ∅ATC ∅TH ¨ OR ∅
+> Ours 96.67 100 98.9 90 91 85 81 Metric 100 100 100 99 98 94 99
+
+TABLE II: Success rates (%) for our homotopic approach versus the metric approach before and after the empty h-signature is introduced. These results support our intuition that the h = () class presents a challenge to our approach. Still, here we see our approach is able to handle this class with only small impact to success rate – the sparse number of measurements taken and competitive final ADE echoes the findings from the datasets where h = () is excluded. This is due to our treatment of the partial h-signature as a random variable together with maximi-sation of the expected homotopic information gain, resulting in a non-zero planning heuristic even for empty partial h-signatures. Regardless, observation of the target below an ob-stacle should explicitly provide homotopic information to the robot and be utilised in planning. We therefore believe a more expressive choice of homotopy invariant can further improve the performance of our algorithm, particularly on the h = () 
+
+set. For example, the homotopy invariant presented in [19] identifies homotopy class by considering the convex regions through which a path moves through rather ray crossings, and may provide non-empty labels for all trajectories. VII. C ONCLUSION 
+
+We presented the homotopic information gain for solving the active target tracking problem. Leveraging the homotopic belief first proposed in [9] we constructed a light-weight information gain measure comprising only discrete finite sums. In tandem with the new measure we proposed a planning approach that capitalises on the sparse nature of homotopic information gain. Our homotopic approach enables more ef-ficient informative path planning than a conventional metric-information-based approach, as demonstrated in evaluation on real and simulated datasets. Our evaluations revealed pathways to further improvements in future work, including investigation of different homotopy invariants and better handling of time-of-arrival uncertainty to improve success rate. This work opens many exciting opportunities for extending the homotopic tracking framework. The sparse nature of our approach can be further leveraged in resource-constrained scenarios such as multi-target tracking, or multi-task prob-lems. Moreover, the discrete nature of the homotopic belief can be exploited in planning for multi-robot systems, where robots could be assigned tasks based on likely future motion hypotheses. Real robot deployments for these tasks will require moving to a receding horizon planning formulation as the remaining length of target trajectories will be unknown. Then, with short-term predictions our proposed approach will enable re-planning every second. 13 
+
+REFERENCES [1] P. Yang, S. Koga, A. Asgharivaskasi, and N. Atanasov, “Policy learning for active target tracking over continuous se (3) trajectories,” Proceed-ings of The 5th Annual Learning for Dynamics and Control Conference ,vol. 211, pp. 64–75, 2023. [2] L. Zhou, V. Tzoumas, G. J. Pappas, and P. Tokekar, “Resilient Active Target Tracking With Multiple Robots,” IEEE Robotics and Automation Letters , vol. 4, no. 1, pp. 129–136, 2019. [3] L. Zhou and P. Tokekar, “Active Target Tracking With Self-Triggered Communications in Multi-Robot Teams,” IEEE Transactions on Automa-tion Science and Engineering , vol. 16, no. 3, pp. 1085–1096, 2019. [4] S. Gillijns and B. De Moor, “Unbiased minimum-variance input and state estimation for linear discrete-time systems,” Automatica , vol. 43, no. 1, pp. 111–116, 2007. [5] K. Li, S. Eiffert, M. Shan, F. Gomez-Donoso, S. Worrall, and E. Nebot, “Attentional-gcnn: Adaptive pedestrian trajectory prediction towards generic autonomous vehicle use cases,” IEEE International Conference on Robotics and Automation , pp. 14 241–14 247, 2021. [6] W. Zhi, L. Ott, and F. Ramos, “Kernel Trajectory Maps for Multi-Modal Probabilistic Motion Prediction,” Proceedings of the Conference on Robot Learning , vol. 100, pp. 1405–1414, 2020. [7] S. H. Kiss, K. Katuwandeniya, A. Alempijevic, and T. Vidal-Calleja, “Constrained Gaussian Processes With Integrated Kernels for Long-Horizon Prediction of Dense Pedestrian Crowd Flows,” IEEE Robotics and Automation Letters , vol. 7, no. 3, pp. 7343–7350, 2022. [8] S. Eiffert, K. Li, M. Shan, S. Worrall, S. Sukkarieh, and E. Nebot, “Probabilistic crowd gan: Multimodal pedestrian trajectory prediction using a graph vehicle-pedestrian attention network,” IEEE Robotics and Automation Letters , vol. 5, no. 4, pp. 5026–5033, 2020. [9] J. Wakulicz, K. M. Brian Lee, T. Vidal-Calleja, and R. Fitch, “Topolog-ical Trajectory Prediction with Homotopy Classes,” IEEE International Conference on Robotics and Automation , pp. 6930–6936, 2023. [10] H. Kurniawati, “Partially Observable Markov Decision Processes and Robotics,” Annual Review of Control, Robotics, and Autonomous Sys-tems , vol. 5, no. 1, pp. 253–277, 2022. [11] J. R. Hershey and P. A. Olsen, “Approximating the Kullback Leibler Divergence Between Gaussian Mixture Models,” IEEE International Conference on Acoustics, Speech and Signal Processing , pp. IV–317– IV–320, 2007. [12] A. Kolchinsky and B. Tracey, “Estimating Mixture Entropy with Pair-wise Distances,” Entropy , vol. 19, no. 7, p. 361, 2017. [13] A. Hatcher, Algebraic Topology . Cambridge University Press, 2002. [14] O. De Groot, L. Ferranti, D. M. Gavrila, and J. Alonso-Mora, “Topology-Driven Parallel Trajectory Optimization in Dynamic Environments,” 
+
+IEEE Transactions on Robotics , vol. 41, pp. 110–126, 2024. [15] K. Kolur, S. Chintalapudi, B. Boots, and M. Mukadam, “Online Motion Planning Over Multiple Homotopy Classes with Gaussian Process Inference,” IEEE/RSJ International Conference on Intelligent Robots and Systems , pp. 2358–2364, 2019. [16] S. Bhattacharya, V. Kumar, and M. Likhachev, “Search-based path plan-ning with homotopy class constraints,” AAAI Conference on Artificial Intelligence , pp. 1230–1237, 2010. [17] M. Novosad, R. Penicka, and V. Vonasek, “CTopPRM: Clustering Topo-logical PRM for Planning Multiple Distinct Paths in 3D Environments,” 
+
+IEEE Robotics and Automation Letters , vol. 8, no. 11, pp. 7336–7343, 2023. [18] D. Yi, M. A. Goodrich, and K. D. Seppi, “Homotopy-aware RRT*: Toward human-robot topological path-planning,” 2016 11th ACM/IEEE International Conference on Human-Robot Interaction (HRI) , pp. 279– 286, 2016. [19] B. Sakcak, L. Bascetta, and G. Ferretti, “Homotopy aware kinodynamic planning using rrt-based planners,” in 2019 18th European Control Conference (ECC) , 2019, pp. 1568–1573. [20] J. Wiest, M. Hoffken, U. Kresel, and K. Dietmayer, “Probabilistic trajectory prediction with Gaussian mixture models,” IEEE Intelligent Vehicles Symposium , pp. 141–146, 2012. [21] B. Ivanovic and M. Pavone, “The trajectron: Probabilistic multi-agent trajectory modeling with dynamic spatiotemporal graphs,” Proceedings of the IEEE/CVF International Conference on Computer Vision , 2019. [22] A. Zyner, S. Worrall, and E. Nebot, “Naturalistic Driver Intention and Path Prediction Using Recurrent Neural Networks,” IEEE Transactions on Intelligent Transportation Systems , vol. 21, no. 4, pp. 1584–1594, 2020. [23] F. T. Pokorny, M. Hawasly, and S. Ramamoorthy, “Topological trajectory classification with filtrations of simplicial complexes and persistent homology,” International Journal of Robotics Research , vol. 35, no. 1-3, pp. 204–223, 2016. [24] J. Frederico Carvalho, M. Vejdemo-Johansson, F. T. Pokorny, and D. Kragic, “Long-term Prediction of Motion Trajectories Using Path Homology Clusters,” IEEE/RSJ International Conference on Intelligent Robots and Systems , pp. 765–772, 2019. [25] J. L. Ny and G. Pappas, “On trajectory optimization for active sensing in gaussian process models,” IEEE Conference on Decision and Control ,pp. 6286–6292, 2009. [26] M. P. Vitus and C. J. Tomlin, “Closed-loop belief space planning for linear, Gaussian systems,” IEEE International Conference on Robotics and Automation , pp. 2152–2159, 2011. [27] M. Vitus, W. Zhang, A. Abate, J. Hu, and C. Tomlin, “On efficient sensor scheduling for linear dynamical systems,” Automatica , vol. 48, no. 10, pp. 2482–2493, 2012. [28] N. Atanasov, J. L. Ny, K. Daniilidis, and G. J. Pappas, “Information acquisition with sensing robots: Algorithms and error bounds,” IEEE International Conference on Robotics and Automation , pp. 6447–6454, 2014. [29] V. Tzoumas, A. Jadbabaie, and G. J. Pappas, “Sensor placement for optimal Kalman filtering: Fundamental limits, submodularity, and algo-rithms,” American Control Conference (ACC) , pp. 191–196, 2016. [30] B. Schlotfeldt, D. Thakur, N. Atanasov, V. Kumar, and G. Pappas, “Any-time planning for decentralized multirobot active information gathering,” 
+
+IEEE Robotics and Automation Letters , vol. 3, no. 2, pp. 1025–1032, 2018. [31] Y. Kantaros, B. Schlotfeldt, N. Atanasov, and G. Pappas, “Asymptoti-cally optimal planning for non-myopic multi-robot information gather-ing,” Robotics: Science and Systems , pp. 22–26, 2019. [32] Ke Zhou and S. I. Roumeliotis, “Multirobot Active Target Tracking With Combinations of Relative Observations,” IEEE Transactions on Robotics , vol. 27, no. 4, pp. 678–695, 2011. [33] Z. Zhang and P. Tokekar, “Non-myopic target tracking strategies for non-linear systems,” IEEE Conference on Decision and Control , pp. 5591–5596, 2016. [34] R. Zahroof, J. Liu, L. Zhou, and V. Kumar, “Multi-Robot Localization and Target Tracking with Connectivity Maintenance and Collision Avoidance,” American Control Conference (ACC) , pp. 1331–1338, 2023. [35] A. Ryan and J. K. Hedrick, “Particle filter based information-theoretic active sensing,” Robotics and Autonomous Systems , vol. 58, no. 5, pp. 574–584, 2010. [36] P. Tokekar, V. Isler, and A. Franchi, “Multi-target visual tracking with aerial robots,” IEEE/RSJ International Conference on Intelligent Robots and Systems , pp. 3067–3072, 2014. [37] J. Fischer and O. S. Tas, “Information particle filter tree: An online algorithm for POMDPs with belief-based rewards on continuous do-mains,” International Conference on Machine Learning , vol. 119, pp. 3177–3187, 2020. [38] B.-N. Vo and W.-K. Ma, “The Gaussian Mixture Probability Hypothesis Density Filter,” IEEE Transactions on Signal Processing , vol. 54, no. 11, pp. 4091–4104, 2006. [39] Ruijie He, A. Bachrach, and N. Roy, “Efficient planning under un-certainty for a target-tracking micro-aerial vehicle,” IEEE International Conference on Robotics and Automation , pp. 1–8, 2010. [40] C. Kim, F. Li, A. Ciptadi, and J. M. Rehg, “Multiple Hypothesis Track-ing Revisited,” IEEE International Conference on Computer Vision , pp. 4696–4704, 2015. [41] F. Zheng, Y. Tian, W. Zhan, J. Yu, and K. Liu, “A Gaussian mix-ture multiple-model belief propagation filter for multisensor-multitarget tracking,” Signal Processing , vol. 220, p. 109473, 2024. [42] M. Shienman and V. Indelman, “Nonmyopic Distilled Data Association Belief Space Planning Under Budget Constraints,” Robotics Research ,vol. 27, pp. 102–118, 2023. [43] J. Wakulicz, H. Kong, and S. Sukkarieh, “Active Information Acquisition under Arbitrary Unknown Disturbances,” IEEE International Conference on Robotics and Automation , pp. 8429–8435, 2021. [44] M. Carreira-Perpinan, “Mode-finding for mixtures of Gaussian distribu-tions,” IEEE Transactions on Pattern Analysis and Machine Intelligence ,vol. 22, no. 11, pp. 1318–1323, 2000. [45] Tian Lan, D. Erdogmus, U. Ozertem, and Yonghong Huang, “Estimating Mutual Information Using Gaussian Mixture Model for Feature Ranking and Selection,” IEEE International Joint Conference on Neural Network Proceedings , pp. 5034–5039, 2006. [46] S. McCammon and G. A. Hollinger, “Topological path planning for autonomous information gathering,” Autonomous Robots , 2021. [47] K. B. Petersen and M. S. Pedersen, The Matrix Cookbook . Technical University of Denmark, 2007, vol. 16, no. 4. [48] S. M. LaValle, “Sensing and Filtering: A Fresh Perspective Based on Preimages and Information Spaces,” Foundations and Trends in Robotics , vol. 1, no. 4, pp. 253–372, 2010. 14 
+
+[49] B. Tovar, F. Cohen, and S. M. LaValle, “Sensor Beams, Obstacles, and Possible Paths,” Algorithmic Foundation of Robotics VIII , vol. 57, pp. 317–332, 2009. [50] A. El Gamal and Y.-H. Kim, Network Information Theory: , 1st ed. Cambridge University Press, 2011. [51] M. G. Kantor and M. B. Rosenwein, “The Orienteering Problem with Time Windows,” The Journal of the Operational Research Society ,vol. 43, no. 6, p. 629, 1992. [52] L. Kocsis and C. Szepesv´ ari, “Bandit Based Monte-Carlo Planning,” 
+
+Machine Learning , vol. 4212, pp. 282–293, 2006. [53] D. Brscic, T. Kanda, T. Ikeda, and T. Miyashita, “Person position and body direction tracking in large public spaces using 3D range sensors,” 
+
+Trans. on Human-Mach. Sys. , vol. 43, pp. 522 – 534, 2013. [54] A. Rudenko, T. P. Kucner, C. S. Swaminathan, R. T. Chadalavada, K. O. Arras, and A. J. Lilienthal, “Th¨ or: Human-robot navigation data collection and accurate motion trajectories dataset,” IEEE Robotics and Automation Letters , vol. 5, no. 2, pp. 676–682, 2020. [55] I. Karamouzas, N. Sohre, R. Narain, and S. J. Guy, “Implicit crowds: Optimization integrator for robust crowd simulation,” ACM Transactions on Graphics , vol. 36, no. 4, 2017. 
+
+Jennifer Wakulicz (Member, IEEE) is a Postdoc-toral Research Fellow at the University of Sydney, Sydney, NSW, Australia. She received the B.Sc. degree in Mathematics and Physics from the Uni-versity of Sydney, Camperdown, NSW, Australia, and the Ph.D. degree in robotics from the University of Technology Sydney, Ultimo, NSW, Australia, in 2025. Her research lies in probabilistic modelling and planning, with the objective of developing ro-bust robotic decision-making frameworks capable of operating reliably in unstructured environments. 
+
+Ki Myung Brian Lee (Member, IEEE) is a Post-doctoral Scholar at the Contextual Robotics Institute, University of California San Diego, La Jolla, CA, USA. He received the B.Eng. (Hons I) degree in mechatronics (space) from the University of Syd-ney, Camperdown, NSW, Australia, and the Ph.D. degree in robotics from the University of Technol-ogy Sydney, Ultimo, NSW, Australia, in 2023. He was recognized as an RSS Pioneer of 2023, and was the recipient of the UTS Research Excellence Scholarship. His current research aims to develop novel representations of environments and tasks that accelerate planning and control. More broadly, he is interested in mobile robot autonomy in previously unseen environments. 
+
+Teresa Vidal-Calleja (Senior Member, IEEE) re-ceived the B.Eng. degree in mechanical engineering from the National Autonomous University of Mex-ico, Mexico City, Mexico, in 2000, the M.Sc. degree in mechatronics from CINVESTAV-IPN, Mexico City, Mexico, in 2002, and the Ph.D. degree in au-tomatic control, computer vision, and robotics from the Polytechnic University of Catalonia, Barcelona, Spain, in 2007. She is currently a Professor and Research Director of the Robotics Institute at the University of Technology Sydney (UTS), Sydney, Australia. She was previously a Postdoctoral Research Fellow with LAAS-CNRS, Toulouse, France, and with the Australian Centre for Field Robotics at the University of Sydney, Sydney, Australia. In 2012, she was appointed as a Chancellor’s Research Fellow with the Robotics Institute at UTS. She has also been a Visiting Professor at the Tokyo University of Science, Tokyo, Japan, and at the Institute of Robotics and Mechatronics, German Aerospace Centre (DLR), Cologne, Germany, as well as a Visiting Scholar with the Active Vision Laboratory, University of Oxford, Oxford, U.K., and the Autonomous Systems Lab, ETH Z¨ urich, Z¨ urich, Switzerland. Her research focuses on robotic perception, combining estimation theory and machine learning. 
+
+Robert Fitch (Member, IEEE) received the Ph.D. degree in computer science from Dartmouth College, USA, in 2005. He is currently a Professor in the School of Mechanical and Mechatronic Engineering at the University of Technology Sydney (UTS), Australia. His research interests include motion plan-ning, field robotics, multi-robot systems, and coor-dinated autonomy.

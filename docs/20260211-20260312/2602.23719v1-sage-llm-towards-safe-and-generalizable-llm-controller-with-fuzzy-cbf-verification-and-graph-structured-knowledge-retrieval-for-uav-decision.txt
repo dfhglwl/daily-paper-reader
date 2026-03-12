@@ -1,0 +1,371 @@
+Title: SAGE-LLM: Towards Safe and Generalizable LLM Controller with Fuzzy-CBF Verification and Graph-Structured Knowledge Retrieval for UAV Decision
+
+URL Source: https://arxiv.org/pdf/2602.23719v1
+
+Published Time: Mon, 02 Mar 2026 01:31:30 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# SAGE-LLM: Towards Safe and Generalizable LLM Controller with Fuzzy-CBF Verification and Graph-Structured Knowledge Retrieval for UAV Decision 
+
+# Wenzhe Zhao 1 , Yang Zhao 1 , Ganchao Liu 1 , Zhiyu Jiang 1 , Dandan Ma 1 , Zihao Li 1 and Xuelong Li 21School of Artificial Intelligence, OPtics and ElectroNics (iOPEN), Northwestern Polytechnical University, Xi’an 710072, China 
+
+> 2
+
+# Institute of Artificial Intelligence (TeleAI), China Telecom, China zhaowenzhe@mail.nwpu.edu.cn, izhaoyang@nwpu.edu.cn, xuelong li@ieee.org 
+
+# Abstract 
+
+In UAV dynamic decision, complex and variable hazardous factors pose severe challenges to the generalization capability of algorithms. Despite offering semantic understanding and scene gen-eralization, Large Language Models (LLM) lack domain-specific UAV control knowledge and for-mal safety assurances, restricting their direct appli-cability. To bridge this gap, this paper proposes a train-free two-layer decision architecture based on LLMs, integrating high-level safety planning with low-level precise control. The framework intro-duces three key contributions: 1) A fuzzy Con-trol Barrier Function verification mechanism for semantically-augmented actions, providing prov-able safety certification for LLM outputs. 2) A star-hierarchical graph-based retrieval-augmented gen-eration system, enabling efficient, elastic, and in-terpretable scene adaptation. 3) Systematic experi-mental validation in pursuit-evasion scenarios with unknown obstacles and emergent threats, demon-strating that our SAGE-LLM maintains perfor-mance while significantly enhancing safety and generalization without online training. The pro-posed framework demonstrates strong extensibil-ity, suggesting its potential for generalization to broader embodied intelligence systems and safety-critical control domains. 
+
+# 1 Introduction 
+
+In the field of UAV dynamic decision, traditional methods based on reinforcement learning and optimal control have demonstrated excellent mission completion capabilities in specific scenarios [Wang et al. , 2024]. However, these approaches are typically performance-oriented and prone to hazardous behaviors in complex adversarial settings, with weak safety margins. To address this, safety theories such as reachable analysis [Zhao et al. , 2025] and Control Barrier Function (CBF) [Sankaranarayanan et al. , 2024] have been introduced, providing rigorous safety guarantees for control decisions through mathematical constraints. Nevertheless, the safety certification of such methods heavily relies on pre-cise and fixed environmental models. Once encountering unknown obstacles or emergent threats outside the training distribution, their generalization capability declines signifi-cantly, making it difficult to balance safety and adaptability in open and dynamic environments [Safaoui et al. , 2024]. Thus, achieving both safety and generalization in open-world UAV pursuit-evasion remains an open challenge. In recent years, the powerful semantic understanding and zero-shot reasoning capabilities of LLMs have opened new pathways for building generalized autonomous decision-making systems. In robotics, LLMs have been successfully applied to task planning for robotic arms [Mu et al. , 2023] and scene understanding for autonomous vehicles [Wang et al. , 2023], demonstrating their potential in handling open-ended instructions. However, directly applying LLMs to high-dynamic, safety-critical UAV adversarial control still faces two fundamental challenges. 1. Lack of domain-specific knowledge: UAV adversar-ial control involves in-depth expertise such as aerody-namics and game-theoretic strategies. While general-purpose LLMs possess commonsense reasoning, they lack internalized domain knowledge, and their gener-ated decisions may violate UAV physical constraints or game-theoretic contexts, rendering the decisions seman-tically plausible yet physically infeasible or even dan-gerous during execution. 2. Absence of formal safety guarantees: UAV control im-poses extremely high safety requirements, yet the gener-ative nature of LLMs is inherently stochastic and black-box. Their outputs may exhibit inconsistencies and poor interpretability, and more critically, they cannot provide explicit safety certificates, potentially leading to catas-trophic failures such as crashes or collisions. Researchers have conducted a series of studies to address these key challenges. In terms of domain knowledge, ap-proaches mainly include instruction tuning [Zhang et al. ,2023] and retrieval augmented generation (RAG) [Arslan et al. , 2024]. However, the effectiveness of instruction tuning is limited by the scarcity of high-quality, domain-specific data. Meanwhile, mainstream vector-based RAG methods return isolated text fragments, failing to effectively capture the com-plex structured relationships among scenario to threat and to strategy of UAV decision, leading to incomplete decision 
+
+> arXiv:2602.23719v1 [cs.RO] 27 Feb 2026
+
+support and weak explainability. Regarding safety verifica-tion, existing work predominantly focuses on the linguistic safety of LLM outputs [Ma et al. , 2025], neglecting the safety of these outputs in embodied control contexts. Some stud-ies incorporate safety modules such as MPC at the low-level control stage [Baumann et al. , 2025], yet these require spe-cific control parameters and suffer from a semantic gap with LLM outputs, making it difficult to establish end-to-end for-mal safety guarantees. To systematically address these challenges, this paper pro-poses the SAGE-LLM towards safety and generalization. The main contributions are summarized as follows: • Star-hierarchical graph RAG for UAV decision knowl-edge: We introduce a star-hierarchical graph-based RAG to structure UAV decision knowledge across scene, strat-egy, and control levels with an elastic retrieval method. Compared with traditional RAG method, it provides more coherent, interpretable, and extensible domain knowledge support for LLM-based decision-making. • Fuzzy control barrier function safety verification theory for semantic actions: We define a semantic action cone to model LLM’s discrete instructions as sets with di-rectional uncertainty and accordingly construct a fuzzy CBF. This enables efficient safety certification and au-tomatic correction of high-level semantic actions, estab-lishing for the first time a provable mapping from se-mantic instructions to safe control inputs. • Experimental validation: We conduct extensive testing in UAV pursuit-evasion scenarios. The results show that SAGE-LLM maintains high task success rates while achieving near-zero collision safety and exhibits strong zero-shot generalization capability. The framework also exhibits strong extensibility and can serve as a reference for broader embodied intelligent systems. 
+
+# 2 Related Work 
+
+2.1 Safety Research in UAV Adversarial Games 
+
+In UAV pursuit-evasion games, the objective is to accomplish tracking tasks while ensuring safety. Among mainstream approaches, Reinforcement Learning (RL) has demonstrated strong performance in trajectory planning [Zhao et al. , 2024]. However, its reward mechanisms often overlook collision risks, leading to insufficient safety in practice. To enhance safety, Safe RL methods incorporate risk penalty terms to suppress unsafe behaviors [Wachi et al. , 2024]. Neverthe-less, their safety guarantees rely heavily on the distribution of training data, resulting in limited generalization capability. In contrast, formal methods based on safe theories can provide rigorous mathematical safety certificates [Xiao et al. , 2024; He et al. , 2024]. However, their applicability depends on precise system models, making them difficult to adapt to dy-namic and open environments. 
+
+2.2 Large Language Models in Embodied Intelligence and UAV Control 
+
+LLMs exhibit strong potential in embodied intelligence due to their semantic understanding and generalization capa-bilities [Feng et al. , 2025; Liang et al. , 2025]. Exist-ing control architectures are primarily categorized into two paradigms: end-to-end and hierarchical. The former suf-fers from simulation-to-reality gaps and black-box decision-making [Zitkovich et al. , 2023; Driess et al. , 2023], while the latter often exhibits misalignment between semantic in-structions and actual control requirements due to a lack of domain-specific knowledge [Ahn et al. , 2022; Geng et al. ,2025]. To improve domain adaptability, research has focused on parameter fine-tuning and knowledge augmentation [Shao 
+
+et al. , 2025; Mao et al. , 2025]. However, fine-tuning is constrained by the scarcity of high-quality domain-specific data, and knowledge augmentation through retrieval often yields fragmented results, lacking logical coherence [Wu et al. , 2025]. Furthermore, LLMs still face challenges such as hallucinations and output inconsistency in safety-critical con-trol scenarios. Existing studies predominantly focus on the linguistic safety of LLM outputs [Wang et al. , 2025], with limited attention to establishing formal guarantees for map-ping semantic instructions to safe control actions. 
+
+# 3 Preliminaries 
+
+3.1 Control Barrier Function 
+
+Control barrier functions [Ames et al. , 2014] provide a sys-tematic framework for ensuring the safety of dynamical sys-tems by enforcing state constraints. The concept revolves around the forward invariance of a set, ensuring that the sys-tem’s state trajectory remains within a predefined safe set over time. Consider the control-affine system dynamics: 
+
+˙x = f (x) + g(x)u, x ∈ Rn, u ∈ Rm, (1) where f (x) and g(x) are locally Lipschitz continuous, x rep-resents the system state, and u is the control input. We define the safe set C as: 
+
+C = {x ∈ Rn | h(x) ≥ 0}, (2) where h(x) is a continuously differentiable function. The boundary and interior of set C are given by: 
+
+∂C = {x ∈ Rn | h(x) = 0 }, (3) 
+
+Int( C) = {x ∈ Rn | h(x) > 0}. (4) The set C is forward invariant if, for any x(0) ∈ C , the solution x(t) ∈ C for all t ≥ 0. Forward invariance ensures that the system remains within the safe set indefinitely. Afunction h(x) is called a CBF if there exists an extended class 
+
+K∞ function α [So et al. , 2024] such that for all x(0) ∈ C :
+
+sup 
+
+> u∈Rm
+
+[Lf h(x) + Lg h(x)u] ≥ − α(h(x)) , (5) where Lf h(x) and Lg h(x)u are the Lie derivatives of h(x)
+
+with respect to f (x) and g(x) respectively which ensures that the set C is forward invariant under the control law u. How-ever, the limitation of conventional CBFs lies in their strict re-liance on precise system dynamics models and their require-ment that control inputs be continuous low-level signals. High Layer 
+
+> Decision Strategy
+> Central Layer
+> Scene Node
+> Bottom Layer
+> Control Params
+
+Large Language Model   
+
+> Task Target
+> Scene Info
+> Scene --> Strategy
+> “Sphere Obstacle Front: Climb”
+> Judge --> Strategy
+> “Unsafe: Climb”
+
+Low-Level Control 
+
+High-Level Plan 
+
+> Unsafe
+
+Large Language Model     
+
+> Scene --> Strategy --> Action
+> “Obstacle Climb: <nx,n z,phi>”
+> Strategy Prompt
+
+Graph RAG 
+
+> Safe
+
+Control Action: <nx,nz,phi> 
+
+Obstacle Info UAV I nfo 
+
+> robs
+> dsafe
+> Action=Forward
+> CBF=Unsafe
+> Action=Climb
+> CBF=Safe
+
+Fuzzy CBF Verification 
+
+RL Policy 
+
+> Action
+> State Figure 1: System Framework
+
+# 4 Method 
+
+4.1 Overall Framework 
+
+SAGE-LLM adopts a two-layer architecture of high-level se-mantic planning and low-level execution, as illustrated in Fig-ure 1. The high-level planner integrates two modules: an LLM responsible for semantic understanding of perceptual information and scene-aware planning, followed by a fuzzy CBF module that performs real-time safety verification of the generated instructions to ensure compliance with formal safety constraints. The low-level controller consists of two components: an RL controller for pursuit-evasion tasks un-der safe conditions, and an LLM-driven safety controller for precisely obstacle avoidance maneuvers in hazardous states. Upon receiving perceptual input, the high-level planner conducts scene comprehension, makes high-level strategy and validates safety. If the output is deemed safe, the RL con-troller is activated to execute the pursuit-evasion task. If the output is classified as hazardous, the LLM safety controller engages, incorporating the high-level avoidance plan to per-form safe operations. Throughout this process, an elastic hi-erarchical graph RAG system provides real-time knowledge retrieval support for both LLM modules, enhancing the the capabilities in domain-specific decision and precise control. 
+
+4.2 Fuzzy CBF Safety Verification Theory 
+
+To ensure the safety of high-level semantic instructions gener-ated by large language models, this section proposes a fuzzy CBF verification theory. First, we establish a geometric direc-tional cone representation model for semantic actions, map-ping discrete semantics to continuous control direction sets. Second, a fuzzy CBF verification framework based on this representation is structed, proving the global safety of the di-rectional cone through finite discretization and convex com-bination. 
+
+Directional Cones for Semantic Actions 
+
+To establish a verifiable mapping from the discrete semantic space to the continuous control space, this paper proposes the directional cone model for semantic actions. 
+
+Definition 1 (Formal Representation of a Semantic Action) .
+
+Let A = {a1, a 2, . . . , a K } be the finite set of high-level se-mantic actions. Each action ak ∈ A is formally defined as a triple: 
+
+ak := ( vk, θ k, Vk), (6) where: • vk ∈ R2 is the nominal control direction, a unit vector representing the intended motion. • θk ∈ (0 , π ] is the directional uncertainty cone angle, quantifying the maximum allowable deviation during execution. • Vk is the admissible control direction set, defined as the spherical cap: 
+
+Vk := {v ∈ R2 | ∠(v, vk) ≤ θk}, (7) geometrically, Vk forms a spherical cap region. This model extends a discrete semantic label into a contin-uous geometric region, thereby providing the necessary math-ematical structure for subsequent formal safety verification based on CBFs. The directional cone angle θk can be pa-rameterized according to the precision of the semantics. For instance, precise tracking may be set with θ = 10 o while emergency evasion may be set with θ = 60 o to allow greater maneuverability. Fuzzy CBF Theory Based on Directional Cones 
+
+To establish formal safety guarantees for semantic actions, we first discretize the continuous directional cone vk into a set of basis directions. Let {e1, e2, ..., eN } be a finite set of basis directions satisfying vk ⊆ conv {e1, e2, ..., eN }, where 
+
+conv denotes the convex hull, i.e., the set of all convex com-binations of the basis directions. [Wang, 2024] For each basis direction ei we define a continuously differ-entiable safety function hi(x) and a feasible control law ui
+
+that satisfy the CBF condition: 
+
+Lf hi(x) + Lg hi(x)ui ≥ − αi (hi(x)) , (8) where αi is a class K∞ function. For any direction v ∈ V k, there exist non-negative coeffi-cients λ1, . . . , λ N with PNi=1 λi = 1 such that v = P 
+
+> i
+
+λiei.We then construct the mixed control law and mixed safety function for direction v as: 
+
+uv =
+
+> N
+
+X
+
+> i=1
+
+λiui, hv(x) = 
+
+> N
+
+X
+
+> i=1
+
+λihi(x). (9) Under the above construction, for any v ∈ V k the mixed control law uv satisfies: 
+
+Lf hv(x) + Lg hv(x)uv ≥ − α (hv(x)) , (10) where α(·) = max i αi(·). The detailed provement could be found in Appendix A. Given M spherical obstacles parameterized by center oj
+
+and radius rj , we introduce the fuzzy CBF criterion for action 
+
+ak aggregates the risk over the entire uncertainty cone Vk:
+
+hf uzzy (x) = min 
+
+> v∈V k
+
+
+
+min  
+
+> j∈{ 1,...,M }
+
+(∥p(x, v) − oj ∥ − rj )
+
+
+
+− dsaf e ,
+
+(11) where p(x, v) is the predicted position along the direction of 
+
+v, and dsaf e denotes the safety margin. This criterion effec-tively guarantees safety by bounding the distance to the near-est obstacle under the worst-case directional deviation within 
+
+Vk.
+
+4.3 Star-Hierarchical Graph Based RAG 
+
+Conventional RAG paradigms typically treat knowledge as flat embedding spaces, thereby overlooking the inherent hi-erarchical dependencies, specifically from situational aware-ness to strategic reasoning and to control execution pipeline within dynamic game-theoretic tasks for UAVs. To ad-dress this limitation, this chapter proposes a Star-Hierarchical Graph (SHG) framework for knowledge retrieval. The frame-work aims to establish a structured, relational, and elastically fault-tolerant mechanism for knowledge representation and invocation. 
+
+Construction of the Star-Hierarchical Graph 
+
+The framework models domain knowledge as a directed star-hierarchical graph G = ( N , E ). To balance global decision consistency with local execution flexibility, the node set N
+
+and edge set E are partitioned into three disjoint subsets: 
+
+N = NS ∪ N H ∪ N L, E = ES ∪ EH ∪ EL. (12) The node set N defines the basic graph structure. • Scene Hub Node ( NS = {ns}): The global context cen-ter serving as the logical origin for retrieval. • Hierarchical Subgraphs ( NH , NL): NH captures seman-tic evolution from perception to strategy; NL maps ac-tion categories to execution parameters. The edge set E defines the multi-dimensional paths for knowledge flow: • Connections ( ES ): This set directly connects the central scene hub ns to the initial layer nodes of the policy graph 
+
+NH and control graph NL. It establishes a synchronous constraint from the global context over all subsequent decision branches, • Intra-layer Logical Associations ( EH , E L): Within each subgraph, edges are further bifurcated into vertical se-quential edges Eseq and horizontal relational edges Erel .
+
+Eseq connect nodes in adjacent layers to model the causal progression of the decision chain. Erel link se-mantically similar or logically equivalent nodes within the same layer. 
+
+Hierarchical Recursive Elastic Retrieval 
+
+To mitigate the semantic ambiguity inherent in UAV game-theoretic queries Q, this chapter introduces the Hierarchical Recursive Elastic Retrieval algorithm to make retrieval effi-ciently. Adopting a neural-symbolic fusion strategy, we de-fine a hybrid matching scoring function Φ( n, q l) for node v
+
+and query component ql:
+
+Φ( n, q l) = α · cos (zv , zql ) + (1 − α) · Isyn (n, q l), (13) where z denotes the semantic embedding vectors extracted via pre-trained language models, and Isyn is the fuzzy match-ing indicator function. Specifically, Isyn = 1 if the query value ql exactly matches the node value or exists within the synonym set synset (n). By tuning the weight α, the algo-rithm balances the semantic generalization of vector spaces with the rigorous constraints of symbolic domain knowledge. To enable structured retrieval, the query is defined as a hi-erarchical sequence Q = {q1, . . . , q L}, where each ql tar-gets nodes of different semantic levels within the graph lay-ers. During execution, SAGE-LLM performs a top-down, layer-by-layer search to identify an optimal decision path 
+
+P = {n(1) , . . . , n (L)} that maximizes: 
+
+max  
+
+> P
+
+J (P |Q) = 
+
+> L
+
+X
+
+> l=1
+
+log(Φ( n(l), q l) + ϵ)
+
+s.t. (n(l), n (l+1) ) ∈ Eseq ∪ Erel ,
+
+(14) where ϵ is a small positive constant added to ensure numer-ical stability during the log-likelihood calculation. More de-tails could be found in Appendix B. This hierarchical re-trieval mechanism provides precise information via the ef-ficient, elastic search structure that grounds high-level intent into domain-specific, executable control knowledge. Figure 2: Generalization Experience Visualization. From left to right, the scenarios are: 5 spherical obstacles at random positions, 8 spherical obstacles at random positions, and 5 cylindrical obstacles with infinite height at fixed positions. The results show that SAGE-LLM success-fully pursues the target while avoiding all obstacles in unseen, challenging environments, showcasing its zero-shot generalization capability. 
+
+# 5 Experience 
+
+5.1 Experimental Overview 
+
+The experiments are centered around the task of UAV dy-namic pursuit-evasion games, with the core objective of ad-dressing the following four key research questions to validate the framework’s effectiveness, advantages, and robustness: 1. Safety Verification: During intense dynamic confronta-tion, can the SAGE-LLM framework strictly adhere to formal safety constraints and avoid collisions while pur-suing mission objectives? 2. Generalization Capability Verification: Compared to ex-isting mainstream methods, does SAGE-LLM demon-strate superior zero-shot adaptation and decision-making capabilities when dealing with unseen obstacles, sudden threats, and complex environmental layouts? 3. Architectural Robustness Verification: Is the core per-formance of the SAGE-LLM framework independent of the architecture and scale of the base LLM backbone? 4. Module Contribution Analysis: Through ablation stud-ies, what are the quantitative contributions and necessity of the two core innovative modules ? 
+
+Experimental Platform 
+
+All experiments are run on NVIDIA RTX 4090 GPU and con-ducted within the NVIDIA Isaac Gym environment. 
+
+Evaluation Metrics 
+
+To evaluate the safe and generalized ability, we introduce three matrix referring to [Zhao et al. , 2025]. 1. Success Rate: The task success rate measures the per-centage of missions in which the UAV successfully locks onto the adversarial UAV and completes the task. 
+
+Rate success = N um success 
+
+N um total 
+
+. (15) 2. Safety Rate: The safety rate measures the average prob-ability of violating safety rules (colliding with obstacles) while completing the mission. 
+
+Rate saf e = 1 − N umStep danger 
+
+N umStep total 
+
+. (16) Besides, to evaluate the zero-constraint-violation ability of our algorithm, we introduce a zero-danger-rate: 
+
+Rate zero danger = N umEpisode saf e 
+
+N umEpisode total 
+
+, (17) where the episode means single whole game. 
+
+5.2 Experiment 1: Safety Verification 
+
+Experimental Setup 
+
+This experiment aims to validate the core capability of the SAGE-LLM framework in ensuring safety within dynamic adversarial environments. The operational airspace contains five static spherical obstacles with fixed positions and radii, randomly distributed. The pursuing UAV must intercept a tar-get drone moving along a fixed straight line at a constant ve-locity within this environment and precisely avoid all spheri-cal obstacles while planning its pursuit trajectory. 
+
+Baselines 
+
+For a comprehensive safety assessment, we selected four rep-resentative Safe RL methods based on deep reinforcement learning as baselines, and compared them with our proposed SAGE-LLM: 1. DDPG: A standard deep deterministic policy gradient al-gorithm without safety constraints. 2. Negative Reward: Incorporating a collision penalty term into the reward function. [Qu et al. , 2023] 3. Primal-Dual Method: RL with constraints using La-grangain optimization. [Yue et al. , 2023] 4. MSMAR-RL: A state-of-the-art (SOTA) safe RL algo-rithm with recovery strategy. [Zhao et al. , 2025] Method Success Rate Safe Rate Zero-Danger-Epoch DDPG 92% 90.57% 52% Punishment 56% 92.93% 60% Primal-Dual 60% 97.52% 48% MSMAR-RL 64% 98.29% 80% SAGE-LLM 90% 99.73% 92% 
+
+> Table 1: Baselines Comparison
+
+Results and Analysis 
+
+As shown in Table 1, a clear trade-off between task success rate and safety performance is observed across the baseline methods: While the game-theoretic DDPG approach achieves the highest task success rate, it exhibits the weakest safety 0.0 0.2 0.4 0.6 0.8                  
+
+> Success Rate
+> 0.4
+> 0.6
+> 0.8
+> Safety Rate (zero-danger)  Scenario 1: 5 Random Spheres
+> 0.0 0.2 0.4 0.6 0.8
+> Success Rate
+> 0.4
+> 0.6
+> 0.8 Scenario 2: 8 Spheres
+> 0.0 0.2 0.4 0.6 0.8
+> Success Rate
+> 0.4
+> 0.6
+> 0.8
+> Scenario 3: 3 Spheres
+> 0.0 0.2 0.4 0.6 0.8
+> Success Rate
+> 0.4
+> 0.6
+> 0.8 Scenario 4: 2 Cylinders + 3 Spheres
+> DDPG Negative Reward Primal-Dual MSMAR-RL SAGE-LLM(Ours)
+
+Figure 3: Generalization performance scatter plot with error bars. Proximity to the top-right signifies superior overall performance, while 
+
+smaller error bars reflect higher stability. SAGE-LLM demonstrates a leading and robust position. 
+
+performance. Other safe reinforcement learning methods, de-spite improving safety to varying degrees, suffer from a no-ticeable decline in task success rates. In contrast, the pro-posed SAGE-LLM framework attains the highest safety rate while maintaining a high task success rate, with a zero-danger epoch ratio of 92%. These results demonstrate that SAGE-LLM can provide reliable safety guarantees for dynamic ad-versarial scenarios with almost no loss in task performance. 
+
+5.3 Experiment 2: Generalization Capability 
+
+Experimental Setup 
+
+Base Scenario: This scenario is used for training the base-line reinforcement learning policies and for constructing the knowledge base. The scene contains five spherical obstacles, whose initial positions are fixed in a standard layout. The target drone employs a matrix game-based evasion strategy. Generalization Test Suites: All methods are tested directly in the following three categories of generalization scenarios after training/construction on the base scenario, without any fine-tuning: a) Randomization of Obstacle Positions: The initial posi-tions of all obstacles are randomized to evaluate the system’s robustness and zero-shot adaptability. b) Generalization of Obstacle Quantity: The number of ob-stacles is varied from the baseline of 5 to either 3 or 8, testing the framework’s stability. c) Generalization of Obstacle Types: Unseen cylindrical obstacles are introduced and mixed with original spheres to simulate real-world heterogeneous obstacles. 
+
+Results and Analysis 
+
+The experimental trajectory visualizations are presented in Figure 2, in which our SEGE-LLM could pusuit the target UAV without any danger violence, showing great safety and generalization. Table 2 presents the performance of differ-ent methods across three generalization scenarios. 1) In the random position generalization scenario, SAGE-LLM signifi-cantly outperforms baseline methods in both task success rate and zero-danger epoch rate, with only a slightly lower suc-cess rate compared to the purely game-theoretic DDPG, while surpassing it substantially in safety. 2) In the increased ob-stacle quantity scenario, SAGE-LLM maintains a relatively high success rate and safety rate, whereas most safe rein-forcement learning methods exhibit a sharp decline in suc-cess rate, demonstrating their vulnerability to novel general-ization challenges. 3) When confronted with previously un-seen cylindrical obstacles, SAGE-LLM still achieves a high safety rate, reflecting its strong zero-shot generalization ca-pability across geometric types, which holds significant prac-tical relevance for real-world dynamic environments. Be-sides,according to the error regions in Figure 3, the analysis concludes that the fluctuations in success rate and safety rate of our method are not significant. 
+
+5.4 Experiment 3: Architectural Robustness 
+
+Experimental Setup 
+
+This experiment is designed to evaluate the compatibility and stability of the SAGE-LLM framework when driven by vari-ous LLM backends. To provide a comprehensive assessment of architectural robustness, we selected representative models based on the following two dimensions: Cross-Model Series: We utilized three top-tier LLMs with distinct technical lineages and optimization strategies, namely Qwen-max, DeepSeek Chat, and GLM-4.5. These models vary significantly in their pre-training corpora, align-ment techniques, and architectural nuances, [Sun et al. ,2025] serving as a rigorous testbed for the generalizability of SAGE-LLM across heterogeneous logical cores. Cross-Size Scales: Focusing on the Qwen series, we eval-uated four versions spanning different parameter magnitudes: Qwen-max, Qwen3-235b, Qwen3-32b, and Qwen3-8b. This dimension aims to investigate the specific impact of model scale reduction on decision-making safety and task execution efficiency. The scenario setup remains the same with the Randomiza-tion of Obstacle Position described in Section 5.3. Base Model Success Rate Safe Rate Zero-Danger-Epoch Qwen-max 80% 99.68% 85%                
+
+> Qwen3-235b 70% 99.11% 70% Qwen3-32b 75% 99.13% 70% Qwen3-8b 50% 98.55% 65% DeekSeek Chat 75% 99.51% 80% GLM-4.5 75% 99.71% 85%
+
+Table 2: Architecture Robustness Results and Analysis 
+
+Table 2 summarizes the performance of SAGE-LLM across various backend models. The results lead to the following observations: 1) Unified Robustness Across Heterogeneous Architec-tures: The experimental data indicate that SAGE-LLM main-tains a safe rate exceeding 99.5% and a stable Zero-Danger-Epoch rate of approximately 80%, regardless of whether DeepSeek Chat or GLM-4.5 is employed as the backbone. This demonstrates that the SAGE-LLM framework, by inte-grating the fuzzy CBF verification mechanism with the star-hierarchical graph RAG system, effectively shields the sys-tem from the inherent stochasticity and potential hallucina-tions of the underlying LLMs, exhibiting exceptional archi-tectural robustness. 2) Performance Scaling and Bottlenecks Across Model Sizes: Evaluation across the Qwen series demonstrates that SAGE-LLM maintains a consistently high safety floor regard-less of model scale, effectively decoupling safety from core reasoning capacity. However, task success exhibits a strong positive correlation with parameter size; while larger back-bones achieve superior success rates of approximately 80% ,the smaller model suffers significant performance degrada-tion, with its success and Zero-Danger-Epoch rates falling to 
+
+50% and 60% , respectively. Analysis suggests that while the Fuzzy-CBF module suc-cessfully constrains action boundaries to prevent collisions, smaller models struggle with the complex adversarial logic and precise instruction alignment required for air combat. This indicates that while SAGE-LLM can provide provable safety for models of any size, efficient task completion still relies on the advanced reasoning and control capabilities in-herent in larger-scale models. 
+
+5.5 Experiment 4: Ablation Studies 
+
+This section evaluates the individual contributions of the Fuzzy-CBF verification module and the Graph-RAG retrieval module to the system’s overall performance. 
+
+Fuzzy-CBF in Safety Assurance 
+
+1) Safety Performance: As illustrated in Table 3, the Fuzzy-CBF module serves as a critical component for maintaining UAV flight safety. Removal of this module leads to a signifi-cant reduction in safety metrics. These results suggest that while LLMs can comprehend semantic avoidance instruc-tions, they may lack the deterministic precision required for high-stakes dynamic environments, highlighting the necessity of physical safety constraints. 2) Performance Limitations: Comparing Row 1 and Row 2 in Table 3 reveals that although the Fuzzy-CBF only configu-ration achieves a superior safe rate, it suffers from a compar-atively lower success rate. This indicates that a safety-only approach tends to be overly conservative, revealing a perfor-mance bottleneck in purely reactive safety mechanisms. 
+
+Graph-RAG to Tactical Logic 
+
+1) Mission Efficiency: The Graph-RAG module significantly enhances the system’s tactical reasoning capabilities. By inte-grating structured domain knowledge, the framework enables the LLM to navigate complex pursuit scenarios more effec-tively, raising the Success Rate from a baseline of 50% to approximately 80% in the full configuration. 2) Aggressive Risks: A comparison between Row 3 and Row 4 reveals a noteworthy phenomenon: removing Graph-RAG results in a higher safe rate compared to the Graph-RAG only variant. This suggests that the Graph-RAG module may encourage aggressive maneuvers to maximize task success, demonstrating the safety risks of unconstrained retrieval-augmented reasoning. 
+
+Collaborative Synergy 
+
+The ablation study confirms that Fuzzy-CBF and Graph-RAG address different dimensions of the decision-making process, safety and efficiency, respectively. Relying on ei-ther module in isolation may lead to sub-optimal outcomes characterized by either excessive passivity or risky aggres-sion. The SAGE-LLM architecture mitigates these individual limitations through the synergistic integration of both compo-nents. This approach achieves a balanced performance pro-file, maintaining a high safety standard while ensuring robust task execution. Fuzzy CBF Graph RAG Success Rate Safe Rate Zero-Danger-Rate             
+
+> ✓✓80% 99.68% 85.00%
+> ✓55% 99.05% 90.00%
+> ✓70% 97.12% 45.00% 50% 98.81% 60.00%
+> Table 3: Ablation Test
+
+# 6 Conclusion 
+
+This paper proposes SAGE-LLM, a train-free two-layer decision-making architecture, addressing the challenges of safety and generalization for UAV decision in dynamic and unknown environments. The framework introduces three key innovations: 1) A train-free two-layer architecture that leverages LLMs to enhance generalization capabilities for emergent threats. 2) A Fuzzy-CBF verification mechanism that provides formal physical safety boundaries for LLM-generated semantic commands. 3) A star-hierarchical graph RAG system that significantly improves tactical reasoning and precision control through structured domain knowledge retrieval. Extensive experiments demonstrate that the pro-posed architecture achieves a superior balance between mis-sion efficiency and flight safety, exhibiting robust perfor-mance and cross-model compatibility in complex pursuit-evasion scenarios. For future research, we aim to optimize the framework’s computational efficiency to facilitate real-time deployment on resource-constrained embedded platforms. Furthermore, we plan to extend this architecture to accommodate multi-UAV swarm coordination and explore its broader applica-bility across other Embodied AI domains, such as ground robotics and autonomous driving. 
+
+# References 
+
+[Ahn et al. , 2022] Michael Ahn, Anthony Brohan, Noah Brown, Yevgen Chebotar, Omar Cortes, Byron David, Chelsea Finn, Chuyuan Fu, Keerthana Gopalakrishnan, Karol Hausman, et al. Do as i can, not as i say: Grounding language in robotic affordances. arXiv preprint arXiv:2204.01691 , 2022. [Ames et al. , 2014] Aaron D Ames, Jessy W Grizzle, and Paulo Tabuada. Control barrier function based quadratic programs with application to adaptive cruise control. In 
+
+53rd IEEE conference on decision and control , pages 6271–6278. IEEE, 2014. [Arslan et al. , 2024] Muhammad Arslan, Hussam Ghanem, Saba Munawar, and Christophe Cruz. A survey on rag with llms. Procedia computer science , 246:3781–3790, 2024. [Baumann et al. , 2025] Nicolas Baumann, Cheng Hu, Paviththiren Sivasothilingam, Haotong Qin, Lei Xie, Michele Magno, and Luca Benini. Enhancing au-tonomous driving systems with on-board deployed large language models. arXiv preprint arXiv:2504.11514 , 2025. [Driess et al. , 2023] Danny Driess, Fei Xia, Mehdi SM Saj-jadi, Corey Lynch, Aakanksha Chowdhery, Ayzaan Wahid, Jonathan Tompson, Quan Vuong, Tianhe Yu, Wenlong Huang, et al. Palm-e: An embodied multimodal language model. 2023. [Feng et al. , 2025] Tongtong Feng, Xin Wang, Yu-Gang Jiang, and Wenwu Zhu. Embodied ai: From llms to world models [feature]. IEEE Circuits and Systems Magazine ,25(4):14–37, 2025. [Geng et al. , 2025] Minghong Geng, Shubham Pateria, Bud-hitama Subagdja, Lin Li, Xin Zhao, and Ah-Hwee Tan. L2m2: A hierarchical framework integrating large lan-guage model and multi-agent reinforcement learning. In James Kwok, editor, Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelligence, IJCAI-25 , pages 99–107. International Joint Conferences on Artificial Intelligence Organization, 8 2025. Main Track. [He et al. , 2024] Tairan He, Chong Zhang, Wenli Xiao, Guanqi He, Changliu Liu, and Guanya Shi. Agile but safe: Learning collision-free high-speed legged locomo-tion. arXiv preprint arXiv:2401.17583 , 2024. [Liang et al. , 2025] Wenlong Liang, Rui Zhou, Yang Ma, Bing Zhang, Songlin Li, Yijia Liao, and Ping Kuang. Large model empowered embodied ai: A survey on decision-making and embodied learning. arXiv preprint arXiv:2508.10399 , 2025. [Ma et al. , 2025] Xingjun Ma, Yifeng Gao, Yixu Wang, Ruofan Wang, Xin Wang, Ye Sun, Yifan Ding, Hengyuan Xu, Yunhao Chen, Yunhan Zhao, et al. Safety at scale: A comprehensive survey of large model safety. arXiv preprint arXiv:2502.05206 , 2025. [Mao et al. , 2025] Yuren Mao, Yuhang Ge, Yijiang Fan, Wenyi Xu, Yu Mi, Zhonghao Hu, and Yunjun Gao. A sur-vey on lora of large language models. Frontiers of Com-puter Science , 19(7):197605, 2025. [Mu et al. , 2023] Yao Mu, Qinglong Zhang, Mengkang Hu, Wenhai Wang, Mingyu Ding, Jun Jin, Bin Wang, Jifeng Dai, Yu Qiao, and Ping Luo. Embodiedgpt: Vision-language pre-training via embodied chain of thought. 
+
+Advances in Neural Information Processing Systems ,36:25081–25094, 2023. [Qu et al. , 2023] Xiuqing Qu, Wenhao Gan, Dalei Song, and Liqin Zhou. Pursuit-evasion game strategy of usv based on deep reinforcement learning in complex multi-obstacle environment. Ocean Engineering , 273:114016, 2023. [Safaoui et al. , 2024] Sleiman Safaoui, Abraham P Vinod, Ankush Chakrabarty, Rien Quirynen, Nobuyuki Yoshikawa, and Stefano Di Cairano. Safe multia-gent motion planning under uncertainty for drones using filtered reinforcement learning. IEEE Transactions on Robotics , 40:2529–2542, 2024. [Sankaranarayanan et al. , 2024] Viswa Narayanan Sankara-narayanan, Akshit Saradagi, Sumeet Satpute, and George Nikolakopoulos. A cbf-adaptive control architecture for visual navigation for uav in the presence of uncertainties. In 2024 IEEE International Conference on Robotics and Automation (ICRA) , pages 13659–13665. IEEE, 2024. [Shao et al. , 2025] Yihua Shao, Minxi Yan, Yang Liu, Siyu Chen, Wenjie Chen, Xinwei Long, Ziyang Yan, Lei Li, Chenyu Zhang, Nicu Sebe, Hao Tang, Yan Wang, Hao Zhao, Mengzhu Wang, and Jingcai Guo. In-context meta lora generation. In James Kwok, editor, Proceedings of the Thirty-Fourth International Joint Conference on Ar-tificial Intelligence, IJCAI-25 , pages 6138–6146. Interna-tional Joint Conferences on Artificial Intelligence Organi-zation, 8 2025. Main Track. [So et al. , 2024] Oswin So, Zachary Serlin, Makai Mann, Jake Gonzales, Kwesi Rutledge, Nicholas Roy, and Chuchu Fan. How to train your neural control bar-rier function: Learning safety filters for complex input-constrained systems. In 2024 IEEE International Confer-ence on Robotics and Automation (ICRA) , pages 11532– 11539. IEEE, 2024. [Sun et al. , 2025] Weigao Sun, Jiaxi Hu, Yucheng Zhou, Jusen Du, Disen Lan, Kexin Wang, Tong Zhu, Xiaoye Qu, Yu Zhang, Xiaoyu Mo, et al. Speed always wins: A survey on efficient architectures for large language models. arXiv preprint arXiv:2508.09834 , 2025. [Wachi et al. , 2024] Akifumi Wachi, Xun Shen, and Yanan Sui. A survey of constraint formulations in safe rein-forcement learning. In Kate Larson, editor, Proceedings of the Thirty-Third International Joint Conference on Ar-tificial Intelligence, IJCAI-24 , pages 8262–8271. Interna-tional Joint Conferences on Artificial Intelligence Organi-zation, 8 2024. Survey Track. [Wang et al. , 2023] Wenhai Wang, Jiangwei Xie, ChuanYang Hu, Haoming Zou, Jianan Fan, Wenwen Tong, Yang Wen, Silei Wu, Hanming Deng, Zhiqi Li, et al. Drivemlm: Aligning multi-modal large language models with behavioral planning states for autonomous driving. arXiv preprint arXiv:2312.09245 , 2023. [Wang et al. , 2024] Xinwei Wang, Yihui Wang, Xichao Su, Lei Wang, Chen Lu, Haijun Peng, and Jie Liu. Deep rein-forcement learning-based air combat maneuver decision-making: literature review, implementation tutorial and future direction. Artificial Intelligence Review , 57(1):1, 2024. [Wang et al. , 2025] Ning Wang, Zihan Yan, Weiyang Li, Chuan Ma, He Chen, and Tao Xiang. Advancing em-bodied agent security: From safety benchmarks to in-put moderation. In James Kwok, editor, Proceedings of the Thirty-Fourth International Joint Conference on Ar-tificial Intelligence, IJCAI-25 , pages 7795–7803. Interna-tional Joint Conferences on Artificial Intelligence Organi-zation, 8 2025. Main Track. [Wang, 2024] Zhenbo Wang. A survey on convex optimiza-tion for guidance and control of vehicular systems. Annual Reviews in Control , 57:100957, 2024. [Wu et al. , 2025] Junde Wu, Jiayuan Zhu, Yunli Qi, Jingkun Chen, Min Xu, Filippo Menolascina, Yueming Jin, and Vi-cente Grau. Medical graph rag: Evidence-based medical large language model via graph retrieval-augmented gen-eration. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 28443–28467, 2025. [Xiao et al. , 2024] Wenli Xiao, Tairan He, John Dolan, and Guanya Shi. Safe deep policy adaptation. In 2024 IEEE International Conference on Robotics and Automa-tion (ICRA) , pages 17286–17292. IEEE, 2024. [Yue et al. , 2023] Longfei Yue, Rennong Yang, Ying Zhang, and Jialiang Zuo. Research on reinforcement learning-based safe decision-making methodology for multiple unmanned aerial vehicles. Frontiers in Neurorobotics ,16:1105480, 2023. [Zhang et al. , 2023] Shengyu Zhang, Linfeng Dong, Xiaoya Li, Sen Zhang, Xiaofei Sun, Shuhe Wang, Jiwei Li, Runyi Hu, Tianwei Zhang, Guoyin Wang, et al. Instruction tun-ing for large language models: A survey. ACM Computing Surveys , 2023. [Zhao et al. , 2024] Yang Zhao, Zidong Nie, Kangsheng Dong, Qinghua Huang, and Xuelong Li. Autonomous decision making for uav cooperative pursuit-evasion game with reinforcement learning. arXiv preprint arXiv:2411.02983 , 2024. [Zhao et al. , 2025] Yang Zhao, Wenzhe Zhao, and Xuelong Li. Msmar-rl: Multi-step masked-attention recovery re-inforcement learning for safe maneuver decision in high-speed pursuit-evasion game. In Proceedings of the Thirty-Fourth International Joint Conference on Artificial Intelli-gence , pages 311–319, 2025. [Zitkovich et al. , 2023] Brianna Zitkovich, Tianhe Yu, Sichun Xu, Peng Xu, Ted Xiao, Fei Xia, Jialin Wu, Paul Wohlhart, Stefan Welker, Ayzaan Wahid, et al. Rt-2: Vision-language-action models transfer web knowledge to robotic control. In Conference on Robot Learning , pages 2165–2183. PMLR, 2023.

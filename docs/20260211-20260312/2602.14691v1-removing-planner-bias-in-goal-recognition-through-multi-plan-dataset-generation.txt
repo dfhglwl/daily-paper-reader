@@ -1,0 +1,258 @@
+Title: Removing Planner Bias in Goal Recognition Through Multi-Plan Dataset Generation
+
+URL Source: https://arxiv.org/pdf/2602.14691v1
+
+Published Time: Tue, 17 Feb 2026 03:19:22 GMT
+
+Number of Pages: 5
+
+Markdown Content:
+# Removing Planner Bias in Goal Recognition Through Multi-Plan Dataset Generation 
+
+# Mustafa F. Abdelwahed 1, Felipe Meneguzzi 2,3 Kin Max Piamolini Gusm˜ ao 2, Joan Espasa 1 
+
+> 1
+
+University of St Andrews, School of Computer Science, UK 
+
+{ma342, jea20 }@st-andrews.ac.uk  
+
+> 2
+
+Pontifical Catholic University of Rio Grande do Sul, Brazil 
+
+Kin.Gusmao@edu.pucrs.br  
+
+> 3
+
+University of Aberdeen, UK 
+
+felipe.meneguzzi@abdn.ac.uk 
+
+Abstract 
+
+Autonomous agents require some form of goal and plan recognition to interact in multiagent settings. Unfortunately, all existing goal recognition datasets suffer from a systemati-cal bias induced by the planning systems that generated them, namely heuristic-based forward search. This means that ex-isting datasets lack enough challenge for more realistic sce-narios (e.g., agents using different planners), which impacts the evaluation of goal recognisers with respect to using dif-ferent planners for the same goal. In this paper, we propose a new method that uses top-k planning to generate multiple, different, plans for the same goal hypothesis, yielding bench-marks that mitigate the bias found in the current dataset. This allows us to introduce a new metric called Version Coverage Score (VCS) to measure the resilience of the goal recogniser when inferring a goal based on different sets of plans. Our results show that the resilience of the current state-of-the-art goal recogniser degrades substantially under low observabil-ity settings. 
+
+# Introduction 
+
+Goal and plan recognition are the related tasks of inferring, from observations of an agent’s behaviour, the agent’s goal and the plan it is following towards such goal. The ability to carry out such recognition is critical when dealing with agents operating in open multiagent environments for two main reasons. First, it allows one to anticipate an agent’s be-haviours, and thus reasoning about positive or negative inter-actions between different agents sharing the same environ-ment. Second, it allows agents to coordinate their behaviour without explicit communication (e.g., to avoid negative in-terference between potentially conflicting plans). Following the seminal approach by Ram´ ırez and Geffner (2009), recent research yielded substantial progress on methods for goal and plan recognition in single agent set-tings (Ram´ ırez and Geffner 2009, 2010; Sukthankar et al. 2014; Mart´ ın, Moreno, and Smith 2015; Sohrabi, Riabov, and Udrea 2016; Pereira, Oren, and Meneguzzi 2017; Vered and Kaminka 2017; Pereira, Oren, and Meneguzzi 2020; R de A Santos et al. 2021; Amado, Mirsky, and Meneguzzi 2022; Serina et al. 2025). These methods vary considerably, 
+
+Copyright © 2026, Association for the Advancement of Artificial Intelligence (www.aaai.org). All rights reserved. 
+
+from relying on a full planning algorithm to find observa-tion compliant plans (Ram´ ırez and Geffner 2010; Sohrabi, Riabov, and Udrea 2016; Vered and Kaminka 2017), to com-puting heuristic estimates of such plans (Mart´ ın, Moreno, and Smith 2015; Pereira, Oren, and Meneguzzi 2017, 2020), to building machine-learning models of the agent prefer-ences (Amado, Mirsky, and Meneguzzi 2022; Chiari et al. 2023; Serina et al. 2025). Indeed, most recent approaches achieve substantial accuracy, often at low total computa-tional cost (Pereira, Oren, and Meneguzzi 2020; R de A San-tos et al. 2021). Common in virtually all such approaches is their use of either the problem set from Ram´ ırez and Geffner (2010), or a more recent problem set (Pereira and Meneguzzi 2017) derived from Pereira, Oren, and Meneguzzi (2020). Indeed, they were all created by planning systems that rely on heuristic search (Gerevini, Saetti, and Serina 2003; Helmert 2006; Richter and Westphal 2010), and where sys-tematic biases (for instance, sub-optimality) is a result of an inadmissible heuristic (Richter and Westphal 2010), an in-admissible search procedure (e.g., GBFS or weighted A ∗ in (Helmert 2006)), or sampling from top-k plans (Katz et al. 2018a; Gerevini, Saetti, and Serina 2003). Current goal recognition benchmarking uses the dataset suggested by Ram´ ırez and Geffner (2009), or variations thereof (Pereira, Oren, and Meneguzzi 2020). This dataset does not consider different sequences of observations for the same goal. This is not realistic since in the real world, agents under observation can generate different optimal plans for the same goal. A goal recogniser that does not consider this, risks jeopardising its accuracy. Therefore, in this pa-per we suggest a new measure for goal recognisers called 
+
+Resilience , which measures the sensitivity of the goal recogniser to different observation sequences for the same goal hypothesis. The contributions of this paper are: (1) a new dataset generation that eliminates the planner’s bias and (2) a metric to measure the recogniser’s resilience. The paper first motivates the need to measure the re-silience of a goal recogniser. Then presents background nec-essary for understanding the contribution for this paper, fol-lowed by the suggested dataset generation method. Finally, it evaluates the landmark-based recogniser’s resilience, list conclusions and future work.             
+
+> arXiv:2602.14691v1 [cs.AI] 16 Feb 2026 Table
+> w
+> a
+> r
+> d
+> Table
+> drawoepc
+> opecw
+> ra
+> d
+> Table
+> w
+> a
+> r
+
+Initial State 
+
+Hypo-A
+
+Hypo-B                    
+
+> ??
+> ddr
+> acdo
+> deaw
+> rp
+> daacra
+> awrp
+> ra
+> d
+
+I
+
+II 
+
+III 
+
+IV 
+
+V
+
+Block  Stack/Unstack 
+
+Observation 
+
+Pickup/Putdown 
+
+Observation 
+
+> ?
+
+Observation sequence 
+
+Hypo-C 
+
+Hypo-D 
+
+> Table
+> w
+> o
+> r
+> Table
+> r
+> a
+> e
+
+Rejected 
+
+hypothsis Figure 1: A complete goal recognition problem with a set of different observation sequences for the same blocks arrangement. 
+
+# Motivating Example 
+
+We illustrate the need for measuring a goal recogniser re-silience through the well-known goal recognition task called 
+
+blocks-world . In this task, the recogniser attempts to infer the final placement of a set of lettered blocks from a partial sequence of observations. The proportion of the full sequence provided is called the observation level . Figure 1 shows a generated set of different observation sequences for the same arrangement. We refer to a specific target arrange-ment as a hypothesis . This task has four hypotheses: (A) r on top a on top w, (B) d on top r on top a on top w, (C) r on top o on top w, and (D) e on top a on top r. Cru-cially, each hypothesis can typically be achieved through multiple distinct plans, each producing a different observa-tion sequence. We generated 5 possible plans for hypothesis B, and then dropped 50% of the actions randomly to cre-ate observation sequences with 50% observability. For this example, we used Symk (Speck, Seipp, and Torralba 2025) to generate the observations and the Landmark-based recog-niser (Pereira, Oren, and Meneguzzi 2020) to solve the tasks. Here, the landmark-based approach was only able to iden-tify the correct hypothesis only one out of five times. Current benchmarking practice treats each observation sequence as an independent task, ignoring the fact that all five sequences represent different paths to the same goal. We argue that a recogniser’s performance on a hypothesis should instead be measured by aggregating results across all sequences for that hypothesis. For example, one could compute the proportion of correctly solved sequences and deem the recogniser re-silient if this proportion exceeds a specified threshold. 
+
+# Background 
+
+This section provides the necessary background for our sug-gested measurement. We first define the goal recognition task then cover top-k planners. 
+
+Planning and Goal Recognition 
+
+We formalise goal recognition in the context of automated planning (Meneguzzi and Pereira 2021), starting with a high-level model and refining it to match the approaches dis-cussed later. We then define goal recognition itself, ground-ing it in planning and progressively refining its components. Following Ghallab, Nau, and Traverso (2016), a planning task is a tuple of Ξ = ⟨S, A, γ, cost , I, G ⟩, where the first part represents the domain with S as a set of states, A as a set of actions, and γ as a transition function γ : S × A → S
+
+that associates each state s ∈ S and action a ∈ A to the next state γ(s, a ) = s′. The function cost : A → R+ represents the cost of an action. Note that here we only consider action costs that are independent of the state unlike state-dependent action ones (Speck, Seipp, and Torralba 2025). I ∈ S rep-resents the initial state while G is a formula that models all possible goal states. A Goal Recognition task is about identifying an agent’s goal by observing its interactions with an environment (Suk-thankar et al. 2014, Chapter 1). These observations pro-vide evidence for recognition and are either executed ac-tions (e.g., movement, cooking) or state changes (e.g., loca-tion, activity). We adopt the problem formulation of Ram´ ırez and Geffner (2009), defining a goal recognition task (Defi-nition 1) analogously to a planning task but with two key differences. First, a set of goal hypotheses G replaces the single goal. We assume there is a single correct goal hy-pothesis G∗ ∈ G , which is not revealed to the recognizer. Second, a sequence of observations Ω reflects the agent’s behaviour. Note that the goal state G inside Ξ is discarded. Thus, from this point we refer to Ξ as the planning domain for simplicity. Definition 1 (Goal Recognition Task) . A goal recognition task ΞΩ 
+
+> G
+
+= ⟨Υ, G, Ω⟩ includes: a planning task Υ; a set of possible goals G; and an observation sequence Ω.
+
+Top-k planners 
+
+Riabov, Sohrabi, and Udrea (2014) introduced the first top-k planner. It is called TK ∗ and is based on the K∗ algo-rithm (Aljazzar and Leue 2011), which is a generalisation of 
+
+A∗. This planner takes a solution to a planning task and cre-ates a set of new planning tasks that preserve all solutions of the original task except for the specified one. It then searches for a reformulation tree, invoking an existing planner at each node. Katz et al. (2018b) proposed FORBID-k , an alterna-tive iterative approach to top-k planning. Their method in-volves reformulating the planning task into a single task, allowing for the identification of additional solutions while preserving all previously found solutions except for the one originally given. They also suggested further methods to de-rive new solutions from those already discovered, which re-duces the number of times the underlying cost-optimal plan-ner needs to be invoked. Additionally, they extended their re-formulation to prohibit multiple plans simultaneously, which helps mitigate the increase in the size of task formulations. Speck, Mattm¨ uller, and Nebel (2020) suggested using sym-bolic search for solving the top-k planning problem. They introduced SymK , a symbolic-based planner that performs better for small and large numbers of required plans com-pared to all other approaches. In this work, we used SymK 
+
+because it is the state-of-the-art top-k planner. 
+
+# Resilient Goal Recognition Dataset 
+
+In this section, we formulate a metric that measures the re-silience of a goal recogniser, as discussed in motivating ex-ample. Furthermore, we show how to generate a resilient goal recognition dataset. We define Version Coverage Score (VCS) metric to mea-sure the resilience of a goal recogniser for a given task. This metric is defined as follows: 
+
+Definition 2 (Version Coverage Score (VCS)) . Given a set of goal recognition tasks for the same hypothesis Γ = 
+
+{ΞΩ1 
+
+> G
+
+, . . . , ΞΩk 
+
+> G
+
+}, a recogniser R, Version Coverage Score is defined as VCS : Γ × {R} → R a function that receives a set of goal recognition tasks ( Γ), a goal recogniser ( R) and computes the ratio between the correctly solved tasks to the number of tasks. 
+
+After defining VCS metric, we say a goal recogniser R is resilient to a goal recognition task ΞG with Γ tasks if its Ver-sion Coverage Score is greater than or equal to a resilience threshold T ∈ [0 , 1] (i.e., VCS(Γ , R) ≥ T ). In order to produce a resilient dataset we use a top-k plan-ner (Katz et al. 2018b). Algorithm 1 denotes a generalised procedure for generating such a dataset. Usually, a goal recognition dataset contains the same goal recognition task with different observation values O ∈ { 10 , 30 , 50 , 70 , 100 }
+
+with noisy values N ∈ { 0, 10 , 20 , 30 } (Pereira, Oren, and Meneguzzi 2020). Furthermore, a goal recognition task can have at most k distinct observations for a given hypothesis, resulting in a maximum of k versions of the task. Therefore, to construct the whole dataset, we invoke Algorithm 1 for every observation, noise, k and goal hypothesis. Algorithm 1 receives a planning task (Ξ), planner (planner ), a goal hypothesis ( g), the number of required variants of Ξ (k), observability percentage ( O) and noisy percentage ( N ). The first step of the planning task is up-dated to contain the goal hypothesis g through an auxiliary function called update , then generates k observations using behaviour planning (lines 2-3). In the second step, it gener-ates a set of possible hypotheses G including the goal state in Ξ. This is done using the HypothesisGenerator function, which follows the same logic as the dataset from Ram´ ırez and Geffner (2010). Afterwards, for every ordered set of ob-servations ( Ω), Algorithm 1 generates two tasks: a clean and a noisy version. This is achieved as follows, Algorithm 1 se-lects a subset of observations with size O · | Ω| with no noise applied and then selects another subset of observations with size O · | Ω| but with N% noise applied (Lines 5-9). Algorithm 1: TaskGenerator 
+
+Require: Ξ: Planning task, planner : Planner, g: goal hy-pothesis, k: planning task variants, O: observability per-centage, N : noisy percentage. 
+
+Ensure: k goal recognition tasks ( tasks clean , tasks noise ).  
+
+> 1:
+
+tasks clean ← {} , tasks noise ← {}  
+
+> 2:
+
+Ξ′ ← update(Ξ , g ) 
+
+> 3:
+
+Ψ ← planner(Ξ ′, k ) 
+
+> 4:
+
+G ← HypothesisGenerator(Ξ) ∪ { g} 
+
+> 5:
+
+for Ω ∈ Ψ do  
+
+> 6:
+
+Ω′ 
+
+> clean
+
+← Select(Ω , O, 0)  
+
+> 7:
+
+Ω′ 
+
+> noise
+
+← Select(Ω , O, N ) 
+
+> 8:
+
+tasks clean ← tasks clean ∪ {⟨ Ξ, G, Ω′
+
+> clean
+
+⟩}  
+
+> 9:
+
+tasks noise ← tasks noise ∪ {⟨ Ξ, G, Ω′
+
+> noise
+
+⟩}  
+
+> 10:
+
+return tasks clean , tasks noise 
+
+# Experiments Setup, Results, & Discussion 
+
+In this section we generate a dataset using the method men-tioned in the previous section, benchmarked the landmark-based goal recogniser on it and discussed the results of the experiment. 
+
+Setup. To show resilience of a goal recogniser given dif-ferent threshold levels, we generated a dataset with k = 5 
+
+for every goal recognition task in Ram´ ırez and Geffner (2009)’s dataset using an Intel(R) Xeon(R) Gold 6138 CPU at 2.00GHz, with a 32GB RAM limit. Then we computed VCS for different resilience threshold values T ∈ [0 .1, 1.0] 
+
+the tasks’ variants. As for the spread (i.e., number of selected hypotheses), we averaged them across the tasks’ variants. Usually a goal recogniser is evaluated based on several pa-rameters. The first parameter denotes the average number of goal hypotheses selected by the goal recogniser. Such pa-rameter is called spread . The second parameter is accuracy ,it is the number of correctly assigned truth-values to the goal hypotheses divided by the total number of hypotheses. The last parameter is positive predictive value (PPV), it is the Obs. Level Threshold 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 10 95.0/0.11 89.0/0.14 89.0/0.14 86.0/0.15 86.0/0.15 82.0/0.16 82.0/0.16 79.0/0.17 79.0/0.17 76.0/0.17 76.0/0.17 30 97.0/0.05 96.0/0.07 96.0/0.07 94.0/0.09 94.0/0.09 92.0/0.11 92.0/0.11 89.0/0.12 89.0/0.12 85.0/0.14 85.0/0.14 50 99.0/0.03 98.0/0.04 98.0/0.04 98.0/0.05 98.0/0.05 97.0/0.07 97.0/0.07 95.0/0.08 95.0/0.08 91.0/0.11 91.0/0.11 70 99.0/0.02 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.03 98.0/0.05 98.0/0.05 98.0/0.07 98.0/0.07 96.0/0.09 96.0/0.09 100 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.03 99.0/0.04 99.0/0.04 
+
+> (a) Landmark accuracy statistical results (mean/std).
+
+Obs. Level Threshold 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 10 81.0/0.37 57.0/0.43 57.0/0.43 45.0/0.45 45.0/0.45 31.0/0.4 31.0/0.4 22.0/0.35 22.0/0.35 13.0/0.29 13.0/0.29 30 85.0/0.18 78.0/0.29 78.0/0.29 70.0/0.36 70.0/0.36 61.0/0.42 61.0/0.42 49.0/0.45 49.0/0.45 35.0/0.44 35.0/0.44 50 91.0/0.14 90.0/0.19 90.0/0.19 86.0/0.26 86.0/0.26 80.0/0.34 80.0/0.34 70.0/0.41 70.0/0.41 54.0/0.47 54.0/0.47 70 95.0/0.12 95.0/0.13 95.0/0.13 93.0/0.17 93.0/0.17 90.0/0.24 90.0/0.24 87.0/0.31 87.0/0.31 77.0/0.4 77.0/0.4 100 95.0/0.16 95.0/0.17 95.0/0.17 95.0/0.17 95.0/0.17 95.0/0.17 95.0/0.17 95.0/0.18 95.0/0.18 93.0/0.21 93.0/0.21 
+
+> (b) Landmark ppv statistical results (mean/std).
+
+Obs. Level Threshold 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 10 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 1.47/0.73 30 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 1.26/0.41 50 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 1.13/0.27 70 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 1.08/0.2 100 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 1.11/0.39 
+
+> (c) Landmark spread statistical results (mean/std).
+
+Table 1: Statistical results for accuracy, ppv and spread. Results format is mean/std. number of correctly selected true hypotheses divided by the total number of hypotheses selected as true. 
+
+Results. To capture the relation between the observation level, resilience threshold and the evaluation metric (i.e., ac-curacy, PPV, spread) we tabled the statistical results showing the mean and standard deviation of each evaluation metric, see Table 1 for the results. 
+
+Discussion. In general, the values for accuracy and PPV decrease when the resilience threshold increases. This is ex-pected because increasing the threshold means expecting that the recogniser can infer the correct hypothesis for more than one observation sequence. Even though the landmark-based recogniser performs well for observation level above 50%, its accuracy starts to deteriorate when the observation level is 50% and below. This is not the under the old dataset. For instance on the old dataset, the recogniser had accuracy of 85% at 10% observation level and 95% at 50% observa-tion level. This difference shows that even the state-of-the-art recogniser has a planner bias. We observe a similar pat-tern for the PPV. As for the spread, the same results matches the old dataset and the reason behind this is that the recog-niser tend to select one hypothesis only. 
+
+# Conclusions & Future work 
+
+This paper addresses a critical limitation in existing goal recognition datasets which is related to the systematic plan-ner bias. Current datasets do not consider that optimal plan-ners can generate different plans for the same planning task and this what introduces the bias. To overcome this limita-tion, we developed a new method to generate datasets that produces multiple plans for each goal hypothesis. This can be done by leveraging top-k planners such as SymK. We pro-posed a metric to quantify a goal recogniser’s resilience and called it Version Coverage Score (VCS). Our experimental evaluation of the state-of-the-art landmark-based goal recog-niser on this new dataset revealed significant insights. While the recogniser performs well under high observation levels, its accuracy and positive predictive value deteriorate as the observation level decreases and the resilience threshold in-creases. This decline, not observed when testing on the tradi-tional biased dataset and indicates that even state-of-the-art recogniser is susceptible to planner bias. 5 There are sev-eral promising directions emerge from this research. One of these directions is to explore using diverse planners to gen-erate more challenging tasks for goal recognisers. Another possible direction is exploring other methods to pick which actions of the observation sequence to drop or modify. Cur-rently, it is based on a random sampling approach. References 
+
+Aljazzar, H.; and Leue, S. 2011. K∗: A heuristic search algorithm for finding the k shortest paths. Artif. Intell. ,175(18): 2129–2154. Amado, L.; Mirsky, R.; and Meneguzzi, F. 2022. Goal Recognition as Reinforcement Learning. In Proceedings of the 36th AAAI Conference on Artificial Intelligence (AAAI-22) , 9644–9651. AAAI Press. Chiari, M.; Gerevini, A. E.; Percassi, F.; Putelli, L.; Serina, I.; and Olivato, M. 2023. Goal Recognition as a Deep Learn-ing Task: The GRNet Approach. In Koenig, S.; Stern, R.; and Vallati, M., eds., Proceedings of the Thirty-Third Inter-national Conference on Automated Planning and Schedul-ing , 560–568. AAAI Press. Gerevini, A.; Saetti, A.; and Serina, I. 2003. Planning Through Stochastic Local Search and Temporal Action Graphs in LPG. J. Artif. Intell. Res. , 20: 239–290. Ghallab, M.; Nau, D.; and Traverso, P. 2016. Automated planning and acting . Cambridge University Press. Helmert, M. 2006. The Fast Downward Planning System. 
+
+Journal of Artificial Intelligence Research , 26: 191–246. Katz, M.; Sohrabi, S.; Udrea, O.; and Winterer, D. 2018a. A Novel Iterative Approach to Top-k Planning. In de Weerdt, M.; Koenig, S.; R¨ oger, G.; and Spaan, M. T. J., eds., Pro-ceedings of the Twenty-Eighth International Conference on Automated Planning and Scheduling, ICAPS 2018, Delft, The Netherlands, June 24-29, 2018 , 132–140. AAAI Press. Katz, M.; Sohrabi, S.; Udrea, O.; and Winterer, D. 2018b. A Novel Iterative Approach to Top-k Planning. In de Weerdt, M.; Koenig, S.; R¨ oger, G.; and Spaan, M. T. J., eds., Pro-ceedings of the Twenty-Eighth International Conference on Automated Planning and Scheduling, ICAPS 2018, Delft, The Netherlands, June 24-29, 2018 , 132–140. AAAI Press. Mart´ ın, Y. E.; Moreno, M. D. R.; and Smith, D. E. 2015. A Fast Goal Recognition Technique Based on Interaction Es-timates. In Proceedings of the Twenty-Fourth International Joint Conference on Artificial Intelligence .Meneguzzi, F.; and Pereira, R. F. 2021. A Survey on Goal Recognition as Planning. In Zhou, Z., ed., Proceedings of the Thirtieth International Joint Conference on Artificial In-telligence , 4524–4532. Pereira, R. F.; and Meneguzzi, F. 2017. Goal and plan recog-nition datasets using classical planning domains. Pereira, R. F.; Oren, N.; and Meneguzzi, F. 2017. Landmark-Based Heuristics for Goal Recognition. In Proceedings of the 31st AAAI Conference on Artificial Intelligence (AAAI-17) , 3622–3628. Pereira, R. F.; Oren, N.; and Meneguzzi, F. 2020. Landmark-based approaches for goal recognition as planning. Artificial Intelligence , 279: 103217. R de A Santos, L.; Meneguzzi, F.; Pereira, R. F.; and Pereira, A. 2021. An LP-Based Approach for Goal Recognition as Planning. In Proceedings of the 35th AAAI Conference on Artificial Intelligence (AAAI-21) , 11939–11946. AAAI Press. Ram´ ırez, M.; and Geffner, H. 2009. Plan Recognition as Planning. In Boutilier, C., ed., Proceedings of the 21st Inter-national Joint Conference on Artificial Intelligence , 1778– 1783. Ram´ ırez, M.; and Geffner, H. 2010. Probabilistic Plan Recognition Using Off-the-Shelf Classical Planners. In Pro-ceedings of the 24th AAAI Conference on Artificial Intelli-gence (AAAI-10) , 1121–1126. Riabov, A.; Sohrabi, S.; and Udrea, O. 2014. New algo-rithms for the top-k planning problem. In Proceedings of the scheduling and planning applications workshop (spark) at the 24th international conference on automated planning and scheduling (icaps) , 10–16. Richter, S.; and Westphal, M. 2010. The LAMA Planner: Guiding Cost-Based Anytime Planning with Landmarks. 
+
+Journal of Artificial Intelligence Research , 39: 127–177. Serina, L.; Chiari, M.; Gerevini, A. E.; Putelli, L.; and Se-rina, I. 2025. Towards Efficient Online Goal Recognition through Deep Learning. In Proceedings of the 24th In-ternational Conference on Autonomous Agents and Multia-gent Systems , 1895–1903. International Foundation for Au-tonomous Agents and Multiagent Systems. Sohrabi, S.; Riabov, A. V.; and Udrea, O. 2016. Plan Recog-nition as Planning Revisited. In International Joint Confer-ence on Artificial Intelligence , 3258–3264. Speck, D.; Mattm¨ uller, R.; and Nebel, B. 2020. Symbolic Top-k Planning. In The Thirty-Fourth AAAI Conference on Artificial Intelligence, AAAI 2020, The Thirty-Second In-novative Applications of Artificial Intelligence Conference, IAAI 2020, The Tenth AAAI Symposium on Educational Ad-vances in Artificial Intelligence, EAAI 2020, New York, NY, USA, February 7-12, 2020 , 9967–9974. AAAI Press. Speck, D.; Seipp, J.; and Torralba, ´A. 2025. Symbolic Search for Cost-Optimal Planning with Expressive Model Extensions. J. Artif. Intell. Res. , 82. Sukthankar, G.; Goldman, R. P.; Geib, C.; Pynadath, D. V.; and Bui, H. H. 2014. Plan, Activity, and Intent Recognition: Theory and Practice . Elsevier. ISBN 978-0123985323. Vered, M.; and Kaminka, G. A. 2017. Online Recognition of Navigation Goals Through Goal Mirroring. In Proceedings of the Sixteenth International Conference on Autonomous Agents and Multiagent Systems .
