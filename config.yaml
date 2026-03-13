@@ -39,9 +39,6 @@ subscriptions:
         - keyword: reinforcement learning
           keyword_cn: 强化学习
           query: deep reinforcement learning for air combat strategy generation
-        - keyword: opponent modeling
-          keyword_cn: 对手建模
-          query: adversary behavior modeling and intent recognition in dogfights
         - keyword: prediction-aided decision
           keyword_cn: 预测辅助决策
           query: prediction-based decision making framework for aerial combat
@@ -77,4 +74,4 @@ subscriptions:
           enabled: true
           source: manual
           note: ''
-      updated_at: '2026-03-11T01:25:36.538Z'
+      updated_at: '2026-03-13T08:27:18.086Z'
