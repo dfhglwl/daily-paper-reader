@@ -1,0 +1,223 @@
+Title: Evaluating randomized smoothing as a defense against adversarial attacks in trajectory prediction
+
+URL Source: https://arxiv.org/pdf/2603.10821v1
+
+Published Time: Thu, 12 Mar 2026 01:05:04 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# Evaluating randomized smoothing as a defense against adversarial attacks in trajectory prediction 
+
+Julian F. Schumann ∗, Eduardo Figueiredo †, Frederik Baymler Mathiesen †,Luca Laurenti †, Jens Kober ∗, Arkady Zgonnikov ∗∗Department of Cognitive Robotics , TU Delft , Delft, Netherlands 
+
+†Delft Center for Systems and Control , TU Delft , Delft, Netherlands 
+
+{j.f.schumannn, e.figueiredo, f.b.mathiesen, l.laurenti, j.kober, a.zgonnikov }@tudelft.nl 
+
+Abstract —Accurate and robust trajectory prediction is es-sential for safe and efficient autonomous driving, yet recent work has shown that even state-of-the-art prediction models are highly vulnerable to inputs being mildly perturbed by adversarial attacks. Although model vulnerabilities to such attacks have been studied, work on effective countermeasures remains limited. In this work, we develop and evaluate anew defense mechanism for trajectory prediction models based on randomized smoothing – an approach previously applied successfully in other domains. We evaluate its ability to improve model robustness through a series of experiments that test different strategies of randomized smoothing. We show that our approach can consistently improve prediction robustness of multiple base trajectory prediction models in various datasets without compromising accuracy in non-adversarial settings. Our results demonstrate that randomized smoothing offers a sim-ple and computationally inexpensive technique for mitigating adversarial attacks in trajectory prediction. 
+
+Index Terms —autonomous vehicles, trajectory prediction, adversarial attack, randomized smoothing. 
+
+I. I NTRODUCTION 
+
+Autonomous driving has emerged as a key automotive innovation, attracting billions in investment [1], driven by its potential to reduce traffic injuries and fatalities [2] as well as to generate substantial economic value [3]. However, for the viability of autonomous vehicles, being safer than human drivers alone is insufficient; they must also drive efficiently and interact smoothly with human road users. Early autonomous vehicles were often overly cautious, which paradoxically created risks, such as being rear-ended [4], [5]. This arises from the uncertainty about other road users’ behavior, limiting safe control options. Accurate prediction models can reduce this uncertainty, enabling more efficient and assertive driving, anticipating conflicts, and yielding when appropriate [6], [7], while also supporting realistic simulation of human behavior in virtual environments [8]. Consequently, many distinct prediction models have been proposed in recent years, with a primary focus on deep learning methods. The employed architectures range from conditional variational autoencoders [9], [10] and normaliz-
+
+The source code used in this work is available online at https://github.com/julianschumann/General-Framework-Smoothing. 
+
+ing flows [11] to denoising diffusion models [12], [13] and large language models [14], [15]. While these models generally achieve impressive predic-tion accuracy on well-defined benchmarks, their robustness – although essential for public safety [16] – is explored far less thoroughly. One emerging method for evaluating robustness is based on adversarial trajectories, which are specifically generated to deceive the model’s predictions as much as possible; a model’s ability to withstand such attacks is known as adversarial robustness [17]. Initial work on adversarial attack generation has shown promise in exposing system vulnerabilities [18]–[21]. However, these works typ-ically compare the model predictions under adversarial per-turbations against ground-truth future trajectories of benign agents, which might not be kinematically reachable from the perturbed past on which these predictions are conditioned. Recent work has introduced additional constraints ensuring kinematic reachability to make such comparisons more physi-cally meaningful [22]. However, even under those more con-strained and meaningful attacks, though, most state-of-the-art models still show significant degradation in performance. Additionally, such adversarial attacks have been shown to be remarkably transferable between different models when trained on similar datasets [22], [23], further highlighting the importance of trajectory prediction robustness for real-world automated driving systems. While prior work has examined the design and evaluation of adversarial attacks [16], research on countering such attacks in trajectory prediction models is very limited. Re-cently, Fan et al. proposed a method for detecting adversarial trajectories [24] which could enable an autonomous vehicle to avoid being misled by an adversarial agent. However, be-yond this work, systematic approaches to defending trajectory prediction models against adversarial attacks remain largely unexplored. At the same time, outside trajectory prediction, 
+
+randomized smoothing has proven to be an effective coun-termeasure against adversarial attacks [25]. This technique (introduced in details in Section II-B), perturbs the input data with random noise and returns an averaged prediction, thus attenuating the effect of any specific adversarial modification. The approach has been successfully applied in computer       
+
+> arXiv:2603.10821v1 [cs.LG] 11 Mar 2026 a) Trajectory prediction in a benign scenario.
+> b) Trajectory prediction under an adversarial attack.
+> c) Trajectory prediction with ran-domized smoothing under an adver-sarial attack.
+> Ego agent
+> Target agent
+> Adversarial agent
+> Past observation X
+> Future ground truth Y
+> Predicted future ̂Y
+> Noisy past observation
+> Predicted future for
+> noisy past Fig. 1. An overview of randomized smoothing applied to trajectory prediction. a) In a benign scenario, it can be expected that a well-trained trajectory prediction model Pcan make predictions which align with the ground truth. b) However, if the target agent, for which predictions are made, uses an adversarial attack, the prediction quality can deteriorate even in state-of-the-art models [22], [23]. c) Randomized smoothing can be used to overcome this issue. Instead of the actual past observations of the adversarial agent, the model is applied to multiple randomly perturbed versions of these observations. The final prediction is then built by averaging those separate model predictions.
+
+vision [26], [27] and language models [28], [29]. However, to the best of our knowledge, it has not yet been applied to trajectory prediction. In this work, we propose a methodology for applying ran-domized smoothing to arbitrary trajectory prediction models (as illustrated in Figure 1) and assess its efficacy against realistic adversarial attacks. After introducing the concept of adversarial attacks on trajectory prediction and the random-ized smoothing technique (Sections II-A and II-B, respec-tively), we present two strategies for smoothing trajectory predictors in Section III. Then, we empirically evaluate our proposed methods in Section IV. In particular, we gener-ate adversarial attacks on two datasets ( L-GAP [30] and 
+
+rounD [31]) following [22], and evaluate the impact of the randomized smoothing (implemented following [32]) on established trajectory prediction models ( Trajectron++ [9] and ADAPT [33]) using select robustness metrics. II. B ACKGROUND 
+
+A. Adversarial attacks on trajectory prediction models 
+
+In trajectory prediction, the goal is to forecast the fu-ture movement Yi = {si(t) | t ∈ { ∆t, . . . , T ∆t}} , where 
+
+s ∈ RD is recorded in intervals of ∆t, of an agent 
+
+i over prediction horizon T based on the past ob-served trajectories with observation horizon H of all N
+
+agents X = {Xi | i ∈ {1, . . . , N }} , where Xi =
+
+{si(t) | t ∈ { (−H + 1)∆ t, . . . , 0}} are the trajectories of different agents and s is one state in a trajectory, including for example position or velocities. To this end, a probabilistic model Pθ parametrized by θ ∈ Θ ⊆ RQ is trained to generate K trajectory samples bY ki ∼ Pθ (·| Xi, X¬i) with 
+
+bYi = { bY ki | k ∈ { 1, . . . , K }} and X¬i = {Xj | j ∈{1, . . . , N }\{ i}} . Generally, such models are trained to min-imize the distance between bYi and ground truth observation 
+
+Yi, or to maximize the likelihood Pθ (Yi|Xi, X¬i) [22] 1.An attack by an adversarial target agent “tar” (with index 
+
+i = tar) then attempts to deceive the prediction model employed by the autonomous vehicle into making incorrect predictions. Specifically, the observed (past) states of the target agent are modified using perturbations δX , resulting in the perturbed past trajectory eXtar = Xtar + δX and the corresponding predictions beY tar ∼ Pθ (·| eXtar , X¬tar ), which can then used to evaluate the robustness of the models. While there have been many works on adversarial attacks on trajectory prediction models [18]–[21] suggesting different methods for generating δX , in this work we will use the kinematically constrained attacks proposed by Schumann et al. [22]. This method was chosen because it is the only avail- 
+
+> 1There are models predicting all agents simultaneously (e.g., see Rowe
+> et al. [34]), but we are not considering them here.
+
+able approach that produces realistic attacks while preserving the original behavior of the target vehicle. In this “white-box” attack, projected gradient descent is used to generate an attack starting from the unperturbed input (i.e., δ0 
+
+> X
+
+= 0)in M iterations. Abstractly, in each iteration m ∈ { 1, . . . , M }
+
+a gradient step (using step size αm) based on a loss function 
+
+L is added to the previous displacement δm−1 
+
+> X
+
+before a projection onto the feasible set C (e.g., a hypercube around the unperturbed input X) is performed to match constraints: 
+
+bδm−1 
+
+> X
+
+= δm−1 
+
+> X
+
+− αm−1∇δX L
+
+δmX = argmin 
+
+> v∈C
+
+v − bδm−1 
+
+> X
+
+. (1) A more detailed overview on the specific loss function L and the corresponding feasible set being used as a constraint C
+
+can be found in the original work [22]. 
+
+B. Randomized smoothing Randomized Smoothing [25], [35], [36] has recently emerged as one of the primary techniques for improving the robustness of machine learning models. While the literature has initially focused on classification problems [25], [27], [37], [38], analogous results have been then presented for the regression setting [32], [39], [40], which we briefly introduce in this Section. Let f : Rd → Rq be a base regression model. The randomized smoothed regression model is defined as 
+
+g(x) = Eε
+
+f (x + ε), (2) where ε ∼ N (0, σ 2I) is (typically) a Gaussian random noise with variance σ2 > 0. Intuitively, Equation (2) represents a regressor averaging the value of the base regressor f in a neighborhood around the input x ∈ Rd. In practice, comput-ing Equation (2) in closed-form is often infeasible [41] (e.g. due to the potential non-linearity of f , which is the case, for instance, if f is a neural network). Thus, this expression is generally replaced by the natural approximation 
+
+gN (x) = 1
+
+N
+
+> N
+
+X
+
+> i=1
+
+f (x + εi), (3) where {ε1, . . . , ε N } are i.i.d. samples from the distribution of ε. The main advantage of smoothed regressors is that they inherit some particular robustness properties against attacks in Lp-norm, without any need to retrain the base regressor [32], [40]. Indeed, Theorem 3 in [32] shows that, for a given input x ∈ Rd, one may define a compact set R that 
+
+gN (x+δ) belongs to with high probability for any sufficiently small attack δ. In other words, by averaging predictions in a neighborhood of the point x, the smoothed regressor becomes less sensitive to inputs associated with high-norm gradients, thus regularizing the prediction output. The insight that averaging mechanisms can protect against adversarial attacks has also been observed in the context of Bayesian models [42]. III. R ANDOMIZED SMOOTHING FOR TRAJECTORY PREDICTION 
+
+After giving a short overview over both adversarial attacks against trajectory prediction models and randomized smooth-ing, we apply the latter to trajectory prediction. Specifically, we first assume that for each agent i, the sampling of 
+
+K independent trajectories from the prediction distribution 
+
+Pθ (. | Xi, X¬i) described in Section II-A induces a base (stochastic) prediction function 2 fPθ : RH×D → RK×T ×D
+
+such that bYi = fPθ (Xi) . (4) Furthermore, we assume that a trajectory state s =
+
+{p, v, u} ∈ RD can be partitioned into a position p, some auxiliary states v, and the control inputs u, where the latter are distinguished by being associated with the highest order of derivatives of p over time. Based on this, we then propose two approaches of randomized smoothing for the base prediction model fPθ presented in Equation (4). 
+
+A. Position-based smoothing 
+
+Our first approach consists in smoothing the position co-ordinates of the vehicles’ states, thus obtaining the smoothed predictor gN given by: 
+
+gN (X) = 1
+
+N
+
+> N
+
+X
+
+> i=1
+
+fPθ (X + εX ) , ε X ∼ N (0 , ΣX ), (5) where ΣX is only non-zero in the block-diagonal associated with the positions p, to which we assign the variance σ2 > 0.
+
+B. Control-based smoothing 
+
+Alternatively, under the assumption that there exists a dynamical model φ such that {p(t), v(t)} = φ(s(t − ∆t)) ,we define the function Φ with Xtar = Φ( Utar ), where Utar 
+
+Utar = {ptar (( −H + 1)∆ t) , vtar (( −H + 1)∆ t)} ∪ {utar (t) | t ∈ { (−H + 1)∆ t, . . . , 0}} . (6) We then propose a second smoothing approach, where the noise is applied to the control inputs, similarly to how the perturbations are applied to them in [22]: 
+
+gN (X) = 1
+
+N
+
+> N
+
+X
+
+> i=1
+
+fPθ (Φ( U + εU )) , ε U ∼ N (0 , ΣU ) (7) This approach – which could be described as a (higher-order) Ornstein–Uhlenbeck process [43] – is theorized to have the advantage that the resulting trajectories are less likely to display dynamically infeasible inputs (such as impossible sharp turns), and are therefore less prone to degrade model performance, if the model would rely on such properties. The covariance ΣU is only non-zero on the diagonal entries associated with the control inputs u. Here, to allow for a fair comparison with the position-based approach, the variance levels are chosen so that the noise accumulated      
+
+> 2The dependence of fPθon the index iand the other agents’ trajectories
+> X¬iis implicit for notational simplicity.
+
+after applying the dynamical model roughly matches the one expected from applying σ2 onto the positions themselves. For example, for the acceleration, we would assume that the corresponding standard deviation expressed in ΣU would be 
+
+σa = σ √3√H3∆t2 .IV. E VALUATION 
+
+A. Experiment setup 
+
+To empirically evaluate the potential of randomized smoothing in the context of adversarial attacks against tra-jectory prediction models, we test the approaches introduced in Section III (position-based in Equation (5) – henceforth referred as pos – and control-based in Equation (7) –
+
+ctrl ) on two datasets and two base prediction models. For the datasets, following [22], we consider L-GAP [30] and 
+
+rounD [31]. In L-GAP [30] (a driving simulator dataset), a vehicle performing a left turn at an intersection is assumed to be adversarial (similar to Figure 1); it performs a turn across the path of an oncoming vehicle (the ego agent). In rounD [31] (a real-world dataset collected on German roundabouts), the ego agent is on the roundabout and the adversarial agent tries to enter the roundabout in front of the ego agent. For the base trajectory prediction models, we employ Trajectron++ [9] and ADAPT [33], two state-of-the-art models which are trained on each of the datasets. To compensate for L-GAP ’s small size, the models evaluated on that dataset are trained on a combination of L-GAP and 
+
+NuScenes [44]. The loss function L used for generating adversarial attacks (Equation 1) is defined as the average displacement error (ADE) of the prediction model. Perturbations are applied not to the trajectories themselves but to the underlying control inputs, subject to further constraints that ensure that the attack remains meaningful (see Schumann et al. [22] for a more detailed description). This approach was selected because it produces adversarial attacks that are kinematically feasible and not easily detectable by simple filters. In each experiment, we run multiple attacks by varying the perturbation limit dmax ∈ { 0.25 m , 0.5 m , 1 m }. The ADE metric is then also used to assess the performance of ran-domized smoothing, which is performed with various levels of noise standard deviation, i.e. σ ∈ { 0.25 m , 0.5 m , 1 m }.Further, we empirically evaluate the impact of the training strategy, i.e. either employing smoothing during the training phase of the base predictor 3 – train & eval , or the standard practice of smoothing only during evaluation – eval . In all experiments, evaluation is performed with N = 20 .
+
+B. Results and discussion 
+
+The results in Tables I, II, III, and IV suggest that, com-pared with the base prediction models, employing random-ized smoothing improves models’ ADE performance in all                                                                                         
+
+> 3Specifically, we directly train the smoothed regressor using N= 1 ,resampling the smoothing noise at each epoch, which maintains the compu-tational effort similar to training the base predictor. TABLE I AVERAGE DISPLACEMENT ERROR (IN METERS m)ON L-GAP FOR
+> Trajectron++ . T HE BOLD VALUES SHOWS THE BEST RESULT IN EACH COLUMN .Smoothing approach dmax [m]Applied Goal σ[m](0.0) 0.25 0.5 1.0 No Smoothing (0.0) 0.473 0.663 0.844 2.057 eval pos (5) 0.25 0.471 0.637 0.833 2.020
+> 0.5 0.546 0.761 0.902 2.063 1.0 0.676 0.850 1.015 2.123 ctrl (7) 0.25 0.637 0.749 0.762 2.563 0.5 0.862 0.888 0.961 2.410 1.0 1.237 1.232 1.323 2.331 TABLE II AVERAGE DISPLACEMENT ERROR (IN METERS m)ON L-GAP FOR
+> ADAPT . T HE BOLD VALUES SHOWS THE BEST RESULT IN EACH COLUMN .Smoothing approach dmax [m]Applied Goal σ[m](0.0) 0.25 0.5 1.0 No Smoothing (0.0) 1.169 1.867 2.262 2.952 eval pos (5) 0.25 1.420 1.617 1.958 2.723 0.5 1.937 1.901 2.005 2.532 1.0 6.576 6.210 5.996 5.716 ctrl (7) 0.25 1.164 1.509 1.558 1.428
+> 0.5 1.214 1.494 1.574 1.504 1.0 1.394 1.585 1.708 1.728
+
+adversarial attack experiments (i.e., dmax > 0). Additionally, with the exception of Trajectron++ on rounD (Table III), randomized smoothing (either position-based or control-based) achieved comparable performance on the unperturbed datasets as well (i.e, dmax = 0 ), and in one case ( ADAPT 
+
+on rounD ; Table IV) even improved baseline performance. While earlier work in other domains demonstrated that randomized smoothing typically deteriorates performance in nominal scenarios [25], [36], our results support the idea that randomized smoothing can function as a form of regulariza-tion that protects against model overfitting [45]. Furthermore, we observe that randomized smoothing is capable of lowering the correlation between the perturbation limit dmax and the resulting ADE. For instance, when apply-ing the control-based approach ( ctrl , Equation (7)) with noise variance level σ = 0 .25 m to the base model ADAPT , the ADE differences between dmax = 0 .25 m and dmax = 1 m 
+
+are much less severe ( −0.81 m vs. 1.095 m on L-GAP in Table II and 0.028 m vs. 0.92 m on rounD in Table IV), which suggests a reduction of the impact of the attack magnitude on the model predictions in general. The effect of the training strategy is, however, less clear. For instance, employing randomized smoothing during the training phase ( train & eval ) improves the results for Tra-jectron++ for both the position- ( pos ) and control-based (ctrl ) approaches (Table III), while for ADAPT , it is only beneficial for the position-based. Similarly, the impact of the smoothing approaches in Equations (5) and (7) is model-TABLE III AVERAGE DISPLACEMENT ERROR (IN METERS m) ON rounD FOR                                                                                                                                   
+
+> Trajectron++ . T HE BOLD VALUES SHOWS THE BEST RESULT IN EACH COLUMN .Smoothing approach dmax [m]Applied Goal σ[m](0.0) 0.25 0.5 1.0 No Smoothing (0.0) 0.116 4.989 5.562 6.335 eval pos (5) 0.25 0.341 1.405 1.610 2.708 0.5 0.520 1.430 1.697 2.708 1.0 0.614 1.467 1.872 2.766 ctrl (7) 0.25 0.533 2.822 3.025 4.880 0.5 0.607 5.422 5.663 6.194 1.0 0.793 10.604 10.817 10.088 train & eval pos (5) 0.25 0.300 1.171 1.251 1.724 0.5 0.477 1.357 1.481 2.273 1.0 0.817 1.412 1.510 2.031 ctrl (7) 0.25 0.376 0.487 0.538 1.104 0.5 0.498 0.540 0.559 0.930
+> 1.0 0.916 0.892 0.889 0.943 TABLE IV AVERAGE DISPLACEMENT ERROR (IN METERS m)ON rounD FOR ADAPT .THE BOLD VALUES SHOWS THE BEST RESULT IN EACH COLUMN .Smoothing approach dmax [m]Applied Goal σ[m](0.0) 0.25 0.5 1.0 No Smoothing (0.0) 0.537 0.655 0.654 0.747 eval pos (5) 0.25 1.504 1.582 1.563 1.644 0.5 2.308 2.343 2.347 2.383 1.0 3.541 3.554 3.563 3.565 ctrl (7) 0.25 0.494 0.541 0.552 0.569
+> 0.5 0.567 0.612 0.621 0.636 1.0 0.789 0.827 0.835 0.847 train & eval pos (5) 0.25 1.174 1.185 1.173 1.206 0.5 1.420 1.427 1.415 1.443 1.0 1.670 1.677 1.665 1.688 ctrl (7) 0.25 0.647 0.669 0.676 0.685 0.5 1.183 1.178 1.178 1.187 1.0 1.924 1.915 1.911 1.920
+
+dependent 4. Concretely, ADAPT ’s best results are generally achieved when smoothing control inputs (Tables II and IV). In contrast, for Trajectron++ , if smoothing is only used for evaluation, the position-based approach pos , with very few exceptions, presents superior results. Given the lack of clear preferences, future work might also try to explore the benefit of combining both approaches. Meanwhile, the effect of noise variance σ2 is much more pronounced, and the smallest ADEs are achieved most often with the smallest values of σ (the noticeable exceptions are for dmax = 0 .25 m in Table II and dmax = 1 m in Table III). This seems reasonable, as lower variances likely allow for a better balance between increasing the prediction robustness while maintaining the local accuracy of the base model.   
+
+> 4While we tried to make the impact of the similar values of σacross the two approaches comparable, the validity of such a comparison cannot be guaranteed.
+
+Importantly, given that randomized smoothing is an ap-proach that promises increased robustness without retraining the base model, it is remarkable that, for both Trajectron++ 
+
+and ADAPT , we can find at least one smoothing setting which consistently improves on the base model across all datasets for dmax > 0. In particular, for Trajectron++ , this is the case for the position-based ( pos ) approach when σ = 0 .25 m ,while for ADAPT , we can point to the control-based ( ctrl )approach also with σ = 0 .25 m .While our results suggest that randomized smoothing is a promising technique for enhancing the robustness of trajec-tory prediction models, future work should explore whether the probabilistic robustness guarantees in [32] generate tight useful prediction sets in the case of trajectory prediction, while also further exploring their α-smoothing technique. Furthermore, it is interesting to explore whether the variance of the randomized predictor (i.e., f (x + ε)) could be used as a reliable proxy for the uncertainty of the base predictor, which would be useful information for the motion planner using such predictions. Finally, expanding to more models, datasets, and adversarial attack methods would improve the support for the claims in this section. V. C ONCLUSION 
+
+In this work, we explored randomized smoothing as a defense mechanism for trajectory prediction models against adversarial attacks. Our results indicate that this technique consistently improves performance (i.e., reduced average displacement error) of trajectory predictions under adver-sarial attacks, while also lowering the model sensitivity to the magnitude of the adversarial perturbation. Interestingly, we observe that the smoothed predictors exhibit at most a marginal reduction in accuracy on the original, non-adversarial data, even achieving improved performance in some settings. Consequently, randomized smoothing seems to be capable of consistently improving empirical robustness for the base models across datasets and perturbation magni-tudes studied in this work. Even though our results indicate that the ideal smoothing approach is model-dependent, our work positions randomized smoothing as a computationally inexpensive and practical tool for increasing the robustness of trajectory prediction systems, and motivate future work on certified robustness guarantees in this domain. REFERENCES [1] D. Holland-Letz, M. K¨ asser, B. Kloss, and T. M¨ uller, “Mobility’s future: An investment reality check | McKinsey,” Apr. 2021. [2] E. Commission and J. R. Centre, The future of road transport – Implications of automated, connected, low-carbon and shared mobility .Publications Office, 2019. [3] L. Duboz, I. C. Raileanu, J. Krause, A. Norman-L´ opez, M. Weitzel, and B. Ciuffo, “Scenarios for the deployment of automated vehicles in europe,” Transp. Research Interdiscip. Perspect ., vol. 32, p. 101530, 2025. [4] M. Milford, S. Anthony, and W. Scheirer, “Self-Driving Vehicles: Key Technical Challenges and Progress Off the Road,” IEEE Potentials ,vol. 39, pp. 37–45, Jan. 2020. [5] A. Sinha, S. Chand, V. Vu, H. Chen, and V. Dixit, “Crash and disen-gagement data of autonomous vehicles on public roads in California,” 
+
+> Sci. Data , vol. 8, p. 298, Dec. 2021.
+
+[6] S. Mozaffari, O. Y. Al-Jarrah, M. Dianati, P. Jennings, and A. Mouza-kitis, “Deep Learning-Based Vehicle Behavior Prediction for Au-tonomous Driving Applications: A Review,” IEEE Trans. on Intell. Transp. Syst ., vol. 23, pp. 33–47, Jan. 2022. [7] J. F. Schumann, J. Kober, and A. Zgonnikov, “Benchmarking Behavior Prediction Models in Gap Acceptance Scenarios,” IEEE Trans. on Intell. Veh ., vol. 8, pp. 2580–2591, Mar. 2023. [8] N. Montali, J. Lambert, P. Mougin, A. Kuefler, N. Rhinehart, M. Li, C. Gulino, T. Emrich, Z. Yang, S. Whiteson, B. White, and D. Anguelov, “The Waymo Open Sim Agents Challenge,” Adv. Neural Inf. Process. Syst ., vol. 36, pp. 59151–59171, Dec. 2023. [9] T. Salzmann, B. Ivanovic, P. Chakravarty, and M. Pavone, “Trajec-tron++: Dynamically-Feasible Trajectory Forecasting with Heteroge-neous Data,” in Comput. Vis. – ECCV 2020 (A. Vedaldi, H. Bischof, T. Brox, and J.-M. Frahm, eds.), pp. 683–700, Springer International Publishing, 2020. [10] N. Nayakanti, R. Al-Rfou, A. Zhou, K. Goel, K. S. Refaat, and B. Sapp, “Wayformer: Motion Forecasting via Simple & Efficient Attention Networks,” in 2023 IEEE Int. Conf. on Robotics Autom. (ICRA) ,pp. 2980–2987, May 2023. [11] A. M´ esz´ aros, J. F. Schumann, J. Alonso-Mora, A. Zgonnikov, and J. Kober, “TrajFlow: Learning Distributions over Trajectories for Human Behavior Prediction,” in 2024 IEEE Intell. Veh. Symp. (IV) , June 2024. [12] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,” Adv. neural information processing systems , vol. 33, pp. 6840–6851, 2020. [13] I. Bae, Y.-J. Park, and H.-G. Jeon, “Singulartrajectory: Universal trajectory predictor using diffusion model,” in Proc. IEEE/CVF Conf. on Comput. Vis. Pattern Recognit ., pp. 17890–17901, 2024. [14] A. Seff, B. Cera, D. Chen, M. Ng, A. Zhou, N. Nayakanti, K. S. Refaat, R. Al-Rfou, and B. Sapp, “Motionlm: Multi-agent motion forecasting as language modeling,” in Proc. IEEE/CVF Int. Conf. on Comput. Vis ., pp. 8579–8590, 2023. [15] Y. Xu, R. Yang, Y. Zhang, J. Lu, M. Zhang, Y. Wang, L. Su, and Y. Fu, “Trajectory prediction meets large language models: A survey,” arXiv preprint arXiv:2506.03408 , 2025. [16] J. Hagenus, F. B. Mathiesen, J. F. Schumann, and A. Zgonnikov, “Ro-bustness in trajectory prediction for autonomous vehicles: a survey,” in 2024 IEEE Intell. Veh. Symp. (IV) , pp. 969–976, IEEE, 2024. [17] A. Tocchetti, L. Corti, A. Balayn, M. Yurrita, P. Lippmann, M. Bram-billa, and J. Yang, “Ai robustness: a human-centered perspective on technological challenges and opportunities,” ACM Comput. Surv ., vol. 57, no. 6, pp. 1–38, 2025. [18] Y. Cao, C. Xiao, A. Anandkumar, D. Xu, and M. Pavone, “AdvDO: Realistic Adversarial Attacks for Trajectory Prediction,” in Comput. Vis. – ECCV 2022 (S. Avidan, G. Brostow, M. Ciss´ e, G. M. Farinella, and T. Hassner, eds.), pp. 36–52, Springer Nature Switzerland, 2022. [19] Y. Cao, D. Xu, X. Weng, Z. Mao, A. Anandkumar, C. Xiao, and M. Pavone, “Robust Trajectory Prediction against Adversarial Attacks,” in Proc. The 6th Conf. on Robot Learn ., pp. 128–137, PMLR, Mar. 2023. ISSN: 2640-3498. [20] Q. Zhang, S. Hu, J. Sun, Q. A. Chen, and Z. M. Mao, “On adversarial robustness of trajectory prediction for autonomous vehicles,” in Proc. IEEE/CVF Conf. on Comput. Vis. Pattern Recognit ., pp. 15159– 15168, 2022. [21] J. Fan, Z. Wang, and G. Li, “Adversarial attack on trajectory prediction for autonomous vehicles with generative adversarial networks,” in 
+
+2024 IEEE/RSJ Int. Conf. on Intell. Robots Syst. (IROS) ,pp. 1026–1031, IEEE, 2024. [22] J. F. Schumann, J. Hagenus, F. B. Mathiesen, and A. Zgonnikov, “Realistic Adversarial Attacks for Robustness Evaluation of Trajectory Prediction Models via Future State Perturbation,” ACM J. on Auton. Transp. Syst ., 2026. [23] J. F. Schumann, A. M´ esz´ aros, J. Kober, and A. Zgonnikov, “Step: Structured training and evaluation platform for benchmarking trajec-tory prediction models,” arXiv preprint arXiv:2509.14801 , 2025. [24] J. Fan, Z. Wang, and G. Li, “A novel unsupervised anomaly detection method on adversarial attacks for autonomous vehicles trajectory prediction,” in 2024 IEEE 22nd Int. Conf. on Ind. Informatics (INDIN) , pp. 1–18, IEEE, 2024. [25] J. Cohen, E. Rosenfeld, and Z. Kolter, “Certified adversarial robustness via randomized smoothing,” in international conference on machine learning , pp. 1310–1320, PMLR, 2019. [26] H. Salman, J. Li, I. Razenshteyn, P. Zhang, H. Zhang, S. Bubeck, and G. Yang, “Provably robust deep learning via adversarially trained smoothed classifiers,” Adv. neural information processing systems ,vol. 32, 2019. [27] A. Levine and S. Feizi, “Wasserstein smoothing: Certified robustness against wasserstein adversarial attacks,” in Int. conference on artificial intelligence statistics , pp. 3938–3947, PMLR, 2020. [28] R. Olivier and B. Raj, “Sequential randomized smoothing for adver-sarially robust speech recognition,” in Proc. 2021 Conf. on Empir. Methods Natural Language Process ., pp. 6372–6386, 2021. [29] E. Seferis, C. Wu, S. Kollias, S. Bensalem, and C.-H. Cheng, “Ran-domized smoothing meets vision-language models,” in Proc. 2025 Conf. on Empir. Methods Natural Language Process ., pp. 27456– 27466, 2025. [30] A. Zgonnikov, D. Abbink, and G. Markkula, “Should I Stay or Should I Go? Cognitive Modeling of Left-Turn Gap Acceptance Decisions in Human Drivers,” Hum. Factors , p. 00187208221144561, Dec. 2022. Publisher: SAGE Publications Inc. [31] R. Krajewski, T. Moers, J. Bock, L. Vater, and L. Eckstein, “The rounD Dataset: A Drone Dataset of Road User Trajectories at Roundabouts in Germany,” in IEEE Int. Conf. on Intell. Transp. Syst. (ITSC) ,pp. 1–6, Sept. 2020. [32] A. Rekavandi, F. Farokhi, O. Ohrimenko, and B. Rubinstein, “Certified adversarial robustness via randomized α-smoothing for regression models,” Adv. Neural Inf. Process. Syst ., vol. 37, pp. 134127– 134150, 2024. [33] G. Aydemir, A. K. Akan, and F. G¨ uney, “Adapt: Efficient multi-agent trajectory prediction with adaptation,” in Proc. IEEE/CVF Int. Conf. on Comput. Vis ., pp. 8295–8305, 2023. [34] L. Rowe, M. Ethier, E.-H. Dykhne, and K. Czarnecki, “Fjmp: Factor-ized joint multi-agent motion prediction over learned directed acyclic interaction graphs,” in Proc. IEEE/CVF Conf. on Comput. Vis. Pattern Recognit ., pp. 13745–13755, 2023. [35] X. Liu, M. Cheng, H. Zhang, and C.-J. Hsieh, “Towards robust neural networks via random self-ensemble,” in Proc. european conference on computer vision (ECCV) , pp. 369–385, 2018. [36] M. Lecuyer, V. Atlidakis, R. Geambasu, D. Hsu, and S. Jana, “Certified robustness to adversarial examples with differential privacy,” in 2019 IEEE symposium on security privacy (SP) , pp. 656–672, IEEE, 2019. [37] B. Li, C. Chen, W. Wang, and L. Carin, “Certified adversarial robust-ness with additive noise,” Adv. neural information processing systems , vol. 32, 2019. [38] G. Yang, T. Duan, J. E. Hu, H. Salman, I. Razenshteyn, and J. Li, “Randomized smoothing of all shapes and sizes,” in Int. conference on machine learning , pp. 10693–10705, PMLR, 2020. [39] P.-y. Chiang, M. Curry, A. Abdelkader, A. Kumar, J. Dickerson, and T. Goldstein, “Detection as regression: Certified object detection with median smoothing,” Adv. Neural Inf. Process. Syst ., vol. 33, pp. 1275–1286, 2020. [40] A. M. Rekavandi, O. Ohrimenko, and B. I. Rubinstein, “Rs-reg: Proba-bilistic and robust certified regression through randomized smoothing,” 
+
+arXiv preprint arXiv:2405.08892 , 2024. [41] A. Girard, C. Rasmussen, J. Q. Candela, and R. Murray-Smith, “Gaussian process priors with uncertain inputs application to multiple-step ahead time series forecasting,” Adv. neural information processing systems , vol. 15, 2002. [42] L. Bortolussi, G. Carbone, L. Laurenti, A. Patane, G. Sanguinetti, and M. Wicker, “On the robustness of bayesian neural networks to adversarial attacks,” IEEE Trans. on Neural Networks Learn. Syst ., vol. 36, no. 4, pp. 6679–6692, 2024. [43] B. Oksendal, Stochastic differential equations: an introduction with applications . Springer Science & Business Media, 2013. [44] H. Caesar, V. Bankiti, A. H. Lang, S. Vora, V. E. Liong, Q. Xu, A. Krishnan, Y. Pan, G. Baldan, and O. Beijbom, “nuScenes: A Multimodal Dataset for Autonomous Driving,” pp. 11618–11628, IEEE Computer Society, June 2020. [45] C. M. Bishop, “Training with noise is equivalent to tikhonov regular-ization,” Neural Comput ., vol. 7, no. 1, pp. 108–116, 1995.

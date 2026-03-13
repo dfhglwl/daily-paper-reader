@@ -1,0 +1,301 @@
+Title: UAV-MARL: Multi-Agent Reinforcement Learning for Time-Critical and Dynamic Medical Supply Delivery
+
+URL Source: https://arxiv.org/pdf/2603.10528v1
+
+Published Time: Thu, 12 Mar 2026 00:59:05 GMT
+
+Number of Pages: 7
+
+Markdown Content:
+# UAV-MARL: Multi-Agent Reinforcement Learning for Time-Critical and Dynamic Medical Supply Delivery 
+
+Islam Guven, Mehmet Parlak 
+
+ICTEAM, Universit´ e catholique de Louvain 
+
+Ottignies-Louvain-la-Neuve, Belgium islam.guven@uclouvain.be 
+
+Abstract —Unmanned aerial vehicles (UAVs) are increasingly used to support time-critical medical supply delivery, providing rapid and flexible logistics during emergencies and resource shortages. However, effective deployment of UAV fleets requires coordination mechanisms capable of prioritizing medical re-quests, allocating limited aerial resources, and adapting de-livery schedules under uncertain operational conditions. This paper presents a multi-agent reinforcement learning (MARL) framework for coordinating UAV fleets in stochastic medical delivery scenarios where requests vary in urgency, location, and delivery deadlines. The problem is formulated as a partially observable Markov decision process (POMDP) in which UAV agents maintain awareness of medical delivery demands while having limited visibility of other agents due to communication and localization constraints. The proposed framework employs Proximal Policy Optimization (PPO) as the primary learning algorithm and evaluates several variants, including asynchronous extensions, classical actor–critic methods, and architectural mod-ifications to analyze scalability and performance trade-offs. The model is evaluated using real-world geographic data from selected clinics and hospitals extracted from the OpenStreetMap dataset. The framework provides a decision-support layer that prioritizes medical tasks, reallocates UAV resources in real time, and assists healthcare personnel in managing urgent logistics. Experimental results show that classical PPO achieves superior coordination performance compared to asynchronous and sequential learning strategies, highlighting the potential of reinforcement learning for adaptive and scalable UAV-assisted healthcare logistics. 
+
+Index Terms —Multi-agent reinforcement learning (MARL), UAV coordination, swarm, autonomous drone delivery, medical supply delivery, healthcare logistics, dynamic task allocation, proximal policy optimization, reward shaping, time-critical de-livery, stochastic logistics, drone delivery systems. 
+
+I. I NTRODUCTION 
+
+Unmanned aerial vehicles (UAVs) are increasingly utilized in autonomous navigation, mission-critical data collection, and real-time environmental monitoring applications such as pre-cision agriculture [1]. Beyond sensing and monitoring tasks, UAVs are also emerging as a promising solution for time-critical logistics, particularly in the distribution of medical supplies from central depots to healthcare facilities. Such op-erations require the coordination of multiple delivery vehicles under strict time constraints and payload limitations. The chal-lenge becomes even more critical during epidemic outbreaks, natural disasters, or supply chain disruptions, when ground transportation infrastructure may be compromised and rapid response is essential for patient outcomes. Although UAVs provide rapid and flexible delivery capabilities independent of road networks, efficient coordination of multiple UAVs under dynamic operational constraints remains an open research problem, particularly in time-critical healthcare logistics. Reliable medical supply chains are essential for maintaining effective healthcare services, particularly where rapid and flexible delivery of critical resources is required. Intelligent decision-support systems are therefore needed to assist med-ical practitioners in allocating limited resources and coordi-nating logistics operations efficiently [2], [3]. Beyond routing optimization, healthcare logistics requires integrated frame-works that support personnel allocation, automated sensing for inventory management, and adaptive supply chain control capable of responding to changing patient needs and clinical urgency. While prior work in drone logistics has explored last-mile planning, facility siting, and fleet coordination [2]– [5], a key research gap remains in developing learning-based systems that jointly address clinical priority, strict delivery deadlines, payload constraints, and stochastic task arrivals under limited communication and information availability. Traditional optimization methods such as mixed-integer pro-gramming, metaheuristics, and genetic algorithms are effective for static UAV routing but often fail to adapt efficiently to dynamic medical supply requests with heterogeneous urgency levels. Each new task typically requires costly re-optimization, limiting their scalability for real-time healthcare logistics [2], [3]. Prior multi-UAV systems, including our own previous work [6], leverage evolutionary approaches effectively in fixed-task settings but suffer from computational inefficiency when applied to highly dynamic, time-sensitive environments. Recent advances in UAV routing and multi-agent rein-forcement learning (MARL) demonstrate strong potential for scalable, adaptive decision-making. Wang et al. [7] introduced the C-SPPO framework, a centralized reinforcement learning model that minimizes flight conflicts and delivery delays in large-scale logistics routing. Cui et al. [8] proposed a GCN-based policy network that improves multi-UAV task allocation 
+
+> arXiv:2603.10528v1 [cs.LG] 11 Mar 2026
+
+efficiency under distance constraints, while Qiu et al. [9] developed a distributed cooperative UAV search and rescue framework robust to communication limitations. Gabler and Wollherr [10] emphasized decentralized actor–critic structures to enhance scalability and real-world deployability, and Kong and Sousa [11] demonstrated how UAVs can simultaneously perform package delivery and wireless coverage through deep Q-learning-based trajectory control. Recent surveys [5] have highlighted ongoing challenges in integrating autonomy, coor-dination, and real-world uncertainty. MARL offers significant potential for adaptive decision-making in such contexts, yet designing a general framework for heterogeneous tasks that are dynamically assigned has not been investigated yet. This paper addresses the gap between existing MARL approaches and practical medical supply ap-plications by presenting a unified learning-based framework for adaptive healthcare logistics optimization. We introduce a multi-agent reinforcement learning model that operates under stochastic demand, partial fleet observability, and strict deliv-ery deadlines for real-world medical UAV operations. To examine the trade-off between throughput and coordi-nation performance, we also evaluated two distributed ac-tor–learner architectures—Asynchronous PPO (APPO) [12] and IMPALA [13] and a classical actor-critic method (A2C) [14]. These frameworks are designed for large-scale environ-ments where many agents collect experience in parallel. The contributions of this paper are as follows.  
+
+> •
+
+A partially observable MDP formulation for multi-UAV medical delivery with full task visibility but partial fleet position awareness, modeling depot resupply, stochastic task arrivals, and clinical urgency.  
+
+> •
+
+A reward shaping framework with proximity guidance, distance reduction bonuses, and urgency-based weighting that accelerates learning with minimal computational overload.  
+
+> •
+
+Experimental analysis with various MARL methods for observing the effect of network architecture, policy-update mechanism, and data collection in dynamic de-livery missions. The paper is organized as follows. Section II presents the problem formulation. Section III details the MARL framework with observation design and reward structure. Section IV presents experimental results. Section V concludes. II. S YSTEM MODEL 
+
+This study models the coordination of multiple UAVs for real-time delivery of medical supplies in an urban environ-ment. The system includes the operational characteristics of healthcare logistics: Dynamic demand, time-critical deliveries, and limited UAV resources. The framework provides the math-ematical model for the reinforcement learning formulation presented in Section III. 
+
+A. Environment Representation 
+
+Table I summarizes the environment parameters. The en-vironment is represented as a grid-based graph G = ( V, E ),TABLE I: Summary of Environment Parameters                                                        
+
+> Symbol Description Value
+> NNumber of UAVs 5–20
+> GGrid dimensions 30 ×30
+> cCell size (m) 400 m
+> vUAV speed (m/s) 50 m/s
+> Pmax Max payload 5units
+> Rcomm Comm. range 400 m
+> Tmax Max episode steps 200
+> λTask arrival rate 0.1–0.3
+> Kmax Max active tasks 10
+> p(t)UAV payload level 0–Pmax
+> xi(t)UAV position Grid cell
+> τDelivery task —
+> uUrgency class {crit., urg., std. }
+> dcrit Critical deadline 10 steps
+> durg Urgent deadline 20 steps
+> dstd Standard deadline 50 steps
+> HNumber of hospitals 4
+> DNumber of depots 2
+> I0Initial inventory 10 units
+> TdPickup/delivery time 5s
+> ρConsumption rate 0.1
+
+where each cell corresponds to a vertex v ∈ V , and each UAV can move to one of its four neighboring cells at each time step. The main components of the system are:  
+
+> •
+
+Depots D ⊆ V : nodes where UAVs collect supplies and refuel.  
+
+> •
+
+Clinics H ⊆ V : nodes where delivery requests originate.  
+
+> •
+
+UAV fleet U = {1, 2, . . . , N }: each UAV has a maximum payload capacity Pmax and a discrete position xi(t) ∈ V . 
+
+> •
+
+Delivery tasks T (t): dynamically appearing requests re-quiring pickup from a depot and delivery to a clinic before a deadline. 
+
+B. Case Study: Brussels Operational Region 
+
+Figure 1 illustrates the case study region centered on the Brussels Capital Area. The area is modeled as a 12 km ×
+
+12 km grid, divided into 30 × 30 cells, each representing a 
+
+Fig. 1: Operational region centered around the Brussels Capital Region. The grid defines UAV navigation cells with depots (green) and clinics (red). 400 m ×400 m area. Green markers indicate depots (hospitals with storage and refilling capacity), while red markers repre-sent clinics that request supplies. 
+
+C. Medical Dynamic Task Model 
+
+Each delivery request is represented as a medical task τ
+
+defined by a pickup location psource , a target hospital ptarget , an urgency class u, a creation time tcreated , and a deadline tdeadline :
+
+τ = ( psource , p target , u, t created , t deadline ).
+
+New tasks arrive stochastically with probability λ at each time step, reflecting the irregular and unpredictable nature of clinical demand. The urgency level u ∈{critical , urgent , standard } determines the feasable delivery window. The deadline is assigned as 
+
+tdeadline = tcreated + ∆( u),
+
+where ∆( u) is the allowed time for the task and ∆crit < ∆urg <
+
+∆std . Critical tasks correspond to life-saving items such as blood units or emergency medication, whereas standard tasks represent routine consumables with more flexible timing. Hospitals maintain initial inventories I0 that decrease at each step according to a consumption rate ρ, which models continuous clinical use of supplies: 
+
+Ih(t + 1) = max 
+
+
+
+0, I h(t) − ρ 1 + |Ph(t)|
+
+> 10
+
+
+
+,
+
+where Ph(t) denotes the set of patients waiting at hospital 
+
+h. As inventories decline, hospitals generate new tasks with urgency linked to patient conditions and required treatment types. Patients enter a waiting list upon arrival, each inheriting a personal deadline du. If treatment cannot begin before this deadline, the patient is considered deceased, and a mortality penalty is applied to the learning agent. Each task requires UAVs to pick up a supply package at a depot and deliver it to the designated hospital. Depots broadcast available tasks to all UAVs, agents are tasked with choosing actions based on urgency, distance, and remaining time to deadline. 
+
+D. UAV Operations and Constraints 
+
+Each UAV follows a periodic process: 1) Travel to a depot and collect available supplies. 2) Pick up an assigned delivery task if available. 3) Transport the package to the corresponding clinic. 4) Refill payload at a depot if capacity is low. The UAV’s state at time t includes its grid position xi(t),remaining payload pi(t), and any assigned task τi(t). Move-ments are limited to one adjacent cell per step. Payload evolves according to: 
+
+pi(t + 1) = 
+
+
+
+Pmax , if refilling at depot ,pi(t) − 1, if picking up a task ,pi(t), otherwise. A UAV can carry at most one active task at a time and must deliver it before its deadline. UAVs fly on constant altitude and each delivery or pick-up is accounted for extra flight time Td
+
+due to altitude changes. Communications assume a disc model. When two UAVs are within a distance Rcomm , they can communicate and share their information to each other. For battery considerations, a flight time limit is given from take-off until landing. For reference, we assumed the batteries have a capacity of 0.5kWh and each movement and delivery costs 0.8Wh energy for our test scenario. A more detailed analysis on battery and altitude considerations will be part of future work. 
+
+E. Objective Function 
+
+The system aims to maximize the overall delivery perfor-mance across all UAVs and tasks. The total objective balances three key components: 
+
+J = Rdeliveries + Rurgency − Cdelays − Cinefficiency .
+
+Here:  
+
+> •
+
+Rdeliveries : rewards for successful and timely deliveries.  
+
+> •
+
+Rurgency : additional bonuses for critical and urgent tasks.  
+
+> •
+
+Cdelays : penalties for late or expired deliveries.  
+
+> •
+
+Cinefficiency : penalties for unnecessary movement or idling. This formulation encourages UAVs to complete high-priority deliveries first while maintaining efficiency in motion and resource usage. At each time step, the system must decide how UAVs should move and which task to pick up. These sequential and uncertain decisions form a dynamic control problem. To solve this, the UAV coordination process is represented as a Markov decision process (MDP), where the state captures UAV positions, payload levels, and current task information. Section III reformulates this system model within the re-inforcement learning framework, defining the corresponding states, actions, transition dynamics, and reward structure used for multi-agent training. III. R EINFORCEMENT LEARNING FORMULATION 
+
+A. Markov Decision Process Specification 
+
+The delivery task is formulated as a partially observable Markov decision process: 
+
+M = ⟨N , S, {A i}, P, R, {Ωi}, O, γ ⟩,
+
+where:  
+
+> •
+
+N is the set of UAVs,  
+
+> •
+
+S is the global state (all UAV positions, all task states, time),  
+
+> •
+
+Ai = {up , down , left , right , stay } is agent i’s action space,  
+
+> •
+
+R : S × A N → R is the reward function,  
+
+> •
+
+Ωi is agent i’s observation space,  
+
+> •
+
+O : S × i → Ωi is the observation function,  
+
+> •
+
+γ = 0 .99 is the discount factor. B. Observation Space 
+
+Each UAV agent receives a compact observation vector at each time step. This vector provides the information required to make navigation and task allocation decisions while coor-dinating with other UAVs in the environment. The observation includes six main components:  
+
+> •
+
+Positional information: Normalized positions of UAVs based on last communication time.  
+
+> •
+
+Own state: Information about UAV’s internal status, including its current payload level (normalized between 0 and 1) and whether it is carrying a delivery task.  
+
+> •
+
+Closest pending task: Information about the nearest unas-signed delivery request, such as the relative position of the pickup depot and destination hospital, the task’s urgency level, and the remaining time before its deadline. This helps the UAV decide which pending task to prioritize based on distance and urgency.  
+
+> •
+
+Current carried task: Details about the task currently being delivered, including the relative position of the delivery target and the time remaining until the deadline. If the UAV is not carrying any task, this part of the observation remains zero.  
+
+> •
+
+Closest depot: The relative position of the nearest depot, allowing the UAV to plan refilling or resupply actions when its payload is low.  
+
+> •
+
+Closest hospital: The relative position of the nearest hospital or clinic, which supports decisions related to future deliveries or route planning.  
+
+> •
+
+Global context: General information about the environ-ment, including the total number of active tasks, the proportion of pending tasks, and the normalized simula-tion time. This provides situational awareness and helps balance workload distribution across the UAV fleet. Together, these components allow each agent to maintain awareness of its own operational status, nearby opportunities for delivery, and the overall mission context. 
+
+C. Reward Shaping for Medical Delivery 
+
+The learning process combines sparse clinical rewards with dense shaping rewards to guide UAV agents toward efficient and meaningful behaviors. Table II summarizes the reward components used during training. This reward design encour-ages UAV agents to prioritize critical medical deliveries while maintaining efficient resource use and coordinated movement. The largest rewards are given upon successful and timely deliveries. Urgency-based bonuses are also given to prioritize critical and urgent tasks. Dense shaping rewards provide continuous feedback even when deliveries are not yet completed. They help agents learn useful intermediate behaviors such as moving toward pend-ing tasks, reducing distance to delivery targets, and refilling supplies before depletion. Small penalties for unnecessary movement and idling discourage inefficient actions. Finally, the mortality penalty models the severe consequence of miss-ing critical deliveries, reinforcing the importance of meeting medical deadlines within the learning process. TABLE II: Reward structure for UAV medical delivery tasks.                                 
+
+> Category Description Value
+> Clinical outcomes (sparse rewards)
+> Delivery completion Successful delivery +50.0 Critical delivery bonus Critical task completed +20.0 Urgent delivery bonus Urgent task completed +10.0 Early delivery bonus Remaining time before deadline +5.0 × ratio Deadline violation Late or missed delivery –15.0
+> Task discovery and progress (dense rewards)
+> Task proximity Near pending task +0.2 × proximity Pickup success Task picked up at depot +5.0 Urgent task claim Claim of urgent/critical task +3.0 Distance reduction Moved closer to target +0.3 × distance gain Progress movement Step toward assigned target +0.5
+> Resource management and penalties
+> Refill at depot Refill when payload is low +1.0 Depot visit (low) Visit depot when half-empty +2.0 Movement cost Per movement step –0.001 Idle penalty Idle away from depot –0.01 Mortality penalty Expired critical task –20.0
+
+D. Action Space 
+
+Each UAV executes one of five discrete actions per timestep: 
+
+Ai = {up , down , left , right , stay }.
+
+Actions move the UAV one grid cell or keep it stationary. The environment handles task claiming, pickup, delivery, and refilling automatically when position and state conditions are satisfied. We used a discrete action space instead of a continuous model in order to focus on the long-term planning aspect of our model. Furthermore, with cell movements being synchronized, UAVs only exchange information when all UAVs reach their waypoints, which decreases communication complexity and allows for synchronized updates. 
+
+E. Training Algorithms 
+
+We implemented a family of policy gradient algorithms using Ray RLlib [15] to study both architectural and systems-level design choices. The synchronous on-policy baseline is Proximal Policy Optimization (PPO), instantiated with a three-layer multilayer perceptron (MLP) policy. Two architectural variants of PPO were considered:  
+
+> •
+
+PPO Large FCNet : a deeper fully connected network with hidden layers of size [512 , 512 , 256] sharing param-eters between actor and critic. This variant tests whether additional capacity improves coordination under the same on-policy update rule.  
+
+> •
+
+PPO LSTM : a recurrent policy based on an LSTM-containing RLModule with stacked dense layers and a 256-unit LSTM cell. This configuration models tempo-ral dependencies such as task queues and approaching deadlines. To provide a classical on-policy baseline, we also include Advantage Actor–Critic (A2C), representing a low-complexity alternative to PPO. Finally, we evaluate two distributed ac-tor–learner architectures: • APPO : Asynchronous PPO with V-trace corrections and centralized learners. Experience is collected in parallel from multiple workers and consumed off-policy.  
+
+> •
+
+IMPALA : an importance-weighted actor–learner archi-tecture optimized for high-throughput sampling with V-trace targets. All methods share the same observation and action spaces, reward structure (Table II), and discount factor γ = 0 .99 .Hyperparameters for each algorithm (batch sizes, entropy regularization, clipping coefficients, and gradient clipping) use RLlib defaults. Multi-agent training uses a centralized policy mapping in which each UAV runs its own copy of the policy network which is evaluated on a decentralized setting. IV. R ESULTS AND DISCUSSION 
+
+A. Experimental Setup 
+
+The experimental evaluation was conducted using a 30 by 30 grid representing a 12 km by 12 km urban area centered on Brussels, with each cell spanning 400 meters. The infrastruc-ture consisted of 2 supply depots and 6 clinic locations. UAV parameters include maximum payload of 5 units, movement speed of 50 meters per second, and communication range of 400 meters. Medical supply requests arrived stochastically with rate 0.2 per timestep, categorized into three urgency levels: critical (15%, ∆crit = 5 steps), urgent (35%, ∆urg = 10 
+
+steps), and standard (50%, ∆std = 20 steps). Each UAV has 200 steps of movement until they have to return to their initial positions. Each mission ends when at least 15 tasks are completed and all tasks that have been assigned must be completed. Since the arrival of tasks are nondeterministic, some missions can have significantly more tasks and more urgency, which represents the real-life environment in terms of a health crisis. We use Ray RLlib [15] with four algorithms (A2C, PPO, APPO, IMPALA) using 3-layer MLP architecture (512-256-128 units), Adam optimizer with learning rate 0.0003, and discount factor 0.99. Each configuration trained for 2,000,000 steps using 8 parallel workers with 2 environments each on our 32 core Intel Xeon Gold 6444Y CPU. Evaluation consists of 1000 episodes per configuration with action selection across fleet sizes of 4, 8, 12, and 16 UAVs. 
+
+B. Computational Analysis 
+
+Fig. 2 shows training times in seconds for each algorithm. Asynchronous models are trained around 900 seconds re-gardless of number of agents whereas classical models have increasing training times from 350 to 1200 seconds. Evaluation times for a single episode range from 0.5 to 1.2 seconds depending on episode length for all algorithms. LSTM-based PPO models take 3 seconds per episode due to more complex model structure. Fast training times allow the existing model to be quickly trained on new scenarios whereas fast evaluation requires minimal computational capacity that can be used on most UAV processors. 
+
+Fig. 2: Training Times for each algorithm 
+
+C. Learning Performance 
+
+We first examine learning dynamics for a fixed fleet size. Fig. 3 shows the evolution of episode returns for 10 UAVs over 2,000,000 training steps. PPO exhibits clear convergence, improving from an initial average return of approximately 
+
+−600 to around −200 as training progresses. In contrast, APPO and IMPALA remain close to their initial performance and fail to achieve meaningful learning progress in this domain. This behavior indicates that in our setting, simple actor–critic updates (A2C) and off-policy V-trace corrections (APPO, IMPALA) are insufficient to stabilize learning under the combined challenges of strict delivery deadlines, stochastic task arrivals, and cooperative multi-agent assignments. The clipped policy updates in PPO, together with carefully shaped rewards that penalize missed deadlines and inefficient routing, enable more stable policy improvement and encourage exploration of coordinated delivery strategies. As training progresses, the learned policies gradually reduce mission completion time while increasing the fraction of successfully delivered medical supplies. This behavior suggests that PPO effectively balances exploration and exploitation in environ-
+
+Fig. 3: Episode return mean. (a) (b) 
+
+Fig. 4: Performance comparison across different configurations of PPO for varying fleet sizes. (a) Average mission time across UAV counts. (b) Success rate for different RL algorithms. ments where agents must jointly allocate limited resources under time constraints. From a systems perspective, these results highlight the importance of stable on-policy learning mechanisms for co-ordinating UAV fleets in time-critical healthcare logistics en-vironments. The findings further indicate that policy stability plays a crucial role in multi-agent scheduling problems where delivery deadlines, spatial constraints, and agent cooperation must be handled simultaneously. Consequently, the proposed MARL framework provides a promising approach for enabling reliable and scalable UAV-assisted medical logistics in dy-namic operational settings. 
+
+D. Mission Performance 
+
+Figure 4 shows how algorithms scale with fleet size. PPO success rate is 100% for all fleet sizes with mission time decreasing from 1400 s to 800 s. We observe that effective workload distribution and coordination benefit from additional agents, as reflected in the decline of average mission times. Furthermore, we can observe that 15 UAVs provide nearly identical results to 20 UAVs. Large architecture variant of PPO (PPO Large FCNet) follows the similar trend and closely track standard PPO in terms of mission-level performance with minor improvements. LSTM provided poorer results whereas using a larger fully connected network on standard PPO improved the performance. This indicates that the benefits from sequential actions are minimal and the mission requires more adaptive decision-making. V. C ONCLUSION 
+
+This paper presented a MARL framework for time-critical UAV medical supply delivery in urban environments with stochastic task arrivals and heterogeneous urgency levels. Us-ing a realistic grid representation of a 12 km ×12 km city envi-ronment with multiple depots and clinics, we evaluated several reinforcement learning algorithms for coordinating UAV fleets under payload, communication, and deadline constraints. Experimental results demonstrate that synchronous on-policy learning using PPO consistently achieves reliable co-ordination across different fleet sizes. In particular, PPO converges from an initial average return of approximately 
+
+−600 to around −200 during training and achieves a 100% 
+
+task completion rate during evaluation. Mission duration de-creases significantly as fleet size increases, dropping from approximately 1400 s with smaller fleets to about 800 s with larger fleets due to improved workload distribution among agents. In contrast, asynchronous approaches such as APPO and IMPALA fail to achieve meaningful convergence in this environment, highlighting the importance of stable on-policy updates and reward shaping for cooperative UAV coordination under strict deadlines. Computational analysis further shows that training can be completed within practical time scales, with asynchronous models requiring roughly 900 s and classical models ranging between 350 s and 1200 s depending on fleet size. Evaluation time remains low ( 0.5–1.2 s per episode), indicating that the learned policies can be executed on resource-constrained UAV platforms in real time. These findings demonstrate that PPO-based coordination provides a practical and scalable approach for UAV-assisted medical logistics during emergencies. ACKNOWLEDGMENT 
+
+This work was supported by the Brains for Brussels research and innovation funding program of the R´ egion de Bruxelles-Capitale–Innoviris under Grant RBC/BFB 2023-BFB-2. REFERENCES [1] I. Guven and M. Parlak, “Blockchain, AI and IoT Empowered Swarm Drones for Precision Agriculture Applications,” in 2022 IEEE 1st Global Emerging Technology Blockchain Forum: Blockchain and Beyond (iGETblockchain) , 2022, pp. 1–6. [2] V. Garg et al. , “Drones in last-mile delivery: A systematic review on efficiency, accessibility and sustainability,” Transportation Research Part D: Transport and Environment , 2023. [3] M. B. Sushma et al. , “Spatial drone path planning: A systematic review of parameters and algorithms,” Journal of Transport Geography , 2025. [4] J. Zhou, J. Yi, Z. Yang, H. Pu, X. Li, J. Luo, and L. Gao, “A survey on vehicle–drone cooperative delivery operations optimization: Models, methods, and future research directions,” Swarm and Evolutionary Computation , vol. 92, p. 101780, 2025. [5] Z. Ning et al. , “A survey on multi-agent reinforcement learning and its applications,” Neurocomputing , 2024. [6] ˙I. G¨ uven and E. Yanmaz, “Multi-objective path planning for multi-UAV connectivity and area coverage,” Ad Hoc Networks , vol. 160, p. 103520, 2024. [7] F. Wang, H. Zhang, S. Du, M. Hua, and G. Zhong, “C-SPPO: A deep reinforcement learning framework for large-scale dynamic logistics UAV routing problem,” Chinese Journal of Aeronautics , vol. 38, no. 5, p. 103229, May 2025. [8] Y. Cui, Y. Gao, and D. Zhao, “Design of Multi-UAV Task Alloca-tion Algorithm Based on Deep Reinforcement Learning,” in 2025 6th International Conference on Computer Engineering and Application (ICCEA) , Apr. 2025, pp. 440–443, iSSN: 2159-1288. [9] H. Zhang, H. Ma, B. W. Mersha, X. Zhang, and Y. Jin, “Distributed co-operative search method for multi-UAV with unstable communications,” 
+
+Applied Soft Computing , vol. 148, p. 110592, 2023. [10] V. Gabler and D. Wollherr, “Decentralized multi-agent reinforcement learning based on best-response policies,” Front Robot AI , vol. 11, p. 1229026, Apr. 2024. [11] J. M. Kong and E. Sousa, “Piggybacking on UAV Package Delivery Systems to Simultaneously Provide Wireless Coverage: A Deep Re-inforcement Learning-Based Trajectory Design,” in IEEE INFOCOM 2024 - IEEE Conference on Computer Communications Workshops (INFOCOM WKSHPS) , May 2024, pp. 1–6, iSSN: 2833-0587. [12] A. N. Kyzy, C.-H. Ji, Y. Choi, Y.-J. Seok, I. Ullah, and Y.-H. Han, “Accelerating convergence in distributed reinforcement learning via Asynchronous PPO,” in 2025 International Conference on Artificial Intelligence in Information and Communication (ICAIIC) , 2025, pp. 1059–1064. [13] L. Espeholt, H. Soyer, R. Munos, K. Simonyan, V. Mnih, T. Ward, Y. Doron, V. Firoiu, T. Harley, I. Dunning, S. Legg, and K. Kavukcuoglu, “IMPALA: Scalable distributed Deep-RL with importance weighted actor-learner architectures,” 2018. [14] I. Grondman, L. Busoniu, G. A. D. Lopes, and R. Babuska, “A survey of actor-critic reinforcement learning: Standard and natural policy gradients,” IEEE Transactions on Systems, Man, and Cybernetics, Part C (Applications and Reviews) , vol. 42, no. 6, pp. 1291–1307, 2012. [15] E. Liang, R. Liaw, P. Moritz, R. Nishihara, R. Fox, K. Goldberg, J. E. Gonzalez, M. I. Jordan, and I. Stoica, “RLlib: Abstractions for distributed reinforcement learning,” 2018. [Online]. Available: https://arxiv.org/abs/1712.09381

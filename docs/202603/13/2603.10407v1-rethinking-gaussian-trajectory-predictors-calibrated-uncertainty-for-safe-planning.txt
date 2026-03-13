@@ -1,0 +1,384 @@
+Title: Rethinking Gaussian Trajectory Predictors: Calibrated Uncertainty for Safe Planning
+
+URL Source: https://arxiv.org/pdf/2603.10407v1
+
+Published Time: Thu, 12 Mar 2026 00:36:07 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# Rethinking Gaussian Trajectory Predictors: Calibrated Uncertainty for Safe Planning 
+
+Fatemeh Cheraghi Pouria, Mahsa Golchoubian, and Katherine Driggs-Campbell 
+
+Abstract — Accurate trajectory prediction is critical for safe autonomous navigation in crowded environments. While many trajectory predictors output Gaussian distributions to represent the multi-modal distribution over future pedestrian positions, the reliability of their confidence levels often remains unad-dressed. This limitation can lead to unsafe or overly conser-vative motion planning when the predictor is integrated with an uncertainty-aware planner. Existing Gaussian trajectory predictors primarily rely on the Negative Log-Likelihood loss, which is prone to predict over- or under-confident distributions, and may compromise downstream planner safety. This paper introduces a novel loss function for calibrating prediction uncertainty which leverages Kernel Density Estimation to estimate the empirical distribution of confidence levels. The proposed formulation enforces consistency with the properties of a Gaussian assumption by explicitly matching the estimated empirical distribution to the Chi-squared distribution. To en-sure accurate mean prediction, a Mean Squared Error term is also incorporated in the final loss formulation. Experimen-tal results on real-world trajectory datasets show that our method significantly improves the reliability of confidence levels predicted by different State-Of-The-Art Gaussian trajectory predictors. We also demonstrate the importance of providing planners with reliable probabilistic insights (i.e. calibrated confidence levels) for collision-free navigation in complex sce-narios. For this purpose, we integrate Gaussian trajectory predictors trained with our loss function with an uncertainty-aware Model Predictive Control on scenarios extracted from real-world datasets, achieving improved planning performance through calibrated confidence levels. 
+
+I. INTRODUCTION Trajectory prediction is a core challenge for interactive robots and autonomous systems [1]. The importance of trajectory prediction becomes evident in the context of safe autonomous navigation in crowded spaces. When endowed with informative trajectory predictors, downstream planners can effectively maneuver through pedestrian crowds while avoiding collisions. Previously, researchers focused on deterministic models, which predict a single most-likely future trajectory repre-sented as a sequence of points. However, the need for more realistic motion forecasting drew attention to the probabilistic and multi-modal nature of pedestrian behavior. As a result, later works utilized generative and probabilistic formula-tions, such as bivariate Gaussian models and Gaussian Mix-ture Models (GMMs) which enable generation of multiple               
+
+> Fatemeh Cheraghi Pouria and Katherine Driggs-Campbell are with the Department of Electrical and Computer Engineering, University of Illinois at Urbana-Champaign, Champaign, IL 61820 USA (e-mail: fate-meh5@illinois.edu; krdc@illinois.edu) Mahsa Golchoubian is with the Department of Mathematical and Computational Sciences, University of Toronto, Toronto, Canada (e-email:mahsa.golchoubian@utoronto.ca) (Cor-responding author: Fatemeh Cheraghi Pouria.)
+
+plausible future trajectories through sampling [2]–[9].Such predictors facilitate uncertainty-aware planning by providing multiple future trajectories and associated probabilities. As a common practice in the trajectory prediction liter-ature, the assessment of whether a predictor outperforms others and consequently is favorable for integration with a planner is often based only on point-wise accuracy metrics such as Average Displacement Error (ADE) and Final Dis-placement Error (FDE), or their Best-of-N (BoN) variants for multi-modal probabilistic models [10]–[12]. However, a trajectory predictor that excels only under these metrics provides little insight into the overall quality and structure of the predicted distribution. Since the predicted distribution itself encodes uncertainty for the planner, neglecting its struc-ture collapses probabilistic forecasting into single-trajectory selection, undermining the reliability and calibration required for safe uncertainty-aware planning in real-world scenarios. Recognizing these limitations, recent works [13], [14] have highlighted the importance of ensuring the statistical validity of probabilistic trajectory predictors, particularly for bivariate Gaussian models, which are among the most widely used representations in trajectory prediction [2]–[9]. They suggest that rather than focusing solely on point-wise accuracy, when developing a bivariate Gaussian model, one should care about a fundamental property of a bivariate Gaussian distributions [13], [14]: the squared Mahalanobis distance between the predicted mean and the true future position at a given confidence level follows a Chi-squared distribution with two degrees of freedom [15]. Since the confidence levels of the predicted distribution inform the planner about regions that are likely to contain the true future position, ensuring the validity of these predictions when developing a trajectory predictor is vital. To the best of our knowledge most State-Of-The-Art (SOTA) Gaussian trajectory predictors lack an evaluation of the predicted confidence levels, which raises the question of whether the predicted uncertainty is reliable. In this paper, we take a model agonistic approach and propose a novel loss function for training bivariate Gaussian trajectory predictors that directly encourages the predicted confidence levels to follow the Chi-squared distribution. Our approach leverages Kernel Density Estimation (KDE) to es-timate the empirical distribution of confidence levels, which we then match to the Chi-squared distribution. In addition, we incorporate a Mean Squared Error (MSE) loss term to encourage the predicted Gaussian mean to align closely with the true position. To validate the benefits of our loss function, we integrate the trajectory predictors trained with our designed loss function into an uncertainty-aware Model 
+
+> arXiv:2603.10407v1 [cs.RO] 11 Mar 2026
+
+Predictive Control (MPC) to demonstrate the effectiveness of informing the planner with more reliable confidence levels. In summary, our key contributions are threefold: (i) We propose a novel loss function that improves the calibration of confidence levels in bivariate Gaussian trajectory predic-tion models (ii) We demonstrate that our method improves confidence level prediction on real-world trajectory datasets (iii) We highlight the importance of reliable confidence level estimation in motion planning by integrating our calibrated predictor with an uncertainty-aware MPC, demonstrating its advantage in scenarios derived from real-world data. II. R ELATED WORKS 
+
+A. Pedestrian Trajectory Prediction 
+
+Pedestrian trajectory prediction has been an active research field for over decades. The evolution of this field began with hand-engineered features capturing pedestrian motion dynamics [16]–[18] and transitioned to deploying learning-based methods [2]–[4], [4], [19]–[21]. These methods aim to capture the inherent complexity of human motion, which arises from factors such as multi-modality [4], [7], environ-mental constraints [22], social interactions [2], [3], and agent intent [20], [21]. Many recent trajectory predictors model the uncertainty in human motion by predicting a distribution over possible future trajectories [2]–[9], [14], [23]–[27]. These approaches can broadly be categorized into two groups: non-parametric generative-based predictors that produce multiple plausible future trajectories [26], [27] and parametric probabilistic-based predictors trained via Maximum Likelihood Estimation (MLE) that output bivariate Gaussian distributions as the future steps of the trajectory [2]–[9], [14], [24], [25]. A common MLE-based strategy minimizes the Negative Log-Likelihood (NLL) loss to align the predicted distribution with assumed bivariate Gaussian distribution [2]–[9]. However, recent studies have shown that optimizing NLL alone can lead to poorly calibrated uncertainty estimates and unreliable confidence regions [13], [14]. To address this limitation, al-ternative training objectives have been proposed that directly target the whole predicted distribution [13], [14]. These ob-jectives aim to improve the reliability of predicted confidence levels, which is essential for uncertainty-aware planning. However, their designed objectives primarily encourage the model to minimize the predicted squared Mahalanobis dis-tance. Yet, according to the Chi-squared distribution, the squared Mahalanobis distance is expected to span a wide range of values beyond zero. Our work introduces a new training objective which directly match the distribution of predicted squared Mahalanobis distance with Chi-square distribution to enhance the reliability of confidence levels produced by Gaussian trajectory predictors. 
+
+B. Incorporating Prediction Uncertainty into Planning 
+
+Predicting human trajectories is a fundamental require-ment for autonomous planning in environments shared with pedestrians. Evidently, a considerable portion of the tra-jectory prediction research focuses on predicting pedestrian motion in pedestrian-vehicle mixed environments [28]. While many approaches only incorporate the predicted trajectories into the planning framework [11], [29]–[31], an increasing number of studies also consider the uncertainty associated with these predictions [14], [32], [33]. In uncertainty-aware planning, it is common to associate each predicted trajectory point with a spatial region that is expected to contain the true future position with a specified probability. For probabilistic trajectory predictors, such as bivariate Gaussian models, these regions correspond to con-fidence levels defined by the predicted mean and covariance. The effectiveness of this representation therefore depends on the quality of the model prediction as miscalibrated confidence levels can lead to misleading uncertainty regions and adversely affect downstream planning. Prior work, such as [13], [14], has highlighted that degradation in the confi-dence levels of bivariate Gaussian predictors harm the plan-ner as the predicted uncertainty regions collapse to near-point estimates and fail to capture the ground truth. To overcome this issue, some recent works [12], [32]–[34] adopt a post-processing approach based on conformal prediction [35] to construct circular uncertainty regions around predicted trajectory points [36], [37] and have shown promising results when the uncertainty regions are integrated into planning frameworks. However, a key limitation of conformal predic-tion is its reliance on sufficiently large datasets that can be partitioned into separate training, calibration, and test sets, which is often impractical with real-world trajectory datasets. More fundamentally, post-hoc calibration does not im-prove the quality of the predicted uncertainty regions. In-stead, greater benefit can be achieved by employing tra-jectory predictors that inherently produce well-calibrated uncertainty regions. This observation motivates our work, which focuses on enforcing uncertainty reliability directly during training, enabling Gaussian trajectory predictors to provide trustworthy confidence regions without requiring post-processing calibration. III. M ETHOD 
+
+A. Problem Formulation 
+
+Considering a crowd scene including N pedestrians, let 
+
+Xt = {(xit, y it)}Ni=1 denote the true positions of all pedes-trians at time t. Given the true trajectories during the observation horizon, Xobs = {X1, ..., X Tobs }, our trajec-tory predictor predicts bivariate Gaussian distributions over the subsequent positions throughout the prediction horizon denoted by ˆXpred = { ˆXTobs +1 , ..., ˆXTpred }, where each 
+
+(ˆ xit, ˆyit) ∈ ˆXt for Tobs +1 ≤ t ≤ Tpred is modeled by a bivariate Gaussian, (ˆ xit, ˆyit) ∼ N (μit, Σit).
+
+B. Properties of bivariate Gaussians and Pitfalls of NLL 
+
+A bivariate Gaussian distribution has two main properties as a solution to a trajectory prediction problem. First, mean is the sample with the highest probability; thus, we want the predicted mean to align closely with the true position of the pedestrian. Second, confidence levels of a bivariate Gaussian encompass a specified proportion of the probability mass. More formally, for a random vector X ∼ N (μ, Σ) ,the squared Mahalanobis distance of X from the mean μ,measured with respect to the covariance structure Σ is given by dM D (X, μ, Σ) 2 = ( X − μ)T Σ−1(X − μ) which follows a Chi-squared distribution with two degrees of freedom, 
+
+X 22 [15]. Therefore, the confidence level defined by: 
+
+P{(X − μ)T Σ−1(X − μ) ≤ X 22 (α)} = 1 − α (1) encloses (1 − α) × 100% of the probability mass. Here, 
+
+χ22(α) denotes the value of Chi-squared with two degrees of freedom evaluated at significant level equal to α. By predict-ing a bivariate Gaussian distribution in a trajectory prediction problem, we claim that the ground truth is somewhere within the ith confidence level of the distribution with the probability of 1 − αi. However, this claim is only valid when our predicted bivariate Gaussian distribution is ”ideal”. Given the aforementioned properties of mean and covariance of a bivariate Gaussian, we call a predicted bivariate Gaussian ideal if the predicted mean and covariance satisfy Eq 1. Otherwise, our confidence levels become unreliable meaning that they can be over-confident (under-confident) and smaller (larger) since they are capturing a lower (higher) proportion of ground truth samples than theoretically expected. Trajectory predictors which predict bivariate Gaussian distributions mostly rely on NLL (Eq 2) as the loss function. 
+
+LN LL =
+
+> Tpred
+
+X
+
+> t=Tobs +1
+> N
+
+X
+
+> i=1
+
+log  q
+
+2π det(Σ it) (2) 
+
++ 12
+
+ (Xit − μit)T (Σ it)−1(Xit − μit)
+
+However, since our goal is to predict an ideal bivariate Gaussian distribution, relying solely on NLL loss can lead to potential issues in practice. First, examining Eq 2 reveals a potential imbalance in optimization. In practice, the model can reduce the second term in the loss more easily by focusing on minimizing the error between the predicted mean 
+
+μ and the true position (ADE/FDE), rather than learning a meaningful covariance matrix. Moreover, the first compo-nent of the loss encourages small covariance determinants, while the second component is better minimized with larger determinants. As a result, the model may fail to maintain a proper balance and lean toward one extreme, producing unrealistically small or large confidence intervals that do not accurately reflect true probabilities. Second, the squared Mahalanobis distance appears explicitly in the second term of the NLL formulation (Eq. 2), incentivizing the model to reduce it toward zero to minimize the overall loss. This, however, may distort its expected distribution, causing it to deviate from the Chi-squared distribution, which natu-rally spans a broad range of values beyond zero. In order to address the potential limitations of NLL and also to predict bivariate Gaussian distributions satisfying the two aforementioned properties, we propose a new loss function that alongside minimizing MSE loss, forces the network to match the distribution of the squared Mahalanobis distances with the Chi-squared distribution. 
+
+C. Proposed Loss Function 
+
+We implement our proposed loss function on open-source bivariate Gaussian predictors that originally use NLL loss. This choice enables a fair comparison, as the network architecture remains unchanged. It is important to note that, as our contribution lies in the design of the loss function rather than the network architecture, the proposed approach is model-agnostic and can be applied to various neural network architectures. The main objective of our proposed loss function is to ensure that the predicted distribution exhibits the properties of a bivariate Gaussian distribution as defined in Eq 1. To enforce this, we define a loss function based on the difference between the empirical distribution of squared Mahalanobis distances (computed from ground truth samples) and the theoretical Chi-squared distribution. Since we only have a limited number of ground truth samples, we approximate the empirical density using kernel density estimation (KDE), which provides a differentiable alternative to standard histograms, as follows: 
+
+ˆp(cj | ¯K, b, D 1 
+
+> t
+
+, ..., D Nt 
+
+> t
+
+) = 1
+
+Ntb
+
+> Nt
+
+X
+
+> i=1
+
+¯K
+
+ cj − Dit
+
+b
+
+
+
+(3) In this equation, {Dit}Nt 
+
+> i=1
+
+denotes set of random vari-ables representing the squared Mahalanobis distance between ground truth positions and predicted distributions of all pedestrians at time t where Nt is number of pedestrians. 
+
+{cj }kj=1 are uniformly spaced bin centers over the interval 
+
+[0 , max i{Dit}], ¯K is a kernel function, and b is the bandwidth parameter. For our density estimation, we employ a Gaussian kernel which is the standard normal distribution, followed by a softmax normalization with temperature parameter T
+
+to obtain a smooth and differentiable estimation. Finally, we sum up the probability densities to get the Cumulative Density Function (CDF) and define our loss (see Figure 1), LCDF as the mean absolute error between the estimated CDF, ˆF (cj ), and Chi-squared CDF, FX 22 (cj ):
+
+LCDF = 1
+
+k
+
+> k
+
+X
+
+> j=1
+
+q  ˆF (cj ) − FX 22 (cj )2 (4) Matching the distribution of confidence levels only guar-antees to satisfy the second mentioned property of an ideal bivariate Gaussian. It alone does not guarantee that the predicted mean aligns with the ground truth. Thus, we add mean absolute error between predicted means and ground truth positions to our final loss formulation: 
+
+L = βLCDF + 1
+
+NtNtX
+
+> i=1
+
+q
+
+(μit − Xit )2 (5) 
+
+D. Model Predictive Control (MPC) Planner 
+
+We aim to demonstrate the importance of predicting ideal confidence levels by integrating our trajectory predictor with an uncertainty-aware planner. The goal of the planner is to output the best control action at each time step t, denoted by ut, given the dynamic of the system and a set of con-straints. We employ MPC as our planning framework since its flexibility in defining stage costs and constraints allows the planner to take advantage of the predicted distribution and avoid collision. The following optimization problem formulates an uncertainty-aware variant of MPC, which we use to highlight the importance of ideal confidence levels. To account for uncertainty in human position predictions, we adopt the collision avoidance constraint from [38] to ensure the MPC respects a minimum collision probability threshold, 
+
+pcol , alongside a minimum required distance between robot and pedestrians, dsaf e .
+
+minimize  
+
+> r1: H, u 0: H−1
+> H−1
+
+X
+
+> t=0
+
+
+
+u⊤ 
+
+> t
+
+Quut+
+
+> Nt
+
+X
+
+> i=1
+
+QM D 
+
+dM D t,i (rt, μ it, Σit) (6) 
+
++QP
+
+  ∥rt − pgoal ∥∥r0 − pgoal ∥
+
+2
+
+
+
++ QH
+
+  ∥rH − pgoal ∥∥r0 − pgoal ∥
+
+2
+
+Subject to 
+
+dM D t,i (rt, μ it, Σit)2 ≥ − 2 ln 
+
+q 
+
+det(2 πΣit) pcol 
+
+Acol 
+
+
+
+,dED t,i (rt, μ it)2 ≥ (rrob + rped + dsaf e )2
+
+In Eq. 6, H is the planning horizon, Nt is the number of pedestrians, and rt is the robot position at time step 
+
+t. Qu, QM D , QP and QH are weights for control effort, Mahalanobis distance cost, stage goal cost, and terminal cost, respectively. dED t,i is the Euclidean distance between pedestrian i and robot at t. rrob and rped are the robot and pedestrians’ radii and Acol = π(rrob + rped )2 is the area of the safety zone around the robot that pedestrians must avoid to prevent collisions. pgoal is the robot’s goal position. IV. E XPERIMENTS 
+
+We conduct two sets of experiments in this work: one to evaluate the prediction model trained with our proposed loss function on a test set of trajectories, and another to assess how prediction accuracy and confidence calibration affect motion planning within an uncertainty-aware planner. 
+
+A. Dataset and Scenarios 
+
+We use two publicly available pedestrian trajectory datasets: ETH [10] and UCY [39]. ETH dataset includes two scenes: ETH and HOTEL, while UCY dataset is composed of UNIV and ZARA scenes. We use 70% of each dataset for training and the remaining for testing to ensure that training and evaluation are performed under the same data distribu-tion. This in-distribution split allows us to train and assess calibration under matched statistical conditions, reducing the influence of distribution shift. In addition, to investigate transferability of our approach to out-of-distribution data, we also adopt the common leave-one-out strategy to train the newest baseline [4]. Leave-one-out strategy suggests to hold one dataset out for testing while the remaining datasets are used for training. All scenes share a rate of 2.5 fps. Following all the baselines, each trajectory is observed for 
+
+3.2s (Tobs = 8 ) and the next 4.8s (Tpred = 12 ) are predicted. Motion planning scenarios are extracted from the test sets. In each scenario, a robot is introduced into the pedestrian crowd and tasked with navigating from a defined start to a goal position. More specifically, for real-word datasets, we extract 16-second-long scenarios (40 frames) from the test sets, using an 8-second skip rate between the starting frames of consecutive scenarios. For each scenario, we define a rectangular region around the ground truth trajectories of the pedestrians present in the scene. Within this region, we define four distinct start-goal pairs for the robot: from the middle of the bottom/right edge to the middle of the top/left edge, and from the bottom-left/right corner to the top-right/left corner. The planner assumes a unicycle model as the robot’s dynamics. Each scenario runs until the robot reaches its goal, unless it freezes, in which case the scenario is terminated. Finally, we generate 44, 64, 52, 108 scenarios from ETH, HOTEL, UNIV, and ZARA respectively. 
+
+B. Baselines and Evaluation Metrics 
+
+Trajectory Prediction: We select the following Gaussian trajectory predictors for pairwise comparison. In all experi-ments, we preserve the original model architectures and only replace the NLL loss with our proposed loss, ensuring a fair and controlled comparison: 1) Vanilla LSTM (VLSTM): an LSTM-based trajectory prediction architecture; 2) Social-LSTM (SLSTM): an LSTM-based architecture augmented with a social pooling layer [2]; 3) Social-STGCNN: aspatio-temporal graph convolutional network that explicitly models social interactions [3]; 4) DSTIGCN: a deformable spatio-temporal interaction graph network [4]; 5) Social-LSTM+MHD (SLSTM+MHD): the same architecture as SLSTM, trained by minimizing the NLL loss while addi-tionally penalizing the Mahalanobis distance between the ground-truth positions and the predicted distribution [14]. Since SLSTM+MHD shares the exact architecture with SLSTM, we use the last baseline to conduct a three-way comparison among SLSTM, SLSTM+MHD, and SLSTM ∗
+
+(trained with our proposed loss) and study the effect of the loss function in isolation. Model performance is evaluated by the following metrics: 
+
+Average Displacement Error (ADE) : Average of Euclidean distance between predicted mean and ground truth posi-tion over the prediction horizon; Final Displacement Error (FDE) : Average Euclidean distance between the predicted mean and the ground truth position at the final time step of the prediction horizon; Delta Empirical Sigma Values (∆ESV i): Difference between the empirical proportion of ground truth falling within the confidence level correspond-ing to ith standard deviation (e.g., 1σ, 2σ, 3σ) of the pre-dicted distribution and the corresponding proportion under an ideal bivariate Gaussian ( σideal, 1 = 0 .39 , σideal, 2 = 0 .86 and 
+
+σideal, 3 = 0 .99 ). Negative and positive values indicate over-confident and under-confidence distribution respectively [40]; 
+
+Mean Absolute Delta Empirical Sigma Value ( |∆ESV |: Av-erage of absolute Delta Empirical Sigma Values over 100 confidence levels. Values closer to zero are desirable. 
+
+MPC Planner: The following metrics are used to evaluate the uncertainty-aware MPC planner integrated with different trajectory predictors. Success Rate (SR) : percentage of the Fig. 1: Empirical (solid lines) and estimated (transparent lines) CDFs of the squared Mahalanobis distance predicted by three SLSTM variants on UNIV dataset. The black curve denotes the theoretical χ22 distribution. Among the compared models, SLSTM ∗ exhibits the closest alignment with the true distribution, indicating superior uncertainty calibration. 
+
+scenarios that the planner successfully reaches the goal; 
+
+Collision Rate (CR) : percentage of the scenarios that result in collision with pedestrians; Timeout Rate (TR) : percentage of scenarios that planner freezes; Navigation Time (Nav. Time) :number of steps that planner takes to achieve the goal. Each step is considered equal to 0.5 second; Path Length (Path Len.) : length (in meters) of the path that planner travels to get to the goal; Percentage of Average Intrusion Ratio (Ave. Intr. Ratio %): the percentage of time throughout the navigation in which the planner intrudes the personal space of any pedestrian where the personal space of each pedestrian is defined as a circle centered at the pedestrian with radius of 0.6m; Average Minimum Intrusion Distance (Ave. Min. Intr. Dist.) : average of the closest distance between planner and pedestrian during intrusions. 
+
+C. Implementation Details 
+
+To preserve the model agonistic assumption of our method, we follow a pairwise comparison scheme where we keep the model architecture of each baseline the same and train two variants: one on NLL loss and one on our proposed loss. For the baseline model trained with the NLL loss, we retain the training hyperparameters reported in the original paper. In contrast, for the variant trained with our proposed loss function, we fine tune the training hyperparameters to achieve its best performance. To that end, we train the model minimizing our loss for 600 epochs using Adam optimizer [41] with a learning rate of 0.001. For fairness we fine tune 
+
+β for each model to achieve their best performance. We set β to 2 for VLSTM and Social-STGCNN and to 1 and 4 for SLSTM and DSTIGCN respectively. For an accurate and high-resolution estimation of the squared Mahalanobis distances distribution, we use a step size of 0.01 between the centers of the histogram bins and we set both the temperature and bandwidth parameters in the kernel function to 0.005.                 
+
+> TABLE I: MPC parameters Param QuQHQpQM D rrob rped rsaf e pcol
+> Value I2×210 310 310 30.20.20.4 0.2
+
+Our MPC framework is built upon the work of [23] where the optimization problem is solved over a prediction horizon of H = 12 , The control vector is bounded between 
+
+[0 m/s, −0.2rad/s ] and [3 m/s, 0.2rad/s ]. The planner is initialized with a start velocity of 1m/s and angled towards the goal. The rest of MPC variables are listed in Table I 1.V. R ESULTS 
+
+A. Trajectory Prediction Results 
+
+Table II reports trajectory prediction results for the SLSTM architecture trained with three different loss func-tions. The last four columns of Table II specifically assess the quality of the predicted confidence levels using ∆ESV 
+
+metrics. Averaged across all datasets, SLSTM architecture trained with our proposed loss achieves lower ADE/FDE as well as closer to zero ∆ESV values, demonstrating the higher accuracy and well-calibrated confidence levels among compared approaches.                                                                                               
+
+> TABLE II: Quantitative trajectory prediction results of three different variant of SLSTM trained with different loss
+> Dataset Method ADE /FDE ∆ESV 1∆ESV 2∆ESV 3|∆ESV |
+> ETH
+> SLSTM [2] 2.26 / 3.74 0.038 -0.187 -0.171 0.091 SLSTM+MHD [14] 3.51 / 5.23 0.070 -0.082 -0.094 0.054
+> SLSTM ∗(ours) 1.58 /2.52 0.110 -0.085 -0.089 0.088
+> HOTEL
+> SLSTM 0.34 / 0.71 0.106 -0.137 -0.151 0.113 SLSTM+MHD 0.39 / 0.92 0.330 0.065 -0.009 0.233 SLSTM ∗0.30 /0.49 0.218 -0.045 -0.056 0.102 ZARA
+> SLSTM 0.42 / 0.78 0.280 0.021 -0.044 0.177 SLSTM+MHD 0.42 / 0.81 0.512 0.109 -0.009 0.364 SLSTM ∗0.42 /0.75 -0.045 0.023 -0.030 0.046 UNIV
+> SLSTM 0.76 / 1.45 0.163 0.015 -0.024 0.098 SLSTM+MHD 0.77 / 1.46 0.500 0.133 0.009 0.342 SLSTM ∗0.77 / 1.43 0.067 0.001 -0.022 0.042 AVE
+> SLSTM 0.95 / 1.67 0.147 -0.077 -0.098 0.120 SLSTM+MHD 1.27 / 2.11 0.353 0.056 -0.026 0.248 SLSTM ∗0.77 /1.30 0.088 -0.027 -0.049 0.070
+> *indicates the model trained with our proposed loss function.
+
+In contrast, SLSTM+MHD, which directly minimizes Mahalanobis distance, yields more positive ∆ESV values, indicating under-confident predictions where the predicted confidence regions capture a larger proportion of ground truth than expected (Fig. 3). Meanwhile, SLSTM trained with the standard NLL shows more negative ∆ESV 1 and ∆ESV 2
+
+values, corresponding to over-confident predictions. Additionally, as shown in Fig. 1, we evaluate the fidelity of the predicted uncertainty by comparing the empirical distributions of squared Mahalanobis distances predicted by three SLSTM variants against the theoretical χ2 distribution. Evidently, the model trained with our proposed loss produces a distribution that closely follows the theoretical χ2 curve. In contrast, the CDF of SLSTM+MHD deviates the most from the theoretical distribution and rises rapidly toward one at small squared Mahalanobis distances, indicating that many predictions concentrate near zero. This behavior is expected, as the loss function of SLSTM+MHD explicitly minimizes the Mahalanobis distance. The strong agreement between the empirical (solid lines) and estimated (transparent lines) distributions also supports the accuracy of our KDE method. 
+
+> 1Code will be released upon acceptance.
+
+(a) (b) (c) (d) Fig. 2: Difference in Mean Absolute Delta Empirical Sigma Value ( |∆ESV |) and Difference in Average Distance Error (ADE, unit:m) computed as: “model trained with our loss - baseline model trained with NLL loss” for each model pair, on (a) ETH, (b) HOTEL, (c) ZARA, (d) UNIV. More negative values indicate that the model trained with our loss obtains lower |∆ESV | and ADE compared to the model trained with NLL. ( ∆|∆ESV |) is hatched for cases where the trajectory predictor trained with our loss achieves a higher success rate in planning, indicating that gains in planning performance often coincide with significant improvement in |∆ESV | resulting from our proposed loss function. TABLE III: Quantitative result of trajectory prediction and corresponding uncertainty-aware MPC planner. 
+
+Trajectory Prediction Uncertainty-aware Planning Dataset (Scene Density) Method ADE / FDE |∆ESV | SR/CR/TR Nav. time Path. Len %Intr.Ratio / Min.Intr.Dist. ETH (0.16 ped/ped/m 2)
+
+VLSTM 2.71 / 4.26 0.119 0.77 / 0.16 / 0.07 11.31 ±1.19 19.57 ±1.57 4.82 ±2.12 / 0.29 ±0.03 VLSTM ∗(ours) 1.52 / 2.41 0.049 0.91 / 0.09 / 0.00 11.32 ±1.24 20.14 ±1.37 4.36 ±1.79 / 0.33 ±0.03 
+
+SLSTM [2] 2.26 / 3.74 0.091 0.86 / 0.09 / 0.05 12.78 ±1.24 20.20 ±1.43 4.35 ±1.65 / 0.38 ±0.02 
+
+SLSTM ∗(ours) 1.58 / 2.52 0.088 0.82 / 0.16 / 0.02 11.81 ±1.25 20.86 ±1.60 5.33 ±1.95 / 0.31 ±0.04 Social-STGCNN [3] 4.08 / 6.80 0.107 0.95 / 0.05 / 0.00 13.49 ±1.31 22.78 ±1.59 2.93 ±1.99 / 0.36 ±0.04 Social-STGCNN ∗(ours) 2.37 / 4.22 0.162 0.93 / 0.07 / 0.00 11.55 ±1.08 19.88 ±1.22 2.17 ±0.67 / 0.39 ±0.04 
+
+DSTIGCN [4] 1.14 / 2.31 0.157 080 / 0.20 / 0.00 5.81 ±0.37 15.80 ±0.94 4.92 ±1.18 / 0.34 ±0.03 
+
+DSTIGCN ∗(ours) 3.25 / 5.53 0.060 0.91 / 0.09 / 0.00 12.01 ±1.33 20.61 ±1.48 2.74 ±1.09 / 0.28 ±0.03 
+
+HOTEL (0.26 ped/m 2)
+
+VLSTM 0.36 / 0.76 0.106 0.91 / 0.09 / 0.00 4.24 ±0.29 9.90 ±0.57 8.04 ±1.55 / 0.41 ±0.02 
+
+VLSTM ∗ 0.37 / 0.56 0.072 0.89 / 0.11 / 0.00 5.52 ±0.53 10.60 ±0.64 7.74 ±1.55 / 0.34 ±0.03 SLSTM 0.34 / 0.71 0.113 0.95 / 0.05 / 0.00 4.39 ±0.28 10.07 ±0.54 9.74 ±1.77 / 0.40 ±0.02 
+
+SLSTM ∗ 0.30 / 0.49 0.102 0.91 / 0.09 / 0.00 5.08 ±0.40 10.19 ±0.57 7.99 ±1.59 / 0.35 ±0.02 Social-STGCNN 0.63 / 1.08 0.228 0.80 / 0.20 / 0.00 5.05 ±0.48 9.88 ±0.64 7.36 ±1.50 / 0.38 ±0.02 
+
+Social-STGCNN ∗ 0.59 / 1.05 0.122 0.86 / 0.14 / 0.00 5.63 ±0.49 10.01 ±0.62 5.80 ±1.29 / 0.38 ±0.03 
+
+DSTIGCN 0.23 / 0.44 0.073 0.94 / 0.06 / 0.00 4.32 ±0.34 9.91 ±0.54 10.63 ±1.82 / 0.42 ±0.01 
+
+DSTIGCN ∗ 0.27 / 0.48 0.067 0.91 / 0.09 / 0.00 4.53 ±0.34 9.92 ±0.56 9.92 ±1.77 / 0.42 ±0.01 ZARA (0.15 ped/m 2)
+
+VLSTM 0.41 / 0.77 0.185 0.80 / 0.18 / 0.02 9.26 ±0.81 13.29 ±0.75 20.18 ±2.39 / 0.39 ±0.00 VLSTM ∗ 0.44 / 0.78 0.047 0.85 / 0.11 / 0.04 12.65 ±0.85 14.61 ±0.74 19.11 ±2.63 / 0.45 ±0.00 
+
+SLSTM 0.42 / 0.78 0.177 0.82 / 0.16 / 0.02 9.31 ±0.74 13.03 ±0.58 20.00 ±2.30 / 0.39 ±0.00 
+
+SLSTM ∗ 0.42 / 0.75 0.046 0.84 / 0.12 / 0.04 12.89 ±0.92 14.51 ±0.72 20.70 ±2.46 / 0.39 ±0.00 
+
+Social-STGCNN 0.50 / 0.93 0.084 0.75 / 0.22 / 0.03 8.38 ±0.76 12.55 ±0.65 17.88 ±2.31 / 0.36 ±0.01 Social-STGCNN ∗ 0.58 / 1.05 0.046 0.77 / 0.20 / 0.03 8.42 ±0.71 13.03 ±0.62 12.81 ±1.82 / 0.41 ±0.01 
+
+DSTIGCN 0.32 / 0.67 0.089 0.81 / 0.15 / 0.04 7.82 ±0.65 12.01 ±0.56 23.26 ±2.29 / 0.42 ±0.01 
+
+DSTIGCN ∗ 0.35 / 0.69 0.071 0.84 / 0.15 / 0.01 10.08 ±0.82 13.67 ±0.64 19.97 ±2.26 / 0.42 ±0.00 UNIV (0.31 ped/m 2)
+
+VLSTM 0.76 / 1.45 0.081 0.83 / 0.17 / 0.00 18.47 ±0.88 30.47 ±1.37 8.71 ±1.76 / 0.39 ±0.01 
+
+VLSTM ∗ 0.78 / 1.46 0.035 0.90 / 0.10 / 0.00 20.21 ±0.81 31.26 ±1.55 4.78 ±1.58 / 0.38 ±0.02 SLSTM 0.76 / 1.45 0.098 0.85 / 0.15 / 0.00 19.47 ±0.91 31.03 ±1.51 5.84 ±1.41 / 0.38 ±0.00 SLSTM ∗ 0.77 / 1.43 0.042 0.85 / 0.13 / 0.02 19.44 ±0.94 31.37 ±1.46 5.58 ±1.68 / 0.41 ±0.01 
+
+Social-STGCNN 0.72 / 1.40 0.132 0.71 / 0.29 / 0.00 16.53 ±1.06 28.11 ±1.16 14.94 ±2.16 / 0.39 ±0.01 Social-STGCNN ∗ 0.66 / 1.30 0.056 0.85 / 0.15 / 0.00 16.76 ±0.91 28.50 ±1.11 8.18 ±1.56 / 0.40 ±0.01 
+
+DSTIGCN 0.53 / 1.15 0.111 0.75 / 0.23 / 0.02 15.74 ±1.15 25.11 ±0.92 21.17 ±2.46 / 0.39 ±0.01 DSTIGCN ∗ 0.56 / 1.17 0.026 0.77 / 0.21 / 0.02 16.15 ±1.06 26.33 ±1.16 12.16 ±1.47 / 0.40 ±0.01  
+
+> *
+
+indicates the model trained with our proposed loss function.  
+
+> +
+
+please refer to Appendix I for comprehensive trajectory prediction result of each baselines, including ∆ESV 1, ∆ESV 2, ∆ESV 3 and ADE / FDE 
+
+calculated using the BoN sampling strategy 
+
+To support the model-agnostic nature of our approach, we train several trajectory prediction models using our pro-posed loss and compare them against their variant trained on the standard NLL loss. The results are summarized in Table III and Fig. 2. Overall, our method reduces |∆ESV |
+
+and achieves lower ADE/FDE in several cases, while any increases in ADE observed in other cases remain marginal. We observe that the ADE/FDE on the ETH dataset are relatively large. This behavior stems from our experimental choice to train and test on the same dataset in order to remain within the same distribution and obtain more calibrated confidence levels. Due to the limited size of the ETH dataset, this setting leads to overfitting and prevents the models from sufficiently reducing ADE/FDE. To further investigate our model performance on out-of-distribution datasets, we adopt a leave-one-out training strategy shown in Table IV, where the most recent model, DSTIGCN [4], is trained with three datasets and evaluated on ETH. As shown in Table IV, the ADE degradation on ETH previously caused by overfitting due to the small dataset size is substantially mitigated. While the resulting ∆ESV metrics are generally higher than those obtained under in-distribution training, our loss still yields improved ∆ESV across most datasets and in average, highlighting the robustness of our (a) (b) Fig. 3: Predicted trajectories and confidence levels corresponding to 1σ                                                                                        
+
+> of (a) SLSTM+MHD and (b) SLSTM ∗evaluated on ZARA dataset. SLSTM+MHD has large positive ∆ESV 1which indicates under-confident behavior of the model and results in larger confidence levels than ideal; while ∆ESV 1of SLSTM ∗is the closer to the zero which makes its confidence levels to be the most similar to confidence levels of an ideal bivariate Gaussian. TABLE IV: Quantitative trajectory prediction results of DSTIGCN under in-distribution and out-of-distribution training strategies.
+> In-Distribution Out-Of-Distribution Dataset Method ADE /FDE |∆ESV |ADE /FDE |∆ESV |
+> ETH DSTIGCN 1.14 /2.31 0.157 0.93 /1.92 0.274 DSTIGCN ∗3.25 / 5.53 0.060 1.01 / 2.16 0.183 HOTEL DSTIGCN 0.23 /0.44 0.073 0.56 / 1.12 0.150 DSTIGCN ∗0.27 / 0.48 0.067 0.56 /1.06 0.088 ZARA DSTIGCN 0.32 /0.67 0.089 0.36 / 0.79 0.103
+> DSTIGCN ∗0.35 / 0.69 0.071 0.36 /0.77 0.144
+> UNIV DSTIGCN 0.53 /1.15 0.111 0.62 /1.26 0.255 DSTIGCN ∗0.56 / 1.17 0.026 0.69 / 1.36 0.191 AVE DSTIGCN 0.56 /1.14 0.109 0.62 /1.27 0.196 DSTIGCN ∗1.11 / 2.25 0.056 0.66 / 1.34 0.152
+> *indicates the model trained with our proposed loss function.
+
+approach under out-of-distribution evaluation. 
+
+B. Effect of Calibrated Gaussian Predictions on Planning 
+
+Under our uncertainty-aware MPC formulation (Eq 6), uncertainty calibration of predicted trajectories (i.e., closer to zero |∆ESV |) influence planning performance through the stage cost and safety constraints. Consequently, evaluating a predictor solely based on ADE as the only factor that affects planning and assuming that a lower ADE necessarily leads to superior planning performance is not generally valid. Therefore, running an extensive set of planning experiment on the real-world scenarios is necessary to evaluate the downstream effect of each predictor. Table III reports the planning performance of each trajec-tory predictor on a fixed set of scenarios extracted from the test portion of the real-world datasets. We observe that higher planning success rates are achieved when confidence levels are better calibrated, meaning |∆ESV | is sufficiently close to zero. In particular, models trained with our loss function that lead to a substantial reduction in |∆ESV |, attain higher success rates (see Fig. 2). In contrast, marginal reductions in calibration error that do not move |∆ESV | close to zero such as SLSTM on ETH and DSTIGCN on HOTEL, fail to yield noticeable improvements in planning performance.  
+
+> (a) (b) Fig. 4: Planning result of DSTIGCN on a scenario from ZARA dataset. Planner integrated with the model trained with our loss successfully reaches the goal by taking a longer collision-free path due to larger calibrated confidence level.
+
+A trade-off of using the trajectory predictors trained with our loss function is a moderate increase in navigation time and path length. Unlike baseline models trained with the original NLL loss, which are prone to produce over-confident or under-confident uncertainty estimates, models trained with our loss function predict better calibrated Gaussian distribu-tions. As a result, compared to scenarios with mildly over-confident predictions, the planner may instead select longer detours or wait for pedestrians to pass in order to safely satisfy collision constraints (see Fig. 4). This safer behavior is beneficial, as it leads to a reduction in intrusion rate and promotes safer navigation. VI. CONCLUSIONS In this paper, we present a novel loss function for training bivariate Gaussian trajectory predictors. This loss function is designed to address the limitations of NLL loss by producing reliable confidence levels through aligning the distribution of predicted squared Mahalanobis distances with the true Chi-squared distribution, consistent with Gaussian distribution properties. Through experiments we show the feasibility of integrating our proposed loss function with different SOTA predictors. The experimental results on real-world datasets demonstrate that bivariate Gaussian models trained with our loss function predict better calibrated confidence levels. Moreover, we integrate two variants of each trajectory pre-dictor, one trained with NLL loss and the other trained with our proposed loss, into an uncertainty-aware MPC planner and evaluate them on scenarios extracted from real-world datasets. Through these planning experiments, we demon-strate the importance of well-calibrated predicted uncertainty in achieving low-collision planning behavior and in reducing intrusion rates. One possible direction for future work could be investigating and developing similar approach for GMMs as another probabilistic and multi-modal predictors. ACKNOWLEDGMENT We thank Neeloy Chakraborty for reviewing drafts of our work and for insightful discussions and feedback. REFERENCES [1] A. Rudenko, L. Palmieri, M. Herman, K. M. Kitani, D. M. Gavrila, and K. O. Arras, “Human motion trajectory prediction: A survey,” 
+
+> The International Journal of Robotics Research , vol. 39, no. 8, pp. 895–935, 2020.
+
+[2] A. Alahi, K. Goel, V. Ramanathan, A. Robicquet, L. Fei-Fei, and S. Savarese, “Social LSTM: Human trajectory prediction in crowded spaces,” in Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition , 2016, pp. 961–971. [3] A. A. Mohamed, K. Qian, M. Elhoseiny, and C. Claudel, “Social-STGCNN: A social spatio-temporal graph convolutional neural net-work for human trajectory prediction,” IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 14 412–14 420, 2020. [4] W. Chen, H. Sang, J. Wang, and Z. Zhao, “DSTIGCN: Deformable spatial-temporal interaction graph convolution network for pedestrian trajectory prediction,” IEEE Transactions on Intelligent Transportation Systems , 2025. [5] K. Lv and L. Yuan, “SKGACN: Social knowledge-guided graph attention convolutional network for human trajectory prediction,” IEEE Transactions on Instrumentation and Measurement , vol. 72, pp. 1–11, 2023. [6] X. Li, Y. Liang, Z. Yang, and J. Li, “Pedestrian trajectory prediction based on dual social graph attention network,” Applied Sciences ,vol. 15, no. 8, p. 4285, 2025. [7] W. Chen, H. Sang, J. Wang, and Z. Zhao, “IMGCN: interpretable masked graph convolution network for pedestrian trajectory predic-tion,” Transportmetrica B: Transport Dynamics , vol. 12, no. 1, p. 2389896, 2024. [8] B. I. Sighencea, I. R. Stanciu, and C. D. C˘ aleanu, “[d-stgcn]: Dynamic pedestrian trajectory prediction using spatio-temporal graph convolu-tional networks,” Electronics , vol. 12, no. 3, p. 611, 2023. [9] W. Chen, H. Sang, J. Wang, and Z. Zhao, “STIGCN: spatial–temporal interaction-aware graph convolution network for pedestrian trajectory prediction,” The Journal of Supercomputing , vol. 80, no. 8, pp. 10 695– 10 719, 2024. [10] S. Pellegrini, A. Ess, K. Schindler, and L. Van Gool, “You’ll never walk alone: Modeling social behavior for multi-target tracking,” in 
+
+2009 IEEE 12th International Conference on Computer Vision . IEEE, 2009, pp. 261–268. [11] V.-A. Le, B. Chalaki, V. Tadiparthi, H. N. Mahjoub, J. D’sa, and E. Moradi-Pari, “Social navigation in crowded environments with model predictive control and deep learning-based human trajectory prediction,” in 2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2024, pp. 4793–4799. [12] Z. Huang, T. Ji, H. Zhang, F. C. Pouria, K. Driggs-Campbell, and R. Dong, “Interaction-aware conformal prediction for crowd naviga-tion.” International Workshop on the Algorithmic Foundations of Robotics (WAFR) 2024, 2024. [13] A. Mohamed, D. Zhu, W. Vu, M. Elhoseiny, and C. Claudel, “Social-Implicit: Rethinking trajectory prediction evaluation and the effec-tiveness of implicit maximum likelihood estimation,” in European Conference on Computer Vision . Springer, 2022, pp. 463–479. [14] M. Golchoubian, M. Ghafurian, K. Dautenhahn, and N. L. Azad, “Uncertainty-aware DRL for autonomous vehicle crowd navigation in shared space,” IEEE Transactions on Intelligent Vehicles , 2024. [15] O. Erten and C. V. Deutsch, “Combination of multivariate gaussian distributions through error ellipses,” Geostatistics lessons , 2020. [16] J. Van den Berg, M. Lin, and D. Manocha, “Reciprocal velocity obsta-cles for real-time multi-agent navigation,” in 2008 IEEE International Conference on Robotics and Automation . Ieee, 2008, pp. 1928–1935. [17] D. Helbing and P. Molnar, “Social force model for pedestrian dynam-ics,” Physical review E , vol. 51, no. 5, p. 4282, 1995. [18] F. C. Pouria, Z. Huang, A. Yammanuru, S. Liu, and K. Driggs-Campbell, “Topology-guided ORCA: Smooth multi-agent motion planning in constrained environments.” Unsolved Problems in Social Robot Navigation workshop in conjunction with RSS, 2024. [19] Z. Huang, R. Li, K. Shin, and K. Driggs-Campbell, “Learning sparse interaction graphs of partially detected pedestrians for trajectory prediction,” IEEE Robotics and Automation Letters , vol. 7, no. 2, pp. 1198–1205, 2021. [20] Z. Huang, A. Hasan, K. Shin, R. Li, and K. Driggs-Campbell, “Long-term pedestrian trajectory prediction using mutable intention filter and warp LSTM,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 542–549, 2020. [21] H. Girase, H. Gang, S. Malla, J. Li, A. Kanehara, K. Mangalam, and C. Choi, “LOKI: Long term and key intentions for trajectory prediction,” in Proceedings of the IEEE/CVF International Conference on Computer Vision , 2021, pp. 9803–9812. [22] J. Bai and I. Shim, “SceneAware: Scene-constrained pedestrian trajectory prediction with llm-guided walkability,” arXiv preprint arXiv:2506.14144 , 2025. [23] T. Akhtyamov, A. Kashirin, A. Postnikov, and G. Ferrer, “Social robot navigation through constrained optimization: a comparative study of uncertainty-based objectives and constraints,” in 2023 European Conference on Mobile Robots (ECMR) . IEEE, 2023, pp. 1–8. [24] M. Golchoubian, M. Ghafurian, K. Dautenhahn, and N. L. Azad, “Polar collision grids: Effective interaction modelling for pedestrian trajectory prediction in shared space using collision checks,” in 2023 IEEE 26th International Conference on Intelligent Transportation Systems (ITSC) . IEEE, 2023, pp. 791–798. [25] C. Zhang, Z. Ni, and C. Berger, “Spatial-Temporal-Spectral LSTM: A transferable model for pedestrian trajectory prediction,” IEEE Trans-actions on Intelligent Vehicles , vol. 9, pp. 2836–2849, 2024. [26] A. Gupta, J. Johnson, L. Fei-Fei, S. Savarese, and A. Alahi, “Social GAN: Socially acceptable trajectories with generative adversarial networks,” in Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition , 2018, pp. 2255–2264. [27] P. Dendorfer, S. Elflein, and L. Leal-Taix´ e, “MG-GAN: A multi-generator model preventing out-of-distribution samples in pedestrian trajectory prediction,” in Proceedings of the IEEE/CVF International Conference on Computer Vision , 2021, pp. 13 158–13 167. [28] M. Golchoubian, M. Ghafurian, K. Dautenhahn, and N. L. Azad, “Pedestrian trajectory prediction in pedestrian-vehicle mixed envi-ronments: A systematic review,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 11, pp. 11 544–11 567, 2023. [29] K. Li, M. Shan, K. Narula, S. Worrall, and E. Nebot, “Socially aware crowd navigation with multimodal pedestrian trajectory prediction for autonomous vehicles,” in 2020 IEEE 23rd International Conference on Intelligent Transportation Systems (ITSC) . IEEE, 2020, pp. 1–8. [30] H.-Y. Chen, P.-H. Huang, and L.-C. Fu, “Social crowd navigation of a mobile robot based on human trajectory prediction and hybrid sensing,” Autonomous robots , vol. 47, no. 4, pp. 339–351, 2023. [31] K. D. Katyal, G. D. Hager, and C.-M. Huang, “Intent-aware pedestrian prediction for adaptive crowd navigation,” in 2020 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2020, pp. 3277–3283. [32] A. Dixit, L. Lindemann, S. X. Wei, M. Cleaveland, G. J. Pappas, and J. W. Burdick, “Adaptive conformal prediction for motion planning among dynamic agents,” in Learning for Dynamics and Control Conference . PMLR, 2023, pp. 300–314. [33] L. Lindemann, M. Cleaveland, G. Shim, and G. J. Pappas, “Safe planning in dynamic environments using conformal prediction,” IEEE Robotics and Automation Letters , vol. 8, no. 8, pp. 5116–5123, 2023. [34] A. Muthali, H. Shen, S. Deglurkar, M. H. Lim, R. Roelofs, A. Faust, and C. Tomlin, “Multi-agent reachability calibration with conformal prediction,” in 2023 62nd IEEE Conference on Decision and Control (CDC) . IEEE, 2023, pp. 6596–6603. [35] G. Shafer and V. Vovk, “A tutorial on conformal prediction.” Journal of Machine Learning Research , vol. 9, no. 3, 2008. [36] R. Tumu, M. Cleaveland, R. Mangharam, G. Pappas, and L. Lin-demann, “Multi-modal conformal prediction regions by optimizing convex shape templates,” in 6th Annual Learning for Dynamics & Control Conference . PMLR, 2024, pp. 1343–1356. [37] M. Cleaveland, I. Lee, G. J. Pappas, and L. Lindemann, “Confor-mal prediction regions for time series using linear complementarity programming,” in Proceedings of the AAAI Conference on Artificial Intelligence , vol. 38, no. 19, 2024, pp. 20 984–20 992. [38] N. E. Du Toit and J. W. Burdick, “Probabilistic collision checking with chance constraints,” IEEE Transactions on Robotics , vol. 27, no. 4, pp. 809–815, 2011. [39] A. Lerner, Y. Chrysanthou, and D. Lischinski, “Crowds by example,” in Computer Graphics Forum , vol. 26, no. 3. Wiley Online Library, 2007, pp. 655–664. [40] B. Ivanovic, Y. Lin, S. Shrivastava, P. Chakravarty, and M. Pavone, “Propagating state uncertainty through trajectory forecasting,” in 2022 International Conference on Robotics and Automation (ICRA) . IEEE, 2022, pp. 2351–2358. [41] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimiza-tion,” in 3rd International Conference on Learning Representations, ICLR 2015, San Diego, CA, USA, May 7-9, 2015, Conference Track Proceedings , Y. Bengio and Y. LeCun, Eds., 2015. APPENDIX IADDITIONAL RESULTS 
+
+We present comprehensive trajectory prediction results for each baseline. The tables below include ∆ESV 1, ∆ESV 2,
+
+∆ESV 3 and ADE / FDE computed using the standard Best-of-N (BoN) strategy with N = 20 , in addition to the metrics reported in Table III. 
+
+TABLE V: Quantitative result of trajectory prediction of VLSTM 
+
+Dataset Method ADE ↓ / FDE ↓ ADE ↓ / FDE ↓ ∆ESV 1 ∆ESV 2 ∆ESV 3 |∆ESV |mean ↓
+
+ETH VLSTM 2.71 / 4.26 0.88 / 1.42 -0.115 -0.196 -0.169 0.119 VLSTM ∗ 1.52 / 2.41 0.77 / 1.01 0.020 -0.112 -0.126 0.049 HOTEL VLSTM 0.36 / 0.76 0.18 / 0.40 0.059 -0.182 -0.167 0.106 VLSTM ∗ 0.37 / 0.56 0.33 / 0.44 0.203 -0.017 -0.067 0.072 ZARA VLSTM 0.41 / 0.77 0.19 / 0.36 0.266 0.013 -0.041 0.185 VLSTM ∗ 0.44 / 0.78 0.23 / 0.41 -0.058 0.033 -0.019 0.047 UNIV VLSTM 0.76 / 1.45 0.31 / 0.60 0.134 -0.001 -0.026 0.081 VLSTM ∗ 0.78 / 1.46 0.33 / 0.61 0.053 0.013 -0.014 0.035 AVE VLSTM 1.06 / 1.81 0.39 / 0.70 0.086 -0.092 -0.101 0.123 VLSTM ∗ 0.78 / 1.30 0.42 / 0.62 0.055 -0.021 -0.057 0.051 
+
+TABLE VI: Quantitative result of trajectory prediction of SLSTM 
+
+Dataset Method ADE ↓ / FDE ↓ ADE ↓ / FDE ↓ ∆ESV 1 ∆ESV 2 ∆ESV 3 |∆ESV |mean ↓
+
+ETH SLSTM 2.26 / 3.74 0.89 / 1.38 0.038 -0.187 -0.171 0.091 SLSTM ∗ 1.58 / 2.52 0.86 / 1.07 0.110 -0.085 -0.089 0.088 HOTEL SLSTM 0.34 / 0.71 0.16 / 0.30 0.106 -0.137 -0.151 0.113 SLSTM ∗ 0.30 / 0.49 0.19 / 0.29 0.218 -0.045 -0.056 0.102 ZARA SLSTM 0.42 / 0.78 0.20 / 0.37 0.280 0.021 -0.044 0.177 SLSTM ∗ 0.42 / 0.75 0.22 / 0.41 -0.045 0.023 -0.030 0.046 UNIV SLSTM 0.76 / 1.45 0.31 / 0.59 0.163 0.015 -0.024 0.098 SLSTM ∗ 0.77 / 1.43 0.32 / 0.60 0.067 0.001 -0.022 0.042 AVE SLSTM 0.95 / 1.67 0.39 / 0.66 0.147 -0.077 -0.098 0.120 SLSTM ∗ 0.77 / 1.30 0.40 / 0.59 0.088 -0.027 -0.049 0.070 
+
+TABLE VII: Quantitative result of trajectory prediction of Social-STGCNN 
+
+Dataset Method ADE ↓ / FDE ↓ ADE ↓ / FDE ↓ ∆ESV 1 ∆ESV 2 ∆ESV 3 |∆ESV |mean ↓
+
+ETH Social-STGCNN 4.08 / 6.80 1.64 / 2.59 -0.140 -0.104 -0.023 0.107 
+
+Social-STGCNN ∗ 2.37 / 4.22 1.73 / 2.49 0.296 -0.002 -0.104 0.162 
+
+HOTEL Social-STGCNN 0.63 / 1.08 0.37 / 0.47 0.329 0.064 -0.015 0.228 Social-STGCNN ∗ 0.59 / 1.05 0.45 / 0.67 0.106 -0.172 -0.171 0.122 ZARA Social-STGCNN 0.50 / 0.93 0.30 / 0.51 0.013 -0.178 -0.161 0.084 Social-STGCNN ∗ 0.58 / 1.05 0.34 / 0.45 0.025 -0.098 -0.092 0.046 UNIV Social-STGCNN 0.72 / 1.40 0.38 / 0.70 -0.075 -0.279 -0.226 0.132 Social-STGCNN ∗ 0.66 / 1.30 0.32 / 0.48 0.041 -0.101 -0.083 0.056 AVE Social-STGCNN 1.48 / 2.55 0.67 / 1.07 0.032 -0.140 -0.106 0.138 Social-STGCNN ∗ 1.05 / 1.91 0.71 / 1.02 0.117 0.093 0.113 0.097 
+
+TABLE VIII: Quantitative result of trajectory prediction of DSTIGCN 
+
+Dataset Method ADE ↓ / FDE ↓ ADE ↓ / FDE ↓ ∆ESV 1 ∆ESV 2 ∆ESV 3 |∆ESV |mean ↓
+
+ETH DSTIGCN 1.14 / 2.31 0.88 / 1.67 -0.072 -0.357 -0.367 0.157 DSTIGCN ∗ 3.25 / 5.53 1.40 / 2.27 -0.072 -0.075 -0.038 0.060 HOTEL DSTIGCN 0.23 / 0.44 0.13 / 0.22 -0.011 -0.181 -0.138 0.077 DSTIGCN ∗ 0.27 / 0.48 0.15 / 0.20 0.106 -0.012 -0.045 0.067 ZARA DSTIGCN 0.32 / 0.67 0.20 / 0.40 0.025 -0.189 -0.183 0.089 DSTIGCN ∗ 0.35 / 0.69 0.19 / 0.30 0.098 0.039 -0.022 0.071 UNIV DSTIGCN 0.53 / 1.15 0.28 / 0.56 -0.039 -0.244 -0.199 0.111 DSTIGCN ∗ 0.56 / 1.17 0.24 / 0.39 0.042 0.001 -0.019 0.026 AVE DSTIGCN 0.56 / 1.14 0.36 / 0.71 -0.024 -0.243 -0.222 0.109 DSTIGCN ∗ 1.11 / 2.25 0.50 / 0.79 0.044 -0.012 -0.031 0.056

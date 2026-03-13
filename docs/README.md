@@ -6,70 +6,49 @@
 </div>
 
 ## 每次日报
-- 最新运行日期：2026-03-12
-- 运行时间：2026-03-12 19:35:00 UTC
+- 最新运行日期：2026-03-13
+- 运行时间：2026-03-13 19:24:29 UTC
 - 运行状态：成功
-- 本次总论文数：16
-- 精读区：5
-- 速读区：11
+- 本次总论文数：9
+- 精读区：1
+- 速读区：8
 
 ### 今日简报（AI）
-今日聚焦 16 篇 AI 论文，深度探讨了多智能体系统的规模化权衡及自动泊车中的意图预测优化。
-核心结论指出，通过运动历史显式预测意图可大幅提升泊车性能，而多智能体系统的扩展性研究为复杂任务提供了关键的性能边界参考。
-建议关注强化学习在空间探索与语言智能体策略博弈中的最新融合趋势。
-- 详情：[/202603/12/README](/202603/12/README)
+今日精选 9 篇强化学习前沿进展，重点攻克对抗环境下的策略稳定性与多智能体协作难题。
+核心研究通过分式目标函数成功“驯服”了 Minimax 优化的不稳定性，并展示了子模奖励在无人机医疗配送中的实战潜力。
+建议深入探索对抗鲁棒性算法的优化技巧，并关注强化学习在动态物流调度等时效性场景的落地应用。
+- 详情：[/202603/13/README](/202603/13/README)
 
 ### 精读区论文标签
-1. [Scaling and Trade-offs in Multi-agent Autonomous Systems](/202603/12/2603.10743v1-scaling-and-trade-offs-in-multi-agent-autonomous-systems)  
-   标签：评分：9.0/10、query:uav-air-combat
-   evidence：集群对战模拟与缩放法则
-2. [Selecting Spots by Explicitly Predicting Intention from Motion History Improves Performance in Autonomous Parking](/202603/12/2603.04695v1-selecting-spots-by-explicitly-predicting-intention-from-motion-history-improves-performance-in-autonomous-parking)  
+1. [Taming the Adversary: Stable Minimax Deep Deterministic Policy Gradient via Fractional Objectives](/202603/13/2603.12110v1-taming-the-adversary-stable-minimax-deep-deterministic-policy-gradient-via-fractional-objectives)  
    标签：评分：8.0/10、query:uav-air-combat
-   evidence：通过运动历史预测意图以辅助决策
-3. [Joint Inverse Learning of Cognitive Radar Perception and Perception-Action Policy](/202603/12/2603.07051v1-joint-inverse-learning-of-cognitive-radar-perception-and-perception-action-policy)  
-   标签：评分：8.0/10、query:uav-air-combat
-   evidence：推断对抗雷达的感知与动作策略
-4. [Code-Space Response Oracles: Generating Interpretable Multi-Agent Policies with Large Language Models](/202603/12/2603.10098v1-code-space-response-oracles-generating-interpretable-multi-agent-policies-with-large-language-models)  
-   标签：评分：8.0/10、query:uav-air-combat
-   evidence：使用大模型和策略空间响应先验的可解释多智能体策略
-5. [ASTER: Attitude-aware Suspended-payload Quadrotor Traversal via Efficient Reinforcement Learning](/202603/12/2603.10715v1-aster-attitude-aware-suspended-payload-quadrotor-traversal-via-efficient-reinforcement-learning)  
-   标签：评分：8.0/10、query:uav-air-combat
-   evidence：四旋翼无人机的自主敏捷机动与强化学习
+   evidence：用户策略与对抗性扰动之间的极大极小优化
 
 ### 速读区论文标签
-1. [Hybrid Belief Reinforcement Learning for Efficient Coordinated Spatial Exploration](/202603/12/2603.03595v1-hybrid-belief-reinforcement-learning-for-efficient-coordinated-spatial-exploration)  
+1. [Multi-Agent Reinforcement Learning with Submodular Reward](/202603/13/2603.06810v1-multi-agent-reinforcement-learning-with-submodular-reward)  
    标签：评分：7.0/10、query:uav-air-combat
-   evidence：用于轨迹规划的混合信念强化学习框架
-2. [MAGE: Meta-Reinforcement Learning for Language Agents toward Strategic Exploration and Exploitation](/202603/12/2603.03680v1-mage-meta-reinforcement-learning-for-language-agents-toward-strategic-exploration-and-exploitation)  
+   evidence：用于多无人机监视的多智能体强化学习
+2. [UAV-MARL: Multi-Agent Reinforcement Learning for Time-Critical and Dynamic Medical Supply Delivery](/202603/13/2603.10528v1-uav-marl-multi-agent-reinforcement-learning-for-time-critical-and-dynamic-medical-supply-delivery)  
    标签：评分：7.0/10、query:uav-air-combat
-   evidence：多智能体策略博弈的元强化学习
-3. [Towards Explainable Deep Learning for Ship Trajectory Prediction in Inland Waterways](/202603/12/2603.04472v1-towards-explainable-deep-learning-for-ship-trajectory-prediction-in-inland-waterways)  
+   evidence：用于在随机环境中协调无人机群的多智能体强化学习
+3. [Evaluating randomized smoothing as a defense against adversarial attacks in trajectory prediction](/202603/13/2603.10821v1-evaluating-randomized-smoothing-as-a-defense-against-adversarial-attacks-in-trajectory-prediction)  
    标签：评分：7.0/10、query:uav-air-combat
-   evidence：拥挤环境下基于深度学习的可解释轨迹预测
-4. [GIANT - Global Path Integration and Attentive Graph Networks for Multi-Agent Trajectory Planning](/202603/12/2603.04659v1-giant---global-path-integration-and-attentive-graph-networks-for-multi-agent-trajectory-planning)  
-   标签：评分：7.0/10、query:uav-air-combat
-   evidence：多智能体轨迹规划与避障
-5. [SCoUT: Scalable Communication via Utility-Guided Temporal Grouping in Multi-Agent Reinforcement Learning](/202603/12/2603.04833v1-scout-scalable-communication-via-utility-guided-temporal-grouping-in-multi-agent-reinforcement-learning)  
-   标签：评分：7.0/10、query:uav-air-combat
-   evidence：通过时间分组实现多智能体强化学习中的可扩展通信
-6. [K-Gen: A Multimodal Language-Conditioned Approach for Interpretable Keypoint-Guided Trajectory Generation](/202603/12/2603.04868v1-k-gen-a-multimodal-language-conditioned-approach-for-interpretable-keypoint-guided-trajectory-generation)  
-   标签：评分：7.0/10、query:uav-air-combat
-   evidence：反映智能体意图的可解释轨迹生成
-7. [Principled Learning-to-Communicate with Quasi-Classical Information Structures](/202603/12/2603.03664v1-principled-learning-to-communicate-with-quasi-classical-information-structures)  
+   evidence：轨迹预测中对抗攻击的防御机制
+4. [A Recipe for Stable Offline Multi-agent Reinforcement Learning](/202603/13/2603.08399v1-a-recipe-for-stable-offline-multi-agent-reinforcement-learning)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：部分可观测环境下的多智能体强化学习
-8. [HALyPO: Heterogeneous-Agent Lyapunov Policy Optimization for Human-Robot Collaboration](/202603/12/2603.03741v1-halypo-heterogeneous-agent-lyapunov-policy-optimization-for-human-robot-collaboration)  
+   evidence：离线多智能体强化学习的稳定优化方法
+5. [Strategically Robust Multi-Agent Reinforcement Learning with Linear Function Approximation](/202603/13/2603.09208v1-strategically-robust-multi-agent-reinforcement-learning-with-linear-function-approximation)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：异构智能体协作的多智能体强化学习
-9. [Learning Approximate Nash Equilibria in Cooperative Multi-Agent Reinforcement Learning via Mean-Field Subsampling](/202603/12/2603.03759v1-learning-approximate-nash-equilibria-in-cooperative-multi-agent-reinforcement-learning-via-mean-field-subsampling)  
+   evidence：一般和马尔可夫博弈中的鲁棒均衡计算
+6. [Rethinking Gaussian Trajectory Predictors: Calibrated Uncertainty for Safe Planning](/202603/13/2603.10407v1-rethinking-gaussian-trajectory-predictors-calibrated-uncertainty-for-safe-planning)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：大规模系统中的协作多智能体强化学习
-10. [Dual-Interaction-Aware Cooperative Control Strategy for Alleviating Mixed Traffic Congestion](/202603/12/2603.03848v1-dual-interaction-aware-cooperative-control-strategy-for-alleviating-mixed-traffic-congestion)  
+   evidence：轨迹预测与规划中的不确定性校准
+7. [Trajectory-Informed Memory Generation for Self-Improving Agent Systems](/202603/13/2603.10600v1-trajectory-informed-memory-generation-for-self-improving-agent-systems)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：用于交互感知的多智能体强化学习
-11. [Self-adapting Robotic Agents through Online Continual Reinforcement Learning with World Model Feedback](/202603/12/2603.04029v1-self-adapting-robotic-agents-through-online-continual-reinforcement-learning-with-world-model-feedback)  
+   evidence：从智能体执行轨迹中提取可操作的学习成果
+8. [STAIRS-Former: Spatio-Temporal Attention with Interleaved Recursive Structure Transformer for Offline Multi-task Multi-agent Reinforcement Learning](/202603/13/2603.11691v1-stairs-former-spatio-temporal-attention-with-interleaved-recursive-structure-transformer-for-offline-multi-task-multi-agent-reinforcement-learning)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：机器人智能体的在线持续强化学习
+   evidence：用于多智能体强化学习中多机协同的Transformer架构
 
 
 <div class="dpr-home-promo-card">
