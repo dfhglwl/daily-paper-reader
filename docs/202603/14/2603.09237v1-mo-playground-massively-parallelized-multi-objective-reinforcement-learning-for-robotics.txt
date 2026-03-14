@@ -1,0 +1,305 @@
+Title: MO-Playground: Massively Parallelized Multi-Objective Reinforcement Learning for Robotics
+
+URL Source: https://arxiv.org/pdf/2603.09237v1
+
+Published Time: Wed, 11 Mar 2026 00:37:20 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# MO-Playground 1:Massively Parallelized Multi-Objective Reinforcement Learning for Robotics 
+
+Neil Janwani 1†, Ellen Novoseller 2, Vernon J. Lawhern 2, Maegan Tucker 1Multi-Objective Environments GPU-Parallelized Pareto-set Approximation via Hypernetworks Rapid Rollout of Diverse Policies Prioritization of Rewards  
+
+> Pareto-optimal Policies
+> Trade-O ff Vectors
+
+Fig. 1: MO-Playground provides a suite of multi-objective environments, a framework for easily creating custom environments, and fast Pareto set approximation via GPU-accelerated massive parallelization and parameter-efficient hypernetworks. 
+
+Abstract — Multi-objective reinforcement learning (MORL) is a powerful tool to learn Pareto-optimal policy families across conflicting objectives. However, unlike traditional RL algo-rithms, existing MORL algorithms do not effectively leverage large-scale parallelization to concurrently simulate thousands of environments, resulting in vastly increased computation time. Ultimately, this has limited MORL’s application towards complex multi-objective robotics problems. To address these challenges, we present 1) MORLAX , a new GPU-native, fast MORL algorithm, and 2) MO-Playground, a pip -installable playground of GPU-accelerated multi-objective environments. Together, MORLAX and MO-Playground approximate Pareto sets within minutes, offering 21-270x speed-ups compared to legacy CPU-based approaches whilst achieving superior Pareto front hypervolumes. We demonstrate the versatility of our approach by implementing a custom BRUCE humanoid robot environment using MO-Playground and learning Pareto-optimal locomotion policies across 6 realistic objectives for BRUCE, such as smoothness, efficiency and arm swinging. 
+
+I. I NTRODUCTION 
+
+Reinforcement learning (RL) has established itself as an effective paradigm for synthesizing complex robotic con-trollers by enabling agents to learn directly from interactions with their environment [1]–[3]. However, this methodology notoriously relies on crafting a single-objective, scalar reward function that trades off between conflicting objectives such as energy efficiency and tracking accuracy in a hard-coded manner. This reward shaping process is time-consuming, re-quires domain knowledge, and implies that the prioritization of conflicting objectives is known at training time, presenting a major barrier to real-world deployment [4].  
+
+> This work was supported by DEVCOM Army Research Laboratory under Cooperative Agreement Number W911NF-19-S-0001 and the Institute of Robotics and Intelligent Machines at Georgia Tech.
+> †Corresponding author: njanwani@gatech.edu
+> 1Georgia Institute of Technology, Atlanta, GA USA
+> 2DEVCOM Army Research Laboratory, MD, USA
+
+Several paradigms have been proposed to address the problem of RL with unknown rewards, for instance, learning from human interaction, e.g. via demonstrations, pairwise preferences, or ratings [3], [5]–[9]. Yet, these methods learn behavior reflecting a single reward function, and do not learn to intelligently trade off between conflicting objectives. This lack of on-demand flexibility is especially problematic for real-world robotic systems, which inherently have competing objectives with optimal weightings that vary across different scenarios. For instance, human-robot systems such as lower-limb exoskeletons or assistive driving require this tunability for user-specific personalization [7], [10], [11]. Multi-Objective Reinforcement Learning (MORL) pro-vides a principled framework to address this gap and enable the exploration of trade-offs between objectives. In contrast to the single-objective RL setting, which uses a single, scalarized reward, the MORL paradigm measures perfor-mance with a vectorized reward in which each component represents a different objective. With this vectorized reward, MORL enables practitioners to flexibly tune robot behavior post-training by finding and exploring the Pareto set , a collection of high quality solutions that are optimal under different objective prioritizations, capturing critical trade-offs among objectives. To this end, a wide variety of MORL algorithms have been developed to approximate or explore the Pareto set efficiently [4], [12], including evolutionary approaches [13], context-conditioned policy exploration [14], [15] and hypernetwork-based approaches [16], [17]. While these methods have all contributed significant methodolog-ical advances, modern MORL algorithms still require long training times, sometimes on the order of days [14]. Meanwhile, single-objective RL has benefited from 
+
+> 1MO-Playground: https://github.com/dynamicmobility/moplayground
+> arXiv:2603.09237v1 [cs.RO] 10 Mar 2026
+
+hardware-accelerated differentiable physics and vectorized computation frameworks such as JAX [18] and MuJoCo JaX (MJX) [19]. These tools enable large-scale on-device paral-lelization and just-in-time compilation through the simulation loop. Most notably, recent toolboxes such as MuJoCo Play-ground [19] are capable of running thousands of MuJoCo-native simulations simultaneously on consumer GPUs, vastly decreasing training times and bolstering a community shift away from CPU-based, small-scale parallelism. MORL algorithms have yet to leverage such computational frameworks effectively. Most current implementations rely on CPU-based simulation or limited concurrency, resulting in training times that are an order of magnitude slower than state-of-the-art single-objective RL. This critical computa-tional gap has fundamentally hindered MORL’s application to complex, high-dimensional robot morphologies and set-tings involving more than a few objectives. In this paper, we remove this barrier by introducing a GPU-native MORL algorithm that takes advantage of hyper-networks [16]. Our highlighted contributions are as follows: 1) MORLAX : a JAX-compatible framework for scalable MORL that integrates multi-objective optimization with JAX’s vectorized computation to achieve 21-270x speedups and improved (larger) hypervolumes compared to existing MORL baselines. 2) MO-Playground: an open-source toolbox 1 featuring 
+
+MORLAX and a modernized set of multi-objective MJX environments for systematic benchmarking. 3) A custom application of the BRUCE humanoid robot across six realistic objectives, demonstrating the ver-satility and performance of MO-Playground. II. B ACKGROUND 
+
+Our work sits at the intersection of MORL and mod-ern hardware-accelerated computation. Before presenting our approach, we review the foundational Multi-Objective Markov Decision Process (MOMDP) framework underlying all MORL algorithms, outline the details of existing algo-rithms and toolboxes for MORL, and then introduce the parallelizable computational paradigm that we leverage for our novel, open-source MORL framework, MO-Playground. 
+
+A. Multi-Objective Markov Decision Processes 
+
+We adopt the theoretical foundation for multi-objective sequential decision-making given by the MOMDP [4]. As with a regular Markov Decision Process (MDP), a MOMDP is defined via a tuple (S, A, P, R, γ ), where S is a set of states, A is a set of actions, P(s′ | s, a ) is the transition probability function of state s ∈ S and action a ∈ A to state s′ ∈ S , and γ ∈ [0 , 1) is a discount factor. The key distinction from ordinary MDPs lies in the vector-valued reward R : S × A → Rm, with m denoting the number of objectives. Consequently, the value function Vπ also becomes a vector Vπ ∈ Rm, representing the expected cumulative return for each objective: 
+
+Vπ (s) = Eπ
+
+" ∞X
+
+> t=0
+
+γtR(st, a t) | at ∼ π(st)
+
+#
+
+∈ Rm. (1) We seek to maximize the expected returns over the initial state distribution Ds0 :
+
+Jπ = Es0∼D s0 [Vπ (s0))] ∈ Rm, (2) with Jπ being shorthand for J(π) ∈ Rm.In most scenarios, no single policy can simultaneously maximize all components of Jπ , as trade-offs can exist between the objectives. Thus, the goal is not to find a single optimal policy, but rather to find the set of Pareto-optimal policies, which optimally trade off among the objectives. Pareto optimality is mathematically quantified using the notion of Pareto dominance : a policy π′ dominates a policy 
+
+π if Jπ′ ≥ Jπ , where the comparison is taken elementwise, and Jπ′̸ = Jπ for at least one component. A policy π∗ is then defined as Pareto optimal if it is not dominated by any other policy π′. The set of all such optimal policies forms the Pareto set , and their corresponding objectives form the 
+
+Pareto front in the objective space. While early research focused on analyzing the existence of stationary Pareto-optimal policies and solving small-scale MOMDPs via value iteration or linear programming, the challenge for complex robotic systems lies in efficiently approximating the Pareto set with high granularity. Towards this end, several MORL algorithms have been proposed, which we will discuss next. 
+
+B. Multi-Objective Reinforcement Learning for Robotics 
+
+Modern MORL approaches focus on generating high-quality approximations of the Pareto set in high-dimensional state and action spaces. One of the first such works, Prediction-Guided MORL (PG-MORL) [13], developed an evolutionary algorithm that utilizes a prediction model to choose promising optimization directions, resulting in ap-proximate Pareto sets that maximize hypervolume (i.e., the volume of objective space dominated by the discovered so-lutions) and density (i.e., the degree to which these solutions are evenly distributed). This prior work also established a set of baseline MuJoCo control tasks to benchmark future MORL work [13], which was later fully standardized by MO-Gym, a toolbox for benchmarking MORL algorithms [12]. Notably, a major disadvantage of PG-MORL is that each policy within the Pareto set is represented by a separate neural network, thus requiring thousands of neural networks in cases with 3 or more objectives. This not only affects PG-MORL’s learning complexity, but also decreases the granularity of the approximate Pareto set, as only a finite number of policies can be learned. Subsequent works [16], [17] address this problem by representing the approximate Pareto set as a hypernetwork, a neural network that outputs networks conditioned on a con-text vector [20]. In particular, HYPER-MORL [16] defines the context vector to be the trade-off between objectives and uses a hypernetwork to output the actor and critic networks of policies in the Pareto set, vastly decreasing the number of learnable parameters whilst generating a detailed, continuous approximation of the Pareto Set. However, these approaches utilize small-scale CPU-based parallelization and are therefore impacted by long training times, especially in cases with more than two objectives. Several other approaches, e.g. AMOR [14] and PD-MORL [15], learn a single context-conditioned policy to ap-proximate the Pareto set. Of particular interest, AMOR lever-ages GPU-accelerated parallelization through Isaac Gym. However, AMOR requires 5 days of wall-clock time on an NVIDIA RTX 4090 GPU to approximate a seven-objective Pareto set, significantly longer than HYPER-MORL or PG-MORL, albeit over more objectives. While there could be many reasons for this, one possibility is that AMOR requires a large actor network to learn complex mappings between conflicting objectives and desirable actions. This is one of our motivations to leverage hypernetworks in our approach. Across all MORL algorithms, development pipelines and debugging cycles are substantially prolonged due to long training times, outdated benchmarks, and a lack of open-source integration with modern parallelization, hindering the application of these methods towards robotics. 
+
+C. GPU-Acceleration for Reinforcement Learning 
+
+Unlike in MORL, GPU-accelerated physics simulation is well established in single-objective RL. For example, prior work has demonstrated that a robust single-objective quadruped locomotion policy can be trained within minutes [2]. This massive parallelization alleviates the data-collection bottleneck in on-policy RL and enables the practical de-ployment of on-algorithms such as Proximal Policy Opti-mization (PPO) [21]. In particular, by drastically shortening training time, GPU-accelerated RL makes it substantially easier to debug and shape reward functions through repeated train–evaluate–modify cycles. Concurrently, several open-source toolboxes have been developed to streamline GPU-accelerated RL. One such tool-box, Brax [22], introduces a differentiable and parallelizable physics engine built in JaX. Brax became the underlying physics engine and RL framework for MuJoCo Playground, a toolbox that streamlines open-source GPU-based simulation, training, and sim-to-real transfer of several robotic platforms [19]. Offering the familiarity and excellent physics accuracy of MuJoCo with proven single-objective RL algorithms like PPO [21] and Soft-Actor Critic [23], MuJoCo Playground has already spurred many follow-on works [6], [24]. Despite wide-spread success of GPU-Accelerated RL for robotics, these approaches still maintain their single objective nature, and thus are more rigid approaches than MORL for scenarios which balance multiple objectives. Some works have attempted to address this lack of tunability, particularly through learning from diverse demonstrations and smoothly blending between reference motions depending on the task specification [3]. Yet, these approaches require demonstra-tions which can be challenging to collect and may not be dynamically feasible for certain robotic platforms.                     
+
+> Framework Real Robots GPU Multi-Obj. Ref.
+> Gymnasium ✗✗✗[25], [26] MO-Gymnasium ✗✗✓[12] MuJoCo Playground ✓✓✗[19] MO-Playground ✓✓✓Ours
+> TABLE I: A comparison of open-source RL toolboxes for robotics.
+
+D. Toolboxes for Multi-Objective Optimization in Robotics 
+
+The OpenAI Gym (now called Gymnasium [25]), is likely the most foundational toolbox for RL in robotics. This toolbox standardized the form factor used in RL environ-ments, e.g. the format of reset and step functions to begin and progress through the system dynamics. This toolbox focused primarily on CPU-based single-objective problems, and was soon followed by the Multi-Objective Gym (MO-Gym) [12]. This toolkit paired existing MORL algorithms with MuJoCo tasks contributed by PG-MORL and Gym, among other environments not related to continuous con-trol. However, neither of these toolkits leverage GPU-based parallelization to speed up the simulation loop. Adjacent to the MORL space, the evolutionary Multi-Objective Opti-mization toolbox EvoX [27] contains a suite of evolutionary single and multi-objective algorithms and interfaces with the aforementioned control tasks. In a recent update, it also interfaces with MuJoCo Playground. While this brings GPU acceleration to evolutionary algorithms in EvoX, the multi-objective algorithms and environment benchmarks still rely on CPU-based computation, limiting parallelism and speed compared to our GPU-based approach. Table I compares the aforementioned MORL and RL toolboxes and showcases the specific contributions of our work, MO-Playground. III. MO-P LAYGROUND : GPU-A CCELERATED MORL The MO-Playground framework has two major compo-nents: (1) MORLAX , a Multi-Objective (MO), highly paral-lelized actor-critic algorithm that learns a continuous Pareto set representation, and (2) a suite of MO continuous control benchmarks that build upon prior GPU-accelerated simula-tion [19]. With a simple pip install moplayground ,our work enables users to approximate high-quality Pareto sets in drastically shorter times than previous approaches [14], [16] as demonstrated in Sec. IV-A. 
+
+A. Problem Setup 
+
+As illustrated in Fig. 2, MORLAX learns high-quality Pareto sets in a parameter efficient manner by leveraging hypernet-works with the input context being a vector of weights over the m reward functions, and the output being parameters of a Pareto-optimal policy that corresponds to the objective prioritization specified by the input context. We term this input vector the trade-off vector, w ∈ ∆m−1 ⊂ Rm, where 
+
+m is the number of objectives (i.e., R = [ R1, . . . , R m]), and ∆m−1 is the (m − 1) -simplex. Intuitively, the trade-off vector represents a particular objective prioritization through the convex combination wT R. Trade-off vectors serve as 
+
+optimization directions for MORLAX , representing directions along which to extend the Pareto front. To normalize the Fig. 2: MORLAX Architecture. (a) showcases evaluating the policy hypernetwork Hπ by picking a trade-off w, evaluating Hπ , and rolling out the extracted policy in the environment. (b) showcases how MORLAX trains Hπ via a parallelized sample -rollout -update procedure. 
+
+trade-off vectors, we restrict w to the (m − 1) -simplex, so that P w = 1 and w ≥ 0.Linearly scalarizing objectives via wT R is highly conve-nient for value-based algorithms, like MORLAX as it provides a straightforward method of comparing the values of two states, even when the true vector-valued values are not nat-urally sortable. This metric enables the discovery of convex Pareto fronts F, which can be explicitly defined via linear dominance: 
+
+F = {Jπ | ∃ w s.t. Jπ · w ≥ Jπ′ · w, ∀π′}. (3) 
+
+B. Hypernetwork Architecture 
+
+MORLAX jointly trains two hypernetworks: an actor hyper-network and a critic hypernetwork, respectively: 
+
+Hπ : ∆ m−1 → Θπ , HV : ∆ m−1 → ΘV , (4) which learn a mapping between w ∈ ∆m−1 ∈ Rm and a corresponding actor and critic network, respectively, with the parameter spaces Θπ and ΘV . We represent both hyper-networks in an affine form. The actor hypernetwork (critic defined analogously) is modeled as: 
+
+Hπ (w) = Mπ fπ (w) + bπ , (5) where fπ : ∆ m−1 → RF is a nonlinear function that maps trade-off w to an F -dimensional feature vector. This feature representation is then transformed into the actor parameter space Θπ via matrix M ∈ R|Θπ | × RF and column vector 
+
+b ∈ R|Θπ |. This hypernetwork representation is well-studied as it induces a low-rank parameter manifold [16], thereby reducing the problem dimensionality and enabling efficient representations for policies in the Pareto Set. While Hπ outputs an ordinary stochastic policy network that maps observations to a distribution of actions, commonly seen in PPO [21], HV outputs a vector-valued Vπ as defined in (1), where π is drawn from Hπ for some trade-off w. The use of these hypernetworks is explained further below. 
+
+C. The MORLAX Algorithm 
+
+Beyond simply moving simulation onto hardware acceler-ators, MORLAX is explicitly structured to efficiently update its hypernetworks by leveragimg massive parallelization and automatic differentiation via JAX [18], achieving high uti-lization and sample throughput on accelerator devices such as GPUs. We separate the algorithm into an initialization phase and three training phases: sampling, rollout, and update. Figure 2b illustrates each phase in detail. Algorithm Initialization. MORLAX is initialized for a robotic environment E with observation space O and action space A.The environment is instantiated as N parallel environments, allowing data collection to be vectorized across CPU or GPU workers. The reward returned across environments is a vector-valued reward R : S × A → Rm for m objectives. Lastly, we initialize Hπ and HV with random weights. Sampling Phase. At the start of each algorithm iteration, 
+
+MORLAX constructs a set of K trade-off vectors, 
+
+W ′ = {w′
+
+> 1
+
+, . . . , w′ 
+
+> K
+
+}, w′ 
+
+> i
+
+∈ ∆m−1, (6) by independently and identically drawing K samples from a symmetric Dirichlet distribution with concentration parame-ters αi = 1 , for i = 1 , . . . , m , which ensures that each w′ 
+
+> i
+
+is sampled uniformly over the simplex. We restrict K > 1 and that K is an integer factor of N so that K batches of repeated trade-offs can be constructed and cleanly parallelized over N
+
+parallel environment instances, thus collecting many trials of the same stochastic policy (generated in the rollout phase) while exploring multiple tradeoffs. We denote this set of 
+
+repeated w′ 
+
+> i
+
+as: 
+
+{wi}Ni=1 = {Wi}Ki=1 = {w′
+
+> 1
+
+, . . . , w′
+
+> 1
+
+| {z } 
+
+> N/K times
+
+, . . . , w′ 
+
+> K
+
+, . . . w′
+
+> K
+
+| {z }
+
+> WK
+
+}.
+
+While K = N does not affect MORLAX ’s iteration time, it can affect learning speed and potential; we empirically MOCheetah MOHumanoid MOHopper MOWalker MOAnt MOCheetah MOHumanoid MOHopper MOWalker MOAnt Fig. 3: MORL AX finds Pareto sets that achieve better-performing, diverse behavior compared to the baseline, HYPER-MORL [16], but significantly (21-270x) faster. To visualize each environment’s objectives, Pareto fronts along with composite figures of a single  
+
+> MORLAX policy hypernetwork are shown across extreme input trade-offs (e.g. maximum speed vs. maximum energy efficiency in MOCheetah). The displayed trajectories are generated via policies highlighted on the Pareto Fronts.
+
+observe that sparse sampling routines (a few, large clusters of trade-offs) often perform better than dense sampling routines (thousands of independent samples). To further exploit this finding, MORLAX provides an option to sample K−κ clusters of trade-offs, and designate κ trade-offs to represent the extreme endpoints within the simplex, such as [1 , 0] and [0 , 1] 
+
+for m = 2 . When κ > 0, the extreme trade-off vectors serve to extend the Pareto Set to include even the most extreme policies, e.g. energy efficient policies that remain completely still. Naturally, κ scales with the number of objectives and must satisfy K ≥ κ. We reserve K and κ as hyperparameters that must be specified by the user prior to training. Rollout Phase. In standard PPO, the rollout phase involves selecting a single policy πθ that interacts with N parallel environments to collect transitions of the form: 
+
+D(i) 
+
+> single objective
+
+=
+
+
+
+s(i) 
+
+> t
+
+, a (i) 
+
+> t
+
+, R (i) 
+
+> t
+
+, s (i)
+
+> t+1
+
+
+
+, (7) where s(i) 
+
+> t
+
+∈ S and a(i) 
+
+> t
+
+∈ A and R(i) 
+
+> t
+
+∈ R denote sampled states, actions, and rewards with i indexing the parallel environment and t indexing the timestep within a rollout horizon T . These transitions are then used to compute advantages and update the actor-critic networks. 
+
+MORLAX mirrors this structure, but replaces PPO’s actor-critic networks with a family of N (possibly repeated) stochastic actors each with a corresponding critic. Explicitly, the policy and corresponding value families are denoted: 
+
+{πi} := {H π (wi) | i = 1 , . . . , N }, (8) 
+
+{Vi} := {H V (wi) | i = 1 , . . . , N }. (9) Then, for each policy, MORLAX collects the corresponding dataset via policy interaction with the environment E across 
+
+N of the parallel environments and evaluates Vi at each state. The environment rollouts produce dataset D(i) conditioned on trade-off wi and are aggregated to form a consolidated dataset over all N parallel instances: 
+
+D = {(D(i), wi) | i = 1 , . . . , N }. (10) It is important to note that when K̸ = N , there are repeated trade-offs and thus there are repeated policies being evaluated. However, because Hπ provides a stochastic policy the collected data will have some variance, especially in the early stages of training, leading to more stable learning. Update Phase. MORLAX performs separate updates on Hπ
+
+and HV using the aggregated dataset D. This decoupled optimization allows the two hypernetworks to learn at differ-ent rates, which is well established to improve stability and performance in traditional actor-critic methods [28]. We adopt a multi-objective extension of the Proximal Pol-icy Optimization (PPO) framework following Xu et al. [13]. To compute policy updates, we first estimate a vector-valued advantage At ∈ Rm, which estimates the quality of a given action relative to the average action taken in the state, by applying Generalized Advantage Estimation (GAE) independently to each objective. The resulting advantages are normalized across the batch, following common PPO prac-tice [22], with the scalarized advantage Ait = w⊤ 
+
+> i
+
+A(sit, a it).Using this scalarized advantage, MORLAX minimizes the unclipped policy and value losses given by: 
+
+LHπ = −E(sit,a it,wi)∼D
+
+rt(θi) Ait
+
+ , (11) 
+
+LHV = E(sit,wi)∼D
+
+
+
+Vϕi (sit) − ˆV it
+
+> 22
+
+
+
+, (12) where: 
+
+rt(θi) = πθi (ait | sit)
+
+πθi,old (ait | sit) , θ i = Hπ (wi), ϕ i = HV (wi),
+
+(13) with rt(θi) denoting the policy probability ratio of the policy parameters θi (i.e., the actor policy associated with trade-off 
+
+wi) and ϕi = HV (wi) denoting the vector-valued critic network associated with wi, and lastly, ˆV it denoting the vector-valued value targets computed from rollout returns using GAE. The expectations are taken over all time indices (i.e., t = 0 , . . . T ) and every rollout in the dataset (i.e., the sum from i = 1 , . . . , N ). In practice, we optimize the policy hypernetwork using the clipped PPO surrogate objective, which replaces the policy ratio rt(θ) with a clipped version to limit excessively large updates. These modifications improve training stability and are consistent with standard PPO implementations [22]. 
+
+D. Multi-Objective Environments in MO-Playground 
+
+As illustrated in Fig. 3, our toolbox includes 5 clas-sic DeepMind control environments [29]: Cheetah, Walker, Ant, Humanoid, and Hopper, initially established in the MO realm by Xu et al. [13]. We update each of these environments to reflect recent changes in XML structure related to GPU-optimization [19] and MuJoCo updates [30]. Unique to our package and to facilitate development, all of our environments feature a swappable backend ( numpy 
+
+and jax.numpy ) for fast CPU environment evaluation and highly parallelized evaluation during GPU training.                                                        
+
+> Environment MORLAX HYPER-MORL Improvement
+> Maximum Hypervolume Possible Hypervol. Increase Cheetah 5.78 ·10 65.58 ·10 61.03x Walker 6.48 ·10 65.28 ·10 61.23x Ant 2.81 ·10 72.70 ·10 71.04x Hopper 1.48 ·10 70.60 ·10 72.48x Humanoid 5.45 ·10 60.74 ·10 57.33x
+> Time to Achieve Target Hypervolume Speed-up Cheetah 144.0 sec 4955.0 sec 34.4x Walker 307.1 sec 8075.8 sec 26.3x Ant 533.7 sec 13338.6 sec 21.8x Hopper 53.2 sec 12728.2 sec 239.2x Humanoid 92.4 sec 25950.0 sec 271.1x
+
+TABLE II: This table presents the comparative results between 
+
+MORLAX and an existing MORL algorithm, HYPER-MORL [16]. 
+
+Top : the maximum hypervolume each algorithm attained when run until convergence (5-45 min for MORLAX ). Bottom : the time taken for each algorithm to reach the lower of the two maximum hypervolumes in Top . Across all environments, MORLAX achieved larger hypervolumes faster than HYPER-MORL. 
+
+E. Key Adaptations to HyperMORL 
+
+GPU parallelization results in non-sequential network training updates. Thus, in order to maintain the training stability of HYPER-MORL [16], two key adaptations are needed: 1) the model structure must enable separate updates to the actor and critic hypernetworks [28], [31], and 2) we sample trade-off vectors using the Dirichlet distribution. Furthermore, unlike existing approaches, our algorithm does not require a warm-up stage due to increased data-collection enabled by massive parallelization. Several minor architec-tural differences were also implemented, for instance, actor network activation functions explicitly account for actuator limits by passing outputs through tanh functions, and we distinguish between environment terminations (failures) and truncations (time limits) in value estimation. IV. R ESULTS 
+
+To showcase our methodology, we train MORLAX in each environment of MO-Playground and compare the results with the state-of-the-art CPU-based baseline HYPER-MORL [16]. Further, to demonstrate scalability, we later demonstrate a practical application of MORLAX on the BRUCE humanoid. 
+
+A. Comparison with Previous MORL Baslines 
+
+Fig. 3 visualizes both policy performance and the Pareto fronts corresponding to the learned Pareto sets. The compar-ative results are summarized in Table II. Implementation Details. We train on an NVIDIA RTX A4000 GPU and set identical hypernetwork sizes across 
+
+MORLAX and the baseline approach, HYPER-MORL, for all environments, except the Humanoid and BRUCE, which benefit from additional model capacity to effectively capture their multi-objective nature. As mentioned, MORLAX also includes a second hypernetwork to model the critic. More implementation parameters can be found in our repository 1.Time comparison. Our first experiment compares the speed-up achieved by MORLAX over the HYPER-MORL base-Fig. 4: We project the learned six-dimensional Pareto front representing 30,720 policies tracking a moderate, forward velocity onto two 3D plots, each with different objectives. The colors represent trade-off vectors, and are blended according to the color-coded objectives along each axis. π1 represents a policy with arm swinging, π2 represents a policy with rigid arms, and π3 represents a policy with maximum smoothness. One interesting finding is that π1 walks faster and has higher efficiency, likely an emergent benefit of arm-swing. 
+
+line, with both algorithms run on MO-Playground envi-ronments for fair comparison. To compare algorithm run-times, we identify the maximum hypervolume attained by each algorithm at convergence, take the smaller between the MORLAX and HYPER-MORL maximum hypervolumes (HYPER-MORL in all cases), and determine both the time taken by MORLAX to reach the same hypervolume and the speed-up factor given by MORLAX . The results of this timing experiment, shown in Table II, showcase the massive speedup delivered by MO-Playground (21-270x speedup). Hypervolume comparison. As observed in Table II, MO-Playground learns superior Pareto fronts across all five benchmark environments. Even in environments that main-tain identical dynamical and reward models to the older generation MuJoCo benchmark set [13] (i.e., Cheetah and Walker), MORLAX ’s increased sampling and data collection abilities leads to the discovery of higher quality Pareto sets. 
+
+B. Custom Robotic Example: BRUCE Humanoid 
+
+We showcase the new capabilities and substantial speed-up afforded by MORLAX through application to a real-world, highly multi-objective robotics problem: humanoid locomo-tion. Prior MORL methods would have required several days to train on this task [14], highlighting their infeasibility for many practical scenarios. Specifically, we demonstrate a real-world robotic application of MO-Playground on the BRUCE humanoid robot [32]. We straightforwardly create this environment in our package MO-Playground by porting in existing MuJoCo models and creating a child class of the 
+
+MultiObjective environment that our package provides, extending standards established by MuJoCo Playground [19]. 
+
+Robot Model. In this work, we extend the robot model used in Janwani et al. [6] to include the upper limbs. This results in 16 degrees of actuation: three at each hip, one at each knee, one at each ankle (for ankle pitch), two at each shoulder, and one at the elbow. There are also 4 degrees of freedom for the passive ankle roll joints and the closed-chain constraints of the four-bar linkages. In total, the local joint configuration comprises nl = 20 coordinates, of which 16 are actuated. For additional information on the model and our modeling assumptions, we refer the reader to [6]. 
+
+NaviGait Controller. We build on the N AVI GAIT con-troller introduced in [6], a hierarchical RL–based locomotion framework that leverages structured motion priors to achieve robust bipedal walking. N AVI GAIT first generates a library of dynamically feasible gaits via traditional trajectory opti-mization. Rather than learning locomotion from scratch, an RL policy is trained to navigate and interpolate within this library online, tracking high-level commands while applying residual corrections for stability. Importantly, the gait library used by N AVI GAIT includes only lower-body motion and does not prescribe arm swing. In this work, we instead induce arm swing through task-level objectives within the MORL framework, allowing the policy to discover coordinated upper-body motion that complements the underlying locomotion. Importantly, unlike in [6] we al-low policies to directly output joint commands to encourage discovery of diverse policies. We train with identical domain randomization parameters as [6] and set the policy and value network sizes to two hidden layers of 256 neurons. 
+
+Reward Design. Six separate reward functions were con-structed for MORL with BRUCE: base tracking, joint track-ing, arm swinging, arm rigidness, energy efficiency, and smoothness. Explicit reward definitions along with their respective numerical constants can be found in the repository. 
+
+Results. In Fig. 4, we showcase the results of extend-ing MO-Playground to the BRUCE humanoid. Across the aforementioned six objectives, MORLAX finds continuous, highly diverse Pareto sets in around 2 hours and 11 min-utes, a significant speedup compared to the 5-day training time reported in [14]. The resulting policies are capable of following velocity commands of the forward, lateral and angular yaw velocities. Three policies are shown in Fig. 4 that demonstrate some of the diverse behaviors contained within the approximate Pareto set: swinging arms ( π1), rigid arms ( π2), and maximum smoothness ( π3). One interesting finding is that policies that swing their arms walked faster with higher efficiencies, as seen when comparing π1 to π2.For conciseness, we show only two projections of this highly dimensional Pareto front for a moderate, forward velocity command. Further illustrations of our results, including other velocities, projections, and policy rollouts can be found on the project website 1.V. C ONCLUSION 
+
+MO-Playground decreases the cost of training MORL problems through an open-source parameter-efficient frame-work that streamlines GPU-accelerated MORL. While our approach demonstrates fast, high-quality Pareto set approx-imation for robotics, it shares some common limitations with existing MORL algorithms. First and foremost is the assumption that objectives are known a priori , when in reality many human-specified objectives, like naturalness ,are difficult to write down mathematically. Another key lim-itation is that MORLAX , like most RL algorithms, is sensitive to hyperparameter selection. However, MORLAX ’s increased speed quickens the tune-train-evaluate loop, enabling more efficient hyperparameter sweeps than previous approaches. Lastly, using a linear scalarization function limits MORLAX to discovering convex Pareto fronts. While this constraint is common in MORL for continuous control [13], [14], [16], approximating concave sections of the Pareto Front is an exciting direction for MORL. Other interesting extensions of our work include human-in-the-loop optimization to guide multi-objective reward learning, alongside applications in human-centered robotics such as lower-limb exoskeletons. REFERENCES [1] J. Hwangbo, J. Lee, A. Dosovitskiy, D. Bellicoso, V. Tsounis, V. Koltun, and M. Hutter, “Learning agile and dynamic motor skills for legged robots,” Science Robotics , 2019. [2] N. Rudin, D. Hoeller, P. Reist, and M. Hutter, “Learning to walk in minutes using massively parallel deep reinforcement learning,” in 
+
+Conference on robot learning . PMLR, 2022. [3] Q. Liao, T. E. Truong, X. Huang, Y. Gao, G. Tevet, K. Sreenath, and C. K. Liu, “Beyondmimic: From motion tracking to versatile humanoid control via guided diffusion,” arXiv preprint arXiv:2508.08241 , 2025. [4] C. F. Hayes, R. R˘ adulescu, E. Bargiacchi, J. Källström, M. Macfarlane, M. Reymond, T. Verstraeten, L. M. Zintgraf, R. Dazeley, F. Heintz 
+
+et al. , “A practical guide to multi-objective reinforcement learning and planning,” arXiv preprint arXiv:2103.09568 , 2021. [5] H. Ravichandar, A. S. Polydoros, S. Chernova, and A. Billard, “Recent advances in robot learning from demonstration,” Annual review of control, robotics, and autonomous systems , 2020. [6] N. C. Janwani, V. Madabushi, and M. Tucker, “Navigait: Navigating dynamically feasible gait libraries using deep reinforcement learning,” in International Conference on Robotics and Automation . IEEE, 2026. [7] M. Tucker, E. Novoseller, C. Kann, Y. Sui, Y. Yue, J. W. Burdick, and A. D. Ames, “Preference-based learning for exoskeleton gait optimization,” in Int. Conf. on Robotics and Automation . IEEE, 2020. [8] K. Li, M. Tucker, E. Bıyık, E. Novoseller, J. W. Burdick, Y. Sui, D. Sadigh, Y. Yue, and A. D. Ames, “ROIAL: Region of interest active learning for characterizing exoskeleton gait preference landscapes,” in 
+
+International Conference on Robotics and Automation . IEEE, 2021. [9] D. White, M. Wu, E. Novoseller, V. J. Lawhern, N. Waytowich, and Y. Cao, “Rating-based reinforcement learning,” in Proceedings of the AAAI Conference on Artificial Intelligence , 2024. [10] C. Basu, Q. Yang, D. Hungerman, M. Singhal, and A. D. Dragan, “Do you want your autonomous car to drive like you?” in ACM/IEEE International Conference on Human-Robot Interaction , 2017. [11] N. C. Janwani, E. Da¸ s, T. Touma, S. X. Wei, T. G. Molnar, and J. W. Burdick, “A learning-based framework for safe human-robot collabo-ration with multiple backup control barrier functions,” in International Conference on Robotics and Automation (ICRA) . IEEE, 2024. [12] F. Felten, L. N. Alegre, A. Nowé, A. L. C. Bazzan, E. G. Talbi, G. Danoy, and B. C. da. Silva, “A toolkit for reliable benchmarking and research in multi-objective reinforcement learning,” in Neural Information Processing Systems (NeurIPS) , 2023. [13] J. Xu, Y. Tian, P. Ma, D. Rus, S. Sueda, and W. Matusik, “Prediction-guided multi-objective reinforcement learning for continuous robot control,” in International Conference on Machine Learning , 2020. [14] L. N. Alegre, A. Serifi, R. Grandia, D. Müller, E. Knoop, and M. Bächer, “AMOR: Adaptive character control through multi-objective reinforcement learning,” in Special Interest Group on Com-puter Graphics and Interactive Techniques Conference , 2025. [15] T. Basaklar, S. Gumussoy, and U. Y. Ogras, “PD-MORL: Preference-driven multi-objective reinforcement learning algorithm.” The Eleventh International Conference on Learning Representations, 2023. [16] T. Shu, K. Shang, C. Gong, Y. Nan, and H. Ishibuchi, “Learning pareto set for multi-objective continuous robot control,” in International Joint Conference on Artificial Intelligence , 2024. [17] E. Liu, Y.-C. Wu, X. Huang, C. Gao, R.-J. Wang, K. Xue, and C. Qian, “Pareto set learning for multi-objective reinforcement learning,” in 
+
+Proceedings of the AAAI Conference on Artificial Intelligence , 2025. [18] J. Bradbury, R. Frostig, P. Hawkins, M. J. Johnson, C. Leary, D. Maclaurin, G. Necula, A. Paszke, J. VanderPlas, S. Wanderman-Milne, and Q. Zhang, “JAX: composable transformations of Python+NumPy programs,” 2018. [Online]. Available: http://github. com/jax-ml/jax [19] K. Zakka, B. Tabanpour, Q. Liao, M. Haiderbhai, S. Holt, J. Y. Luo, A. Allshire, E. Frey, K. Sreenath, L. A. Kahrs et al. , “MuJoCo playground,” arXiv preprint arXiv:2502.08844 , 2025. [20] D. Ha, A. M. Dai, and Q. V. Le, “Hypernetworks,” in ICLR , 2017. [21] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, “Proximal policy optimization algorithms,” arXiv preprint arXiv:1707.06347 , 2017. [22] C. D. Freeman, E. Frey, A. Raichuk, S. Girgin, I. Mordatch, and O. Bachem, “Brax - a differentiable physics engine for large scale rigid body simulation,” 2021. [Online]. Available: http://github.com/google/brax [23] T. Haarnoja, A. Zhou, P. Abbeel, and S. Levine, “Soft actor-critic: Off-policy maximum entropy deep reinforcement learning with a stochastic actor,” in International conference on machine learning , 2018. [24] F. Liu, Z. Gu, Y. Cai, Z. Zhou, H. Jung, J. Jang, S. Zhao, S. Ha, Y. Chen, D. Xu et al. , “Opt2skill: Imitating dynamically-feasible whole-body trajectories for versatile humanoid loco-manipulation,” 
+
+IEEE Robotics and Automation Letters , 2025. [25] G. Brockman, V. Cheung, L. Pettersson, J. Schneider, J. Schulman, J. Tang, and W. Zaremba, “Openai gym,” 2016. [26] M. Towers, A. Kwiatkowski, J. Terry, J. U. Balis, G. De Cola, T. Deleu, M. Goulão, A. Kallinteris, M. Krimmel, A. KG et al. , “Gymnasium: A standard interface for reinforcement learning environments,” arXiv preprint arXiv:2407.17032 , 2024. [27] B. Huang, R. Cheng, Z. Li, Y. Jin, and K. C. Tan, “EvoX: A Distributed GPU-accelerated Framework for Scalable Evolutionary Computation,” 
+
+IEEE Transactions on Evolutionary Computation , 2024. [28] V. Konda and J. Tsitsiklis, “Actor-critic algorithms,” Advances in neural information processing systems , vol. 12, 1999. [29] S. Tunyasuvunakool, A. Muldal, Y. Doron, S. Liu, S. Bohez, J. Merel, T. Erez, T. Lillicrap, N. Heess, and Y. Tassa, “dm_control: Software and tasks for continuous control,” Software Impacts , 2020. [30] E. Todorov, T. Erez, and Y. Tassa, “Mujoco: A physics engine for model-based control,” in 2012 IEEE/RSJ International Conference on Intelligent Robots and Systems . IEEE, 2012, pp. 5026–5033. [31] R. S. Sutton, D. Precup, and S. Singh, “Between MDPs and semi-MDPs: A framework for temporal abstraction in reinforcement learn-ing,” Artificial intelligence , vol. 112, no. 1-2, pp. 181–211, 1999. [32] W. Robotics, “BRUCE: Bipedal Robot Unit with Compliance En-hanced,” https://www.westwoodrobotics.io/bruce/, 2022.

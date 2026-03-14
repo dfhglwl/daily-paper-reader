@@ -1,0 +1,446 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-03-14T19:20:15.561947+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 11,
+    "quick_skim_target": 11,
+    "quick_selected": 11
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2603.06859v1",
+      "title": "Contextual Counterfactual Credit Assignment for Multi-Agent Reinforcement Learning in LLM Collaboration",
+      "abstract": "Cooperative multi-agent reinforcement learning (MARL) systems powered by large language models (LLMs) are frequently optimized via sparse terminal-only feedback. This shared signal entangles upstream decisions, obstructing accurate decision-level credit assignment. To address this trajectory-level diffusion, we introduce Contextual Counterfactual Credit Assignment (\\textbf{\\texttt{C3}}). Instead of distributing rewards across an entire episode, \\textbf{\\texttt{C3}} isolates the causal impact of individual messages by freezing the exact transcript-derived context, evaluating context-matched alternatives via fixed-continuation replay, and applying a leave-one-out (LOO) baseline. This localized intervention extracts unbiased, low-variance marginal advantages for standard policy-gradient optimization. Evaluated across five mathematical and coding benchmarks under matched budgets, \\textbf{\\texttt{C3}} improves terminal performance over established baselines. Mechanistic diagnostics further show that these gains are accompanied by higher credit fidelity, lower contextual variance, and stronger inter-agent causal dependence. Our code is available at https://github.com/EIT-EAST-Lab/C3.",
+      "authors": [
+        "Yanjun Chen",
+        "Yirong Sun",
+        "Hanlin Wang",
+        "Xinming Zhang",
+        "Xiaoyu Shen",
+        "Wenjie Li",
+        "Wei Zhang"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-03-06T20:25:11+00:00",
+      "link": "https://arxiv.org/pdf/2603.06859v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Counterfactual credit assignment for multi-agent reinforcement learning collaboration",
+      "llm_evidence_cn": "多智能体强化学习协作中的反事实信用分配",
+      "llm_evidence": "多智能体强化学习协作中的反事实信用分配",
+      "canonical_evidence": "多智能体强化学习协作中的反事实信用分配",
+      "llm_tldr_en": "Introduces a causal credit assignment method to optimize cooperative multi-agent systems powered by LLMs.",
+      "llm_tldr_cn": "引入一种因果信用分配方法，以优化由LLM驱动的协作多智能体系统。",
+      "llm_tldr": "引入一种因果信用分配方法，以优化由LLM驱动的协作多智能体系统。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.07253v1",
+      "title": "Learning When to Cooperate Under Heterogeneous Goals",
+      "abstract": "A significant element of human cooperative intelligence lies in our ability to identify opportunities for fruitful collaboration; and conversely to recognise when the task at hand is better pursued alone. Research on flexible cooperation in machines has left this meta-level problem largely unexplored, despite its importance for successful collaboration in heterogeneous open-ended environments. Here, we extend the typical Ad Hoc Teamwork (AHT) setting to incorporate the idea of agents having heterogeneous goals that in any given scenario may or may not overlap. We introduce a novel approach to learning policies in this setting, based on a hierarchical combination of imitation and reinforcement learning, and show that it outperforms baseline methods across extended versions of two cooperative environments. We also investigate the contribution of an auxiliary component that learns to model teammates by predicting their actions, finding that its effect on performance is inversely related to the amount of observable information about teammate goals.",
+      "authors": [
+        "Max Taylor-Davies",
+        "Neil Bramley",
+        "Christopher G. Lucas"
+      ],
+      "primary_category": "cs.MA",
+      "categories": [
+        "cs.MA",
+        "cs.AI"
+      ],
+      "published": "2026-03-07T15:09:27+00:00",
+      "link": "https://arxiv.org/pdf/2603.07253v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Multi-agent reinforcement learning for cooperation under heterogeneous goals",
+      "llm_evidence_cn": "异构目标下的多智能体强化学习协作",
+      "llm_evidence": "异构目标下的多智能体强化学习协作",
+      "canonical_evidence": "异构目标下的多智能体强化学习协作",
+      "llm_tldr_en": "Proposes a hierarchical RL approach for agents to identify cooperation opportunities in heterogeneous environments.",
+      "llm_tldr_cn": "提出一种分层强化学习方法，使智能体能够在异构环境中识别协作机会。",
+      "llm_tldr": "提出一种分层强化学习方法，使智能体能够在异构环境中识别协作机会。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "multi-agent reinforcement learning for cooperative and competitive air combat",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.07456v1",
+      "title": "Agentic AI-Driven UAV Network Deployment: A LLM-Enhanced Exact Potential Game Approach",
+      "abstract": "Unmanned Aerial Vehicular Networks (UAVNs) are envisioned to provide flexible connectivity, wide-area coverage, and low-latency services in dynamic environments. From an agentic artificial intelligence (Agentic AI) perspective, UAVNs naturally operate as multi-agent systems, where autonomous UAVs act as intelligent agents that coordinate deployment and networking decisions to achieve global performance objectives. However, the strong coupling between discrete link decisions and continuous deployment parameters makes UAVN topology optimization a mixed-integer nonconvex problem, resulting in challenges in scalability, efficiency, and solution consistency under dynamic network conditions. This paper proposes a dual spatial-scale UAVN topology optimization framework based on exact potential games (EPGs), enhanced by Agentic AI. At the large spatial scale, a log-linear learning based EPG (L3-EPG) algorithm is developed to optimize inter-UAV link configurations, enabling sparse yet connected network topologies while reducing redundant links and interference. At the small spatial scale, an approximate gradient based EPG (AG-EPG) algorithm jointly optimizes UAV deployment, transmission power allocation, and ground user (GU) association to improve network throughput and latency. To further enhance adaptability across heterogeneous scenarios, a large language model (LLM) is incorporated as a knowledge-driven decision enhancer to automatically generate utility weights according to network characteristics, alleviating reliance on manual parameter tuning. Simulation results demonstrate that the proposed framework consistently outperforms baseline methods in terms of energy consumption, end-to-end latency, and system throughput.",
+      "authors": [
+        "Xin Tang",
+        "Qian Chen",
+        "Binhan Liao",
+        "Yaqi Zhang",
+        "Jianxin Chen",
+        "Changyuan Zhao",
+        "Junchuan Fan",
+        "Junxi Tian",
+        "Xiaohuan Li"
+      ],
+      "primary_category": "cs.DC",
+      "categories": [
+        "cs.DC"
+      ],
+      "published": "2026-03-08T04:13:09+00:00",
+      "link": "https://arxiv.org/pdf/2603.07456v1",
+      "tags": [
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-agent coordination for UAV networks",
+      "llm_evidence_cn": "无人机网络的多智能体协调",
+      "llm_evidence": "无人机网络的多智能体协调",
+      "canonical_evidence": "无人机网络的多智能体协调",
+      "llm_tldr_en": "Uses Agentic AI and game theory for UAV coordination, applicable to tactical network deployment in combat.",
+      "llm_tldr_cn": "利用智能体AI和博弈论进行无人机协调，可应用于战斗中的战术网络部署。",
+      "llm_tldr": "利用智能体AI和博弈论进行无人机协调，可应用于战斗中的战术网络部署。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "intelligent air combat tactics using multi agent reinforcement learning",
+      "matched_requirement_id": "req-11",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.07797v1",
+      "title": "Toward Global Intent Inference for Human Motion by Inverse Reinforcement Learning",
+      "abstract": "This paper investigates whether a single, unified cost function can explain and predict human reaching movements, in contrast with existing approaches that rely on subject- or posture-specific optimization criteria. Using the Minimal Observation Inverse Reinforcement Learning (MO-IRL) algorithm, together with a seven-dimensional set of candidate cost terms, we efficiently estimate time-varying cost weights for a standard planar reaching task. MO-IRL provides orders-of-magnitude faster convergence than bilevel formulations, while using only a fraction of the available data, enabling the practical exploration of time-varying cost structures. Three levels of generality are evaluated: Subject-Dependent Posture-Dependent, Subject-Dependent Posture-Independent, and Subject-Independent Posture-Independent. Across all cases, time-varying weights substantially improve trajectory reconstruction, yielding an average 27% reduction in RMSE compared to the baseline. The inferred costs consistently highlight a dominant role for joint-acceleration regulation, complemented by smaller contributions from torque-change smoothness. Overall, a single subject- and posture-agnostic time-varying cost function is shown to predict human reaching trajectories with high accuracy, supporting the existence of a unified optimality principle governing this class of movements.",
+      "authors": [
+        "Sarmad Mehrdad",
+        "Maxime Sabbah",
+        "Vincent Bonnet",
+        "Ludovic Righetti"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.LG"
+      ],
+      "published": "2026-03-08T20:37:19+00:00",
+      "link": "https://arxiv.org/pdf/2603.07797v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "intent inference for motion prediction",
+      "llm_evidence_cn": "运动预测的意图推理",
+      "llm_evidence": "运动预测的意图推理",
+      "canonical_evidence": "运动预测的意图推理",
+      "llm_tldr_en": "Uses Inverse Reinforcement Learning to infer intent and predict motion, applicable to adversarial recognition.",
+      "llm_tldr_cn": "利用逆强化学习进行意图推理和运动预测，可应用于对抗性意图识别。",
+      "llm_tldr": "利用逆强化学习进行意图推理和运动预测，可应用于对抗性意图识别。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "adversarial intent recognition and strategy generation for UAVs",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.07824v1",
+      "title": "Reasoning Knowledge-Gap in Drone Planning via LLM-based Active Elicitation",
+      "abstract": "Human-AI joint planning in Unmanned Aerial Vehicles (UAVs) typically relies on control handover when facing environmental uncertainties, which is often inefficient and cognitively demanding for non-expert operators. To address this, we propose a novel framework that shifts the collaboration paradigm from control takeover to active information elicitation. We introduce the Minimal Information Neuro-Symbolic Tree (MINT), a reasoning mechanism that explicitly structures knowledge gaps regarding obstacles and goals into a queryable format. By leveraging large language models, our system formulates optimal binary queries to resolve specific ambiguities with minimal human interaction. We demonstrate the efficacy of this approach through a comprehensive workflow integrating a vision-language model for perception, voice interfaces, and a low-level UAV control module in both high-fidelity NVIDIA Isaac simulations and real-world deployments. Experimental results show that our method achieves a significant improvement in the success rate for complex search-and-rescue tasks while significantly reducing the frequency of human interaction compared to exhaustive querying baselines.",
+      "authors": [
+        "Zeyu Fang",
+        "Beomyeol Yu",
+        "Cheng Liu",
+        "Zeyuan Yang",
+        "Rongqian Chen",
+        "Yuxin Lin",
+        "Mahdi Imani",
+        "Tian Lan"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-03-08T22:00:32+00:00",
+      "link": "https://arxiv.org/pdf/2603.07824v1",
+      "tags": [
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "drone planning under uncertainty",
+      "llm_evidence_cn": "不确定性下的无人机规划",
+      "llm_evidence": "不确定性下的无人机规划",
+      "canonical_evidence": "不确定性下的无人机规划",
+      "llm_tldr_en": "Proposes a neuro-symbolic framework for drone planning and resolving knowledge gaps in uncertain environments.",
+      "llm_tldr_cn": "提出了一种神经符号框架，用于无人机规划并解决不确定环境中的知识鸿沟。",
+      "llm_tldr": "提出了一种神经符号框架，用于无人机规划并解决不确定环境中的知识鸿沟。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "autonomous maneuver decision making for UAVs",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.09022v1",
+      "title": "MEMO: Memory-Augmented Model Context Optimization for Robust Multi-Turn Multi-Agent LLM Games",
+      "abstract": "Multi-turn, multi-agent LLM game evaluations often exhibit substantial run-to-run variance. In long-horizon interactions, small early deviations compound across turns and are amplified by multi-agent coupling. This biases win rate estimates and makes rankings unreliable across repeated tournaments. Prompt choice worsens this further by producing different effective policies. We address both instability and underperformance with MEMO (Memory-augmented MOdel context optimization), a self-play framework that optimizes inference-time context by coupling retention and exploration. Retention maintains a persistent memory bank that stores structured insights from self-play trajectories and injects them as priors during later play. Exploration runs tournament-style prompt evolution with uncertainty-aware selection via TrueSkill, and uses prioritized replay to revisit rare and decisive states. Across five text-based games, MEMO raises mean win rate from 25.1% to 49.5% for GPT-4o-mini and from 20.9% to 44.3% for Qwen-2.5-7B-Instruct, using $2,000$ self-play games per task. Run-to-run variance also drops, giving more stable rankings across prompt variations. These results suggest that multi-agent LLM game performance and robustness have substantial room for improvement through context optimization. MEMO achieves the largest gains in negotiation and imperfect-information games, while RL remains more effective in perfect-information settings.",
+      "authors": [
+        "Yunfei Xie",
+        "Kevin Wang",
+        "Bobby Cheng",
+        "Jianzhu Yao",
+        "Zhizhou Sha",
+        "Alexander Duffy",
+        "Yihan Xi",
+        "Hongyuan Mei",
+        "Cheston Tan",
+        "Chen Wei",
+        "Pramod Viswanath",
+        "Zhangyang Wang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-03-09T23:36:32+00:00",
+      "link": "https://arxiv.org/pdf/2603.09022v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Memory-augmented self-play for multi-agent games",
+      "llm_evidence_cn": "多智能体博弈的记忆增强自博弈框架",
+      "llm_evidence": "多智能体博弈的记忆增强自博弈框架",
+      "canonical_evidence": "多智能体博弈的记忆增强自博弈框架",
+      "llm_tldr_en": "Optimizes multi-agent interactions using memory-augmented self-play to reduce variance in game outcomes.",
+      "llm_tldr_cn": "利用记忆增强的自博弈框架优化多智能体交互，减少博弈结果的方差。",
+      "llm_tldr": "利用记忆增强的自博弈框架优化多智能体交互，减少博弈结果的方差。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "intelligent air combat tactics using multi agent reinforcement learning",
+      "matched_requirement_id": "req-11",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.09237v1",
+      "title": "MO-Playground: Massively Parallelized Multi-Objective Reinforcement Learning for Robotics",
+      "abstract": "Multi-objective reinforcement learning (MORL) is a powerful tool to learn Pareto-optimal policy families across conflicting objectives. However, unlike traditional RL algorithms, existing MORL algorithms do not effectively leverage large-scale parallelization to concurrently simulate thousands of environments, resulting in vastly increased computation time. Ultimately, this has limited MORL's application towards complex multi-objective robotics problems. To address these challenges, we present 1) MORLAX, a new GPU-native, fast MORL algorithm, and 2) MO-Playground, a pip-installable playground of GPU-accelerated multi-objective environments. Together, MORLAX and MO-Playground approximate Pareto sets within minutes, offering 25-270x speed-ups compared to legacy CPU-based approaches whilst achieving superior Pareto front hypervolumes. We demonstrate the versatility of our approach by implementing a custom BRUCE humanoid robot environment using MO-Playground and learning Pareto-optimal locomotion policies across 6 realistic objectives for BRUCE, such as smoothness, efficiency and arm swinging.",
+      "authors": [
+        "Neil Janwani",
+        "Ellen Novoseller",
+        "Vernon J. Lawhern",
+        "Maegan Tucker"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-03-10T06:12:56+00:00",
+      "link": "https://arxiv.org/pdf/2603.09237v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "parallelized multi-objective RL for robotics",
+      "llm_evidence_cn": "机器人领域并行化多目标强化学习",
+      "llm_evidence": "机器人领域并行化多目标强化学习",
+      "canonical_evidence": "机器人领域并行化多目标强化学习",
+      "llm_tldr_en": "Accelerates multi-objective RL, useful for balancing conflicting tactical goals in air combat.",
+      "llm_tldr_cn": "加速多目标强化学习，有助于平衡空战中相互冲突的战术目标。",
+      "llm_tldr": "加速多目标强化学习，有助于平衡空战中相互冲突的战术目标。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "intelligent air combat tactics using multi agent reinforcement learning",
+      "matched_requirement_id": "req-11",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.10199v1",
+      "title": "Actor-Accelerated Policy Dual Averaging for Reinforcement Learning in Continuous Action Spaces",
+      "abstract": "Policy Dual Averaging (PDA) offers a principled Policy Mirror Descent (PMD) framework that more naturally admits value function approximation than standard PMD, enabling the use of approximate advantage (or Q-) functions while retaining strong convergence guarantees. However, applying PDA in continuous state and action spaces remains computationally challenging, since action selection involves solving an optimization sub-problem at each decision step. In this paper, we propose \\textit{actor-accelerated PDA}, which uses a learned policy network to approximate the solution of the optimization sub-problems, yielding faster runtimes while maintaining convergence guarantees. We provide a theoretical analysis that quantifies how actor approximation error impacts the convergence of PDA under suitable assumptions. We then evaluate its performance on several benchmarks in robotics, control, and operations research problems. Actor-accelerated PDA achieves superior performance compared to popular on-policy baselines such as Proximal Policy Optimization (PPO). Overall, our results bridge the gap between the theoretical advantages of PDA and its practical deployment in continuous-action problems with function approximation.",
+      "authors": [
+        "Ji Gao",
+        "Caleb Ju",
+        "Guanghui Lan",
+        "Zhaohui Tong"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-03-10T20:05:18+00:00",
+      "link": "https://arxiv.org/pdf/2603.10199v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "RL in continuous action spaces for faster decision making",
+      "llm_evidence_cn": "连续动作空间中的强化学习以实现快速决策",
+      "llm_evidence": "连续动作空间中的强化学习以实现快速决策",
+      "canonical_evidence": "连续动作空间中的强化学习以实现快速决策",
+      "llm_tldr_en": "Accelerates RL in continuous spaces, supporting real-time decision making in high-speed aerial combat.",
+      "llm_tldr_cn": "加速连续空间中的强化学习，支持高速空战中的实时决策。",
+      "llm_tldr": "加速连续空间中的强化学习，支持高速空战中的实时决策。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for air combat strategy generation",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.10263v1",
+      "title": "From Prior to Pro: Efficient Skill Mastery via Distribution Contractive RL Finetuning",
+      "abstract": "We introduce Distribution Contractive Reinforcement Learning (DICE-RL), a framework that uses reinforcement learning (RL) as a \"distribution contraction\" operator to refine pretrained generative robot policies. DICE-RL turns a pretrained behavior prior into a high-performing \"pro\" policy by amplifying high-success behaviors from online feedback. We pretrain a diffusion- or flow-based policy for broad behavioral coverage, then finetune it with a stable, sample-efficient residual off-policy RL framework that combines selective behavior regularization with value-guided action selection. Extensive experiments and analyses show that DICE-RL reliably improves performance with strong stability and sample efficiency. It enables mastery of complex long-horizon manipulation skills directly from high-dimensional pixel inputs, both in simulation and on a real robot. Project website: https://zhanyisun.github.io/dice.rl.2026/.",
+      "authors": [
+        "Zhanyi Sun",
+        "Shuran Song"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.LG"
+      ],
+      "published": "2026-03-10T22:49:46+00:00",
+      "link": "https://arxiv.org/pdf/2603.10263v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "RL finetuning for mastering complex skills",
+      "llm_evidence_cn": "强化学习微调以掌握复杂技能",
+      "llm_evidence": "强化学习微调以掌握复杂技能",
+      "canonical_evidence": "强化学习微调以掌握复杂技能",
+      "llm_tldr_en": "DICE-RL framework refines pretrained policies for skill mastery, useful for complex maneuver generation.",
+      "llm_tldr_cn": "DICE-RL框架通过微调预训练策略实现技能精通，可用于复杂机动动作生成。",
+      "llm_tldr": "DICE-RL框架通过微调预训练策略实现技能精通，可用于复杂机动动作生成。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.11110v1",
+      "title": "ResWM: Residual-Action World Model for Visual RL",
+      "abstract": "Learning predictive world models from raw visual observations is a central challenge in reinforcement learning (RL), especially for robotics and continuous control. Conventional model-based RL frameworks directly condition future predictions on absolute actions, which makes optimization unstable: the optimal action distributions are task-dependent, unknown a priori, and often lead to oscillatory or inefficient control. To address this, we introduce the Residual-Action World Model (ResWM), a new framework that reformulates the control variable from absolute actions to residual actions -- incremental adjustments relative to the previous step. This design aligns with the inherent smoothness of real-world control, reduces the effective search space, and stabilizes long-horizon planning. To further strengthen the representation, we propose an Observation Difference Encoder that explicitly models the changes between adjacent frames, yielding compact latent dynamics that are naturally coupled with residual actions. ResWM is integrated into a Dreamer-style latent dynamics model with minimal modifications and no extra hyperparameters. Both imagination rollouts and policy optimization are conducted in the residual-action space, enabling smoother exploration, lower control variance, and more reliable planning. Empirical results on the DeepMind Control Suite demonstrate that ResWM achieves consistent improvements in sample efficiency, asymptotic returns, and control smoothness, significantly surpassing strong baselines such as Dreamer and TD-MPC. Beyond performance, ResWM produces more stable and energy-efficient action trajectories, a property critical for robotic systems deployed in real-world environments. These findings suggest that residual action modeling provides a simple yet powerful principle for bridging algorithmic advances in RL with the practical requirements of robotics.",
+      "authors": [
+        "Jseen Zhang",
+        "Gabriel Adineera",
+        "Jinzhou Tan",
+        "Jinoh Kim"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI"
+      ],
+      "published": "2026-03-11T11:27:08+00:00",
+      "link": "https://arxiv.org/pdf/2603.11110v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "predictive world models for continuous control and residual actions",
+      "llm_evidence_cn": "用于连续控制和残差动作的预测世界模型",
+      "llm_evidence": "用于连续控制和残差动作的预测世界模型",
+      "canonical_evidence": "用于连续控制和残差动作的预测世界模型",
+      "llm_tldr_en": "A world model framework using residual actions to stabilize long-horizon predictive control in reinforcement learning.",
+      "llm_tldr_cn": "一种利用残差动作稳定强化学习中长时程预测控制的世界模型框架。",
+      "llm_tldr": "一种利用残差动作稳定强化学习中长时程预测控制的世界模型框架。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2603.11351v1",
+      "title": "Novelty Adaptation Through Hybrid Large Language Model (LLM)-Symbolic Planning and LLM-guided Reinforcement Learning",
+      "abstract": "In dynamic open-world environments, autonomous agents often encounter novelties that hinder their ability to find plans to achieve their goals. Specifically, traditional symbolic planners fail to generate plans when the robot's planning domain lacks the operators that enable it to interact appropriately with novel objects in the environment. We propose a neuro-symbolic architecture that integrates symbolic planning, reinforcement learning, and a large language model (LLM) to learn how to handle novel objects. In particular, we leverage the common sense reasoning capability of the LLM to identify missing operators, generate plans with the symbolic AI planner, and write reward functions to guide the reinforcement learning agent in learning control policies for newly identified operators. Our method outperforms the state-of-the-art methods in operator discovery as well as operator learning in continuous robotic domains.",
+      "authors": [
+        "Hong Lu",
+        "Pierrick Lorang",
+        "Timothy R. Duggan",
+        "Jivko Sinapov",
+        "Matthias Scheutz"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI"
+      ],
+      "published": "2026-03-11T22:38:05+00:00",
+      "link": "https://arxiv.org/pdf/2603.11351v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-guided reinforcement learning for autonomous agent planning in dynamic environments",
+      "llm_evidence_cn": "LLM引导的强化学习用于动态环境中的自主代理规划",
+      "llm_evidence": "LLM引导的强化学习用于动态环境中的自主代理规划",
+      "canonical_evidence": "LLM引导的强化学习用于动态环境中的自主代理规划",
+      "llm_tldr_en": "Integrates symbolic planning and LLM-guided RL to help autonomous agents adapt to novel objects and environments.",
+      "llm_tldr_cn": "结合符号规划与LLM引导的强化学习，帮助自主代理适应新颖对象和环境。",
+      "llm_tldr": "结合符号规划与LLM引导的强化学习，帮助自主代理适应新颖对象和环境。",
+      "llm_tags": [
+        "query:uav-air-combat"
+      ],
+      "matched_query_tag": "query:uav-air-combat",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

@@ -6,49 +6,56 @@
 </div>
 
 ## 每次日报
-- 最新运行日期：2026-03-13
-- 运行时间：2026-03-13 19:24:29 UTC
+- 最新运行日期：2026-03-14
+- 运行时间：2026-03-14 19:21:16 UTC
 - 运行状态：成功
-- 本次总论文数：9
-- 精读区：1
-- 速读区：8
+- 本次总论文数：11
+- 精读区：0
+- 速读区：11
 
 ### 今日简报（AI）
-今日精选 9 篇强化学习前沿进展，重点攻克对抗环境下的策略稳定性与多智能体协作难题。
-核心研究通过分式目标函数成功“驯服”了 Minimax 优化的不稳定性，并展示了子模奖励在无人机医疗配送中的实战潜力。
-建议深入探索对抗鲁棒性算法的优化技巧，并关注强化学习在动态物流调度等时效性场景的落地应用。
-- 详情：[/202603/13/README](/202603/13/README)
+今日速览 11 篇前沿成果，深度解析大模型驱动的多智能体协作与复杂网络部署。
+重点关注 LLM 在多智能体信用分配中的反事实推理应用，以及结合势博弈优化无人机网络的新范式。
+建议优先探索大模型如何解决异构目标下的协作难题，提升多机系统的决策效率。
+- 详情：[/202603/14/README](/202603/14/README)
 
 ### 精读区论文标签
-1. [Taming the Adversary: Stable Minimax Deep Deterministic Policy Gradient via Fractional Objectives](/202603/13/2603.12110v1-taming-the-adversary-stable-minimax-deep-deterministic-policy-gradient-via-fractional-objectives)  
-   标签：评分：8.0/10、query:uav-air-combat
-   evidence：用户策略与对抗性扰动之间的极大极小优化
+- 本次无精读推荐。
 
 ### 速读区论文标签
-1. [Multi-Agent Reinforcement Learning with Submodular Reward](/202603/13/2603.06810v1-multi-agent-reinforcement-learning-with-submodular-reward)  
-   标签：评分：7.0/10、query:uav-air-combat
-   evidence：用于多无人机监视的多智能体强化学习
-2. [UAV-MARL: Multi-Agent Reinforcement Learning for Time-Critical and Dynamic Medical Supply Delivery](/202603/13/2603.10528v1-uav-marl-multi-agent-reinforcement-learning-for-time-critical-and-dynamic-medical-supply-delivery)  
-   标签：评分：7.0/10、query:uav-air-combat
-   evidence：用于在随机环境中协调无人机群的多智能体强化学习
-3. [Evaluating randomized smoothing as a defense against adversarial attacks in trajectory prediction](/202603/13/2603.10821v1-evaluating-randomized-smoothing-as-a-defense-against-adversarial-attacks-in-trajectory-prediction)  
-   标签：评分：7.0/10、query:uav-air-combat
-   evidence：轨迹预测中对抗攻击的防御机制
-4. [A Recipe for Stable Offline Multi-agent Reinforcement Learning](/202603/13/2603.08399v1-a-recipe-for-stable-offline-multi-agent-reinforcement-learning)  
+1. [Contextual Counterfactual Credit Assignment for Multi-Agent Reinforcement Learning in LLM Collaboration](/202603/14/2603.06859v1-contextual-counterfactual-credit-assignment-for-multi-agent-reinforcement-learning-in-llm-collaboration)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：离线多智能体强化学习的稳定优化方法
-5. [Strategically Robust Multi-Agent Reinforcement Learning with Linear Function Approximation](/202603/13/2603.09208v1-strategically-robust-multi-agent-reinforcement-learning-with-linear-function-approximation)  
+   evidence：多智能体强化学习协作中的反事实信用分配
+2. [Learning When to Cooperate Under Heterogeneous Goals](/202603/14/2603.07253v1-learning-when-to-cooperate-under-heterogeneous-goals)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：一般和马尔可夫博弈中的鲁棒均衡计算
-6. [Rethinking Gaussian Trajectory Predictors: Calibrated Uncertainty for Safe Planning](/202603/13/2603.10407v1-rethinking-gaussian-trajectory-predictors-calibrated-uncertainty-for-safe-planning)  
+   evidence：异构目标下的多智能体强化学习协作
+3. [Agentic AI-Driven UAV Network Deployment: A LLM-Enhanced Exact Potential Game Approach](/202603/14/2603.07456v1-agentic-ai-driven-uav-network-deployment-a-llm-enhanced-exact-potential-game-approach)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：轨迹预测与规划中的不确定性校准
-7. [Trajectory-Informed Memory Generation for Self-Improving Agent Systems](/202603/13/2603.10600v1-trajectory-informed-memory-generation-for-self-improving-agent-systems)  
+   evidence：无人机网络的多智能体协调
+4. [Toward Global Intent Inference for Human Motion by Inverse Reinforcement Learning](/202603/14/2603.07797v1-toward-global-intent-inference-for-human-motion-by-inverse-reinforcement-learning)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：从智能体执行轨迹中提取可操作的学习成果
-8. [STAIRS-Former: Spatio-Temporal Attention with Interleaved Recursive Structure Transformer for Offline Multi-task Multi-agent Reinforcement Learning](/202603/13/2603.11691v1-stairs-former-spatio-temporal-attention-with-interleaved-recursive-structure-transformer-for-offline-multi-task-multi-agent-reinforcement-learning)  
+   evidence：运动预测的意图推理
+5. [Reasoning Knowledge-Gap in Drone Planning via LLM-based Active Elicitation](/202603/14/2603.07824v1-reasoning-knowledge-gap-in-drone-planning-via-llm-based-active-elicitation)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：用于多智能体强化学习中多机协同的Transformer架构
+   evidence：不确定性下的无人机规划
+6. [MEMO: Memory-Augmented Model Context Optimization for Robust Multi-Turn Multi-Agent LLM Games](/202603/14/2603.09022v1-memo-memory-augmented-model-context-optimization-for-robust-multi-turn-multi-agent-llm-games)  
+   标签：评分：6.0/10、query:uav-air-combat
+   evidence：多智能体博弈的记忆增强自博弈框架
+7. [MO-Playground: Massively Parallelized Multi-Objective Reinforcement Learning for Robotics](/202603/14/2603.09237v1-mo-playground-massively-parallelized-multi-objective-reinforcement-learning-for-robotics)  
+   标签：评分：6.0/10、query:uav-air-combat
+   evidence：机器人领域并行化多目标强化学习
+8. [Actor-Accelerated Policy Dual Averaging for Reinforcement Learning in Continuous Action Spaces](/202603/14/2603.10199v1-actor-accelerated-policy-dual-averaging-for-reinforcement-learning-in-continuous-action-spaces)  
+   标签：评分：6.0/10、query:uav-air-combat
+   evidence：连续动作空间中的强化学习以实现快速决策
+9. [From Prior to Pro: Efficient Skill Mastery via Distribution Contractive RL Finetuning](/202603/14/2603.10263v1-from-prior-to-pro-efficient-skill-mastery-via-distribution-contractive-rl-finetuning)  
+   标签：评分：6.0/10、query:uav-air-combat
+   evidence：强化学习微调以掌握复杂技能
+10. [ResWM: Residual-Action World Model for Visual RL](/202603/14/2603.11110v1-reswm-residual-action-world-model-for-visual-rl)  
+   标签：评分：6.0/10、query:uav-air-combat
+   evidence：用于连续控制和残差动作的预测世界模型
+11. [Novelty Adaptation Through Hybrid Large Language Model (LLM)-Symbolic Planning and LLM-guided Reinforcement Learning](/202603/14/2603.11351v1-novelty-adaptation-through-hybrid-large-language-model-llm-symbolic-planning-and-llm-guided-reinforcement-learning)  
+   标签：评分：6.0/10、query:uav-air-combat
+   evidence：LLM引导的强化学习用于动态环境中的自主代理规划
 
 
 <div class="dpr-home-promo-card">

@@ -1,0 +1,723 @@
+Title: Agentic AI-Driven UAV Network Deployment: A LLM-Enhanced Exact Potential Game Approach
+
+URL Source: https://arxiv.org/pdf/2603.07456v1
+
+Published Time: Tue, 10 Mar 2026 01:09:27 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+> IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 1
+
+# Agentic AI–Driven UAV Network Deployment : ALLM–Enhanced Exact Potential Game Approach 
+
+Xin Tang, Qian Chen, Binhan Liao, Yaqi Zhang, Jianxin Chen, Changyuan Zhao, Junchuan Fan, Junxi Tian, Xiaohuan Li, Member, IEEE 
+
+Abstract —Unmanned Aerial Vehicular Networks (UAVNs) are envisioned to provide flexible connectivity, wide-area coverage, and low-latency services in dynamic environments. From an agentic artificial intelligence (Agentic AI) perspective, UAVNs naturally operate as multi-agent systems, where autonomous UAVs act as intelligent agents that coordinate deployment and networking decisions to achieve global performance objectives. However, the strong coupling between discrete link decisions and continuous deployment parameters makes UAVN topology optimization a mixed-integer nonconvex problem, resulting in challenges in scalability, efficiency, and solution consistency under dynamic network conditions. This paper proposes a dual spatial-scale UAVN topology optimization framework based on exact potential games (EPGs), enhanced by Agentic AI. At the large spatial scale, a log-linear learning based EPG (L3-EPG) algorithm is developed to optimize inter-UAV link configurations, enabling sparse yet connected network topologies while reducing redundant links and interference. At the small spatial scale, an approximate gradient based EPG (AG-EPG) algorithm jointly optimizes UAV deployment, transmission power allocation, and ground user (GU) association to improve network throughput and latency. To further enhance adaptability across heterogeneous scenarios, a large language model (LLM) is incorporated as a knowledge-driven decision enhancer to automatically generate utility weights according to network characteristics, alleviating reliance on manual parameter tuning. Simulation results demon-strate that the proposed framework consistently outperforms baseline methods in terms of energy consumption, end-to-end latency, and system throughput. 
+
+Index Terms —Agentic artificial intelligence (AI), unmanned aerial vehicular network, deployment optimization, large lan-guage model (LLM), intent, exact potential game. 
+
+I. I NTRODUCTION X. Tang, B. Liao, Y. Zhang, J. Chen, J. Fan, and J. Tian are with the Guangxi University Key Laboratory of Intelligent Networking and Scenario System (School of Information and Communication, GUET), Guilin, 541004, China (e-mails:tangx@mail.guet.edu.cn; guetlbh@126.com; zhangyaqi8@163.com; chenjianxin792@gmail.com; fanjunchuan@mails.guet.edu.cn). Q. Chen is with the School of Architecture and Transportation Engineering, GUET, Guilin, 541004, China (e-mail: chenqian@mails.guet.edu.cn). C. Zhao is with the College of Computing and Data Science, Nanyang Technological University, Singapore, and CNRS@CREATE, 1 Create Way, 08-01 Create Tower, Singapore 138602 (e-mail: zhao0441@e.ntu.edu.sg). Xiaohuan Li is with the Guangxi University Key Laboratory of Intelligent Networking and Scenario System (School of Information and Communication, GUET), Guilin, 541004, China, and also with National Engineering Labo-ratory for Comprehensive Transportation Big Data Application Technology (Guangxi), Nanning, 530001, China (e-mail: lxhguet@guet.edu.cn). This work was supported in part by the Guangxi Natural Science Foundation of China under Grant 2025GXNSFAA069687, in part by the National Natural Science Foundation of China under Grant U22A2054. (Corresponding author: Xiaohuan Li). 
+
+# AGENTIC artificial intelligence (Agentic AI) has re-cently emerged as a promising paradigm for building autonomous and goal-oriented intelligent systems. Unlike con-ventional data-driven AI models that focus on perception or prediction, Agentic AI emphasizes decision-making, action execution, and long-term objective optimization through in-teractions among multiple agents [1]. Such systems typically consist of autonomous agents equipped with sensing, compu-tation, and communication capabilities, enabling them to adapt their behaviors according to environmental dynamics and task requirements. Unmanned aerial vehicle networks (UAVNs) naturally serve as an important physical embodiment of Agen-tic AI in wireless communication systems [2]. Despite these advantages, enabling effective agentic intelligence in UAVNs remains highly challenging. UAVs are subject to strict energy constraints, which limit network endurance and operational continuity [3]. Moreover, air–ground communication links are vulnerable to blockage and interference, making it difficult to maintain reliable connectivity [4]. In addition, UAVNs typically operate in highly dynamic environments and must jointly optimize multiple performance metrics, such as cover-age, system throughput, energy consumption, and end-to-end latency. These factors collectively result in a highly complex and multi-objective optimization problem for UAVNs. 
+
+Challenge 1 : Bottlenecks in mixed integer non-convex mod-eling and centralized solving for UAVN topology optimiza-tion. UAVN topology optimization is typically modeled as a Mixed Integer Nonlinear Programming (MINLP) problem [5], involving discrete variables such as link connectivity and user allocation, as well as continuous variables such as UAV location and transmit power. Essentially, it is an NP-hard prob-lem, making it difficult to obtain a globally optimal solution using precise methods [6].Although convex relaxation methods [7], centralized linear solvers [8], and nonlinear programming approaches [9] can provide approximate solutions for small-scale static problems, they incur high computational and communication overhead. Moreover, their centralized nature introduces single-point failures and privacy risks, making them unsuitable for dynamic distributed UAVNs [10]. 
+
+Challenge 2: Insufficient efficiency and deployability of heuristic and learning-based methods in dynamic UAVNs. 
+
+To alleviate the complexity of centralized optimization, re-searchers have proposed heuristic methods such as genetic al-gorithms [11], particle swarm optimization [12], and simulated annealing [13]. However, these methods usually rely on global information, have high computational complexity, are prone to getting trapped in local optima, and lack convergence guar- 
+
+> arXiv:2603.07456v1 [cs.DC] 8 Mar 2026 IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 2
+
+antees [14]. Although UAVN topology optimization methods based on DRL have certain environmental adaptability [15] [16] [17], they rely on a large number of interaction samples and training computations, and the feasibility of actual network deployment is still limited [18]. 
+
+Challenge 3 : Limited global consistency and generalization ability in game theory distributed optimization. Game theory methods are widely used in UAVN optimization because they are suitable for describing distributed interactions between multiple agents [19], and have achieved certain results in problems such as spectrum allocation [20], power control [21], and user association [22]. However, most game models are difficult to optimize for global utility and are prone to getting trapped in local optima [23]. By associating individual utility changes with the overall situation function, potential games can guaranty the convergence and consistency of the game. Exact Potential Games (EPG) further ensure the existence of a pure strategy Nash equilibrium [24]. However, its adaptability and generalization ability in complex multi-scenario environ-ments are limited, and it still relies on manual parameter tuning, making network optimization difficult. This paper proposes a UAVN topology optimization method based on EPG. This method first decomposes the complex MINLP problem into a dual spatial scale optimization method of discrete links and continuous parameters. At large spa-tial scales, this paper proposes an EPG algorithm based on Log-Linear Learning (L3). This algorithm achieves a sparse configuration of network links through a probabilistic policy update mechanism, reducing redundant communication links and link interference while optimizing network connectivity. At small spatial scales, this paper proposes an approximate gradient based EPG (AG-EPG), which optimizes the en-ergy consumption, deployment, power, and user allocation of UAVNs in a distributed environment to improve system throughput and reduce latency. Both algorithms require only local information interaction among nodes to make decisions, without relying on a central control node. Furthermore, to improve the adaptability and generalization ability of these algorithms in multiple scenarios and reduce the complexity of manual parameter tuning, this paper introduces a LLM and a self-built knowledge base to automatically generate utility functions and weight coefficients. The main contributions of this paper are as follows:  
+
+> •
+
+Framework: A Agentic AI-driven low-altitude UAVN deployment model is constructed. A MINLP optimization problem is established, involving discrete decision vari-ables such as the number of communication links between UAVs and the selection of ground user (GU) access associations, and continuous decision variables such as the coordinates of the UAVs and the transmission power configuration. We employ Agentic AI to decompose high-level deployment objectives into structured sub-problems, where decision-making agents interact with the network environment and generate actions through game-based learning dynamics.  
+
+> •
+
+Problem and Solution: A dual-spatial-scale optimization strategy is proposed to solve the discrete link topol-ogy optimization and continuous parameter optimization problems respectively. At a large spatial scale, an EPG algorithm based on log-linear learning (L3-EPG) is pro-posed to effectively eliminate redundant communication links while ensuring network connectivity. At a small spa-tial scale, an approximate gradient based EPG (AG-EPG) algorithm is proposed to achieve joint optimization of UAV coordinate adjustment, differentiated transmission power allocation, and GU load balancing.  
+
+> •
+
+LLM Enhancement Solution: A dedicated domain knowledge base for UAVN topology optimization is con-structed, covering wireless communication theory, basic principles of game theory, and related optimization cases. Combining the Retrieval Enhanced Generation (RAG) framework, a Agentic AI is used to automatically retrieve relevant knowledge and generate weight coefficients in the utility function based on specific feature parameters such as node size, user distribution characteristics, and environmental occlusion degree of the current network scenario. This work improves the algorithm’s adaptability and generalization ability under different network config-urations.  
+
+> •
+
+Validation: Extensive experiments are conducted to ver-ify the performance of LLM-based knowledge retrieval, the convergence of the EPG, and topology optimization, and to demonstrate the substantial advantages of the proposed approach over baseline algorithms in terms of energy consumption, end-to-end latency, and throughput. The remainder of this paper is structured as follows. Section II reviews the related literature. Section III describes the system model. Section IV formulates the optimization problem and further decomposes it into tractable subproblems. Section V develops an EPG based optimization framework for UAVNs. Section VI introduces an LLM enhanced utility function design and weight generation method. Section VII presents the simulation results and performance analysis, followed by concluding remarks in Section VIII. II. R ELATED WORK 
+
+A. UAV network deployment optimization 
+
+The authors in [25] proposed dynamic topology organization and maintenance algorithms for autonomous UAV swarms, focusing on distributed methods to maintain network con-nectivity and robustness. The authors in [26] studied opti-mal measurement strategies for linear measurement systems and applied them to UAV network topology prediction. In [27] explored biological robustness to design reliable multi-UAVNs, proposing the bio-LINK scheme to make the network resilient to UAV node failures. LoS coverage in UAV-based THz communication networks was analyzed in [28], towards 3D visualization of wireless networks, emphasizing topology optimization in high-frequency bands to improve coverage and performance. The authors in [29] introduced formation-aware UAV network self-organization based on game-theoretic dis-tributed topology control, aiming to optimize self-organization performance in multi-hop UAVNs. However, existing studies predominantly focus on UAV navigation, communication tech-nologies, and civilian applications. The system modeling in IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 3
+
+this field often neglects the optimization of network topology specific to low-altitude environments. 
+
+B. Heuristic algorithm-based network optimization 
+
+The authors in [14] utilize bi-objective ant colony optimiza-tion to jointly minimize energy consumption and completion time in UAV-assisted systems. In [13], a hybrid heuristic algorithm is designed to optimize multi-UAV routing paths for time-dependent data collection tasks. In [30], a multi-objective optimization approach is applied to handle resource scheduling in UAV-aided device-to-device communication networks. The authors in [12] propose a hybrid enhanced particle swarm optimization technique to solve complex UAV path planning problems. In [31], an elite-driven differential evolution algo-rithm is developed to jointly optimize the deployment and flight planning of multi-UAVs.The authors in [6] address the joint optimization problem of task offloading and resource al-location in aerial-terrestrial networks. However, these methods often rely on global information, entail high computational complexity, and easily fall into local optima without conver-gence guarantees. However, these methods often face inherent limitations, including a reliance on difficult-to-obtain global information, high computational complexity, and a tendency to converge to local optima without rigorous convergence guarantees. Moreover, many applied game-theoretic models lack strict assurances for global utility, potentially resulting in suboptimal overall system performance. 
+
+C. AI-based network optimization 
+
+In [20], the author proposed a multi-agent reinforcement learning scheme to optimize relay selection and power allo-cation, enhancing the robustness and anti-jamming capability of UAV swarm communication networks. In [18], the author investigated the joint optimization of trajectory planning and network formation topology by integrating Bayesian opti-mization with DRL, thereby improving network connectivity and transmission efficiency. In [23], the author proposed an energy-efficient fast routing protocol for FANETs based on reinforcement learning, achieving a better trade-off between network latency and energy consumption. The authors in [32] investigated the use of LLMs for global resource optimization in space–air–ground integrated networks by jointly optimizing user association and UAV coordinates. In [33] and [34], the authors proposed an interactive generative AI agent framework for satellite networks by integrating LLMs with retrieval-augmented generation and a mixture-of-experts transmission mechanism. However, the practical deployment of such AI methods, particularly DRL, faces significant hurdles. These include their heavy reliance on data-intensive and computa-tionally expensive training with safe environmental interaction, poor cross-scenario generalization, and a high dependency on expert tuning, which collectively increase optimization complexity and hinder real-world application. III. S YSTEM MODEL 
+
+The system model is illustrated in Fig. 1. This scenario ad-dresses the requirements of urban emergency communication applications, utilizing multiple UAVs to form an aerial commu-nication platform that provides wireless access services to GU equipment. A self-organizing backbone network is formed by the UAVs via A2A to enable data forwarding and cooperative communication, while access services for GUs are established via A2G. Simultaneously, a LLM is introduced, leveraging multi-source knowledge base collaborative RAG technology, to assist UAV network architects in generating the utility functions and weight coefficients required for EPG models, thereby realizing scenario-adaptive weight configuration. The design objective of this system model is to maximize network throughput while minimizing energy consumption and network latency, by optimizing UAV coordinates, net-work topology, transmit power, and the number of served GU devices, under the premise of guaranteeing network connectivity. The total network operation time T is divided into several discrete time slots T = {1, 2, . . . , t, . . . , T },during which the UAV coordinates, link states, and channel conditions remain constant. The network consists of N UAV nodes and M GUs. The set of UAV nodes is denoted as 
+
+N = {1, 2, . . . , i, j, . . . , N }, where i̸ = j, and the set of GU nodes is M = {1, 2, . . . , m, . . . , M }. The coordinates of UAV i at time t are qi(t) = ( xi(t), y i(t), z i(t)) , where 
+
+xi(t) and yi(t) are the horizontal coordinates, and zi(t) is the flight altitude. To ensure flight safety, the flight altitude of the UAVs is determined based on low-altitude airspace management regulations, terrain topography, and task require-ments [35], such that zmin ≤ zi(t) ≤ zmax , ∀i ∈ N , where 
+
+zmin and zmax represent the minimum and maximum flight altitudes, respectively. The coordinates of GU m is denoted as 
+
+qm(t) = ( xm(t), y m(t), 0) , assuming that the moving speed of GUs is typically much lower than that of the UAVs.   
+
+> Fig. 1. Agentic AI–driven UAV network deployment model. The model presents an intent-driven UAV network deployment framework. A Agentic AI system translates high-level deployment intents into structured parameters for an EPG. Each UAV optimizes its coordinates and transmit power in a distributed manner, leading to dynamic topology evolution. The network converges to a stable Nash equilibrium aligned with the specified deployment intent. IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 4
+
+A. Topology Model 
+
+The topology of the UAV network is modeled as an undi-rected graph G(t) = (N, E(t)) , where E(t) is the set of communication links at time t. To ensure the cooperative communication capability and information transmission reach-ability of the network, G(t) is required to remain connected at any given time, implying that there exists at least one communication path between any two UAV nodes in the network. The network topology is modeled as a symmetric adjacency matrix A(t) = [ aij (t)] N ×N , with elements defined as follows: 
+
+aij (t) = 
+
+
+
+1, if a communication link exists between UAV i and j
+
+0, otherwise 
+
+. (1) Since the network is an undirected graph, the adjacency matrix satisfies symmetry: 
+
+aij (t) = aji (t), aii (t) = 0 . (2) The maximum communication radius of a UAV is Rc,which is jointly determined by the UAV’s transmit power, reception sensitivity, antenna gain, and channel propagation characteristics. In practical systems, to ensure link quality and communication reliability, constraints on the Signal-to-Noise Ratio (SNR) or Signal-to-Interference-plus-Noise Ratio (SINR) thresholds are typically considered. The Euclidean distance between UAV i and j at time t is expressed as follows: 
+
+dij (t) = || qi(t) − qj (t)|| 
+
+=
+
+q
+
+(xi(t)−xj (t)) 2 +( yi(t)−yj (t)) 2 +( zi(t)−zj (t)) 2.
+
+(3) This paper defines the Line-of-Sight (LoS) link indicator 
+
+ζij (t) ∈ { 0, 1} as follows: 
+
+ζij (t) = 
+
+
+
+1, if a Line-of-Sight (LoS) link exists between UAVs i and j,
+
+0, if the link between UAVs i and 
+
+j is Non-Line-of-Sight (NLoS). (4) The determination of an LoS link is based on the altitudes of the UAVs, their horizontal distance, and the distribution of obstacles in the environment. Specifically, ζij (t) = 1 when the direct path between UAVs i and j is not obstructed by buildings, terrain, or other obstacles; otherwise, ζij (t) = 0 .Network connectivity can be determined via the algebraic properties of the graph’s Laplacian matrix L(t) = ∇(t) −
+
+A(t), where ∇(t) = diag (δ1, δ 2, . . . , δ N ) is the degree matrix, and δi = P 
+
+> j∈N
+
+aij (t) is the degree of node i. A necessary and sufficient condition for graph connectivity is that the second smallest eigenvalue (algebraic connectivity) of the Laplacian matrix is greater than zero. 
+
+B. Communication Model 
+
+The communication links in the UAV network are classified into two categories: A2A and A2G. A2A typically possess Line-of-Sight (LoS) conditions but are still subject to path loss, small-scale fading, and Doppler effects. A2G have more complex channel conditions due to the influence of building blockage, terrain undulation, and ground reflection. 
+
+1) A2A Communication 
+
+The path loss model adopts the equivalent free-space prop-agation model form: 
+
+LA2A (dij (t)) = 20 log 10 
+
+ 4πf cdij (t)3 × 10 8
+
+
+
++ ξLoS , (5) where fc denotes the carrier frequency, and ξLoS represents the additional loss for LoS links, including atmospheric absorption and weather effects. The channel power gain from UAV i to UAV j is hij = Gtx Grx · 10 −P L A2A (dij (t)) /10 , where Gtx and 
+
+Grx are the gains of the transmitting and receiving antennas, respectively. P L A2A is the path loss of the A2A. When UAV j receives a signal, it suffers from interfer-ence from other simultaneously transmitting UAVs k (k̸ =
+
+i, k ∈ N ). The total interference-plus-noise power is Ij (t) = P  
+
+> k̸=i,k ∈N
+
+pk(t)hkj +σ2, where σ2 = κB T0B is the power of additive white Gaussian noise, κB is the Boltzmann constant, 
+
+T0 is the absolute temperature, and B is the system bandwidth. The SINR of the link from UAV i to j is expressed as follows: 
+
+γij = P rx ij 
+
+P  
+
+> k̸=i,k ∈N
+
+pk(t)hkj + σ2 , (6) where P rx ij = pi(t)hij is the signal power received by UAV j
+
+from UAV i, and pi is the transmit power of UAV i.Based on the Shannon formula, the instantaneous data transmission rate of the UAV link (i, j ) is expressed as follows: 
+
+rij (t) = B log 2(1 + γij ). (7) 
+
+2) A2G Communication 
+
+According to ITU-R P.1410 recommendation [36], the LoS probability PLoS of the A2G is related to the elevation angle 
+
+θ:
+
+PLoS (θ) = 11 + ϑ exp( −β[θ − ϑ]) , (8) where θ = arctan 
+
+ zi(t)
+
+√(xi(t)−xm(t)) 2+( yi(t)−ym(t)) 2
+
+
+
+is the angle between the GU’s horizontal plane and the A2G, and 
+
+ϑ, β are environmental parameters. The path loss of the A2G distinguishes between LoS and NLoS (Non-Line-of-Sight) cases: 
+
+LA2G (dim (t)) = 
+
+
+
+20 log 10 
+
+ 4πf cdim (t)3×10 8
+
+
+
++ ξLoS , LoS 
+
+20 log 10 
+
+ 4πf cdim (t)3×10 8
+
+
+
++ ξNLoS , NLoS ,
+
+(9) where dim (t) = |qi(t) − qm(t)| represents the distance between UAV i and user m, and ξNLoS is the additional NLoS loss. Considering interference caused by multiple UAVs trans-mitting simultaneously, the SINR for user m is: 
+
+γim = P rx im 
+
+P  
+
+> k̸=i,k ∈N
+
+pk(t)hkm + σ2 , (10) IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 5
+
+where hkm is the channel power gain from UAV k to user m,denoted as hkm = Gtx Grx · 10 −P L A2G (dkm (t)) /10 · | ϑ|2. Here, 
+
+ϑ is the small-scale fading coefficient, determined by PLoS 
+
+(Rician fading for LoS, Rayleigh fading for NLoS). P L A2G is the path loss of the A2G. P rx im = pi(t)him is the signal power received by user m from UAV i.The data transmission rate of the A2G is: 
+
+rim (t) = B log 2(1 + γim ). (11) 
+
+3) Throughput 
+
+The total throughput of A2A is: 
+
+T h A2A = X
+
+> i∈N
+
+X
+
+> j>i,j ∈N
+
+aij (t)rij (t). (12) The total throughput of A2G is: 
+
+T h A2G = X
+
+> i∈N
+
+X
+
+> m∈M
+
+cim (t)rim (t), (13) where cim (t) is the coverage indicator variable; if user m
+
+communicates with UAV i, then cim (t) = 1, otherwise 
+
+cim (t) = 0 . The throughput of UAV i at time t is T h i(t),and the network throughput is the sum of A2A and A2G throughputs: 
+
+T h total = X
+
+> i∈N
+
+T h i(t) = T h A2A + T h A2G . (14) 
+
+C. Energy Consumption Model 
+
+The total energy consumption of a UAV comprises commu-nication energy consumption and flight energy consumption. These are critical factors constraining network performance and task duration. 
+
+1) Communication Energy 
+
+The communication energy consumption of UAV i includes transmission energy and circuit energy: 
+
+Ecom ,i (t) = pi(t)tcom + Pcirc (t)tcom , (15) where pi(t) is the transmit power, and tcom represents the communication duration, with length ∆t. Pcirc (t) is the radio frequency circuit power, including the power consumption of amplifiers, mixers, filters, ADCs (Analog to Digital Con-verter), etc. The communication energy of UAV i simplifies to: 
+
+Ecomm ,i (t) = ( pi(t) + Pcirc (t))∆ t. (16) 
+
+2) Flight Energy 
+
+UAV flight energy consumption consists of several com-ponents: blade profile power, induced power, parasite power, and acceleration energy. The blade profile power is used to overcome air resistance during rotor blade rotation: Pblade (t) =  
+
+> δ
+> 8
+
+ρair Sκ 3
+
+> tip
+
+, where δ is the profile drag coefficient, ρair is the air density, S is the rotor disk area, κtip is the blade tip speed. Induced power is used to generate lift to support the UAV weight: Pinduced (t) = (1+ κb)W 3/2 
+
+> √2ρair S
+
+, where W is the UAV weight (frame, battery, payload), and κb is the induced power correction factor. This power is maximum at hover and decreases slightly with increased flight speed. Parasite power accounts for air resistance on the fuselage during forward flight: Pparasite (t) = 12 df vi(t)3, where df is the fuselage drag coefficient, and vi(t) is the flight speed of UAV i.The total flight power of UAV i during flight is Pflight ,i (t) = 
+
+Pblade (t)+ Pinduced (t)+ Pparasite (t). Within ∆t, the flight energy consumption is Eflight ,i (t) = Pflight ,i ∆t. When the UAV accel-erates or decelerates, additional energy is required to change its kinetic energy: Eaccel ,i (t) = 12 (|vi(t+∆ t)|2 −| vi(t)|2)W/g ,where g is the gravitational acceleration. The total flight energy is: 
+
+Eflight ,i (t) = Pflight ,i ∆t + Eaccel ,i (t). (17) The energy consumption of UAV i at time t is Ei(t), and the energy consumption of all UAVs in the network is: 
+
+Etotal = X
+
+> i∈N
+
+Ei(t) = X
+
+> i∈N
+
+Ecomm ,i (t) + Eflight ,i . (18) 
+
+D. Latency Model 
+
+Transmission latency is the time required to send a packet over the link, depending on the packet size and transmission rate. 
+
+Ttrans ,ij (t) = Ldata 
+
+rij (t) , (19) where Ldata is the packet size. Propagation latency is the time required for the signal to travel through space: 
+
+Tprop ,ij (t) = dij (t)3 × 10 8 . (20) The average latency for UAV i is Ti(t), and the network latency is the sum of the latencies for all links: 
+
+Ttotal = X
+
+> i∈N
+
+Ti(t)= X
+
+> i∈N
+
+X
+
+> j>i,j ∈N
+
+aij (t) ( Ttrans ,ij (t) + Tprop ,ij (t)) + X
+
+> i∈N
+
+X
+
+> m∈M
+
+cim (t) ( Ttrans ,ij (t) + Tprop ,ij (t)) .
+
+(21) 
+
+E. Mobility Model 
+
+The mobility characteristics of UAVs directly affect network topology dynamics and link stability. Under the discrete time slot model, the UAV coordinates update equation is: 
+
+qi(t + 1) = qi(t) + vi(t)∆ t. (22) Expanding this vector equation into three coordinate com-ponents: 
+
+xi(t + 1) = xi(t) + vxi (t)∆ tyi(t + 1) = yi(t) + vyi (t)∆ tzi(t + 1) = zi(t) + vzi (t)∆ t. (23) The UAV velocity is controlled by acceleration: 
+
+vi(t + 1) = vi(t) + ˙ vi(t)∆ t, (24) where ˙vi(t) is the acceleration vector. IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 6 
+
+> Fig. 2. The decomposition process of the Agentic AI-driven UAVN deployment problem. Agentic AI is capable of decoupling high-level tasks, generate sub-problems, plan actions, and interact with other tools or environments with human [1]. First, the network deployment problem is divided into two subproblems. Then, these subproblems are solved using L3-EPG and AG-EPG, respectively. Finally, the RAG-LLM module is used to generate adaptive weight coefficients for the utility function through multi-source knowledge retrieval and logical verification, aiming to obtain a network deployment scheme and parameters that meet the actual needs of the network.
+
+IV. P ROBLEM FORMULATION 
+
+The optimization objectives for the UAV network are to minimize the number of communication links between UAVs, maximize network throughput, and minimize UAV energy consumption and network latency: 
+
+P : min 
+
+> A,P,Q,C
+
+ X
+
+> i∈N
+
+X
+
+> j>i,j ∈N
+
+aij (t)
+
+− ΥT h total + μE total + τ Ttotal 
+
+ (25) s.t. X
+
+> i∈N
+
+cim (t) ≥ 1, ∀m ∈ M , (25a) 
+
+dim (t) ≤ Rc, if cim (t) = 1 , ∀i ∈ N , m ∈ M , (25b) 
+
+pmin ≤ pi(t) ≤ pmax , ∀i ∈ N , (25c) 
+
+qi(t) ∈ R3, ∀i ∈ N , (25d) 
+
+λ2(L(t)) > 0, (25e) 
+
+Ei(t) ≤ Emax  
+
+> i
+
+, (25f) where A is the adjacency matrix, P is the power allocation vector, Q is the coordinates vector, and C is the user as-sociation matrix. Υ, μ, and τ are weighting factors. Rc is the coverage radius, and pmin and pmax are the minimum and maximum transmit powers, respectively. R3 denotes the 3D movement region of the UAVs. (25a) represents the user coverage constraint, ensuring that every GU m is covered by at least one UAV i providing communication service. (25b) represents the communication distance constraint; when user 
+
+m establishes a connection with UAV i, the Euclidean distance 
+
+dim (t) must not exceed the maximum communication radius 
+
+Rc. (25c) represents the UAV transmit power constraint, where 
+
+pmin and pmax denote the minimum and maximum allowable transmit powers, respectively. (25d) specifies the spatial coor-dinate constraints for the UAV, requiring that the coordinates 
+
+qi(t) of UAV i must be located within the permissible flight re-gion R3. (25e) is the network connectivity constraint, ensuring that the network graph G(t) remains connected at all times by requiring the second smallest eigenvalue λ2 of the Laplacian matrix L(t) to be greater than zero. (25f) indicates the upper bound of energy consumption for UAV i, where Emax  
+
+> i
+
+is the initial battery energy of UAV i. Since the multi-objective optimization problem of UAV network topology involves both discrete and continuous variables and contains non-convex constraints, P is a MINLP problem. It belongs to the class of NP-hard problems, with variables coupled to each other [6]. The strategy space of its discrete variables grows rapidly with the scale of the UAV network. Directly solving it jointly would lead to a drastic increase in computational complexity. Agentic AI is capable of decoupling high-level tasks, gen-erate sub-problems, plan actions, and interact with other tools or environments with human [1]. The Fig. 2 depicts an agen-tic AI–driven network deployment framework, where UAV network deployment is formulated as a high-level decision task, decomposed into coupled discrete and continuous sub-problems (i.e. P 1 and P 2), and solved through game-theoretic agents interacting with the environment, with LLMs serving as knowledge-guided utility designers. Since the adjacency matrix aij (t) consists of discrete variables, P 1 represents a discrete variable optimization. This paper describes P 1
+
+as minimizing the number of communication links between UAVs: 
+
+P 1 : min 
+
+> A
+
+X
+
+> i∈N
+
+X
+
+> j>i,j ∈N
+
+aij (t). (26) Furthermore, since network throughput T h total , UAV energy consumption Etotal , and network latency Ttotal are continuous variables, P 2 is a continuous variable optimization. P 2 is formulated to minimize the number of communication links IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 7
+
+between UAVs: 
+
+P 2 : max 
+
+> P,Q,C
+
+X
+
+> i∈N
+
+T h i(t) − X
+
+> i∈N
+
+Ei(t) − X
+
+> i∈N
+
+Ti(t)
+
+!
+
+. (27) V. UAV N ETWORK DEPLOYMENT BASED ON EPG 
+
+P 1 is modeled as an EPG model F1, which is utilized to minimize communication links between UAVs and optimize discrete variables. P 2 is modeled as an EPG model F2,which is utilized to optimize global throughput, UAV energy consumption, and network latency by optimizing continuous variables. Utility functions and potential functions satisfying the conditions of EPGs are designed for F1 and F2. This ensures that the change in the utility function caused by a unilateral strategy change of any UAV is consistent with the change in the potential function. The game achieves a global optimal solution through the Nash Equilibrium, ensuring the convergence of the distributed optimization. 
+
+Algorithm 1 L3-EPG 
+
+Input: N , Rc, Tmax 
+
+Output: A∗ 
+
+> 1:
+
+Generate initial coordinates based on K-Means, construct 
+
+G(0) and A(0)  
+
+> 2:
+
+Initialize: aij (0) ← 1, ∀i ∈ N ; t ← 0 
+
+> 3:
+
+while ∥ P aij (t) − P aij (t − 1) ∥ ≥ 1 and t < T max do  
+
+> 4:
+
+for each i ∈ N do  
+
+> 5:
+
+Calculate ρi1(Γ i1, Γ−i1) 
+
+> 6:
+
+if aij (t) = 1 & ζij (t) = 1 then  
+
+> 7:
+
+Update Γi1(t + 1) with probability 
+
+exp[ ρi1(Γ i1, Γ−i1)] / P exp[ ρi1] 
+
+> 8:
+
+aij (t + 1) ← 0 
+
+> 9:
+
+end if  
+
+> 10:
+
+end for  
+
+> 11:
+
+Construct candidate adjacency matrix A′(t + 1)  
+
+> 12:
+
+if λ2(L(t)) > 0, isConnected (A′(t + 1)) then  
+
+> 13:
+
+A(t + 1) ← A′(t + 1)  
+
+> 14:
+
+else  
+
+> 15:
+
+A(t + 1) ← A(t) 
+
+> 16:
+
+end if  
+
+> 17:
+
+t ← t + 1  
+
+> 18:
+
+end while  
+
+> 19:
+
+return A∗ ← A(t)
+
+A. Log-Linear Learning based EPG 
+
+L3-EPG is utilized to optimize the number of communi-cation links between UAVs in the network,in Algorithm 1. The L3 method is based on reinforcement learning principles and adopts a probabilistic strategy selection mechanism. In this mechanism, each UAV acts as an independent participant and autonomously decides whether to maintain or disconnect a communication link based on local information encoded in the adjacency matrix. This decision process is guided by log-linear learning rules, balancing exploration and exploitation by allocating action probabilities proportional to utility. This mechanism ensures that UAVs adaptively optimize their strate-gies during the iteration process, minimizing redundant links while maintaining necessary network connectivity.The EPG model is defined as F1 = {N, {Γi1}i∈N , {ρi1}i∈N }, where 
+
+ρi1 represents the utility of UAV i. Γ1 
+
+> i
+
+= {aij (t), i, j ∈ N } 
+
+represents the strategy space of the UAV, meaning the strategy of each UAV is to adjust the communication link aij with other UAVs. Each UAV enables the UAV network to achieve an optimal connection topology by adjusting communication links be-tween UAVs and maximizing its local utility. A utility function is designed to reflect the reduction of redundant communi-cation links between UAVs while simultaneously lowering interference and communication energy consumption. The utility function for UAV i is defined as: 
+
+ρi1(Γ i1, Γ−i1) = −(η1
+
+X
+
+> j∈N
+
+aij (t)+ 
+
+η2Ii(t) + η3Ecomm,i (t)) ,
+
+(28) where Γ−i1 represents the strategies of other UAVs, P 
+
+> j∈N
+
+aij (t) is the number of links connected to UAV i, and 
+
+η1, η 2, η 3 are weight coefficients. The potential function can directly represent the changes in the utility functions of the game participants, ensuring that the utility of any participant is consistent with the global objective. To align individual decisions with the global optimal network topology, the global potential function is defined as: 
+
+Φ1(Γ) = X
+
+> i∈N
+
+ρi1(Γ i1, Γ−i1). (29) Furthermore, based on the iterative update mechanism [37] of BRD, each UAV calculates and selects the best action that enhances its local utility after receiving strategy information from other UAVs: 
+
+Γi1(t + 1)=argmax ρi1(Γ i1, Γ−i1(t)) . (30) L3-EPG addresses the link selection problem involving dis-crete parameters, and its optimization process focuses primar-ily on global optimality at the link topology level. Although occlusion factors have been considered in the utility function and links less affected by occlusion are prioritized, individual links may still be partially obstructed by buildings under certain initial UAV coordinates. This issue will be resolved in the subsequent continuous parameter optimization phase of the algorithm V-B. 
+
+B. Approximate Gradient based EPG algorithm 
+
+AG-EPG enables each UAV to iteratively optimize its de-cision space via gradient-based best responses and historical action results, identifying optimal actions consistent with network objectives derived from the strategies of other UAVs. This method includes a random exploration process wherein UAVs utilize updated condition evaluation strategies through an ACK broadcast mechanism, ensuring necessary real-time data sharing. The AG-EPG algorithm performs continuous parameter optimization on the basis of the optimization com-pleted by the L3-EPG algorithm. Unlike BRD, which selects IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 8       
+
+> Fig. 3. Framework of RAG-based Large Language Model assisted UAV network optimization. The framework consists of four modules: 1 ⃝Knowledge Vector Database Module, which performs text segmentation and vector embedding on the pre-constructed knowledge base and literature to establish a retrievable database; 2⃝Knowledge Retrieval Module, which receives the network manager’s intent and retrieves the most relevant knowledge fragments via cosine similarity calculation; 3⃝Result Generation Module, which feeds the retrieved domain knowledge into the LLM as contextual prompts; and 4⃝Iterative Refinement Module, where the LLM generates initial utility functions and weighting coefficients. The manager provides feedback for the LLM to refine the results by integrating knowledge base information until the generated parameters satisfy the specific network requirements.
+
+the optimal action solely based on the current strategies of other participants, the proposed AG-EPG algorithm combines approximate gradient information with historical decision re-sults for best response calculation and introduces a random ex-ploration mechanism to avoid falling into local optima, thereby enhancing the algorithm’s global search capability. The EPG model is defined as F2 = {N, {Γi2}i∈N , {ρi2}i∈N }, where 
+
+Γi2 = {qi(t), p i(t), ci(t)} represents the strategy space of the UAVs. The strategy of each UAV involves adjusting its coordinates qi(t), transmission power pi(t), and the GU equip-ment ci(t)= {cim (t), m ∈M} with which it communicates. The utility function for UAV i is defined as: 
+
+ρi2(Γ i2, Γ−i2) = ψ1T h i(t)– ψ2Ei(t)– ψ3Ti(t) (31) where Γ−i2 represents the strategies of other UAVs, and 
+
+ψ1, ψ 2, ψ 3 are weight coefficients. All participants aim to maximize their own utility, i.e., maxρ i2(Γ i2, Γ−i2).Since the utility function encourages UAVs to improve global throughput, UAVs will adjust their flight altitude to reduce the communication distance to GUs, provided that UAV links are not altered. Therefore, fine-tuning of the UAVs’ 3D coordinates is required to ensure comprehensive coverage of GUs by the UAVs. The global potential function is defined as: 
+
+Φ2(Γ) = X
+
+> i∈N
+
+ρi2 (Γ i2, Γ−i2) . (32) Furthermore, each UAV updates its link strategy [38] ac-cording to the probability update mechanism of L3: 
+
+Γi2(t + 1)=argmax ρi2(Γ i2, Γ−i2(t)) . (33) VI. LLM-E NHANCED EPG FOR FUNCTION AND 
+
+PARAMETERS GENERATING 
+
+A. Knowledge Base Construction 
+
+In this paper, the knowledge system of the pre-constructed knowledge base is extended by integrating an external knowl-edge base, such as academic papers related to UAV resource optimization from IEEE Xplore. The final knowledge base consists of the pre-constructed knowledge base and external academic papers. To achieve efficient semantic retrieval, these knowledge bases in raw text format must be converted into machine-understandable vector representations. Therefore, a framework for a multi-source knowledge base collaborative RAG-assisted LLM for constructing optimization problems is proposed, as shown in Fig. 3. The construction of a knowledge base requires transforming inputs into semantic information to facilitate subsequent retrieval and generation processes. Specifically, for pre-constructed knowledge base documents or academic texts denoted as U from various sources, an equidistant segmentation method is employed to partition the text into a set of knowledge blocks U = {u1, . . . , u o, . . . , u O }.Consequently, the vector representation of a knowledge block 
+
+uo ∈ U is given by: 
+
+E(uo) = Embed (uo). (34) Here, E(·) denotes the process of representing a knowledge block as a vector utilizing the text embedding model Embed (·).Possessing robust representation capabilities, the text embed-ding model can encode natural language into vector formats processable by neural networks, thereby playing a pivotal role in realizing human-machine interaction. In this paper, the text-embedding-ada-002 model is utilized as the text embedding model [39]. Subsequently, the vector representation E(uo)
+
+of the block is stored in a vector database. The knowledge IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 9
+
+vectors of all texts collectively constitute the knowledge vector database, facilitating the subsequent RAG process. This paper employs RAG for document retrieval and gen-eration. The RAG process involves retrieving relevant domain knowledge from the constructed knowledge vector database to support the LLM in generating the mathematical models required by the UAV network topology constructor. The RAG process acquires knowledge by inputting the construction re-quirement q, and subsequently utilizes the retrieved knowledge as a prompt to assist the LLM in generating the modeling solution. The RAG framework comprises a retrieval module and a generation module, which are detailed as follows: 
+
+B. Retrieval Knowledge Base 
+
+The retrieval model Uo(uTOP −K |ϱ) is based on a dual-encoder architecture for semantic retrieval, meaning the se-mantic encoding of the construction requirement ϱ and the semantic encoding of the knowledge chunks U are used to retrieve the most relevant knowledge chunks according to the construction requirement ϱ to support mathematical modeling. The retrieval model is expressed as: 
+
+Uo(uTOP −K |ϱ) = argmax 
+
+> K
+
+(CS ( E(uo), E(ϱ))) , o ∈ O, (35) where Uo(uTOP −K |ϱ) denotes the truncation of the original probability distribution using the top-K technique, i.e., select-ing the top K most relevant knowledge chunks based on the construction requirement. Eϱ is the vector representation of the construction requirement, and CS (Euo , Eϱ) represents the cosine similarity between the construction requirement and the knowledge chunk uo.Cosine similarity is utilized to measure the semantic sim-ilarity between two vectors. The semantic similarity between vector Euo and vector Eϱ is expressed as: 
+
+CS ( E(uo), E(ϱ)) = 
+
+POo=l (E(ϱ)[ ℓ]×E(uo)[ ℓ]) 
+
+qPLℓ=l (E(ϱ)[ ℓ]) 2
+
+qPOo=l (E(uo)[ ℓ]) 2
+
+,
+
+(36) where ℓ represents the vector index and L represents the length of the vector. From this, the semantic similarity between the construction requirement ϱ and the knowledge chunk uo can be obtained. 
+
+C. Result Generation 
+
+In this paper, retrieved knowledge chunks are directly used as prompts input to the generation model. The function of the generation module is to generate a correct response based on the given construction requirement ϱ and the corresponding retrieved knowledge uTOP −K . The generation model UΘ(Ξ |
+
+ϱ, u TOP −K ) is expressed as follows: 
+
+UΘ(S | ϱ, u TOP −K ) = 
+
+> L
+
+Y
+
+> I
+
+pθ (SI | ϱ, u TOP −K , S1 :I−1 ), (37) where S represents the generated response sequence of length 
+
+L, and the output of each token SI depends on the preceding 
+
+I − 1 tokens S1 :I−1 , the construction requirement ϱ, and the retrieved knowledge chunk uTOP −K .The generation module is serviced by any LLM, such as ChatGPT [40], Grok [41], or DeepSeek [42]. In this paper, a pre-trained GPT is employed to implement the model UΘ(S |
+
+ϱ, u TOP −K ), utilizing retrieved knowledge and construction requirements as input prompts to generate the utility functions and their weight coefficients for the EPG. As shown in Fig. 3, the generation of weight coefficients employs a human-machine collaborative interaction method. First, the network manager inputs scenario parameters, in-cluding communication area range, number of UAV nodes and 3D coordinates, GU equipment distribution, communica-tion radius, average communication interference power level, etc., and defines the optimization objectives. Subsequently, the LLM generates initial utility functions and their weight coefficients based on the self-built knowledge base. Next, the LLM confirms with the network manager whether the generated utility functions meet actual requirements. VII. E XPERIMENTAL RESULTS AND ANALYSIS 
+
+The experiment constructs a low-altitude communication network scenario comprising 10 UAVs and 20 users, where users are uniformly and randomly distributed within the area. The LoS probability, denoted as PLoS (θ), for the A2G adopts the elevation-angle-dependent model from ITU-R P.1410 [36]. The environmental parameters are set to α = 9 .6 and β =0.28 . The system bandwidth is B = 2 MHz, the path loss exponent is n0 = 2 .5, the noise power spectral density is 
+
+N0 = −174 dBm/Hz, and the antenna gains are Gt, G r = 3 
+
+dBi. Other simulation parameters are listed in Table I.                                      
+
+> TABLE I SIMULATION PARAMETERS
+> Symbol Meaning Value
+> NNumber of UAVs 10
+> MNumber of GUs 20
+> R3Communication area range 10 km ×10 km
+> [zmin , z max ]UAV altitude range [100 m,300 m]
+> RcMaximum communication radius 4000 m
+> BSystem bandwidth 2MHz
+> pmax Maximum transmit power 2.0W
+> pmin Minimum transmit power 0.5W
+> n0Path loss exponent 2.5
+> N0Noise power spectral density −174 dBm/Hz
+> Gt, G rAntenna gain 3dBi
+
+To validate the effectiveness of the proposed method, the algorithm is compared with the following four benchmark parameter optimization algorithms:  
+
+> •
+
+EPG based on Best Response Dynamics (BRD-EPG): 
+
+BRD-EPG iteratively updates UAV coordinates, transmit power, and user association via gradient descent, basing decisions on the maximization of each UAV’s local utility [43].  
+
+> •
+
+Non-Cooperative Game Solver based on BRD (BRD-NCG): BRD-NCG utilizes BRD to iteratively update UAV strategies to reach a Nash Equilibrium, where strat-egy updates depend solely on the local utility function of each individual UAV.  
+
+> •
+
+Evolutionary Game (ETG): This approach employs Replicator Dynamics [44] to model the evolutionary IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 10 
+
+process of strategies within a population. ETG adjusts the strategy probability distribution in an online manner.  
+
+> •
+
+Genetic Algorithm (GA): GA utilizes crossover and mu-tation mechanisms to obtain parameter convergence es-timates without considering distributed game constraints [11].     
+
+> Fig. 4. Retrieval precision under different knowledge block sizes.
+> (a) L3-EPG (b) AG-EPG
+> (c) L3-EPG (d) AG-EPG Fig. 5. Verification of convergence and global consistency of algorithms.
+
+A. Analysis of LLM Knowledge Retrieval 
+
+As shown in Fig. 4, the knowledge block size and the value of the retrieval count K significantly influence retrieval precision. When the block size is small and K is low, the over-all precision is relatively poor. This is primarily because the volume of effective information returned during the retrieval stage is insufficient, leading to a lack of adequate grounding for the generation stage and consequently degrading retrieval precision. As the block size increases and K is moderately raised, the retrieved results can provide more complete context support, thereby improving precision. However, when the block size continues to increase or K becomes excessively high, a decline in precision is observed. The main reason is that the proportion of irrelevant or weakly relevant information in the retrieved content rises. With longer input texts, the LLM is required to filter key conditions and core clues from a larger scope, which increases the susceptibility to issues such as unfocused key point extraction and insufficient utilization of key constraints, ultimately reducing precision. Therefore, it is evident that larger block sizes and K values are not necessarily better; instead, a balance must be struck between information coverage and redundancy control. Considering the requirements for both retrieval precision and the control of retrieval text scale, this paper adopts parameter settings that achieve peak precision while avoiding excessive redundancy, specifically setting the block size to 4, and K to 3. 
+
+B. Convergence of EPG 
+
+Fig. 5(a) and Fig. 5(b) demonstrates the correspondence between changes in local utility and changes in the potential function, quantified using the correlation coefficient and the coefficient of determination ( R2). Experimental results indi-cate that the trends in the correlation coefficient and R2 for both L3-EPG and AG-EPG are consistent and close. Fig. 5(c) and Fig. 5(d) further presents the convergence trends of 10 UAVs during the iterative process. It can be observed that although the curves for L3-EPG and AG-EPG exhibit certain fluctuations in the early stages of iteration, their directions of change are highly consistent, characterized by a gradual rise from the initial stage to a final steady state. This convergence pattern, where individual trends are consistent and ultimately stable, indicates that the strategy updates of the algorithm not only enable individual UAVs to achieve improvements but also ensure that the update directions of different UAVs do not conflict with each other, demonstrating a feature of synergistic advancement in the overall iteration. Consequently, these results demonstrate that the changes in local utility brought about by unilateral updates remain highly consistent with the changes in the potential function, thereby avoiding the oscillatory situations common in distributed updates and verifying the stable convergence capability of the proposed method. 
+
+C. Topology Optimization 
+
+Fig. 6 illustrates the topology evolution process during discrete link optimization. The initial topology exhibits dense links with numerous redundant connections. As shown in Fig. 6(a) and Fig. 6(b), as the L3-EPG iteration proceeds, redundant links are progressively eliminated under the premise of satisfying connectivity constraints, resulting in a significant reduction in the number of links. This result aligns with the optimization objective of the discrete stage: to prioritize the retention of critical links while reducing unnecessary ones under the condition of guaranteeing network connectivity, thereby creating conditions for minimizing interference and energy consumption. Fig. 6(c) displays the dynamically ad-justed topology after a change in GU coordinates (at time IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 11         
+
+> (a) Time slot 0 (fully connected) (b) Time slot t(c) Time slot t+ 32
+> Fig. 6. Topology optimization process.
+> (a) 3D topology (b) Node altitude Fig. 7. Topology of UAV network.
+
+slot t + 32 ). It can be observed that the UAV coordinates have undergone adaptive adjustments, ensuring that all links successfully bypass or fly over obstacles. Fig. 7(a) visualizes the 3D structure of the network topol-ogy. Simultaneously, as observed in Fig. 7(b), which displays the flight altitudes of network nodes, the flight altitudes of certain UAVs are significantly higher than the initial altitude baseline. Their coordinates correspond to adjacent high-rise buildings, indicating that the continuous stage provides more adequate LoS conditions for critical connections by increasing local altitudes, thereby reducing the occurrence of obstructed links. Meanwhile, the altitudes of the remaining UAVs mostly remain near the initial altitude, with slight descents to re-duce network communication distances, which is conducive to lowering communication latency. These results reflect the complementarity between the L3-EPG and AG-EPG methods. 
+
+D. Network Performance 
+
+Fig. 8 presents a comparison of energy consumption, la-tency, and network throughput among different algorithms under varying numbers of UAVs. AG-EPG achieves the highest throughput while maintaining lower total energy consumption and total latency across different UAV quantities. As the number of UAVs increases, the total energy consumption of all algorithms shows an upward trend, as shown in Fig. 8(a). Similarly, the total latency of all algorithms exhibits a slight upward trend with the increase in UAVs, as shown in Fig. 8(b). This is because maintaining network links and communication overhead increases correspondingly with the number of UAVs. However, since AG-EPG can reduce unnecessary connections during the topology optimization stage, the network energy consumption and latency based on AG-EPG remain the lowest. Furthermore, in the continuous optimization stage, by adjust-ing the 3D coordinates and transmit power of the UAVs, the communication distances of some links are reduced, and trans-mit power is optimized, thereby improving link transmission IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 12 
+
+(a) UAV energy consumption (b) Network latency (c) Network throughput Fig. 8. Comparison of network performance. 
+
+conditions. Compared with the four benchmark algorithms under different network scales, the network throughput is improved by approximately 8.4%, as shown in Fig. 8(c). VIII. C ONCLUSION 
+
+The paper studied the deployment problem in UAVNs, which involves coupled discrete link decisions and continu-ous resource configurations. To address the resulting mixed-integer nonconvex formulation, a dual spatial-scale optimiza-tion framework based on EPGs was proposed. At the large spatial scale, L3-EPG was adopted to optimize network link configurations, while at the small spatial scale, AG-EPG were used to jointly optimize UAV deployment, transmission power, and user association. In addition, a LLM–based mechanism was incorporated to assist utility weight generation, reducing manual parameter tuning and improving adaptability across different scenarios. Simulation results validated the conver-gence of the proposed methods and demonstrated performance improvements over baseline schemes in terms of energy con-sumption, latency, and throughput. REFERENCES [1] R. Zhang, G. Liu, Y. Liu, C. Zhao, J. Wang, Y. Xu, D. Niyato, J. Kang, Y. Li, S. Mao et al. , “Toward edge general intelligence with agentic ai and agentification: Concepts, technologies, and future directions,” IEEE Communications Surveys & Tutorials , vol. 28, pp. 4285–4318, 2026. [2] J. Li, G. Sun, L. Duan, and Q. Wu, “Multi-objective optimization for uav swarm-assisted iot with virtual antenna arrays,” IEEE Transactions on Mobile Computing , vol. 23, no. 5, pp. 4890–4907, 2023. [3] X. Tang, Q. Chen, R. Yu, and X. Li, “Digital twin-empowered task assignment in aerial mec network: A resource coalition cooperation ap-proach with generative model,” IEEE Transactions on Network Science and Engineering , 2024. [4] R. Zhang, H. Du, Y. Liu, D. Niyato, J. Kang, S. Sun, X. Shen, and H. V. Poor, “Interactive ai with retrieval-augmented generation for next generation networking,” IEEE Network , vol. 38, no. 6, pp. 414–424, 2024. [5] C. Zhan, H. Hu, J. Wang, Z. Liu, and S. Mao, “Tradeoff between age of information and operation time for uav sensing over multi-cell cellular networks,” IEEE Transactions on Mobile Computing , vol. 23, no. 4, pp. 2976–2991, 2024. [6] G. Sun, L. He, Z. Sun, Q. Wu, S. Liang, J. Li, D. Niyato, and V. C. Leung, “Joint task offloading and resource allocation in aerial-terrestrial uav networks with edge and fog computing for post-disaster rescue,” 
+
+IEEE Transactions on Mobile Computing , vol. 23, no. 9, pp. 8582–8600, 2024. [7] J. Wang, L. Bai, Z. Fang, R. Han, J. Wang, and J. Choi, “Energy-efficient communication networks via multiple aerial reconfigurable intelligent surfaces: Drl and optimization approach,” IEEE Transactions on Vehicular Technology , vol. 73, no. 7, pp. 9755–9770, 2024. [8] A. Gaydamaka, A. Samuylov, D. Moltchanov, M. Ashraf, B. Tan, and Y. Koucheryavy, “Dynamic topology organization and maintenance algorithms for autonomous uav swarms,” IEEE Transactions on Mobile Computing , vol. 23, no. 5, pp. 4423–4439, 2024. [9] Y. Zhang, Y. Huang, C. Huang, H. Huang, and A.-T. Nguyen, “Joint optimization of deployment and flight planning of multi-uavs for long-distance data collection from large-scale iot devices,” IEEE Internet of Things Journal , vol. 11, no. 1, pp. 791–804, 2024. [10] Y. He, X. He, R. Jin, and H. Dai, “Location privacy-aware and energy-efficient offloading for distributed edge computing,” IEEE Transactions on Wireless Communications , vol. 22, no. 11, pp. 7975–7988, 2023. [11] Y. Gao, J. Tang, B. Li, D. Niyato, and D. I. Kim, “Joint trajectory and power optimization for leo satellite-assisted uav communications: A stackelberg game approach,” IEEE Transactions on Communications ,vol. 72, no. 1, pp. 538–552, 2024. [12] J. Wu, Y. Sun, J. Bi, and C. Chen, “A novel hybrid enhanced particle swarm optimization for uav path planning,” IEEE Transactions on Vehicular Technology , 2025. [13] P. Wan, S. Wang, G. Xu, Y. Long, and R. Hu, “Hybrid heuristic-based multi-uav route planning for time-dependent data collection,” IEEE Internet of Things Journal , vol. 11, no. 13, pp. 24 134–24 147, 2024. [14] Y. Wang, J. Zhu, H. Huang, and F. Xiao, “Bi-objective ant colony optimization for trajectory planning and task offloading in uav-assisted mec systems,” IEEE Transactions on Mobile Computing , vol. 23, no. 12, pp. 12 360–12 377, 2024. [15] S. Fu, X. Feng, A. Sultana, and L. Zhao, “Joint power allocation and 3d deployment for uav-bss: A game theory based deep reinforcement learning approach,” IEEE Transactions on Wireless Communications ,vol. 23, no. 1, pp. 736–748, 2023. [16] J. Chen, X. Lyu, K. Wang, Y. Zhang, K. Li, T. Hong, and C. S. Hong, “Deep reinforcement learning based resource allocation in multi-uav-aided mec networks,” IEEE Transactions on Communications , vol. 71, no. 1, pp. 296–309, 2023. [17] C. Dai, K. Zhu, and E. Hossain, “Multi-agent deep reinforcement learning for joint decoupled user association and trajectory design in full-duplex multi-uav networks,” IEEE Transactions on Mobile Computing ,vol. 22, no. 10, pp. 6056–6070, 2023. [18] S. Gong, M. Wang, B. Gu, W. Zhang, D. T. Hoang, and D. Niyato, “Bayesian optimization enhanced deep reinforcement learning for tra-jectory planning and network formation in multi-uav networks,” IEEE Transactions on Vehicular Technology , vol. 72, no. 8, pp. 10 933–10 948, 2023. [19] Z. Du, S. Wang, X. Wang, and J. Chen, “Formation-aware uav net-work self-organization with game-theoretic distributed topology con-trol,” IEEE Transactions on Cognitive Communications and Networking ,vol. 11, no. 5, pp. 3470–3485, 2025. [20] Z. Lv, L. Xiao, Y. Du, G. Niu, C. Xing, and W. Xu, “Multi-agent rein-forcement learning based uav swarm communications against jamming,” 
+
+IEEE Transactions on Wireless Communications , vol. 22, no. 12, pp. 9063–9075, 2023. [21] Z. Liu, X. Liu, Y. Liu, V. C. Leung, and T. S. Durrani, “Uav assisted inte-grated sensing and communications for internet of things: 3d trajectory optimization and resource allocation,” IEEE Transactions on Wireless Communications , vol. 23, no. 8, pp. 9346–9361, 2024. [22] K. Meng, Q. Wu, J. Xu, W. Chen, Z. Feng, R. Schober, and A. L. Swindlehurst, “Throughput maximization for uav-enabled integrated IEEE TRANSACTIONS ON XX , VOL. X, NO. X, X 2026 13 
+
+periodic sensing and communication,” IEEE Transactions on Wireless Communications , vol. 22, no. 1, pp. 671–687, 2023. [23] J. Li, L. Xiao, X. Qi, Z. Lv, Q. Chen, and Y.-J. Liu, “Reinforcement learning based energy-efficient fast routing for fanets,” IEEE Transac-tions on Communications , vol. 72, no. 11, pp. 7063–7076, 2024. [24] R. Zhang, Z. Ren, and N. Li, “Decentralized reinforcement learning in markov potential games,” IEEE Transactions on Automatic Control ,vol. 69, no. 11, pp. 7867–7874, 2024. [25] A. Gaydamaka, A. Samuylov, D. Moltchanov, M. Ashraf, B. Tan, and Y. Koucheryavy, “Dynamic topology organization and maintenance algorithms for autonomous uav swarms,” IEEE Transactions on Mobile Computing , vol. 23, no. 5, pp. 4423–4439, 2024. [26] Y. Sadi and S. C. Ergen, “Optimal measurement policy for linear mea-surement systems with applications to uav network topology prediction,” 
+
+IEEE Transactions on Vehicular Technology , vol. 69, no. 2, pp. 1970– 1981, Feb 2020. [27] S. K. Yoo, S. L. Cotton, L. Zhang, and W. G. Scanlon, “Exploring bio-logical robustness for reliable multi-uav networks,” IEEE Transactions on Wireless Communications , vol. 20, no. 12, pp. 8034–8047, Dec 2021. [28] M. Polese, M. Giordani, T. Zugno, A. Venugopal, and M. Zorzi, “Los coverage analysis for uav-based thz communication networks: Toward 3-d visualization of wireless networks,” IEEE Transactions on Wireless Communications , vol. 22, no. 12, pp. 8782–8796, Dec 2023. [29] Z. Du, S. Wang, X. Wang, and J. Chen, “Formation-aware uav net-work self-organization with game-theoretic distributed topology con-trol,” IEEE Transactions on Cognitive Communications and Networking ,vol. 11, no. 5, pp. 3470–3485, Oct 2025. [30] H. Pan, Y. Liu, G. Sun, P. Wang, and C. Yuen, “Resource scheduling for uavs-aided d2d networks: A multi-objective optimization approach,” 
+
+IEEE Transactions on Wireless Communications , vol. 23, no. 5, pp. 4691–4708, 2023. [31] Y. Zhang, Y. Huang, C. Huang, H. Huang, and A.-T. Nguyen, “Joint optimization of deployment and flight planning of multi-uavs for long-distance data collection from large-scale iot devices,” IEEE Internet of Things Journal , vol. 11, no. 1, pp. 791–804, 2023. [32] L. Liu, W. Li, and F. Zhou, “Enhancing 6g iot communications: Uav relayed satellite d2d with large language model optimization,” IEEE Communications Magazine , 2025. [33] R. Zhang, H. Du, Y. Liu, D. Niyato, J. Kang, Z. Xiong, A. Jamalipour, and D. I. Kim, “Generative ai agents with large language model for satellite networks via a mixture of experts transmission,” IEEE Journal on Selected Areas in Communications , 2024. [34] J. Wang, H. Du, G. Sun, J. Kang, H. Zhou, D. Niyato, and J. Chen, “Optimizing 6g integrated sensing and communications (isac) via expert networks,” arXiv preprint arXiv:2406.00408 , 2024. [35] IEEE Communication Society, “Ieee standard for a framework for structuring low-altitude airspace for unmanned aerial vehicle (uav) operations,” IEEE, Tech. Rep. IEEE Std 1939.1-2021, 2021. [36] ITU-R, “Propagation data and prediction methods required for the design of terrestrial broadband radio access systems operating in a frequency range from 3 to 60 ghz,” International Telecommunication Union, Tech. Rep. Recommendation ITU-R P.1410-5, 2019. [37] Z. Zhao, Y. Feng, J. Li, Y. Xu, and N. Cheng, “Multi-agent deep reinforcement learning for task offloading in uav-assisted mobile edge computing,” IEEE Transactions on Wireless Communications , vol. 21, no. 9, pp. 6949–6960, 2022. [38] Y. Chen, Y. Wang, J. Zhang, and L. Song, “Coalition formation game for joint spectrum sensing and channel access in cognitive radio networks,” 
+
+IEEE Transactions on Wireless Communications , vol. 20, no. 2, pp. 1496–1510, 2021. [39] OpenAI, “New and improved embedding model,” https://openai.com/ blog/new-and-improved-embedding-model, 2022. [40] S. K. Singh, S. Kumar, and P. S. Mehra, “Chat gpt & google bard ai: A review,” in 2023 International Conference on IoT, Communication and Automation Technology (ICICAT) . IEEE, 2023, pp. 1–6. [41] xAI, “Grok: A large language model,” https://x.ai/blog/grok, 2024. [42] DeepSeek-AI, “Deepseek llm: Scaling open-source language models with longtermism,” arXiv preprint arXiv:2401.02954 , 2024. [43] H. Tembine, E. Altman, R. ElAzouzi, and Y. Hayel, “Evolutionary games in wireless networks,” IEEE Transactions on Systems, Man, and Cybernetics, Part B (Cybernetics) , vol. 40, no. 3, pp. 634–646, 2010. [44] Y. Yang, J. Wu, L. Huang, X. Xu, Q. Wu, and R. Schober, “Multi-uav-enabled load-balance mobile-edge computing for iot networks,” IEEE Internet of Things Journal , vol. 10, no. 16, pp. 14 463–14 478, 2023.
