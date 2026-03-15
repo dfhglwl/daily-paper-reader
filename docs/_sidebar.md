@@ -1,6 +1,9 @@
 * <a class="dpr-sidebar-root-link" href="#/">首页</a>
 * <a class="dpr-sidebar-root-link dpr-sidebar-noactive-link" href="javascript:void(0)" data-dpr-hash="#/tutorial/README">使用教程</a>
 * Daily Papers
+  * 2026-03-15 <!--dpr-date:20260315-->
+    * 速读区
+      * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202603/15/2603.06946v1-joint-mdps-and-reinforcement-learning-in-coupled-dynamics-environments" data-sidebar-item="{&quot;title&quot;: &quot;Joint MDPs and Reinforcement Learning in Coupled-Dynamics Environments&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2603.06946v1-joint-mdps-and-reinforcement-learning-in-coupled-dynamics-environments&quot;, &quot;score&quot;: &quot;6.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;uav-air-combat&quot;}], &quot;evidence&quot;: &quot;耦合动力学环境中的反事实结果联合规律&quot;}">Joint MDPs and Reinforcement Learning in Coupled-Dynamics Environments</a>
   * 2026-03-14 <!--dpr-date:20260314-->
     * 速读区
       * <a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="#/202603/14/2603.06859v1-contextual-counterfactual-credit-assignment-for-multi-agent-reinforcement-learning-in-llm-collaboration" data-sidebar-item="{&quot;title&quot;: &quot;Contextual Counterfactual Credit Assignment for Multi-Agent Reinforcement Learning in LLM Collaboration&quot;, &quot;link&quot;: &quot;https://arxiv.org/abs/2603.06859v1-contextual-counterfactual-credit-assignment-for-multi-agent-reinforcement-learning-in-llm-collaboration&quot;, &quot;score&quot;: &quot;6.0&quot;, &quot;tags&quot;: [{&quot;kind&quot;: &quot;query&quot;, &quot;label&quot;: &quot;uav-air-combat&quot;}], &quot;evidence&quot;: &quot;多智能体强化学习协作中的反事实信用分配&quot;}">Contextual Counterfactual Credit Assignment for Multi-Agent Reinforcement Learning in LLM Collaboration</a>

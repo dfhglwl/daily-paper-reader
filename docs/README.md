@@ -6,56 +6,26 @@
 </div>
 
 ## 每次日报
-- 最新运行日期：2026-03-14
-- 运行时间：2026-03-14 19:21:16 UTC
+- 最新运行日期：2026-03-15
+- 运行时间：2026-03-15 19:13:26 UTC
 - 运行状态：成功
-- 本次总论文数：11
+- 本次总论文数：1
 - 精读区：0
-- 速读区：11
+- 速读区：1
 
 ### 今日简报（AI）
-今日速览 11 篇前沿成果，深度解析大模型驱动的多智能体协作与复杂网络部署。
-重点关注 LLM 在多智能体信用分配中的反事实推理应用，以及结合势博弈优化无人机网络的新范式。
-建议优先探索大模型如何解决异构目标下的协作难题，提升多机系统的决策效率。
-- 详情：[/202603/14/README](/202603/14/README)
+今日聚焦耦合动力学环境下的强化学习，探索联合 MDP 框架在复杂系统建模中的应用。
+重点研究了如何通过联合马尔可夫决策过程，解决多智能体或复杂任务中动力学相互依赖的决策难题。
+推荐关注多智能体协同或复杂物理控制领域的读者，快速查阅其针对耦合环境的建模思路。
+- 详情：[/202603/15/README](/202603/15/README)
 
 ### 精读区论文标签
 - 本次无精读推荐。
 
 ### 速读区论文标签
-1. [Contextual Counterfactual Credit Assignment for Multi-Agent Reinforcement Learning in LLM Collaboration](/202603/14/2603.06859v1-contextual-counterfactual-credit-assignment-for-multi-agent-reinforcement-learning-in-llm-collaboration)  
+1. [Joint MDPs and Reinforcement Learning in Coupled-Dynamics Environments](/202603/15/2603.06946v1-joint-mdps-and-reinforcement-learning-in-coupled-dynamics-environments)  
    标签：评分：6.0/10、query:uav-air-combat
-   evidence：多智能体强化学习协作中的反事实信用分配
-2. [Learning When to Cooperate Under Heterogeneous Goals](/202603/14/2603.07253v1-learning-when-to-cooperate-under-heterogeneous-goals)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：异构目标下的多智能体强化学习协作
-3. [Agentic AI-Driven UAV Network Deployment: A LLM-Enhanced Exact Potential Game Approach](/202603/14/2603.07456v1-agentic-ai-driven-uav-network-deployment-a-llm-enhanced-exact-potential-game-approach)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：无人机网络的多智能体协调
-4. [Toward Global Intent Inference for Human Motion by Inverse Reinforcement Learning](/202603/14/2603.07797v1-toward-global-intent-inference-for-human-motion-by-inverse-reinforcement-learning)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：运动预测的意图推理
-5. [Reasoning Knowledge-Gap in Drone Planning via LLM-based Active Elicitation](/202603/14/2603.07824v1-reasoning-knowledge-gap-in-drone-planning-via-llm-based-active-elicitation)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：不确定性下的无人机规划
-6. [MEMO: Memory-Augmented Model Context Optimization for Robust Multi-Turn Multi-Agent LLM Games](/202603/14/2603.09022v1-memo-memory-augmented-model-context-optimization-for-robust-multi-turn-multi-agent-llm-games)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：多智能体博弈的记忆增强自博弈框架
-7. [MO-Playground: Massively Parallelized Multi-Objective Reinforcement Learning for Robotics](/202603/14/2603.09237v1-mo-playground-massively-parallelized-multi-objective-reinforcement-learning-for-robotics)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：机器人领域并行化多目标强化学习
-8. [Actor-Accelerated Policy Dual Averaging for Reinforcement Learning in Continuous Action Spaces](/202603/14/2603.10199v1-actor-accelerated-policy-dual-averaging-for-reinforcement-learning-in-continuous-action-spaces)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：连续动作空间中的强化学习以实现快速决策
-9. [From Prior to Pro: Efficient Skill Mastery via Distribution Contractive RL Finetuning](/202603/14/2603.10263v1-from-prior-to-pro-efficient-skill-mastery-via-distribution-contractive-rl-finetuning)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：强化学习微调以掌握复杂技能
-10. [ResWM: Residual-Action World Model for Visual RL](/202603/14/2603.11110v1-reswm-residual-action-world-model-for-visual-rl)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：用于连续控制和残差动作的预测世界模型
-11. [Novelty Adaptation Through Hybrid Large Language Model (LLM)-Symbolic Planning and LLM-guided Reinforcement Learning](/202603/14/2603.11351v1-novelty-adaptation-through-hybrid-large-language-model-llm-symbolic-planning-and-llm-guided-reinforcement-learning)  
-   标签：评分：6.0/10、query:uav-air-combat
-   evidence：LLM引导的强化学习用于动态环境中的自主代理规划
+   evidence：耦合动力学环境中的反事实结果联合规律
 
 
 <div class="dpr-home-promo-card">

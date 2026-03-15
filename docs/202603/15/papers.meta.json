@@ -1,0 +1,23 @@
+{
+  "label": "2026-03-15",
+  "date": "2026-03-15",
+  "generated_at": "2026-03-15T19:13:33",
+  "count": 1,
+  "papers": [
+    {
+      "paper_id": "202603/15/2603.06946v1-joint-mdps-and-reinforcement-learning-in-coupled-dynamics-environments",
+      "section": "quick",
+      "title_en": "Joint MDPs and Reinforcement Learning in Coupled-Dynamics Environments",
+      "authors": "Ege C. Kaya, Mahsa Ghasemi, Abolfazl Hashemi",
+      "date": "2026-03-06",
+      "pdf": "https://arxiv.org/pdf/2603.06946v1",
+      "score": "6.0",
+      "evidence": "耦合动力学环境中的反事实结果联合规律",
+      "tldr": "传统的马尔可夫决策过程（MDP）仅定义了动作的边际分布，无法处理动作间的联合分布（如优势概率）。本文提出了联合MDP（JMDP）框架，通过引入多动作生成接口来捕捉共享外生随机性下的反事实结果耦合。研究聚焦于单步耦合机制，推导了n阶回报矩的贝尔曼算子，并开发了具有收敛保证的动态规划和增量算法，为处理复杂耦合环境下的强化学习提供了理论基础。",
+      "tags": "query:uav-air-combat",
+      "abstract_en": "Many distributional quantities in reinforcement learning are intrinsically joint across actions, including distributions of gaps and probabilities of superiority. However, the classical Markov decision process (MDP) formalism specifies only marginal laws and leaves the joint law of counterfactual one-step outcomes across multiple possible actions at a state unspecified. We study coupled-dynamics environments with a multi-action generative interface which can sample counterfactual one-step outcomes for multiple actions under shared exogenous randomness. We propose joint MDPs (JMDPs) as a formalism for such environments by augmenting an MDP with a multi-action sample transition model which specifies a coupling of one-step counterfactual outcomes, while preserving standard MDP interaction as marginal observations. We adopt and formalize a one-step coupling regime where dependence across actions is confined to immediate counterfactual outcomes at the queried state. In this regime, we derive Bellman operators for $n$th-order return moments, providing dynamic programming and incremental algorithms with convergence guarantees.",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

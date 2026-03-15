@@ -1,0 +1,54 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-03-15T19:13:01.550355+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 0,
+    "deep_cap": 6,
+    "deep_selected": 0,
+    "quick_candidates": 1,
+    "quick_skim_target": 11,
+    "quick_selected": 1
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2603.06946v1",
+      "title": "Joint MDPs and Reinforcement Learning in Coupled-Dynamics Environments",
+      "abstract": "Many distributional quantities in reinforcement learning are intrinsically joint across actions, including distributions of gaps and probabilities of superiority. However, the classical Markov decision process (MDP) formalism specifies only marginal laws and leaves the joint law of counterfactual one-step outcomes across multiple possible actions at a state unspecified. We study coupled-dynamics environments with a multi-action generative interface which can sample counterfactual one-step outcomes for multiple actions under shared exogenous randomness. We propose joint MDPs (JMDPs) as a formalism for such environments by augmenting an MDP with a multi-action sample transition model which specifies a coupling of one-step counterfactual outcomes, while preserving standard MDP interaction as marginal observations. We adopt and formalize a one-step coupling regime where dependence across actions is confined to immediate counterfactual outcomes at the queried state. In this regime, we derive Bellman operators for $n$th-order return moments, providing dynamic programming and incremental algorithms with convergence guarantees.",
+      "authors": [
+        "Ege C. Kaya",
+        "Mahsa Ghasemi",
+        "Abolfazl Hashemi"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "math.OC"
+      ],
+      "published": "2026-03-06T23:38:37+00:00",
+      "link": "https://arxiv.org/pdf/2603.06946v1",
+      "tags": [
+        "keyword:UAV-AIR-COMBAT",
+        "query:UAV-AIR-COMBAT"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "joint laws of counterfactual outcomes in coupled-dynamics environments",
+      "llm_evidence_cn": "耦合动力学环境中的反事实结果联合规律",
+      "llm_evidence": "耦合动力学环境中的反事实结果联合规律",
+      "canonical_evidence": "耦合动力学环境中的反事实结果联合规律",
+      "llm_tldr_en": "Proposes Joint MDPs to model coupled dynamics, potentially useful for predicting interacting aircraft trajectories.",
+      "llm_tldr_cn": "提出联合MDP来建模耦合动力学，可能用于预测相互作用的飞机轨迹。",
+      "llm_tldr": "提出联合MDP来建模耦合动力学，可能用于预测相互作用的飞机轨迹。",
+      "llm_tags": [
+        "query:uav-air-combat:composite"
+      ],
+      "matched_query_tag": "query:uav-air-combat:composite",
+      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; prediction-based decision making framework for aerial combat; multi-agent reinforcement learning for cooperative and competitive air combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat; adversarial intent recognition and strategy generation for UAVs.",
+      "matched_requirement_id": "req-composite-uav-air-combat",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

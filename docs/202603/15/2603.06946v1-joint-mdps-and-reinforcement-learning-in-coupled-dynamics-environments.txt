@@ -1,0 +1,1573 @@
+Title: Joint MDPs and Reinforcement Learning in Coupled-Dynamics Environments
+
+URL Source: https://arxiv.org/pdf/2603.06946v1
+
+Published Time: Tue, 10 Mar 2026 00:20:03 GMT
+
+Number of Pages: 25
+
+Markdown Content:
+# Joint MDPs and Reinforcement Learning in Coupled-Dynamics Environments 
+
+Ege C. Kaya, Mahsa Ghasemi, Abolfazl Hashemi ∗
+
+Abstract 
+
+Many distributional quantities in reinforcement learning are intrinsically joint across actions, including distributions of gaps and probabilities of superiority. However, the classical Markov decision process (MDP) formalism specifies only marginal laws and leaves the joint law of counterfactual one-step outcomes across multiple possible actions at a state unspecified. We study coupled-dynamics environments with a multi-action generative interface which can sample counterfactual one-step outcomes for multiple actions under shared exogenous randomness. We propose joint MDPs (JMDPs) as a formalism for such environments by augmenting an MDP with a multi-action sample transition model which specifies a coupling of one-step counterfactual outcomes, while preserving standard MDP interaction as marginal observations. We adopt and formalize a one-step coupling regime where dependence across actions is confined to immediate counterfactual outcomes at the queried state. In this regime, we derive Bellman operators for 
+
+nth-order return moments, providing dynamic programming and incremental algorithms with convergence guarantees. 
+
+Keywords: reinforcement learning, reinforcement learning theory, Markov decision processes, distributional reinforcement learning, policy evaluation, dynamic programming, stochastic ap-proximation, counterfactual modeling. 
+
+# 1 Introduction 
+
+Distributional reinforcement learning (DRL) studies the discounted return random variable (RV) 
+
+Zπ(s, a ) belonging to a policy π, and seeks to represent or estimate its distributional properties beyond its expectation. Formally, 
+
+Zπ(s, a ) = 
+
+> ∞
+
+X
+
+> t=0
+
+γtRt, S 0 = s, A 0 = a, A t ∼ π(· | St)
+
+Rt ∼ PR(· | St, A t), S t+1 ∼ PS (· | St, A t).
+
+(1) DRL methods customarily learn per-action marginal return laws at state s, i.e., {Law (Zπ(s, a )) }a∈A 
+
+[4, 5]. However, a range of distributional quantities that are of interest in decision-making [ 2, 24 ] are not functions of per-action marginals alone. For actions a, ˜a ∈ A , examples include: 1. the gap RV Gπ(s; a, ˜a) := Zπ(s, a ) − Zπ(s, ˜a) and its distribution Law( Gπ(s; a, ˜a)) ,2. any tail functional of Gπ(s; a, ˜a), such as the quantile qα(Gπ(s; a, ˜a)) or the CVaR α(Gπ(s; a, ˜a)) ,
+
+> ∗
+
+The authors are with the Elmore Family School of Electrical and Computer Engineering, Purdue University, West Lafayette, IN, USA. 
+
+1
+
+> arXiv:2603.06946v1 [cs.LG] 6 Mar 2026
+
+3. the probability of superiority P(Zπ(s, a ) > Z π(s, ˜a)) .These quantities depend on the joint law of (Zπ(s, a )) , Z π(s, ˜a)) and thus require knowledge of coupling structure. 
+
+A limitation of the Markov decision process (MDP) formalism. MDPs specify the marginal distributions of the reward and successor state under each action. However, they make no specification about the joint distribution of counterfactual, one-step outcomes across multiple actions at a state . Therefore, joint objects such as Law (Zπ(s, a ) − Zπ(s, ˜a)) are not well-defined without adopting additional coupling conventions [32]. 
+
+Coupled-dynamics environments. The preceding limitation is substantive in environments where counterfactual one-step outcomes under multiple actions are operationally meaningful and sampleable. A canonical setting is scenario-based simulation, where an exogenous disturbance U is realized at each decision point and one-step outcomes are functions of (s, a, U ). Evaluating multiple candidate actions under the same realized disturbance is standard in simulation optimization [ 15 , 26 ]and yields a multi-action generative interface. 
+
+Contribution and scope. 
+
+• We propose joint MDPs (JMDPs) as a formalism for coupled-dynamics environments. A JMDP augments an MDP with a multi-action sample transition model that specifies a coupling of one-step counterfactual outcomes. 
+
+• We focus exclusively on policy evaluation : For a fixed policy π, we derive moment Bellman operators up to arbitrary finite order and provide both dynamic programming (DP) and incremental estimation algorithms with convergence guarantees, along with computable Bellman residual certificates [25]. 
+
+• One-step coupling regime. We adopt a one-step coupling regime throughout the work, where the dependence across actions is confined to the immediate counterfactual outcomes at the queried state. The future stochasticity is assumed to be independent across counterfactual branches conditional on successor states. This regime is aligned with multi-action one-step interface and avoids the exponential blow-up associated with fully-coupled counterfactual trees. 
+
+# 2 Related Works 
+
+MDP formalism and generative interfaces. In the standard MDP formalism, the environment is specified by a per-action reward law and a per-action transition kernel [ 22 , 28 , 5]. Interaction reveals only the reward and next state of the executed action. This is sufficient for objectives depending on marginal state-action return laws (e.g., expected value or a single-action return distribution), but it does not specify a joint law over counterfactual one-step outcomes across actions. We formalize a setting in which the environment exposes a multi-action generative interface returning counterfactual one-step outcomes for multiple queried actions under shared exogenous randomness. Such shared-randomness interfaces are standard in common-random-number Monte Carlo (MC) comparison and scenario-based decision models [15, 26]. 
+
+Distributional and multivariate RL . DRL studies the law of the scalar return and Bellman operators on spaces of probability measures, beginning with the distributional perspective of [ 4]and subsequent practical approximations [ 4, 12 , 11 , 34 , 21 ]. These methods learn per-state action 
+
+marginal return distributions and do not define joint RVs (Zπ(s, a )) a∈A . A complementary line studies multivariate return distributions induced by vector-valued rewards and cumulants, including Bellman-GAN [ 14 ], MD3QN [ 35 ], and the recent foundations and convergent DP/TD methods of [ 33 ]. 2Our setting is orthogonal: even with scalar rewards, we study joint structure across counterfactual actions induced by coupled-environment randomness, which is not captured by standard multivariate DRL formulations. 
+
+Moment-based evaluation, risk sensitivity, and gap/advantage distributions. Return-moment policy evaluation has a long history [ 27 ], including DP characterizations of variance and modern TD-style estimators for variance and related quantities [ 18 , 29 , 30 ]. Coherent risk measures such as CVaR have likewise been incorporated via risk-aware Bellman operators [ 10 ]. These works within a single action’s return law. By contrast, our target quantities are intrinsically joint across actions and require mixed moments encoding cross-action dependence. This distinction is especially visible for gap and advantage distributions [ 32 ]: If only marginals are given, the law of 
+
+Zπ(s, a ) − Zπ(s, ˜a) depends on an unspecified coupling, motivating canonical-coupling axioms [ 32 ]. Our approach instead models environments in which the coupling is part of the environment itself. Under our one-step coupling regime, gap and advantage RVs are well-defined by construction, and their moments are computable from learned mixed moments. 
+
+Counterfactual modeling perspectives. The multi-action generative interface admits a counterfactual interpretation: At a state, the environment reveals multiple potential one-step outcomes under shared exogenous randomness. This connects to potential-outcome and structural causal model (SCM) perspectives in RL [ 17 , 1]. We do not address identifiability or learning such an SCM from data, rather, assuming simulator access to counterfactual one-step queries, we ask what formalism and policy-evaluation theory are appropriate. Existing causal and counterfactual approaches motivate the use of cross-action structure, but do not formalize or estimate the joint counterfactual return laws studied here. Overall, prior DRL and risk-sensitive RL methods either model marginal per-action return laws or multivariate returns arising from vector-valued rewards along a realized trajectory. Our work isolates a different axis of jointness: across actions at a fixed state, induced by coupled-environment randomness. We propose joint MDPs as a formalism and algorithmic basis for policy evaluation of both marginal and joint return moments, enabling principled treatment of intrinsically joint distributional quantities. 
+
+# 3 Preliminaries 
+
+Definition 3.1 (MDP) . An MDP is a quintuple (S, A, P R, P S , γ ), where S is a finite state space, A
+
+is a finite action space with N = |A| , γ ∈ (0 , 1) is the discount factor, PR(· | s, a ) is a reward kernel over [0 , 1] and PS (· | s, a ) is a transition kernel over S.A policy is a Markov kernel π(· | s) ∈ ∆( A). For measurable spaces (Ω i, Fi), let P(Ω i) denote the set of probability measures over Ωi. An m-variate distribution ν ∈ P (Ω 1 × . . . Ωm) is a coupling of its marginals {νi}mi=1 , where νi is the ith coordinate marginal. We write [m] for {1, . . . , m }. To conclude the section, let us recall a standard convention, used throughout RL, for describing the interaction with an environment via a generative model. 
+
+Definition 3.2 (Sample transition model (STM) [ 5]) . Let ξ ∈ ∆( S) and π be a policy. The STM is the joint distribution of (S, A, R, S ′) generated by 
+
+S ∼ ξ, A | S ∼ π(· | S),R | S, A ∼ PR(· | S, A ), S′ | S, A ∼ PS (· | S, A ). (2) 34 Coupled-Dynamics Environments and Joint MDPs 
+
+Many distributional quantities in RL are intrinsically joint across actions at a fixed state, including gaps and advantages, probabilities of superiority, and tail functionals of such quantities. Formalizing such quantities requires a joint law for counterfactual one-step outcomes that would occur under different actions taken from the same state, under the same realization of exogenous randomness. The MDP formalism does not account for this, since it only specifies marginal one-step laws for each action and leaves the joint counterfactual structure unspecified. Consequently, environments that agree on all one-step marginals when modeled using an MDP may still disagree on joint-action quantities. We now present a multi-action variant of the STM, the m-joint STM ( m-JSTM). Informally, an 
+
+m-JSTM allows the learner to query m distinct actions at the same state, and obtain m coupled counterfactual one-step outcomes. 
+
+Definition 4.1 (m-JSTM) . For an integer m ≥ 1, an m-JSTM is a kernel 
+
+Jm(· | s, a 1: m) ∈ P  ([0 , 1] × S )m, s ∈ S , a 1: m ∈ A m distinct , (3) such that each coordinate marginal matches the classical one-step marginals. Concretely, if 
+
+(( Ri, S ′
+
+> i
+
+)) mi=1 ∼ J m(· | s, a 1: m), then for each coordinate i ∈ [m],
+
+(Ri, S ′
+
+> i
+
+) ∼  PR(· | s, a i), P S (· | s, a i). (4) Specifically, when m = N and a1: N is a fixed ordering of A, Jm(· | s, a 1: N ) specifies a joint coupling across all action at s. The additional expressiveness provided by an m-JSTM is the 
+
+dependence it specifies across counterfactual outcomes for different actions. When this dependence is nontrivial, the MDP formalism omits information that is directly relevant for joint distributional questions. This motivates treating the coupling as part of the model. 
+
+Definition 4.2 (Coupled-dynamics environment) . An environment with marginal kernels (PR, P S )
+
+is a coupled-dynamics environment if it admits an m-JSTM Jm for some m ≥ 2 such that for some query (s, a 1: m), Jm(· | s, a 1: m) is not the product coupling of its marginals. Equivalently, the environment contains joint one-step counterfactual structure that is not determined by (PR, P S )
+
+alone, and is therefore lost under a purely marginal MDP description. The following examples illustrate the issue: Identical MDP marginals can conceal different joint structures. 
+
+Example 1. Let A = {1, 2} and fix s ∈ S . Let U ∼ Bernoulli (1 /2) , and let the counterfactual rewards be R(1) = U , R(2) = 1 − U . Each action’s marginal reward law is Bernoulli (1 /2) , while their joint law is perfectly anti-correlated. P(R(1) > R (2) ) = 1 /2 and E[R(1) R(2) ] = 0 , neither fact determined by the marginals alone. 
+
+Example 2. Let S = {0, 1}, A = {1, 2}, and fix s ∈ S . Let U ∼ Bernoulli (1 /2) , and the counterfactual next states be (2.1) S′(1) = S′(2) = U . Each action’s marginal transition law is uniform on S, while S′(1) = S′(2) .(2.2) S′(1) = U and S′(2) = 1 − U . Each action’s marginal transition law is uniform on S, while 
+
+S′(1) = 1 − S′(2) .We now formalize a joint extension of the MDP model, appropriate for modeling coupled-dynamics environments. 4Definition 4.3 (JMDP) . A JMDP is a quadruple (S, A, γ, J ), where S is a finite state space, A is a finite action space with N = |A| , γ ∈ (0 , 1) is the discount factor, and J (· | s) ∈ P (([0 , 1] × S )N )
+
+is a Markov kernel over counterfactual one-step outcome tables (( R(a), S ′(a))) a∈A .At time t, conditional on St = s, the environment samples a one-step outcome table (( R(a),S′(a))) a∈A ∼ J (· | s). The agent selects action At to execute, the realized transition is given by the executed action: (Rt, S t+1 ) = ( R(At) 
+
+> t
+
+, S (At) 
+
+> t+1
+
+). The remaining coordinates of the sampled outcome table are counterfactual and do not affect the realized trajectory. 
+
+Remark 4.4 . Every JMDP induces a marginal MDP description of the environment when we take coordinate marginals of the kernel J . To see this, consider the collection of 1-JSTMs J1(· | s, a ) for each (s, a ) such that 
+
+J1(· | s, a ) := Law  (R(a), S ′(a)), where  (R(b), S ′(b)) 
+
+> b∈A
+
+∼ J (· | s). (5) Then, the reward and transition marginals PR(· | s, a ) and PS (· | s, a ) of J1 will constitute the reward and transition kernels of a classical MDP description of the environment. In a similar vein, fixing m ≥ 2, for any state s and any m-tuple of distinct actions a1: m, we can induce an m-JSTM Jm as the joint law of the m queried coordinates: 
+
+Jm(· | s, a 1: m) := Law  (R(a), S ′(a))a∈a1: m
+
+, where  (R(b), S ′(b)) 
+
+> b∈A
+
+∼ J (· | s). (6) To summarize, a coupled-dynamics environment is one where the marginal description of an MDP formalism does not determine the joint law of counterfactual one-step outcomes across actions. JMDPs model the missing structure via a kernel J (· | s) over counterfactual outcome tables, from which the standard MDP interaction model STM and the multi-action m-JSTM interface are obtained by marginalization. The JMDP formalism retains the dependence information discarded by an MDP description of the environment, essential for joint distributional questions. The JMDP definition specifies how a counterfactual one-step outcome table is sampled at each visited state, and how a single executed action generates the realized transition. Before developing policy evaluation algorithms for joint quantities, it remains to formalize what we have referred to as the one-step coupling regime up to now, i.e., how the counterfactual dependence encoded in the outcome table relates across time. We focus on the case where cross-action dependence is confined to the immediate counterfactual outcomes at the queried state and all subsequent randomness is refreshed in the next step. This choice matches the multi-action sampling interfaces of interest and avoids the exponential blow-up of counterfactual trajectory trees. 
+
+Assumption 4.5 (Exogenous noise representation [ 6, 20 ]) . We assume that there exist an i.i.d. exogenous sequence (Ut)t≥0 over a measurable space U, and measurable maps 
+
+g : S × A × U → [0 , 1] , h : S × A × U → S , (7) such that at any time t and state s, the counterfactual one-step outcomes for any action a ∈ A are related by 
+
+R(a) 
+
+> t
+
+= g(s, a, U t), S(a) 
+
+> t+1
+
+= h(s, a, U t). (8) Thus, the full outcome table sampled by the JMDP kernel can alternatively be expressed as 
+
+ (R(a) 
+
+> t
+
+, S (a)
+
+> t+1
+
+) 
+
+> a∈A
+
+=  (g(St, a, U t), h (St, a, U t)) 
+
+> a∈A
+
+. (9) 5Crucially, the preceding assumption means that after the executed transition to St+1 , subsequent one-step outcome tables are generated using fresh exogenous variables Ut+1 , U t+2 , . . . , independent of Ut. The dependence across different actions is entirely mediated by the current table draw, and does not persist through future shared noise. We now define the main object of the rest of our inquiry. 
+
+Definition 4.6 (Joint return vector) . Let π be a stationary policy. For any state s, we define the 
+
+joint return vector belonging to π as Zπ(s) :=  Zπ(s, a )
+
+> a∈A
+
+.Under the one-step coupling regime, the components of Zπ(s) are coupled through U0, while their continuations evolve independently, conditional on their successor states. 
+
+# 5 Joint Iterative Policy Evaluation 
+
+We now develop DP and incremental policy evaluation schemes for JMDPs. Throughout this section, we fix a policy π, and the goal is to estimate joint moments of Zπ(s), including mixed moments. We start with the case of moments up to 2nd order, displaying an approachable and interpretable instance of the general case of nth-order moments. Proofs are deferred to Appendix A. Let X := S × A denote the state-action space. For each (s, a ) ∈ X , we define the first moments 
+
+μπ(s, a ) := E [Zπ(s, a )] , (10) and for each (s, a, ˜s, ˜a) ∈ X 2, the second moments 
+
+Σπ(s, a, ˜s, ˜a) := E [Zπ(s, a ) Zπ(˜ s, ˜a)] . (11) The algorithms defined below will operate on candidate moment collections M = ( Mμ, M Σ),where 
+
+Mμ ∈ { f : X → R}, MΣ ∈ { f (s, a, ˜s, ˜a) : X 2 → R}. (12) Thus, Mμ(s, a ) will be a candidate value for μπ(s, a ), and MΣ(s, a, ˜s, ˜a) for Σπ(s, a, ˜s, ˜a). The introduced algorithms will map any such dimensionally consistent moment collection M to the true collection of moments M π 
+
+> 2
+
+:= ( μπ, Σπ).We now define the 2nd-order joint Bellman operator. 
+
+Definition 5.1 (2nd-order joint Bellman operator) . The 2nd-order joint Bellman operator T π 
+
+> 2
+
+maps a moment collection M to T π 
+
+> 2
+
+M coordinatewise through the equations 
+
+(T π 
+
+> 2
+
+M )μ(s, a ) := ER(a) + γM μ
+
+ S′(a), A ′(a) | S = s, (13) for each (s, a ). Furthermore, for each (s, a, ˜s, ˜a),
+
+(T π 
+
+> 2
+
+M )Σ(s, a, ˜s, ˜a) := ER(a) ˜R(˜ a) + γR (a)Mμ
+
+  ˜S′(˜ a), ˜A′(˜ a) + γ ˜R(˜ a)Mμ
+
+ S′(a), A ′(a)
+
++γ2MΣ
+
+ S′(a), A ′(a), ˜S′(˜ a), ˜A′(˜ a) | (S, ˜S) = ( s, ˜s). (14) It is instructional to consider the joint laws with respect to which we take the expectation in these equations. In (13), this is the joint law of (R(a), S ′(a), A ′(a)), where 
+
+(R(a), S ′(a)) ∼ J1(· | s, a ), A′(a) ∼ π(· | S′(a)), (15) where J1 is a 1-JSTM induced from the JMDP kernel J .6This is also the case in the “diagonal” scenario of (14) (s = ˜s and a = ˜a), where the expression simplifies to 
+
+(T π 
+
+> 2
+
+M )Σ(s, a, s, a ) = E  R(a)2 + 2 γR (a)Mμ
+
+ S′(a), A ′(a) + γ2MΣ
+
+ S′(a), A ′(a), S ′(a), A ′(a) | S = s,
+
+(16) When a̸ = ˜ a, the joint law is of (R(a), S ′(a), A ′(a), ˜R(˜ a), ˜S′(˜ a), ˜A′(˜ a)). When we have s̸ = ˜ s,
+
+(R(a), S ′(a)) ∼ J 1(· | s, a ), ( ˜R(˜ a), ˜S′(˜ a)) ∼ J 1(· | ˜s, ˜a), A′(a) ∼ π(· | S′(a)), ˜A′(˜ a) ∼ π(· | ˜S′(˜ a)).
+
+(17) 
+
+J1 is a 1-JSTM induced from J , the draws are independent. Crucially, in the “same-state” case where s = ˜ s, we have 
+
+ R(a), S ′(a), ˜R(˜ a), ˜S′(˜ a) ∼ J 2
+
+ · | s, (a, ˜a), A′(a) ∼ π(· | S′(a)), ˜A′(˜ a) ∼ π(· | ˜S′(˜ a)), (18) where J2 is a 2-JSTM induced from J .Note that, by construction, M π 
+
+> 2
+
+is a fixed point of T π 
+
+> 2
+
+, since 
+
+μπ(s, a ) = ER(a) + γZ π S′(a), A ′(a) | S = s,
+
+Σπ(s, a, ˜s, ˜a) = E  R(a) + γZ π S′(a), A ′(a) ·   ˜R(˜ a) + γZ π  ˜S′(˜ a), ˜A′(˜ a) | (S, ˜S) = ( s, ˜s). (19) We now prove that T π 
+
+> 2
+
+is a contraction mapping. 
+
+Lemma 5.2. Let λ := 2 /(1 − γ). For any moment collection M , define the norm 
+
+∥M ∥λ := max 
+
+
+
+∥Mμ∥∞ , 1
+
+λ ∥MΣ∥∞
+
+
+
+. (20) 
+
+Then, T π 
+
+> 2
+
+is a γ-contraction in ∥ · ∥ λ.
+
+We now consider the iterative process expressed by 
+
+Mk+1 = T π 
+
+> 2
+
+Mk. (21) 
+
+Theorem 5.3. T π 
+
+> 2
+
+admits a unique fixed point M π 
+
+> 2
+
+. Moreover, for any initialization M0, the iteration 
+
+(21) has geometric convergence with rate γ in ∥ · ∥ λ:
+
+∥Mk − M π 
+
+> 2
+
+∥λ ≤ γk ∥M0 − M π 
+
+> 2
+
+∥λ . (22) 
+
+Furthermore, for any moment collection M , define the 2nd-order Bellman residual as ∥M − T π 
+
+> 2
+
+M ∥λ.Then, 
+
+∥M − M π 
+
+> 2
+
+∥λ ≤ 11 − γ ∥M − T π 
+
+> 2
+
+M ∥λ . (23) This enables the interpretation of (21) as an algorithm with a computable stopping criterion for 
+
+ϵ accuracy in ∥ · ∥ λ, which we call 2nd-order joint iterative policy evaluation (JIPE-2). 
+
+5.1 JIPE-2 with Function Approximation 
+
+In high-dimensional or continuous state spaces, exact tabular JIPE-2 becomes impractical, so it is preferable to move to a function-approximation setting in which the moments are restricted to a parameterized ˆM (θ), with a PSD-structured parameterization for MΣ to preserve valid 2nd moment geometry. The resulting objective is a projected fixed point equation of the form ˆM (θ∗) = Π T π 
+
+> 2
+
+ˆM (θ∗).This yields a projected JIPE-2 iteration with a standard projection for the mean term and a PSD-constrained projection for the 2nd-moment term. Under standard regularity conditions, Appendix B shows that the projected operator is contractive in a suitable weighted norm, giving existence and uniqueness of the projected fixed point, convergence of the iteration, and a standard approximation-error bound. 75.2 Incremental JIPE-2 
+
+We next give an incremental variant of JIPE-2, suitable when J is accessed only through samples from its induced 1- and 2-JSTMs. The method is an instance of stochastic approximation for the operator T π 
+
+> 2
+
+. Let us define an index set to simplify indexing a moment collection M = ( Mμ, M Σ):
+
+I2 := X × { μ} ∪ X 2 × { Σ}. (24) For i = (( s, a ), μ ), we write M (i) = Mμ(s, a ), and for i = (( s, a ), ( ˜s, ˜a), Σ) , we write M (i) = 
+
+MΣ(s, a, ˜s, ˜a).We define the random one-sample backup ˆT π 
+
+> 2
+
+(M, i ):(i) If i = (( s, a ), μ ), we draw (R(a), S ′(a)) ∼ J 1(· | s, a ) from the induced 1-JSTM, A′(a) ∼ π(· | S′(a)).We set ˆT π 
+
+> 2
+
+(M, i ) := R(a) + γM μ
+
+ S′(a), A ′(a). (25) (ii) If i = (( s, a ), (s, a )) , Σ) , we draw (R(a), S ′(a)) ∼ J 1(· | s, a ) from the induced 1-JSTM and 
+
+A′(a) ∼ π(· | S′(a)). We set 
+
+ˆT π 
+
+> 2
+
+(M, i ) :=  R(a)2 + 2 γR (a)Mμ
+
+ S′(a), A ′(a) + γ2MΣ
+
+ S′(a), A ′(a), S ′(a), A ′(a). (26) (iii) If i = (( s, a ), ( ˜s, ˜a), Σ) , with a̸ = ˜a but s = ˜s, we draw (R(a), S ′(a), ˜R(˜ a), ˜S′(˜ a)) ∼ J 2(· | s, (a, ˜a)) 
+
+from the induced 2-JSTM, A′(a) ∼ π(· | S′(a)), ˜A′(˜ a) ∼ π(· | ˜S′(˜ a)). If s̸ = ˜s, we independently draw 
+
+(R(a), S ′(a)) ∼ J 1(· | s, a ), ( ˜R(˜ a), ˜S′(˜ a)) ∼ J 1(· | ˜s, ˜a) and A′(a) ∼ π(· | S′(a)), ˜A′(˜ a) ∼ π(· | ˜S′(˜ a)).In either case, we set 
+
+ˆT π 
+
+> 2
+
+(M, i ) := R(a) ˜R(˜ a) + γR (a)Mμ
+
+  ˜S′(˜ a), ˜A′(˜ a) + γ ˜R(˜ a)Mμ
+
+ S′(a), A ′(a)
+
++γ2MΣ
+
+ S′(a), A ′(a), ˜S′(˜ a), ˜A′(˜ a). (27) For αk ∈ (0 , 1) , we define the incremental JIPE-2 recursion: 
+
+Mk+1 (i) = 
+
+(
+
+(1 − αk(i)) Mk(i) + αk(i) ˆT π 
+
+> 2
+
+(Mk, i ), i = Ik,Mk(i), i̸ = Ik, (28) where Ik designates the kth (random) index updated. The following theorem establishes almost-sure convergence. 
+
+Theorem 5.4. Assume each coordinate i ∈ I 2 is selected infinitely often by Ik. Let the step size 
+
+αk(i) satisfy the conditions of [23] for every index i:
+
+X
+
+> k
+
+αk(i) = ∞, X
+
+> k
+
+αk(i)2 < ∞. (29) 
+
+Then, the incremental JIPE-2 iteration converges almost surely in ∥ · ∥ λ, i.e., 
+
+∥Mk − M π 
+
+> 2
+
+∥λ → 0 almost surely as k → ∞ . (30) 85.3 Generalization to Higher Moments 
+
+It is logically straightforward to extend the construction to the case of nth-order moments, with heavier notation. For each k ∈ [n], we consider a kth-order moment collection 
+
+M (k) := X k → R, M (k)(x1: k) = E
+
+" kY
+
+> i=1
+
+Zπ(xi)
+
+#
+
+. (31) The collection of all moments of orders 1 through n is M := ( M (1) , . . . , M (n)).
+
+Let k ≤ n and x1: k ∈ X k. Let {Gl}Ll=1 be the partition of [k] into groups that share the same current state, i.e., i, j ∈ Gl for some l if and only if si = sj . For each group Gl with common state 
+
+s(l) and action subtuple aGl := ( ai)i∈Gl , let 
+
+ (Ri, S ′
+
+> i
+
+) 
+
+> i∈Gl
+
+∼ J |Gl|(· | s(l), a Gl ) (32) under the induced |Gl|-JSTM. Assume these groupwise draws are independent across l. Conditioned on (S′
+
+> i
+
+)ki=1 , let actions be drawn independently as A′ 
+
+> i
+
+∼ π(· | S′
+
+> i
+
+) for i ∈ [k]. We write X′ 
+
+> I
+
+:= ( X′
+
+> i
+
+)i∈I
+
+for any index set I ⊆ [k]. This construction is the direct k-variate analogue of the joint laws used in the 2nd-order scenario. Within a state, the relevant coordinates share one coupled draw via induced JSTMs, whereas across distinct states, the one-step randomness is independent under the one-step coupling regime. We define the operator T πn through the system of equations 
+
+(T πn M )k(x1: k) := E
+
+ X
+
+> I⊆[k]
+
+γ|I|  Y 
+
+> i / ∈I
+
+Ri
+
+M|I|(X′ 
+
+> I
+
+) | x1: k
+
+ , (33) for each k ∈ [n] and each x1: k ∈ X k. We also define 
+
+∥M ∥λ := max 
+
+> k∈[n]
+
+1
+
+λk
+
+M (k) 
+
+> ∞
+
+, (34) for λk := (2 /(1 − γ)) k−1. The operator T πn is a γ-contraction with respect to ∥ · ∥ λ, and admits as unique fixed point the true collection of moments up to nth order, M πn . The JIPE-n algorithm and its incremental variant can be defined analogously to the previous section, and admit similar results to those of Theorems 5.3 and 5.4. 
+
+5.4 Connection to the Gap RV 
+
+We now return to the discussion of the gap RV Gπ(s; a, ˜a). Quantities that only involve the first moments require no joint modeling, for instance, E[Gπ(s; a, ˜a)] = μπ(s, a ) − μπ(s, ˜a) is already determined by the marginal dynamics. However, joint structure becomes relevant when we consider comparative or risk-sensitive questions about gaps. JMDPs specify a concrete coupling of counter-factual outcomes for (a, ˜a) at s, inducing a well-defined joint return law. The moment recursions of the previous section provide mixed moments E[Zπ(s, a )iZπ(s, ˜a)j ], which determine the moments of 
+
+Gπ(s; a, ˜a) and enable moment-based bounds or approximations for comparative risk criteria. For example, 2nd-order mixed moments yield the variance of the gap: 
+
+var  Gπ(s; a, ˜a) = Σ π(s, a, s, a ) − Σπ(s, ˜a, s, ˜a) − 2Σ π(s, a, s, ˜a) −  μπ(s, a ) − μπ(s, ˜a)2, (35) where all moments are computable through JIPE-2.Similarly, if μG := E[Gπ(s; a, ˜a) > 0] , by the Chebyshev inequality [ 9] P(Gπ(s; a, ˜a) ≤ 0) ≤
+
+σ2
+
+> G
+
+/(σ2 
+
+> G
+
++ μ2
+
+> G
+
+), where σ2 
+
+> G
+
+:= var( Gπ(s; a, ˜a)) .9Figure 2: Bellman residual convergence in tabular coupled-dynamics environments. Left: 
+
+5×5 WGW. Right: CRC with |S| = 25 . We plot the Bellman residual ∥Mk −T π 
+
+> 2
+
+Mk∥λ on logarithmic scale. 
+
+# 6 Experiments 
+
+Goal 
+
+leftward gust 
+
+Figure 1: A 3 × 3 WGW environment and the eval-uated policy. We empirically validate the policy evaluation theory developed in the previous sections in four complementary ways. First, in tabular coupled-dynamics environments we run JIPE-2 and track the Bellman residual 
+
+∥M − T π 
+
+> 2
+
+M ∥λ, which provides a certificate of accuracy. Second, we vi-sualize the learned joint structure via return correlation matrices across actions, computed from the first and second moments. Third, we demon-strate that the learned mixed moments enable meaningful estimates and bounds for the gap RV, and validate these estimates against MC simulation. Finally, we show that the incremental JIPE-2 with neural function approximation scales beyond tabular settings in coupled ALE environments [3]. All experiments are policy evaluation: We fix π and estimate the first moments μπ(s, a ) and second moments Σπ(s, a, ˜s, ˜a). In tabular experiments, we apply the exact operator T π 
+
+> 2
+
+and report the Bellman residual. In large-scale experiments, we implement incremental JIPE-2
+
+with neural approximation, and report moving-average TD errors. 
+
+Windy gridworld (WGW). We consider a WGW environment with actions {U, R, D, L} and a leftward “wind gust” that couples counterfactual next states under shared exogenous randomness (Figure 1). Figure 2 (left) shows linear decay of the Bellman residual on a log scale, consistent with the γ-contraction and geometric convergence results. 
+
+Coupled-reward chain (CRC). We consider a finite chain of states with two actions and anti-correlated rewards (Figure 4). Figure 2 (right) again displays linear decay of the Bellman residual on a log scale. To visualize the cross-action dependence, we form, for each state s, the covariance and correlation matrices 
+
+Cov πs (a, ˜a) := Σ π(s, a, s, ˜a) − μπ(s, a )μπ(s, ˜a), ρπs (a, ˜a) := Cov πs (a, ˜a)
+
+pCov πs (a, a )Cov πs (˜ a, ˜a) . (36) Figure 3 shows, for a 3 × 3 WGW under a fixed goal-directed policy, the 4 × 4 correlation matrix 10 Figure 3: Per-state action correlation matrices in WGW. Each tile corresponds to a state in a 3 × 3 WGW, and displays the 4 × 4 correlation matrix ρπs computed through JIPE-2.
+
+ρπs at each state. The figure indicates that the coupled-dynamics induce a structured, state-dependent joint law across actions which is invisible to an MDP marginal description. Figure 6 similarly reports the learned return correlation matrix ρπs0 at the initial chain state s0 of a CRC with |S| = 25 .                
+
+> s0· · · sM
+> a= 0
+> a= 1
+> a= 0
+> a= 1
+> a= 0
+> a= 1
+> Ut∼Bernoulli(1 /2)
+> R(0)
+> t=UtR(1)
+> t= 1 −Ut
+
+Figure 4: CRC with M states, where the two actions share the same transition dy-namics while rewards are anti-correlated at each state. We then validate the use of mixed moments for gap statistics. Figure 5 (left, middle) compare JIPE-2-derived predictions of E[Gπ] and var (Gπ) to MC estimates. The agreement indicates that the learned mixed moments mean-ingfully capture joint-action return structure. Furthermore, using the Chebyshev inequality, we derive an upper bound on the inferiority probability P(Gπ ≤ 0) . We summa-rize the bound’s tightness by the empirical cdf (ECDF) of the ratio ˆP(Gπ ≤ 0) /Chebyshev(G π) (where ˆP is an MC estimate). Figure 5 (right) shows ratios bounded by 
+
+1, indicating empirical non-violation of the upper-bound. Higher density of smaller ratios indicate tightness of the bound. To demonstrate scalability beyond tabular settings, we implement incremental JIPE-2 with neural function approximation in four ALE environments with a coupled-dynamics interface. Concretely, we wrap the simulator with a multi-action one-step query mechanism that returns counterfactual one-step outcomes for multiple actions under shared emulator randomness at the queried state, inducing 1- and 2-JSTMs. We parameterize Mμ(s, a ) and 
+
+MΣ(s, a, ˜s, ˜a) with neural networks and perform SGD on TD errors derived from one-sample backups. Figure 7 reports the moving-average TD errors for the μ coordinate and multiple Σ coordinate blocks. Across all cases, TD errors decrease by several orders of magnitude, providing evidence that incremental JIPE-2 can be combined with function approximation to mitigate the |S| 2|A| 2 complexity of tabular 2nd moment evaluation. 11 Figure 5: Gap validation in WGW. We evaluate a fixed goal-directed policy and consider gaps between the policy’s action and alternatives. Left: Predicted vs. MC gap means E[Gπ].
+
+Middle: Predicted vs. MC gap variances var (Gπ). Right: Empirical cdf of the ratio ˆP(Gπ ≤
+
+0) /Chebyshev (Gπ), which measures empirical tightness of the Chebyshev upper bound. The blue 
+
+curve computes the denominator using JIPE-2-estimated moments, while the orange curve uses MC-estimated moments (a near-ground-truth proxy). This comparison separates two sources of looseness: (i) intrinsic looseness of the Chebyshev bound itself, and (ii) moment-estimation error. The close agreement between the two curves indicates that most of the observed looseness is due to the bound and not inaccurate moment estimation. 
+
+Figure 6: Correlation matrix ρπs0 computed from the converged JIPE-2 moments in CRC. 
+
+# 7 Conclusion 
+
+We introduced JMDPs for coupled-dynamics environments that explicitly model the joint law of counterfactual outcomes across actions. Under a one-step coupling regime, we derived Bellman operators for return moments and obtained convergence guarantees for DP algorithms and their incremental variants, along with a projected function-approximation formulation. This makes intrinsically joint quantities such as gap moments and inferiority-probability bounds computable from multi-action simulator access. Experiments in coupled tabular and ALE environments show that learned mixed moments recover meaningful cross-action dependence absent from marginal MDP descriptions. A natural next step is control: extending joint moment evaluation to policy improvement under joint distributional objectives in JMDPs. 12 Figure 7: Incremental JIPE-2 with neural functional approximation on coupled ALE environments. Moving-average TD errors (log scale) during SGD-based incremental JIPE-2 with neural function approximation, shown for Pong, BattleZone, Boxing, and Atlantis (left-to-right, top-to-bottom). The plotted coordinates corresponds to the JIPE-2 blocks: μ is the 1st-moment (mean-return) component, σdiag is the block where s = ˜s and a = ˜a. σsame is the block where s = ˜s,
+
+a̸ = ˜a. σcross is the block where s̸ = ˜s, a̸ = ˜a. Bold curves show the across-seed mean TD error, and faint curves show the individual trajectories from three random seeds . Across all four ALE games, each block exhibits stable descent over training, supporting the practicality of the incremental JIPE-2 updates under nonlinear function approximation. 13 References 
+
+[1] Yotam Amitai, Yael Septon, and Ofra Amir. Explaining reinforcement learning agents through counterfactual action outcomes. In Proceedings of the AAAI Conference on Artificial Intelligence ,volume 38, pages 10003–10011, 2024. [2] Philippe Artzner, Freddy Delbaen, Jean-Marc Eber, and David Heath. Coherent measures of risk. Mathematical finance , 9(3):203–228, 1999. [3] Marc Bellemare, Yavar Naddaf, Joel Veness, and Michael Bowling. The arcade learning environment: An evaluation platform for general agents. Journal of Artificial Intelligence Research , 47, 07 2012. doi: 10.1613/jair.3912. [4] Marc G. Bellemare, Will Dabney, and Rémi Munos. A distributional perspective on reinforcement learning. In Doina Precup and Yee Whye Teh, editors, Proceedings of the 34th International Conference on Machine Learning , volume 70 of Proceedings of Machine Learning Research , pages 449–458. PMLR, 06–11 Aug 2017. URL https://proceedings.mlr.press/v70/bellemare17a. html .[5] Marc G. Bellemare, Will Dabney, and Mark Rowland. Distributional Reinforcement Learning .The MIT Press, 05 2023. ISBN 9780262374026. doi: 10.7551/mitpress/14207.001.0001. URL 
+
+https://doi.org/10.7551/mitpress/14207.001.0001 .[6] Dimitri Bertsekas and Steven E Shreve. Stochastic optimal control: the discrete-time case ,volume 5. Athena Scientific, 1996. [7] Dimitri P Bertsekas. Neuro-dynamic programming. In Encyclopedia of optimization , pages 1–6. Springer, 2025. [8] Dimitri P Bertsekas and John N Tsitsiklis. Neuro-dynamic programming: an overview. In 
+
+Proceedings of 1995 34th IEEE conference on decision and control , volume 1, pages 560–564. IEEE, 1995. [9] Stéphane Boucheron, Gábor Lugosi, and Pascal Massart. Concentration Inequalities: ANonasymptotic Theory of Independence . Oxford University Press, 02 2013. ISBN 9780199535255. doi: 10.1093/acprof:oso/9780199535255.001.0001. URL https://doi.org/10.1093/acprof: oso/9780199535255.001.0001 .[10] Yinlam Chow and Mohammad Ghavamzadeh. Algorithms for cvar optimization in mdps. In 
+
+Proceedings of the 28th International Conference on Neural Information Processing Systems -Volume 2 , NIPS’14, page 3509–3517, Cambridge, MA, USA, 2014. MIT Press. [11] Will Dabney, Georg Ostrovski, David Silver, and Remi Munos. Implicit quantile networks for distributional reinforcement learning. In Jennifer Dy and Andreas Krause, editors, Proceedings of the 35th International Conference on Machine Learning , volume 80 of Proceedings of Machine Learning Research , pages 1096–1105. PMLR, 10–15 Jul 2018. URL https://proceedings.mlr. press/v80/dabney18a.html .[12] Will Dabney, Mark Rowland, Marc G. Bellemare, and Rémi Munos. Distributional reinforce-ment learning with quantile regression. In Proceedings of the Thirty-Second AAAI Confer-ence on Artificial Intelligence and Thirtieth Innovative Applications of Artificial Intelligence Conference and Eighth AAAI Symposium on Educational Advances in Artificial Intelligence ,AAAI’18/IAAI’18/EAAI’18. AAAI Press, 2018. ISBN 978-1-57735-800-8. 14 [13] Amir-massoud Farahmand, Csaba Szepesvári, and Rémi Munos. Error propagation for ap-proximate policy and value iteration. Advances in neural information processing systems , 23, 2010. [14] Dror Freirich, Tzahi Shimkin, Ron Meir, and Aviv Tamar. Distributional multivariate policy evaluation and exploration with the Bellman GAN. In Kamalika Chaudhuri and Ruslan Salakhutdinov, editors, Proceedings of the 36th International Conference on Machine Learning ,volume 97 of Proceedings of Machine Learning Research , pages 1983–1992. PMLR, 09–15 Jun 2019. URL https://proceedings.mlr.press/v97/freirich19a.html .[15] Paul Glasserman. Monte Carlo methods in financial engineering , volume 53. Springer, 2004. [16] Tommi Jaakkola, Michael Jordan, and Satinder Singh. Convergence of stochastic iterative dynamic programming algorithms. Advances in neural information processing systems , 6, 1993. [17] Chaochao Lu, Biwei Huang, Ke Wang, José Miguel Hernández-Lobato, Kun Zhang, and Bernhard Schölkopf. Sample-efficient reinforcement learning via counterfactual-based data augmentation. arXiv preprint arXiv:2012.09092 , 2020. [18] Shie Mannor and John N. Tsitsiklis. Mean-variance optimization in markov decision processes. In Proceedings of the 28th International Conference on International Conference on Machine Learning , ICML’11, page 177–184, Madison, WI, USA, 2011. Omnipress. ISBN 9781450306195. [19] Rémi Munos. Performance bounds in l_p-norm for approximate value iteration. SIAM journal on control and optimization , 46(2):541–561, 2007. [20] Andrew Y Ng and Michael I Jordan. Pegasus: A policy search method for large mdps and pomdps. arXiv preprint arXiv:1301.3878 , 2013. [21] Thanh Nguyen-Tang, Sunil Gupta, and Svetha Venkatesh. Distributional reinforcement learning via moment matching. In Proceedings of the AAAI conference on artificial intelligence , volume 35, pages 9144–9152, 2021. [22] Martin L. Puterman. Markov Decision Processes: Discrete Stochastic Dynamic Programming .John Wiley & Sons, Inc., USA, 1st edition, 1994. ISBN 0471619779. [23] Herbert Robbins and Sutton Monro. A stochastic approximation method. The annals of mathematical statistics , pages 400–407, 1951. [24] R Tyrrell Rockafellar, Stanislav Uryasev, et al. Optimization of conditional value-at-risk. Journal of risk , 2:21–42, 2000. [25] Bruno Scherrer. Should one compute the temporal difference fix point or minimize the bellman residual? the unified oblique projection view. arXiv preprint arXiv:1011.4362 , 2010. [26] Alexander Shapiro, Darinka Dentcheva, and Andrzej Ruszczynski. Lectures on stochastic programming: modeling and theory . SIAM, 2021. [27] Matthew J. Sobel. The variance of discounted markov decision processes. Journal of Applied Prob-ability , 19(4):794–802, 1982. ISSN 00219002. URL http://www.jstor.org/stable/3213832 .[28] Richard S. Sutton and Andrew G. Barto. Reinforcement Learning: An Introduction . A Bradford Book, Cambridge, MA, USA, 2018. ISBN 0262039249. 15 [29] Aviv Tamar, Dotan Di Castro, and Shie Mannor. Temporal difference methods for the variance of the reward to go. In Sanjoy Dasgupta and David McAllester, editors, Proceedings of the 30th International Conference on Machine Learning , volume 28 of Proceedings of Machine Learning Research , pages 495–503, Atlanta, Georgia, USA, 17–19 Jun 2013. PMLR. URL 
+
+https://proceedings.mlr.press/v28/tamar13.html .[30] Aviv Tamar, Dotan Di Castro, and Shie Mannor. Learning the variance of the reward-to-go. 
+
+Journal of Machine Learning Research , 17(13):1–36, 2016. URL http://jmlr.org/papers/ v17/14-335.html .[31] John N Tsitsiklis. Asynchronous stochastic approximation and q-learning. Machine learning , 16 (3):185–202, 1994. [32] Harley Wiltzer, Marc Bellemare, David Meger, Patrick Shafto, and Yash Jhaveri. Action gaps and advantages in continuous-time distributional reinforcement learning. Advances in Neural Information Processing Systems , 37:47815–47848, 2024. [33] Harley Wiltzer, Jesse Farebrother, Arthur Gretton, and Mark Rowland. Foundations of multivariate distributional reinforcement learning. Advances in Neural Information Processing Systems , 37:101297–101336, 2024. [34] Derek Yang, Li Zhao, Zichuan Lin, Tao Qin, Jiang Bian, and Tie-Yan Liu. Fully parameterized quantile function for distributional reinforcement learning. Advances in neural information processing systems , 32, 2019. [35] Pushi Zhang, Xiaoyu Chen, Li Zhao, Wei Xiong, Tao Qin, and Tie-Yan Liu. Distributional reinforcement learning for multi-dimensional reward functions. Advances in Neural Information Processing Systems , 34:1519–1529, 2021. 16 A Proofs 
+
+Lemma A.1. Let λ := 2 /(1 − γ). For any moment collection M , define the norm 
+
+∥M ∥λ := max 
+
+
+
+∥Mμ∥∞ , 1
+
+λ ∥MΣ∥∞
+
+
+
+. (37) 
+
+Then, T π 
+
+> 2
+
+is a γ-contraction in ∥ · ∥ λ.Proof. Firstly, ∥ · ∥ λ is clearly a norm, since it is a maximum over two norms in their respective coordinate spaces. Now, we have, for any (s, a ) ∈ S × A ,
+
+(T π 
+
+> 2
+
+M )μ(s, a ) − (T π 
+
+> 2
+
+M ′)μ(s, a ) = γ E(M − M ′)μ
+
+ S′(a), A ′(a) | S = s ≤ γ (M − M ′)μ ∞ .
+
+(38) Then, taking the supremum over (s, a ) on the left-hand side directly yields 
+
+(T π 
+
+> 2
+
+M − T π 
+
+> 2
+
+M ′)μ ∞ ≤ γ (M − M ′)μ ∞ ≤ γ max 
+
+
+
+(M − M ′)μ ∞ , 1
+
+λ (M − M ′)Σ ∞
+
+
+
+= γ M − M ′
+
+> λ
+
+(39) Similarly for the second-moment coordinate space, for any (s, a, ˜s, ˜a) ∈ (S × A )2,
+
+(T π 
+
+> 2
+
+M )Σ(s, a, ˜s, ˜a) − (T π 
+
+> 2
+
+M ′)Σ(s, a, ˜s, ˜a) = EγR (a)(M − M ′)μ
+
+  ˜S′(˜ a), ˜A′(˜ a)
+
++γ ˜R(˜ a)(M − M ′)μ
+
+ S′(a), A ′(a)
+
++γ2(M − M ′)Σ
+
+ S′(a), A ′(a), ˜S′(˜ a), ˜A′(˜ a) | (S, ˜S) = ( s, ˜s)|≤ Eγ R(a)(M − M ′)μ
+
+  ˜S′(˜ a), ˜A′(˜ a) + γ ˜R(˜ a)(M − M ′)μ
+
+ S′(a), A ′(a)
+
++γ2 (M − M ′)Σ
+
+ S′(a), A ′(a), ˜S′(˜ a), ˜A′(˜ a) | (S, ˜S) = ( s, ˜s)
+
+≤ 2γ (M − M ′)μ ∞ + γ2 (M − M ′)Σ ∞ .
+
+(40) Once again, taking the supremum over (s, a, ˜s, ˜a) on the left-hand side and dividing by λ yields 
+
+1
+
+λ (T π 
+
+> 2
+
+M − T π 
+
+> 2
+
+M ′)Σ) ∞ ≤ 2γλ (M − M ′)μ ∞ + γ2
+
+λ (M − M ′)Σ ∞
+
+≤   2γλ + γ2 max 
+
+
+
+(M − M ′)μ ∞ , 1
+
+λ (M − M ′)Σ ∞
+
+
+
+= γ max 
+
+
+
+(M − M ′)μ ∞ , 1
+
+λ (M − M ′)Σ ∞
+
+
+
+= γ M − M ′ 
+
+> λ
+
+.
+
+(41) Using (39) and (41), we conclude 
+
+T π 
+
+> 2
+
+M − T π 
+
+> 2
+
+M ′ 
+
+> λ
+
+:= max 
+
+
+
+(T π 
+
+> 2
+
+M − T π 
+
+> 2
+
+M ′)μ ∞ , 1
+
+λ (T π 
+
+> 2
+
+M − T π 
+
+> 2
+
+M ′)Σ) ∞
+
+
+
+≤ γ M − M ′ 
+
+> λ
+
+.
+
+(42) 17 Theorem A.2. T π 
+
+> 2
+
+admits a unique fixed point M π 
+
+> 2
+
+. Moreover, for λ = 2 /(1 − γ) and initialization 
+
+M0, JIPE-2 has geometric convergence in γ with respect to ∥ · ∥ λ:
+
+∥Mk − M π 
+
+> 2
+
+∥λ ≤ γk ∥M0 − M π 
+
+> 2
+
+∥λ . (43) 
+
+Furthermore, for any moment collection M , define the 2nd-order Bellman residual as ∥M − T π 
+
+> 2
+
+M ∥λ.Then, 
+
+∥M − M π 
+
+> 2
+
+∥λ ≤ 11 − γ ∥M − T π 
+
+> 2
+
+M ∥λ . (44) 
+
+Proof. The proof of the first statement is a simple application of the Banach fixed-point theorem to Lemma 5.2. For the second statement, since M π 
+
+> 2
+
+= T π 
+
+> 2
+
+M π 
+
+> 2
+
+,
+
+∥M − M π 
+
+> 2
+
+∥λ ≤ ∥ M − T π 
+
+> 2
+
+M ∥λ + ∥T π 
+
+> 2
+
+M − T π 
+
+> 2
+
+M π 
+
+> 2
+
+∥λ
+
+≤ ∥ M − T π 
+
+> 2
+
+M ∥λ + γ ∥M − M π 
+
+> 2
+
+∥λ . (45) Rearranging furnishes the result. 
+
+Lemma A.3. Let Fk be a filtration such that each update index Ik ∈ I 2 is Fk-measurable, and the randomness used to form ˆT π 
+
+> 2
+
+(Mk, I k) is Fk+1 -measurable and conditionally independent of the past given Fk. Let the coordinatewise noise term be 
+
+ωk+1 (i) := ˆT π 
+
+> 2
+
+(Mk, i ) − (T π 
+
+> 2
+
+Mk)( i). (46) 
+
+Then, for every index i ∈ I 2 updated at time k
+
+Eωk+1 (i) | F k
+
+ = 0 , (47) 
+
+and there exist finite constants C0, C 1 > 0 such that 
+
+Eωk+1 (i)2 | F k
+
+ ≤ C0 + C1 ∥Mk∥2 
+
+> λ
+
+. (48) 
+
+Proof. Fix a time k and let i ∈ I 2 be an index updated at time k. Equation (47) holds by construction, since ˆT π 
+
+> 2
+
+(Mk, i ) is a sample-based estimator of the defining conditional expectations for (T π 
+
+> 2
+
+Mk)( i).In other words, (T π 
+
+> 2
+
+Mk)( i) = E[ ˆT π 
+
+> 2
+
+(Mk, i ) | F k]. It remains to prove (48). Firstly, 
+
+ωk+1 (i)2 =   ˆT π 
+
+> 2
+
+(Mk, i ) − (T π 
+
+> 2
+
+Mk)( i)2
+
+≤ 2 ˆT π 
+
+> 2
+
+(Mk, i )2 + 2( T π 
+
+> 2
+
+Mk)( i)2. (49) Taking expectations conditional to Fk on both sides, 
+
+Eωk+1 (i)2 | F k
+
+ ≤ 2E ˆT π 
+
+> 2
+
+(Mk, i )2 | F k
+
+ + 2( T π 
+
+> 2
+
+Mk)( i)2
+
+≤ 2E ˆT π 
+
+> 2
+
+(Mk, i )2 | F k
+
+ + 2 E ˆT π 
+
+> 2
+
+(Mk, i ) | F k
+
+
+
+= 4 E ˆT π 
+
+> 2
+
+(Mk, i )2 | F k
+
+,
+
+(50) using Jensen’s inequality. Thus, it suffices to upper bound E[ ˆT π 
+
+> 2
+
+(Mk, i ) | F k] by an affine function of 
+
+∥Mk∥2 
+
+> λ
+
+for the two cases of i being a μ-index or a Σ-index. 18 Case 1: If i = (( s, a ), μ ), then by definition of the sample backup, 
+
+ˆT π 
+
+> 2
+
+(Mk, i ) = R(a) + γ(Mk)μ
+
+ S′(a), A ′(a), (51) with R(a) ∈ [0 , 1] almost surely. Hence, 
+
+ˆT π 
+
+> 2
+
+(Mk, i ) ≤ 1 + γ ∥(Mk)μ∥∞ ≤ 1 + γ ∥Mk∥λ , (52) or alternatively, ˆT π 
+
+> 2
+
+(Mk, i )2 ≤ 2 + 2 γ2 ∥Mk∥2 
+
+> λ
+
+. (53) Taking conditional expectations with respect to Fk, and using (50), we have 
+
+Eωk+1 (i)2 | F k
+
+ ≤ 8 + 8 γ2 ∥Mk∥2 
+
+> λ
+
+. (54) 
+
+Case 2: If i = (( s, a ), (˜ s, ˜a), Σ) , we have the sample backup 
+
+ˆT π 
+
+> 2
+
+(M, i ) := R(a) ˜R(˜ a) + γR (a)Mμ
+
+  ˜S′(˜ a), ˜A′(˜ a) + γ ˜R(˜ a)Mμ
+
+ S′(a), A ′(a)
+
++γ2MΣ
+
+ S′(a), A ′(a), ˜S′(˜ a), ˜A′(˜ a). (55) Once again, R(a), ˜R(˜ a) ∈ [0 , 1] almost surely. Then, 
+
+ˆT π 
+
+> 2
+
+(M, i ) ≤ 1 + γ (Mk)μ
+
+  ˜S′(˜ a), ˜A′(˜ a) + γ (Mk)μ
+
+ S′(a), A ′(a)
+
++γ2 (Mk)Σ
+
+ S′(a), A ′(a), ˜S′(˜ a), ˜A′(˜ a)
+
+≤ 1 + 2 γ ∥(Mk)μ∥∞ + γ2 ∥(Mk)Σ∥∞ .
+
+(56) Furthermore, we have ∥(Mk)μ∥∞ ≤ ∥ Mk∥λ and ∥(Mk)Σ∥∞ ≤ λ ∥Mk∥λ. Then, 
+
+ˆT π 
+
+> 2
+
+(Mk, i ) ≤ 1 + (2 γ + γ2λ) ∥Mk∥λ , (57) or alternatively, ˆT π 
+
+> 2
+
+(Mk, i )2 ≤ 2 + 2(2 γ + γ2λ)2 ∥Mk∥2 
+
+> λ
+
+. (58) Taking conditional expectations with respect to Fk, and using (50), we have 
+
+Eωk+1 (i)2 | F k
+
+ ≤ 8 + 8(2 γ + γ2λ)2 ∥Mk∥2 
+
+> λ
+
+. (59) Combining (54) and (59) to define 
+
+C0 := 8 , C1 := 8 max γ2, (2 γ + γ2λ)2 (60) finishes the proof. 
+
+Theorem A.4. Assume each coordinate i ∈ I 2 is selected infinitely often by Ik. Let the step size 
+
+αk(i) satisfy the conditions of [23] for every index i:
+
+X
+
+> k
+
+αk(i) = ∞, X
+
+> k
+
+αk(i)2 < ∞. (61) 
+
+Then, the incremental JIPE-2 iteration converges almost surely in ∥ · ∥ λ, i.e., 
+
+∥Mk − M π 
+
+> 2
+
+∥λ → 0 almost surely as k → ∞ . (62) 
+
+Proof. By Lemma 5.2, T π 
+
+> 2
+
+is a contraction map on the space of moment collections under ∥ · ∥ λ,with unique fixed point M π 
+
+> 2
+
+(Theorem 5.3). The incremental JIPE-2 recursion is an asynchronous stochastic approximation scheme [ 16 , 31 , 8] for T π 
+
+> 2
+
+, with martingale-difference noise and controlled conditional second moment (Lemma A.3). The step size and visitation conditions are those required by the contraction-map stochastic approximation theorem by [ 5], yielding almost-sure convergence to the fixed point. 19 B JIPE-2 with Function Approximation 
+
+The exact DP algorithm, namely JIPE-2, is restricted to environments with discrete and appropriately small state-action spaces X . In domains characterized by high-dimensional or continuous state spaces, representing the true moment collection M = ( Mμ, M Σ) exactly may become computationally intractable. To formalize the evaluation of joint return moments in such regimes, we leverage function approximation and restrict our candidate moment collections to a parameterized functional family 
+
+ˆM (θ) = ( ˆMμ(θμ), ˆMΣ(θΣ)) , where the parameter vector θ = ( θμ, θ Σ) resides in a lower-dimensional Euclidean space Rdμ × RdΣ .Specifically, we adopt a linear function approximation architecture. Assuming access to a set of basis functions, formulated as feature maps ϕμ : X → Rdμ for the first-order moment the parameterized approximator is defined as 
+
+ˆMμ(s, a ; θμ) := ϕμ(s, a )⊤θμ. (63) To ensure the second-moment approximator retains positive semi-definiteness, we consider 
+
+ϕΣ : X 2 → RdΣ for the second-order joint moments such that ϕΣ(x, y ) = ϕμ(x) ⊗ ϕμ(y) for all 
+
+x, y ∈ X and define 
+
+ˆMΣ(s, a, ˜s, ˜a; θΣ) := ϕμ(s, a )⊤ΘΣϕμ(˜ s, ˜a), ΘΣ ∈ ΘPSD , (64) where ΘPSD is the convex cone of parameters ensuring that for every s ∈ S , the matrix MΣ(s) is PSD. Let us impose the following standard assumption to guarantee the uniqueness of the approximation weights. 
+
+Assumption B.1. The feature matrix Φμ ∈ R|X |× dμ has full column rank. To define the approximation error and establish the projection mechanisms, we construct an inner product space equipped with a weighted Euclidean norm. Let ν ∈ ∆( X ) denote the stationary state-action distribution induced by the target policy π, such that ν(s, a ) = dπ(s)π(a | s), where dπ
+
+is the stationary state distribution. The following standard assumption ensures the inner product space is well defined (i.e., ∥ · ∥ ν is a norm and not just a seminorm). 
+
+Assumption B.2. The underlying Markov chain over S induced by the stationary policy π is ergodic, ensuring the stationary state-action distribution satisfies ν(s, a ) > 0 for all (s, a ) ∈ X .For the first moment function space defined over X , we formulate the inner product 
+
+⟨f, g ⟩ν := X
+
+> x∈X
+
+ν(x)f (x)g(x), ∥f ∥ν := p⟨f, f ⟩ν . (65) For the second moment function space defined over the product space X 2, we consider the product distribution ν ⊗ ν ∈ ∆( X 2), defined explicitly as (ν ⊗ ν)( x, ˜x) := ν(x)ν( ˜x). The corresponding inner product over X 2 is established as 1
+
+⟨h, l ⟩ν⊗ν := X 
+
+> x, ˜x∈X 2
+
+ν(x)ν(˜ x)h(x, ˜x)l(x, ˜x), ∥h∥ν⊗ν := p⟨h, h ⟩ν⊗ν . (66)                    
+
+> 1One might alternatively consider equipping the product space X2with the invariant measure of the joint transition kernel P2, denoted μ2.Under the geometry of L2(μ2), the operator P2is strictly non-expansive, which would analytically eliminate the requirement for Assumption B.3. However, we adopt the product distribution ν⊗νto maintain operational and objective alignment. Operationally, the agent interacts with the environment by executing the marginal policy π, meaning queried states are distributed according to the marginal stationary distribution ν.Multi-action counterfactual queries are anchored exactly at these visited states, inducing the empirical sampling distribution ν⊗ν. The environment’s one-step coupling regime structurally precludes the simulation of the indefinitely coupled counterfactual trajectories necessary to sample from μ2.
+
+20 We introduce a block-diagonal projection operator Π, which maps an arbitrary moment collection 
+
+M to the nearest representable moment collection that maintains the structural properties of the joint return RV. Specifically, while Πμ remains an orthogonal projection onto the linear subspace span (Φ μ), the second-moment projection ΠΣ must ensure that the resulting function ˆMΣ corresponds to a valid second-moment matrix. For any state s ∈ S , the matrix MΣ(s) ∈ RN ×N defined by coordinates ˆMΣ(s, a, s, ˜a) for a, ˜a ∈ A must be PSD. We therefore define the composite operator 
+
+ΠM := (Π μMμ, ΠΣMΣ) where 
+
+ΠμMμ := arg min 
+
+> ˆMμ∈span (Φ μ)
+
+∥Mμ − ˆMμ∥ν (67) and 
+
+ΠΣMΣ := arg min 
+
+> ˆMΣ∈K Σ
+
+∥MΣ − ˆMΣ∥ν⊗ν , (68) where KΣ is the convex cone of functions representable by the quadratic form ϕ(x)⊤ΘΣϕ(y) with 
+
+ΘΣ ⪰ 0. Note that while Πμ is a linear orthogonal projection, ΠΣ is a projection onto a closed convex set, which ensures both operators remain non-expansive [7]. As the operator T π 
+
+> 2
+
+detailed in the tabular setting cannot be directly resolved (since applying the joint Bellman operator to a representable moment collection ˆM (θ) will produce a vector outside the representable subspace), our objective transforms into finding a parameter configuration θ∗ = ( θ∗
+
+> μ
+
+, θ ∗
+
+> Σ
+
+)
+
+that satisfies the projected joint Bellman equation: 
+
+ˆM (θ∗) = Π T π 
+
+> 2
+
+ˆM (θ∗). (69) 
+
+B.1 Projected JIPE-2 
+
+The exact projected iterative scheme, which we denote as Projected JIPE-2, operates directly on the parameter vectors θμ and ΘΣ. Given the parameter collection θk = ( θμ,k , ΘΣ,k ) at iteration k,the update to the subsequent parameter collection θk+1 is obtained by applying the joint Bellman operator T π 
+
+> 2
+
+to the current approximate moments ˆM (θk) and subsequently projecting the result back onto the feasible feature space via Π.The first-moment parameter update is governed by the standard relation 
+
+θμ,k +1 =  Φ⊤ 
+
+> μ
+
+Dν Φμ
+
+−1Φ⊤ 
+
+> μ
+
+Dν T π 
+
+> 2,μ
+
+ˆM (θk), (70) where Dν is the diagonal matrix with entries ν(s, a ) for (s, a ) ∈ X , and T π 
+
+> 2,μ
+
+extracts the first-moment component of the joint Bellman operator. The second-moment parameter update, however, requires solving the constrained quadratic program defined by Eq. (68) 2
+
+ΘΣ,k +1 = arg min 
+
+> Θ∈ΘPSD
+
+ΦμΘΦ ⊤ 
+
+> μ
+
+− T π 
+
+> 2,Σ
+
+ˆM (θk) 2
+
+> Dν⊗ν
+
+, (71) where Dν⊗ν = Dν ⊗ Dν is the diagonal matrix with entries ν(s, a ) ν( ˜s, ˜a) for (s, a, ˜s, ˜a) ∈ X 2, and 
+
+T π 
+
+> 2,Σ
+
+extracts the second-moment component (here, we interpret T π 
+
+> 2,Σ
+
+ˆM (θk) as a |X | × |X | matrix).          
+
+> 2The objective function can be rewritten using the trace operator as Tr (E⊤DνEDν), where E= Φ μΘΦ ⊤
+> μ−Tπ
+> 2,ΣˆM(θk)
+> denotes the approximation error matrix.
+
+21 B.2 Analysis of Projected JIPE-2 
+
+We analyze this method under the following assumption (motivated by the concentration coefficient defined in Section 5 of [ 19 ]) to establish that the projected joint Bellman operator ΠT π 
+
+> 2
+
+remains a contraction mapping. 
+
+Assumption B.3. There exists a finite coefficient cρ ≥ 1 such that for the transition kernel 
+
+P2 : X 2 × X 2 → [0 , 1] governing the evolution under the 2-JSTM evaluation policy, and for any function f : X 2 → R, the inequality ∥P2f ∥ν⊗ν ≤ √cρ∥f ∥ν⊗ν holds. Furthermore, the discount factor satisfies the strict inequality γ2√cρ < 1.3
+
+We will discuss the necessity of this assumption after the following theorem and its proof. 
+
+Theorem B.4. Under Assumptions B.1, B.2, and B.3 there exists a scalar β > 0 such that the projected joint Bellman operator ΠT π 
+
+> 2
+
+is a κ-contraction with respect to the weighted norm 
+
+∥M ∥ν,β := max {∥ Mμ∥ν , β ∥MΣ∥ν⊗ν }, with a contraction factor κ < 1. Consequently, the sequence generated by Mk+1 = Π T π 
+
+> 2
+
+Mk converges to a unique fixed point ˆM ∗, which satisfies ∥ ˆM ∗ − M π 
+
+> 2
+
+∥ν,β ≤ 
+
+> 11−κ
+
+∥ΠM π 
+
+> 2
+
+− M π 
+
+> 2
+
+∥ν,β .Proof. Let M and ¯M be arbitrary moment collections, and define ∆ := M − ¯M . Recall, by the properties of orthogonal projections, Πμ and ΠΣ are non-expansive in ∥ · ∥ ν and ∥ · ∥ ν⊗ν , respectively. For the first-order moment operator, given non-expansiveness of Πμ and γ-contraction of T π
+
+> 2,μ
+
+∥Πμ(T π
+
+> 2,μ
+
+M − T π 
+
+> 2,μ
+
+¯M )∥ν ≤ ∥ T π
+
+> 2,μ
+
+∆∥ν ≤ γ∥∆μ∥ν . (72) For the second-order moment operator, the linearity of T π 
+
+> 2,Σ
+
+implies that for any X = ( s, a ) and 
+
+Y = (˜ s, ˜a),
+
+(T π
+
+> 2,Σ
+
+∆)( X, Y ) = γE
+
+h
+
+R(a)∆μ(Y ′) | X, Y 
+
+i
+
++ γE
+
+h ˜R(˜ a)∆μ(X′) | X, Y 
+
+i
+
++ γ2E ∆Σ(X′, Y ′) | X, Y  .
+
+(73) Applying the triangle inequality to the norm ∥T π
+
+> 2,Σ
+
+∆∥ν⊗ν , we bound each term separately. For the first cross-term we have 4
+
+E
+
+h
+
+R(a)∆μ(Y ′) | X, Y 
+
+i 
+
+> ν⊗ν
+
+≤ ∥ 1 ⊗ P π|∆μ|∥ ν⊗ν = ∥P π|∆μ|∥ ν ≤ ∥ ∆μ∥ν , (74) where the first inequality follows since R(a) ∈ [0 , 1] almost surely, the equality flows from Lemma B.5, and the final inequality follows from Lemma B.6. By symmetry, the second cross-term is bounded by ∥∆μ∥ν .The final term involves the joint transition kernel P2, yielding ∥P2∆Σ∥ν⊗ν ≤ √cρ∥∆Σ∥ν⊗ν by Assumption B.3. Combining these results, we obtain 
+
+∥ΠΣ(T π
+
+> 2,Σ
+
+M − T π 
+
+> 2,Σ
+
+¯M )∥ν⊗ν ≤ 2γ∥∆μ∥ν + γ2√cρ∥∆Σ∥ν⊗ν . (75) Substituting these bounds into the definition of ∥ · ∥ ν,β provides 
+
+∥ΠT π 
+
+> 2
+
+M − ΠT π 
+
+> 2
+
+¯M ∥ν,β ≤ max γ∥∆∥ν,β , 2βγ ∥∆μ∥ν + βγ 2√cρ∥∆Σ∥ν⊗ν . (76)                        
+
+> 3In other words, this assumption imposes that the operator norm ∥P2∥op := sup g̸=0
+> ∥P2g∥ν⊗ν
+> ∥g∥ν⊗νis upper bounded by
+> √cρ.
+> 4The expression 1⊗frepresents a function over the product space X2such that for any pair (x, y )∈ X 2, the evaluation yields (1⊗f)( x, y ) = 1(x)f(y) = f(y).
+
+22 The second argument of the maximum is upper bounded by (2 βγ + γ2√cρ)∥∆∥ν,β . To ensure 
+
+ΠT π 
+
+> 2
+
+is a contraction mapping, we require max {γ, 2βγ + γ2√cρ} ≤ κ < 1. Given the condition 
+
+γ2√cρ < 1, selecting β ∈  0, 1−γ2√cρ
+
+> 2γ
+
+ ensures κ < 1. The existence of a unique fixed point ˆM ∗
+
+and the corresponding approximation error bound follow immediately from the Banach fixed-point theorem. 
+
+Lemma B.5. It holds that ∥1 ⊗ f ∥ν⊗ν = ∥f ∥ν .Proof. This is a standard result from functional analysis only stated here for completeness. Recall the definitions of the inner product and induced norm in Eq. (66) to write 
+
+∥1 ⊗ f ∥2 
+
+> ν⊗ν
+
+= X 
+
+> (x,y )∈X 2
+
+(ν ⊗ ν)( x, y )( 1 ⊗ f )( x, y )2. (77) Substituting the definitions of the product measure (ν ⊗ ν)( x, y ) = ν(x)ν(y) and the evaluated function (1 ⊗ f )( x, y ) = f (y) into the summation yields 
+
+∥1 ⊗ f ∥2 
+
+> ν⊗ν
+
+= X
+
+> x∈X
+
+X
+
+> y∈X
+
+ν(x)ν(y)f (y)2. (78) Factoring the iterated summation into the product of two independent summations and using the fact that ν ∈ ∆( X ) is a valid probability distribution over the state-action space X and satisfies the normalization axiom, we obtain 
+
+∥1 ⊗ f ∥2 
+
+> ν⊗ν
+
+= 1 · X
+
+> y∈X
+
+ν(y)f (y)2 = ∥f ∥2 
+
+> ν
+
+, (79) where we used the inner product and induced norm in defined Eq. (65) . Taking the square root of both sides furnishes the proof. 
+
+Lemma B.6. The operator P π is non-expansive in L2(ν).Proof. This is a standard result, see e.g. [ 19 ], and we only state it for completeness. The transition operator P π applied to a function f : X → R is defined pointwise as (P πf )( x) = P 
+
+> x′∈X
+
+P π(x′ |
+
+x)f (x′), where P π(x′ | x) represents the probability of transitioning to the state-action pair x′ given the current state-action pair x.Applying the definition of the induced norm from Eq. (65) and expanding the transition operator yields 
+
+∥P πf ∥2 
+
+> ν
+
+= X
+
+> x∈X
+
+ν(x)  X 
+
+> x′∈X
+
+P π(x′ | x)f (x′)2. (80) By Jensen’s inequality, 
+
+∥P πf ∥2 
+
+> ν
+
+≤ X
+
+> x∈X
+
+ν(x) X
+
+> x′∈X
+
+P π(x′ | x)f (x′)2. (81) Interchanging the order of summation over the discrete space X , and using the fact that ν is the invariant stationary distribution of the Markov chain induced by the policy π, i.e. P 
+
+> x∈X
+
+ν(x)P π(x′ |
+
+x) = ν(x′), yields 
+
+∥P πf ∥2 
+
+> ν
+
+≤ X
+
+> x∈X
+
+ν(x) X
+
+> x′∈X
+
+P π(x′ | x)f (x′)2 ≤ X
+
+> x′∈X
+
+f (x′)2ν(x′) = ∥f ∥2 
+
+> ν
+
+. (82) Taking the square root of both sides of the inequality establishes the proof. 23 B.3 Necessity of Assumption B.3 
+
+While versions of Assumption B.3 are standard in approximate dynamic programming and off-policy RL [ 19 , 13 ], 5 the specific utilization in the context of an on-policy evaluation scheme studied here emerges uniquely from the proposed JMDP formalism. In classical on-policy policy evaluation, the sampling distribution perfectly aligns with the stationary distribution of the transition kernel. In our setting, while the marginal sampling distribution ν is the invariant measure of the marginal transition kernel P π, the product distribution ν ⊗ ν we were forced to use for the weighted projection 
+
+ΠΣ is fundamentally not the invariant measure of the coupled joint transition kernel P2.Intuitively, Assumption B.3 restricts the degree to which the shared exogenous noise in the coupled-dynamics environment can couple counterfactual trajectories. The product distribution 
+
+ν ⊗ ν establishes a theoretical baseline where the two queried state-action pairs (s, a ) and ( ˜s, ˜a) and their subsequent transitions evolve with strict statistical independence . The transition kernel P2
+
+however dictates how these variables actually evolve given that they originated from the exact same state under the exact same exogenous noise realization. The coefficient cρ dictates that this coupled one-step transition must not concentrate the probability mass of the successor joint state-action pairs into a narrow region of the product space that possesses low probability mass under the independent product measure ν ⊗ ν. If the environment’s coupling deterministically forces the two counterfactual trajectories to transition to a highly specific joint configuration that is exceedingly rare under independent sampling, the underlying density ratio diverges. In such pathological cases, 
+
+cρ becomes prohibitively large, and γ2 is rendered insufficient to suppress the amplification of the function approximation error, ultimately causing the iterative projection sequence to diverge. To concretize our discussion, consider the environment defined by a finite state space S of cardinality M and a finite action space A of cardinality 2, denoted as A = {a, ˜a}. Let the target policy π be the uniform distribution over A for all states. The transition mechanism operates by drawing an exogenous noise variable from a specified distribution to determine the successor states. Consequently, the invariant state-action distribution ν is uniform over X = S ×A , yielding ν(x) = 12M
+
+for all x ∈ X , and the product measure evaluates to (ν ⊗ ν)( x, y ) = 14M 2 for all (x, y ) ∈ X 2.Now, let us consider two cases: 
+
+Example 1: Statistically independent counterfactual transitions. Suppose the exogenous noise variable is a vector U = ( Ua, U ˜a), where each component is drawn independently from a uniform distribution over S. The deterministic transition map is defined such that gS (s, a, U ) = Ua
+
+and gS (s, ˜a, U ) = U˜a. Under this construction, the counterfactual trajectories evolve with strict statistical independence. The joint transition kernel P2 factors exactly as the tensor product of the marginal transition kernels, i.e. P2 = P1 ⊗ P1. As shown in Lemma B.6 P1 is non-expansive in L2(ν);the tensor product P1 ⊗ P1 preserves this non-expansiveness in L2(ν ⊗ ν), i.e., for any function 
+
+f ∈ L2(ν ⊗ ν), the inequality ∥P2f ∥ν⊗ν ≤ ∥ f ∥ν⊗ν holds. Therefore, this independent construction achieves its theoretical minimum of cρ = 1 . As the standard discount factor satisfies γ ∈ (0 , 1) , we have γ2√cρ = γ2 < 1.
+
+Example 2: Perfectly coupled counterfactual transitions. Suppose instead that the exogenous noise variable U is a scalar drawn from a uniform distribution over S. The transition map forces perfect coupling by defining gS (s, a, U ) = U and gS (s, ˜a, U ) = U . Regardless of the action executed, the successor states for any two counterfactual branches are deterministically identical, such that 
+
+S′(a) = S′(˜ a) = U almost surely. Consider the indicator function defined over the product space 
+
+f (x, y ) = 1{sx=sy }. The squared norm of this function under the independent product measure         
+
+> 5There, the aim is to control the expansion of the transition operator Pin Lp(μ), i.e., general weighted Lp-norms, if the specific weighting distribution μis not the invariant measure of P.
+
+24 evaluates to 
+
+∥f ∥2 
+
+> ν⊗ν
+
+= X
+
+> x,y ∈X
+
+14M 2 1{sx=sy }. (83) Because there are M matching state pairs and 4 action combinations for each, the summation yields ∥f ∥2 
+
+> ν⊗ν
+
+= 4M  
+
+> 4M2
+
+= 1 
+
+> M
+
+, which implies ∥f ∥ν⊗ν = 1√M . Conversely, when evaluating the operator norm, the joint transition dictates that the successor state coordinates are identical with probability 
+
+1. Consequently, (P2f )( x, y ) = E[f (X′, Y ′) | X = x, Y = y ] = 1 everywhere on X 2. That is, 
+
+∥P2f ∥ν⊗ν = ∥1∥ν⊗ν = 1 . The ratio of these norms establishes 
+
+√cρ ≥ ∥ P2∥op = sup  
+
+> g̸=0
+
+∥P2g∥ν⊗ν
+
+∥g∥ν⊗ν
+
+≥ ∥P2f ∥ν⊗ν
+
+∥f ∥ν⊗ν
+
+= √M , (84) If the state space is sufficiently large such that M > γ −4, the scalar cρ becomes prohibitively large, yielding γ2√cρ > 1. That is, the transition mapping concentrates the entire probability mass onto the highly specific diagonal subspace {sx = sy}, representing an event that is rare under the theoretical baseline product distribution ν ⊗ ν.25
