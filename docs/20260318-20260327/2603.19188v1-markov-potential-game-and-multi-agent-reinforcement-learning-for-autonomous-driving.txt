@@ -1,0 +1,1362 @@
+Title: Markov Potential Game and Multi-Agent Reinforcement Learning for Autonomous Driving
+
+URL Source: https://arxiv.org/pdf/2603.19188v1
+
+Published Time: Fri, 20 Mar 2026 01:41:35 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+> 1
+
+# Markov Potential Game and Multi-Agent Reinforcement Learning for Autonomous Driving 
+
+Huiwen Yan ∗ and Mushuang Liu ∗ , Member, IEEE 
+
+Abstract —Autonomous driving (AD) requires safe and reliable decision-making among interacting agents, e.g., vehicles, bicycles, and pedestrians. Multi-agent reinforcement learning (MARL) modeled by Markov games (MGs) provides a suitable framework to characterize such agents’ interactions during decision-making. Nash equilibria (NEs) are often the desired solution in an MG. However, it is typically challenging to compute an NE in general-sum games, unless the game is a Markov potential game (MPG), which ensures the NE attainability under a few learning algorithms such as gradient play. However, it has been an open question how to construct an MPG and whether these construction rules are suitable for AD applications. In this paper, we provide sufficient conditions under which an MG is an MPG and show that these conditions can accommodate general driving objectives for autonomous vehicles (AVs) using highway forced merge scenarios as illustrative examples. A parameter-sharing neural network (NN) structure is designed to enable decentralized policy execution. The trained driving policy from MPGs is evaluated in both simulated and naturalistic traffic datasets. Comparative studies with single-agent RL and with human drivers whose behaviors are recorded in the traffic datasets are reported, respectively. 
+
+Index Terms —Autonomous driving, multi-agent systems, multi-agent reinforcement learning, Markov games, potential games, naturalistic traffic datasets. 
+
+I. I NTRODUCTION 
+
+To realize intelligent decision-making in autonomous driv-ing (AD), reinforcement learning (RL) has been recently ex-plored [1], [2]. The RL problem is often modeled as a Markov decision process (MDP), where an autonomous vehicle (AV) acts as the agent and interacts with the environment to learn a driving policy. However, real traffic scenarios involve multiple decision-making vehicles whose actions mutually influence one another. Treating all other vehicles as part of the envi-ronment and optimizing the ego vehicle’s policy via single-agent RL neglects the fact that surrounding vehicles are also active decision-makers with possibly non-stationary policies [3], [4], thereby failing to account for strategic interactions among traffic participants. This could lead to risky or overly conservative ego vehicle behavior [5], [6]. To capture strategic interactions among multiple traffic agents, multi-agent reinforcement learning (MARL) has been recently adopted in AD [7]–[9]. In particular, cooperative MARL, under the assumption of a shared global objective 
+
+∗ H. Yan and M. Liu are with the Department of Mechanical Engineering at Virginia Tech. This work was supported by DARPA Young Faculty Award with the grant number D24AP00321. 
+
+among agents, has been extensively studied [10]. Many meth-ods demonstrate strong empirical performance in coordinated driving scenarios [11], [12]. Nevertheless, such formulations may raise other concerns. First, the assumption of a shared global objective may not necessarily hold in real-world AD scenarios, where vehicles are often independently operated while optimizing self-centered heterogeneous objectives. Sec-ond, theoretical guarantees, e.g., algorithmic convergence, would be especially crucial for safety-critical applications such as AD; however, many cooperative MARL methods under the centralized training and decentralized execution (CTDE) paradigm rely primarily on empirical evaluations [13]. Unlike cooperative settings, a Markov game (MG) formulation models all traffic participants as active decision-makers with coupled self-interests, e.g., in the scenarios of merging, platooning, intersection crossing, and mixed-traffic interactions [14]–[18]. A Nash equilibrium (NE) is often a desired solution in a MG, which represents a stationary status where no agent can improve its total reward by unilaterally deviating from its policy [19]. However, most of the current MARL algorithms establish the NE attainability under very restrictive game structure assumptions, e.g., zero-sum or identical-interest MGs for Nash Q-learning [20], [21]. These special game structures hardly hold in AD applications where traffic agents’ objective functions are hardly zero-sum or identical. For the MARL algorithms that target general-sum MGs, such as gradient play and no-regret learning, the attainability of an NE (including the convergence of the algorithm and the optimality of the converged point) can be guaranteed if the MG is a Markov potential game (MPG) [22], [23]. MPGs are a special class of MGs with appealing prop-erties. In general, a potential game means that there exists a function, called a potential function, such that any unilat-eral improvement by an agent’s policy deviation equals the improvement in the potential function [24]. If a game is a potential game, then a pure-strategy NE always exists, and most NE-seeking algorithms, such as best- and better- response dynamics, are guaranteed to converge [25]. Due to these ap-pealing properties, potential games have been recently adopted in various AD applications, including intersection-crossing, highway-merging, and incoming traffic scenarios [26]–[29]. Of particular interest to our line of research, the reward shaping approach in [26] states that if agents’ reward functions satisfy certain conditions, then the resulting game is a potential game. These conditions can accommodate many traffic scenarios and driving considerations, such as tracking a desired speed while 
+
+0000–0000/00$00.00 © 2025 IEEE 
+
+> arXiv:2603.19188v1 [eess.SY] 19 Mar 2026 2
+
+avoiding collisions. However, the existing studies only focus on static games at each time instant. Whether they can be generalized to MGs has been an open question. As pointed out by [22], [30], the MPG construction could be much more challenging than static potential game construction. In this paper, we provide sufficient conditions on the reward design and on the Markov decision process such that the resulting MG is an MPG. We also demonstrate that these conditions can accommodate common AD scenarios using highway forced merge as illustrative examples. Specifically, the contributions of our paper are fourfold: 1) We develop sufficient conditions on the reward design and on the Markov transition properties such that an MG is an MPG. 2) We show that the developed conditions can accommo-date general driving objectives (e.g., tracking a desired speed, collision avoidance, or maximizing ride comfort) in AD applications. 3) We design the policy neural network using a parameter-sharing strategy to address the scalability issue and to improve the training efficiency. 4) We perform comprehensive numerical studies on both simulated and naturalistic traffic datasets and show that the MPG-based MARL approach outperforms single-agent RL and human drivers under certain metrics, including safety, energy efficiency, and ride comfort. The paper is organized as follows: Section II formulates the AD problem as an MG problem and reviews MARL pre-liminaries. Section III defines MPGs and their properties, and presents the MPG construction method. Section IV introduces the gradient-based MARL algorithm to solve the MPGs and the parameter-sharing policy network architecture. Section V reports simulation results in highway forced merge scenarios, including statistical and comparative studies. Section VI con-cludes the paper. II. P ROBLEM FORMULATION 
+
+We formulate the AV decision-making problems as Markov games in Section II-A and consider MARL in Section II-B to solve the formulated Markov games. 
+
+A. Markov Games 
+
+Let’s consider a traffic scenario consisting of a set of traffic agents N = {1, 2, · · · , N }. We model the dynamics of each vehicle i ∈ N using the kinematic bicycle model [31]: 
+
+xi,t +1 = xi,t + vi,t cos  ϕi,t + βi,t 
+
+ ∆t, yi,t +1 = yi,t + vi,t sin  ϕi,t + βi,t 
+
+ ∆t, vi,t +1 = vi,t + ui,t ∆t, ϕi,t +1 = ϕi,t + vi,t 
+
+lr
+
+sin  βi,t 
+
+ ∆t, βi,t = arctan lr
+
+lr + lf
+
+tan  δi,f,t 
+
+!
+
+.
+
+(1) Here, xi and yi denote the longitudinal and lateral positions of vehicle i’s center of mass (CoM) in a x-y inertial frame. The variables vi and ui represent the speed and acceleration of vehicle i’s CoM, respectively. The heading angle relative to the inertial frame is denoted by ϕi, while βi denotes the slip angle, defined as the deviation between the speed and the longitudinal axis of the vehicle. The parameters lf and 
+
+lr denote the distances from the CoM of the vehicle to its front and rear axles, and δi,f is the front-wheel steering angle. The dynamics are discretized by a fixed sampling time ∆t.At time instant t, the state of vehicle i is given by si,t =[xi,t , y i,t , v i,t , ϕ i,t ]⊤ ∈ S i, where Si denotes the state space. The state information is assumed to be accessible through onboard sensors. The action is ai,t = [ ui,t , δ i,f,t ]⊤ ∈ A i,consisting of acceleration and front-wheel steering angle. The global state is st = (s1,t , · · · , s N,t ) and a joint action is 
+
+at = ( a1,t , · · · , a ,t ). Specifically, s0 ∼ ρ denotes the initial global state, where ρ is the distribution of the initial global state. The global state space is given by S = S1 × · · · × S N ,and the joint action space is defined as A = A1 × · · · × A N .Each vehicle in this traffic system has its own driving objec-tive, which may consist of collision avoidance, speed regula-tion, and passenger comfort. Given a state-action pair at time t,we denote the reward of vehicle i as ri(si,t , s −i,t , a i,t , a −i,t ),where ri : S ×A → R is the reward function and the subscript 
+
+−i represents the set N \{ i}. Each vehicle solves for its own optimal action sequence, i.e., a∗ 
+
+> i
+
+= {a∗
+
+> i,t
+
+}∞ 
+
+> t=0
+
+∈ U i, where Ui
+
+is the space of the action sequence. If the initial state s0 is fixed, the optimal action sequence can be given by 
+
+a∗ 
+
+> i
+
+= argmax 
+
+> ai∈U i
+> ∞
+
+X
+
+> t=0
+
+γtri (si,t , a i,t , s −i,t , a −i,t ) , (2) where γ ∈ [0 , 1) is a discount factor. As shown in (2), the optimal action sequence a∗ 
+
+> i
+
+of vehicle 
+
+i depends on the actions of other agents through the coupled reward ri(·), characterizing agents’ interactions. Such a cou-pled optimization problem leads to a MG problem since the state transition (1) satisfies the Markov property. In general, a Markov game is defined by the tuple M =(N , S, A, P, r, γ, ρ ). For each agent i at time t, the Markov state and action are identified with the vehicle state and action, respectively. Given a global state st and a joint action at,the probability of the traffic system evolving to the next state st+1 is given by P (st+1 |st, a t), determined by the state transition model (1). Collectively, the system is characterized by the reward vector r = ( r1, · · · , r N ). The discount factor γ
+
+introduces the trade-off between immediate rewards and long-term rewards. Agents make decisions according to a policy function πi :
+
+S → ∆( Ai), which maps states to probability distributions over the action space Ai. Agents act independently based on their individual policies. That is, at each time instant t, the distribution factorizes across the agents: 
+
+Pr( at|st) = π(at|st) = 
+
+> N
+
+Y
+
+> i=1
+
+πi(ai,t |st). (3) Let’s then specify each agent’s policy with parameters θi:
+
+πi,θ i (ai,t |st) = θi, (s,a i), i = 1 , 2, · · · , N. (4) 3
+
+For notational simplicity, and with a slight abuse of notation, we shall use θi and θ = ( θ1, · · · , θ N ) to denote the parameter-ized policies πi,θ i and πθ , whenever the context is clear. We require θi ∈ ∆( Ai)|S| , where |S| denotes the cardinality of the state space. We further denote such sets of the parameters as Xi = ∆( Ai)|S| for each agent i, and the Cartesian product 
+
+X = X1 × · · · × X N for the system. A trajectory is defined as τ := ( st, a t)∞
+
+> t=0
+
+, where at ∼
+
+πθ (·| st) and st ∼ P (·| st−1, a t−1). Given that the system evolves under policy πθ , then the value function of agent i
+
+denoted as V θi : S → R, is defined as the expected discounted reward from the initial state s:
+
+V θi (s) := E
+
+h ∞X
+
+> t=0
+
+γtri(st, a t) πθ , s 0 = s
+
+i
+
+, (5) where the expectation is taken with respect to the trajectory distribution induced by πθ and the transition kernel P .For each agent i, we define its total reward Ji : X → R as: 
+
+Ji(θ) = Ji(θi, θ −i) := Es0∼ρV θi (s0), (6) where the expectation is taken with respect to the randomness of the initial state distribution ρ.From a game-theoretic perspective, an NE is a particularly desirable outcome, for it represents a stable status in multi-agent interactions, where each agent’s policy is a best response to the policies of others. 
+
+Definition 1. (Nash equilibrium [19]) A policy θ∗ =(θ∗ 
+
+> 1
+
+, · · · , θ ∗ 
+
+> N
+
+) is called a Nash equilibrium if 
+
+Ji(θ∗ 
+
+> i
+
+, θ ∗−i) ≥ Ji(θ′
+
+> i
+
+, θ ∗−i), ∀θ′ 
+
+> i
+
+∈ X i, i ∈ N . (7) Furthermore, if the NE θ∗ corresponds to a deterministic policy, it is also called a pure-strategy NE; otherwise, it is a mixed-strategy NE. Following [32], we define the discounted state visitation measure dθ over the state space as: 
+
+dθ (s) := Es0∼ρ(1 − γ)
+
+> ∞
+
+X
+
+> t=0
+
+γtPr θ (st = s|s0), (8) where Pr θ (st = s|s0) denotes the probability of state s being visited at time t given the initial state s0 under policy πθ . Then the discounted state-action visitation measure can be defined as μθ (s, a ) := dθ (s)πθ (a|s).We make the following assumption throughout this work. 
+
+Assumption 1. The Markov game M satisfies: dθ (s) >
+
+0, ∀s ∈ S , ∀θ ∈ X .
+
+This assumption ensures that every state in the state space is visited with a positive probability, a standard assumption in RL convergence proofs [30]. Note that this assumption can be readily satisfied if the initial distribution is positive over the state space, i.e., ρ(s) > 0, ∀s ∈ S .
+
+B. Multi-agent reinforcement learning 
+
+Given a direct distributed parametrization (3) and (4), we employ the gradient play for each agent [22]: 
+
+θ(k+1)  
+
+> i
+
+= Proj Xi (θ(k) 
+
+> i
+
++ η∇θi Ji(θ(k))) , η > 0, (9) where k indexes the learning iteration and η > 0 is the step size. 
+
+Definition 2. (First-order stationary policy [22]) A policy 
+
+θ∗ = ( θ∗ 
+
+> 1
+
+, · · · , θ ∗ 
+
+> N
+
+) is called a first-order stationary policy if (θ′ 
+
+> i
+
+− θ∗ 
+
+> i
+
+)⊤∇θi Ji(θ∗) ≤ 0, ∀θ′ 
+
+> i
+
+∈ X i, i ∈ N .
+
+Lemma 1. (Gradient domination [22]) For the direct dis-tributed parameterization (4) , the following inequality holds for any θ = ( θ1, · · · , θ N ) ∈ X and any θ′ 
+
+> i
+
+∈ X i, i ∈ N :
+
+Ji(θ′
+
+> i
+
+, θ −i) − Ji(θi, θ −i) ≤ dθ′
+
+dθ ∞
+
+max 
+
+> θi∈X i
+
+(θi − θi)⊤∇θi Ji(θ),
+
+(10) 
+
+where ∥ dθ′ 
+
+> dθ
+
+∥∞ := max s dθ′ (s)  
+
+> dθ(s)
+
+, and θ′ = ( θ′
+
+> i
+
+, θ −i).
+
+Compared with single-agent cases, the condition (10) be-comes weaker because the inequality requires θ−i to remain fixed, yet it still holds. Even though gradient domination no longer guarantees equivalence between first-order stationarity and global optimality, it still leads to the following equivalence between NEs and the first-order stationary policy. 
+
+Theorem 1. (Theorem 1 [22]) Under Assumption 1, first-order stationary policies and NEs are equivalent. 
+
+While MGs offer a reasonable framework for modeling AD decision-making involving multiple interactive decision-makers, fundamental challenges exist: 1) In a general MG, a pure-strategy NE may not always exist [22]; 2) The solution-seeking algorithms, e.g., (9), may not al-ways converge [22], [23]. To address the above challenges and to ensure the solv-ability of the problem, including both solution existence and algorithm convergence, we investigate a special class of MGs, called Markov potential games. III. M ARKOV POTENTIAL GAME 
+
+We first define MPGs and introduce their properties in Section III-A, and present sufficient conditions for the MPG construction in Section III-B. 
+
+A. Definition and Properties of MPGs 
+
+Definition 3. (Markov potential game [22]) An MG M be-comes an MPG if there exists a potential function ϕ : S ×A → 
+
+R such that, ∀i ∈ N , ∀(θ′
+
+> i
+
+, θ −i), (θi, θ −i) ∈ X , ∀s ∈ S , the following condition holds: 
+
+E
+
+" ∞X
+
+> t=0
+
+γtri(st, a t) π(θ′
+
+> i,θ −i)
+
+, s 0 = s
+
+#
+
+− E
+
+" ∞X
+
+> t=0
+
+γtri(st, a t) π(θi,θ −i), s 0 = s
+
+#
+
+= E
+
+" ∞X
+
+> t=0
+
+γtϕ(st, a t) π(θ′
+
+> i,θ −i)
+
+, s 0 = s
+
+#
+
+− E
+
+" ∞X
+
+> t=0
+
+γtϕ(st, a t) π(θi,θ −i), s 0 = s
+
+#
+
+.
+
+(11) 4
+
+Next, we define the total potential function of the MPG as: 
+
+Φ( θ) := Es0∼ρ
+
+" ∞X
+
+> t=0
+
+γtϕ(st, a t) π(θi,θ −i), s 0
+
+#
+
+. (12) Theorem 2 guarantees the existence of at least one pure NE in an MPG. 
+
+Theorem 2. (Proposition 1 [22]) In an MPG, there is at least one global maximum θ∗ of the total potential function Φ, i.e., 
+
+θ∗ ∈ argmax θ∈X Φ( θ), that is a pure NE. 
+
+To consider the convergence of the solution-seeking algo-rithm, let us consider the gradient play (9). According to Definition 3, we know that ∀i ∈ N , ∀(θ′
+
+> i
+
+, θ −i), (θi, θ −i) ∈ X :
+
+Ji(θ′
+
+> i
+
+, θ −i) − Ji(θi, θ −i) = Φ( θ′
+
+> i
+
+, θ −i) − Φ( θi, θ −i). (13) With appropriate smoothness assumptions, (13) transforms to 
+
+∇θi Ji(θ) = ∇θi Φ( θ). (14) Therefore, the gradient play (9) in an MPG is equivalent to 
+
+θ(k+1)  
+
+> i
+
+= Proj Xi (θ(k) 
+
+> i
+
++ η∇θi Φ( θ(k))) , η > 0, (15) Theorem 3 ensures the convergence of (9) and (15) to an NE if the MG is an MPG. 
+
+Theorem 3. ( [30, Theorem 4.2]) Given an MPG, for any initial state, the gradient play in Eq. (9) or (15) converges to an NE as k → ∞ .
+
+With the above appealing properties, let us see how to construct MPGs. 
+
+B. Construction of MPGs 
+
+Theorem 4 states that if agent i’s state transition and reward are both determined by solely its own policy, then the resulting MG is an MPG. 
+
+Theorem 4. Consider an MG where agent i’s reward function is of the form, 
+
+ri(st, a t) = rself  
+
+> i
+
+(si,t , a i,t ), (16) 
+
+where rself  
+
+> i
+
+(si,t , a i,t ) is solely dependent on agent i’s policy 
+
+θi. Suppose P (s′
+
+> i
+
+|si, a i, a ′−i) = P (s′
+
+> i
+
+|si, a i, a −i), ∀a−i, a ′−i ∈A−i, ∀ai ∈ A i, ∀si ∈ S i and ∀i ∈ N . Then the formulated game is an MPG with a potential function 
+
+ϕself (st, a t) = X
+
+> i∈N
+
+rself  
+
+> i
+
+(si,t , a i,t ). (17) 
+
+Proof. From (16), the total reward of agent i is given by: 
+
+Ji(θ) = Es0∼ρ
+
+" ∞X
+
+> t=0
+
+γt rself  
+
+> i
+
+(si,t , a i,t ) πθ , s 0
+
+#
+
+= 11 − γ E(s,a )∼μθ (s,a )
+
+rself  
+
+> i
+
+(si, a i) .
+
+(18) A unilateral deviation in agent i’s policy leads to the following difference in total reward: 
+
+Ji(θ′
+
+> i
+
+, θ −i) − Ji(θi, θ −i)= 11 − γ
+
+
+
+E(s,a )∼μθ′
+
+> i,θ −i
+
+rself  
+
+> i
+
+(si, a i)
+
+− E(s,a )∼μθi,θ −i
+
+rself  
+
+> i
+
+(si, a i)
+
+.
+
+(19) From (17), the total potential function is given by: 
+
+Φ( θ) = Es0∼ρ
+
+" ∞X
+
+> t=0
+
+γt X
+
+> i∈N
+
+rself  
+
+> i
+
+(si,t , a i,t ) πθ , s 0
+
+#
+
+= 11 − γ E(s,a )∼μθ (s,a )
+
+" X
+
+> i∈N
+
+rself  
+
+> i
+
+(si, a i)
+
+#
+
+.
+
+(20) The same deviation shall yield the following difference in the total potential function: 
+
+Φ( θ′
+
+> i
+
+, θ −i) − Φ( θi, θ −i)= 11 − γ E(s,a )∼μθ′ 
+
+> i,θ −i(s,a )
+
+" X
+
+> i∈N
+
+rself  
+
+> i
+
+(si, a i)
+
+#
+
+− E(s,a )∼μθi,θ −i (s,a )
+
+" X
+
+> i∈N
+
+rself  
+
+> i
+
+(si, a i)
+
+#! 
+
+.
+
+(21) For (19) and (21) to align, we need to prove: 
+
+E(s,a )∼μθ′ 
+
+> i,θ −i(s,a )
+
+" X  
+
+> j∈N ,j ̸=i
+
+rself  
+
+> j
+
+(sj , a j )
+
+#
+
+= E(s,a )∼μθi,θ −i (s,a )
+
+" X  
+
+> j∈N ,j ̸=i
+
+rself  
+
+> j
+
+(sj , a j )
+
+#
+
+.
+
+(22) By the law of total expectation, we rewrite (22) as follows: 
+
+E(s,a )∼μθ′ 
+
+> i,θ −i(s,a )
+
+"
+
+E
+
+" X  
+
+> j∈N ,j ̸=i
+
+rself  
+
+> j
+
+(sj , a j ) s−j , a −j
+
+## 
+
+= E(s,a )∼μθi,θ −i (s,a )
+
+"
+
+E
+
+" X  
+
+> j∈N ,j ̸=i
+
+rself  
+
+> j
+
+(sj , a j ) s−j , a −j
+
+## 
+
+.
+
+(23) Under the assumption of P (s′ 
+
+> j
+
+|sj , a j , a ′−j ) =
+
+P (s′ 
+
+> j
+
+|sj , a j , a −j ), the inner conditional expectation in (23) is independent of agent i’s policy θi pointwise, given 
+
+(s−j , a −j ). That is, when ai,t changes to a′
+
+> i,t
+
+, the trajectory of any other agent j remains unaffected. Therefore, Eq. (13) holds, completing the proof. 
+
+Remark 1. We note that the condition P (s′ 
+
+> j
+
+|sj , a j , a ′−j ) = 
+
+P (s′ 
+
+> j
+
+|sj , a j , a −j ) means that the state transition of agent i is independent of other agents’ actions, and that the vehicles state transition model (1) satisfies this condition. We also comment that the reward design (16) can be used to model self-centered driving objectives, such as tracking a desired speed, maximizing ride comfort, or optimizing self-energy efficiency. These types of driving objectives only depend on the actions/policies of the ego vehicle and thus satisfy (16) .5
+
+Theorem 5 states that if agents’ interactions are pairwise symmetrical and if the state transition condition holds, then the game is an MPG. 
+
+Theorem 5. Consider an MG where agent i’s reward function is of the form, 
+
+ri(st, a t) = X  
+
+> j∈N ,j ̸=i
+
+rij (si,t , s j,t , a i,t , a j,t ), (24) 
+
+where rij (si,t , s j,t , a i,t , a j,t ) = rji (sj,t , s i,t , a j,t , a i,t ), ∀i, j ∈ N , i ̸ = j. Suppose P (s′
+
+> i
+
+|si, a i, a ′−i) = P (s′
+
+> i
+
+|si, a i, a −i),
+
+∀a−i, a ′−i ∈ A −i, ∀ai ∈ A i, ∀si ∈ S i and ∀i ∈ N . Then the formulated game is an MPG with a potential function 
+
+ϕjoint (st, a t) = X
+
+> i∈N
+
+X 
+
+> j∈N ,j<i
+
+rij (si,t , s j,t , a i,t , a j,t ). (25) 
+
+Proof. From (24), the total reward of agent i is given by: 
+
+Ji(θ)= Es0∼ρ
+
+" ∞X
+
+> t=0
+
+γt X  
+
+> j∈N ,j ̸=i
+
+rij (si,t , s j,t , a i,t , a j,t ) πθ , s 0
+
+#
+
+= 11 − γ E(s,a )∼μθ (s,a )
+
+h X  
+
+> j∈N ,j ̸=i
+
+rij (si, s j , a i, a j )
+
+i
+
+.
+
+(26) A unilateral deviation in agent i’s policy leads to the following difference in total reward, 
+
+Ji(θ′
+
+> i
+
+, θ −i) − Ji(θi, θ −i)= Es0∼ρ
+
+( ∞X
+
+> t=0
+
+γt
+
+" X  
+
+> j∈N , j ̸=i
+
+
+
+rij (s′
+
+> i,t
+
+, s j,t , a ′
+
+> i,t
+
+, a j,t )
+
+− rij (si,t , s j,t , a i,t , a j,t )
+
+
+
+π(θ′
+
+> i,θ −i)
+
+, π (θi,θ −i), s 0
+
+#) 
+
+= 11 − γ E(s,a )∼μθ′ 
+
+> i,θ −i(s,a )
+
+h X  
+
+> j∈N ,j ̸=i
+
+rij (si, s j , a i, a j )
+
+i
+
+− E(s,a )∼dθi,θ −i (s,a )
+
+h X  
+
+> j∈N ,j ̸=i
+
+rij (si, s j , a i, a j )
+
+!
+
+.
+
+(27) 
+
+From (17), the total potential function is given by: 
+
+Φ( θ)= Es0∼ρ
+
+" ∞X
+
+> t=0
+
+γt X
+
+> i∈N
+
+X 
+
+> j∈N ,j<i
+
+rij (si,t , s j,t , a i,t , a j,t ) πθ , s 0
+
+#
+
+= 11 − γ E(s,a )∼μθ (s,a )
+
+" X
+
+> i∈N
+
+X 
+
+> j∈N ,j<i
+
+rij (si, s j , a i, a j )
+
+#
+
+.
+
+(28) 
+
+The same deviation shall yield the following difference in the total potential function: 
+
+Φ( θ′
+
+> i
+
+, θ −i) − Φ( θi, θ −i)= 11 − γ E(s,a )∼μθ′ 
+
+> i,θ −i(s,a )
+
+" X
+
+> i∈N
+
+X 
+
+> j∈N ,j<i
+
+rij (si, s j , a i, a j )
+
+#
+
+− E(s,a )∼μθi,θ −i (s,a )
+
+" X
+
+> i∈N
+
+X 
+
+> j∈N ,j<i
+
+rij (si, s j , a i, a j )
+
+#! 
+
+.
+
+(29) 
+
+For (27) and (29) to align, we recall the symmetry of the joint reward function, i.e., rij (si,t , s j,t , a i,t , a j,t ) =
+
+rji (sj,t , s i,t , a j,t , a i,t ), and prove the following: 
+
+E(s,a )∼μθ′ 
+
+> i,θ −i(s,a )
+
+" X
+
+> j∈− i
+
+X
+
+> k∈− i,k<j
+
+rjk (sj , s k, a j , a k)
+
+#
+
+= E(s,a )∼μθi,θ −i (s,a )
+
+" X
+
+> j∈− i
+
+X
+
+> k∈− i,k<j
+
+rjk (sj , s k, a j , a k)
+
+#
+
+.
+
+(30) We define: 
+
+s−(j,k ) := sℓ, ℓ ∈ N \ { j, k },a−(j,k ) := aℓ, ℓ ∈ N \ { j, k }. (31) Under the law of total expectation, we rewrite (30) as: 
+
+E(s,a )∼μθ′ 
+
+> i,θ −i(s,a )
+
+"
+
+E
+
+" X
+
+> j∈− i
+
+X
+
+> k∈− i,k<j
+
+rjk (sj , s k , a j , a k ) s−(j,k ), a −(j,k )
+
+## 
+
+,
+
+= E(s,a )∼μθi,θ −i (s,a )
+
+"
+
+E
+
+" X
+
+> j∈− i
+
+X
+
+> k∈− i,k<j
+
+rjk (sj , s k , a j , a k ) s−(j,k ), a −(j,k )
+
+## 
+
+.
+
+(32) 
+
+Similarly, under the assumption of P (s′ 
+
+> j
+
+|sj , a j , a ′−j ) =
+
+P (s′ 
+
+> j
+
+|sj , a j , a −j ), the inner expectation in (32) is independent of agent i’s policy θi, and thus Eq. (32) holds. 
+
+Remark 2. We comment that the reward design (24) can be used to model symmetric agents’ interactions, e.g., asymmetric penalty to both vehicles i and j if a collision between them happens. 
+
+Theorem 6 shows that a linear combination of the above two types of reward also lead to an MPG. 
+
+Theorem 6. Consider an MG where agent i’s reward function is of the form, 
+
+ri(st, a t)= αirself  
+
+> i
+
+(si,t , a i,t ) + X  
+
+> j∈N ,j ̸=i
+
+βij rij (si,t , a i,t , s j,t , a j,t ),
+
+(33) 
+
+where rself  
+
+> i
+
+(si,t , a i,t ) and P   
+
+> j∈N ,j ̸=i
+
+rij (si,t , a i,t , s j,t , a j,t )
+
+follow from (16) and (24) , respectively, and αi ∈ R and 
+
+βij ∈ R. Suppose P (s′
+
+> i
+
+|si, a i, a ′−i) = P (s′
+
+> i
+
+|si, a i, a −i),
+
+∀a−i, a ′−i ∈ A −i, ∀ai ∈ A i, ∀si ∈ S i and ∀i ∈ N . Then the MG is an MPG with a potential function 
+
+ϕ(st, a t)= αi
+
+X
+
+> i∈N
+
+rself  
+
+> i
+
+(si,t , a i,t ) + X
+
+> i∈N
+
+X 
+
+> j∈N ,j<i
+
+βij rij (si,t , s j,t , a i,t , a j,t )) .
+
+(34) 
+
+Proof. The result follows directly from Theorem 4 and The-orem 5. 
+
+Remark 3. Theorem 6 suggests that if a vehicle’s driving objective can be modeled as the combination of self-centered terms, e.g., tracking a desired speed, and interactive terms, e.g., pairwise collision penalties, then the resulting game is still an MPG. 6
+
+IV. M ULTI -AGENT REINFORCEMENT LEARNING DESIGN 
+
+This section designs the MARL algorithm and policy neural networks (NNs) to solve the MPG for AD applications. 
+
+Algorithm 1 Potential-function-based Gradient Ascent. 
+
+Require: step size η, time horizon T , number of epochs E 
+
+> 1:
+
+Find the total potential function according to (34).  
+
+> 2:
+
+Sample s0 ∼ ρ. 
+
+> 3:
+
+Initialize shared policy parameter θ(0)  
+
+> s
+
+. 
+
+> 4:
+
+for k = 0 , 1, · · · , E − 1 do  
+
+> 5:
+
+Implement policy θ(k) 
+
+> s
+
+and collect trajectories.  
+
+> 6:
+
+Perform projected gradient ascent as in (15).  
+
+> 7:
+
+end for 
+
+To solve the constructed MPGs, we consider the potential-function-based gradient ascent (i.e., (15)) along with aparameter-sharing network structure. The learning algorithm is detailed in Algorithm 1. For the parameter-sharing network, we let each vehicle i adopt a deterministic policy πi parame-terized by a NN. Recall from Section III-A that gradient play (15) maintains a separate parameterization θi for each agent 
+
+i ∈ N , yielding a number of parameters that grows linearly with N . In our setting, all vehicles are modeled with identical kinematics, as in (1). This homogeneity enables a parameter-sharing scheme [33]–[35], in which a single policy network with shared parameters θs ∈ X s is used across all agents. The per-agent update (15) then becomes: 
+
+θ(k+1)  
+
+> s
+
+= Proj Xs
+
+
+
+θ(k) 
+
+> s
+
++ η ∇θs Φ
+
+
+
+θ(k)
+
+> s
+
+ 
+
+, η > 0. (35) Such a parameter-sharing NN is employed to improve training scalability, especially for large-scale systems. For the NN architecture, we let each vehicle i receive a local observation oi = Oi(s), where Oi : S → O i is a mapping from the global state space to each vehicle i’s local observation space. As illustrated in Figure 1, the policy network receives the local observation oi, and outputs an action ai. For clarity, the figure illustrates a single action output. However, the output can be extended to produce multiple actions if required. The architecture consists of three layers: 1) Input layer : receives the local observation as the input for each agent. 2) Hidden layers : two fully connected layers with Leaky Rectified Linear Unit (Leaky ReLU) activations, to in-troduce nonlinearity. 3) Output layer : a fully connected layer with a Hyperbolic Tangent (Tanh) activation, which constrains the raw output to [−1, 1] ; this can be subsequently scaled to the physical action range. V. N UMERICAL RESULTS IN HIGHWAY FORCED MERGE SCENARIOS 
+
+This section considers highway forced merge scenarios as illustrative examples to validate the MPG-based MARL algorithm in autonomous driving applications. ...    
+
+> Bias
+> Input Layer Local Observation
+> ...
+> ...
+> Bias
+> Hidden Layer 1 128 Neurons LeakyReLU
+> ...
+> ...
+> Bias
+> Hidden Layer 2 128 Neurons LeakyReLU
+> Output Layer Optimal Action Tanh
+> Input Unit
+> Hidden Unit
+> Output Unit
+> Bias Unit
+> Fig. 1. Parameter-sharing policy network architecture. Ego Vehicle Selected Players Other Vehicles
+> Fig. 2. Single-lane highway forced merge scenario.
+
+A. Simulation setup 
+
+(i) Environment and agent configuration 
+
+Consider the highway forced merge scenario shown in Figure 2, where the on-ramp vehicle is the ego vehicle, and the others are surrounding vehicles traveling in the target lane. Among the target-lane vehicles, four leading vehicles and four following vehicles are selected as game players (therefore 
+
+N = 9 ), where “leading” and “following” vehicles are defined according to their longitudinal positions relative to the ego vehicle. For each vehicle, the action is designed to be the longitudi-nal acceleration, and the system state (positions and velocities) evolves according to the vehicle dynamics (1). We set the speed of each vehicle be within the range 0 m/s ≤ vi,t ≤
+
+30 m/s .For the parameter-sharing policy NN, due to the asymme-tries of the on-ramp and target-lane vehicles, we introduce two additional input signals for the forced-merge driving:  
+
+> •
+
+Lane flag : a binary indicator of whether vehicle i is on the ramp or the target lane.  
+
+> •
+
+Agent index : a one-hot vector identifying vehicle i within the player set. The complete local observation is listed in Table I. 
+
+(ii) Action space and feasibility sets 
+
+The action space for each vehicle i is Ai = [ −g, g ], where 
+
+g = 9 .81 m /s2. For a target-lane vehicle, an action ai ∈ A i
+
+is considered feasible if with this action, the time-to-collision (TTC) between vehicle i and its immediate leader and between vehicle i and its immediate follower are both larger than the safety threshold τs = 3 s , where TTC is defined as 
+
+TTC = d
+
+∆v ,
+
+where d denotes the longitudinal distance and ∆v denotes the longitudinal speed difference. If ∆v ≤ 0, the TTC is taken as 7             
+
+> TABLE I LOCAL OBSERVATION FOR EACH VEHICLE i.Feature Definition Position Longitudinal distance to the merging conflict point Speed Speed Leader distance Longitudinal distance to immediate leader Leader relative speed Relative speed w.r.t. immediate leader Leader flag Indicator for leader presence Follower distance Longitudinal distance to immediate follower Follower relative speed Relative speed w.r.t. immediate follower Follower flag Indicator for follower presence Lane flag Indicator for on-ramp or target-lane Agent index One-hot vector for vehicle identity
+> Fig. 3. Convergence of the mean potential function during training.
+
++∞. Accordingly, the feasible action set Afeas  
+
+> i
+
+is defined as the subset of Ai satisfying these safety constraints. 
+
+(iii) Reward function design 
+
+The reward of each vehicle comprises four parts: desired speed tracking, ride comfort, and collision avoidance. Specif-ically, 
+
+Ji(θs) = ωi, 11 Jself ,1 
+
+> i
+
+(θs) + ωi, 12 Jself ,2 
+
+> i
+
+(θs) (36) 
+
++ ωi, 21 Jjoint ,1 
+
+> i
+
+(θs) + ωi, 22 Jjoint ,2 
+
+> i
+
+(θs), (37) where ωi, 11 , ωi, 12 , ωi, 21 , and ωi, 22 are constant real numbers to balance the four terms. The first term, i.e., Jself ,1 
+
+> i
+
+(θs), is to motivate each vehicle to track a desired speed, and it takes the form (18), where 
+
+rself  
+
+> i
+
+(si,t , a i,t ) is given by 
+
+rself  
+
+> i
+
+(si,t , a i,t ) = −(vi,t − vi,d )2, (38) where vi,d = 15 m/s is the desired speed for each vehicle.  
+
+> Fig. 4. Convergence of the mean squared action difference during training.
+
+The second term Jself ,2 
+
+> i
+
+(θs) takes the form (18) and is designed to encourage ride comfort [27]: 
+
+rself  
+
+> i
+
+(si,t , a i,t ) = −(ui,t )2. (39) The third and fourth terms are formulated to prevent collisions, and they both take the form (26). The third term rewards larger TTC for same-lane interactions and 
+
+rij (si,t , s j,t , a i,t , a j,t ) is given by 
+
+rij (si,t , s j,t , a i,t , a j,t ) = 
+
+
+
+− 1
+
+|xi,t − xj,t |
+
+vc
+
++ ϵ, |vi,t − vj,t | ≤ vc m/s ,
+
+− 1TTC ij + ϵ , |vi,t − vj,t | > v c m/s ,
+
+(40) where TTC ij = |xi,t − xj,t ||vi,t − vj,t | and vc denotes a constant relative-speed threshold, and ϵ is a very small positive number to avoid the denominator being 0.The fourth term rewards larger time gaps to the merging conflict point xc = 180 m for different-lane vehicles, where the choice for the merging conflict point is addressed in Section V-C. The reward rij (si,t , s j,t , a i,t , a j,t ) is given by 
+
+rij (si,t , s j,t , a i,t , a j,t )= − 1
+
+pTi(t)Tj (t)( Ti(t) − Tj (t)) 2 + ϵ , (41) where Ti(t) = |xi,t − xc|
+
+vi,t + ϵ and Tj (t) = |xj,t − xc|
+
+vj,t + ϵ denote the time for vehicles i and j to reach the conflict point. The term pTi(t)Tj (t) is added to weight the TTC difference with a “risk level”: given (Ti(t)−Tj (t)) , the smaller the pTi(t)Tj (t)
+
+is, the more dangerous the situation is. According to Theorem 6, the above reward design leads to am MPG. 
+
+(iv) Training setup and results 
+
+We train the shared policy network by maximizing the total potential function over horizon T ,
+
+Φ( θs) = Es0∼ρ
+
+" TX
+
+> t=0
+
+γtϕ(st, a t) πθs , s 0
+
+#
+
+, (42) where we select γ = 0 .99 and T = 30 s. The initial states are generated using stratified sampling to ensure broad coverage of the state space. Vehicle longitudinal positions and velocities are sampled within predefined ranges while requiring a minimum longitudinal headway of 7 m and an initial TTC of at least 4 s for all successive leader and follower. We train the trajectories induced by the initial states with 5 random seeds. Episodes will terminate when any pair of vehicles collide, i.e., when their bounding boxes overlap. The mean total potential function and the mean squared action difference across seeds during training are included in Figures 3 and 4, demonstrating the convergence of the policy NN during the training process. 8
+
+> (a)
+> (b)
+> (c) Fig. 5. Illustration of the merging behavior in Scenario 1 of the simulated data. (a) Initial state. (b) Ego vehicle before merging. (c) Ego vehicle after merging.
+> (a)
+> (b)
+> (c) Fig. 6. Illustration of the merging behavior in Scenario 2 of the simulated data. (a) Initial state. (b) Ego vehicle before merging. (c) Ego vehicle after merging.
+
+B. Numerical results with simulated surrounding vehicles 
+
+After deriving the policy NN, we then test it in various merging scenarios to evaluate its driving performance. In this section, we consider simulated surrounding vehicles, i.e., their behaviors are generated from computer programs instead of human driving datasets. For this type of evaluations, we consider (i) specific scenarios to observe the ego vehicle performance in various situations, (ii) statistical studies to characterize the performance metrics, and (iii) comparative studies with the single-agent RL. 
+
+(i) Specific scenarios 
+
+Scenario 1: In this scenario, the initial state is randomly chosen. The leading vehicles “1” to “4” accelerate, and the following vehicles “5” to “8” decelerate. Hence, the gap between vehicles “4” and “5” expands during driving. Three key moments are shown in Figure 5. In this case, we observe 9 
+
+> (a)
+> (b)
+> (c) Fig. 7. Illustration of the merging behavior in Scenario 1 of the NGSIM dataset. (a) Ego vehicle preparing for merging. (b) Ego vehicle before merging. (c) Ego vehicle after merging.
+
+that the trained policy NN enables the ego vehicle to safely merge into the target lane, as illustrated in Figure 5c. After the merging maneuver is completed, all vehicles tend to maintain their desired speeds. 
+
+Scenario 2: In this scenario, compared with Scenario 1, we set an initially large gap between vehicles “4” and “5”, as shown in Figure 6a. However, vehicle “5” has a higher speed and the gap decreases rapidly. In this case, the ego vehicle first decelerates to wait for vehicle “5” to pass and then accelerates to complete the merge. Three key moments are shown in Figure 6. After the merging maneuver is completed, all vehicles tend to track their desired speeds. 
+
+(ii) Statistical studies 
+
+We also conduct statistical studies to provide a comprehen-sive performance evaluation. To test the driving policy robustness, we consider three types of surrounding vehicle policies: 1) the NE policies, 2) rule-based policies from the Intelligent Driver Model (IDM) [36], and 3) a constant-speed policy. The NE policies correspond to the idea case where all vehicles are perfectly rational. The IDM-based policies exhibit reactive, rule-driven behavior with limited anticipation of interactions. The constant-speed policies do not react to surrounding traffic conflicts, resulting in safety-agnostic or unresponsive driving (e.g., distracted or uncooperative driving). We evaluate the derived policy NN over 500 randomly selected testing scenarios with various initial states. We then use six performance metrics to quantify the results, as sum-marized in Table II. Here, the collision rate is the number of scenarios in which a collision involving the ego vehicle occurs over the total number of scenarios. The failure rate is the number of scenarios in which the ego vehicle fails to pass the conflict point due to dense traffic flow over the total number of scenarios. Note that these two quantities are not necessarily integers, as they are computed by averaging over multiple random seeds ( 5 random seeds in our simulation). 10   
+
+> (a)
+> (b)
+> (c) Fig. 8. Illustration of the merging behavior in Scenario 2 of the NGSIM dataset. (a) Ego vehicle preparing for merging. (b) Ego vehicle before merging. (b) Ego vehicle after merging.
+> Fig. 9. The total reward of the ego vehicle under training.
+
+The average minimum inter-vehicle distance is the average of the minimum distances in each of the 500 scenarios. The statistical results shown in Table II lead to the following observations:  
+
+> •
+
+The trained policy NN can ensure the ego vehicle safety  
+
+> Fig. 10. The total reward of the ego vehicle under testing.
+
+(i.e., 0 collision rate) and successful merging (i.e., 0
+
+failure rate) when the surrounding vehicles take NN or IDM policies, demonstrating a certain level of robustness.  
+
+> •
+
+When the surrounding vehicles also take the NN policies, compared to the IDM-policy, the ego vehicle achieves 11 
+
+larger safety margin (as reflected by the average minimum inter-vehicle distance) and higher travel efficiency (as reflected by the ego vehicle speed), while maintains similar energy efficiency (as reflected by the acceleration magnitude) and ride comfort (as reflected by the jerk magnitude), indicating a preference for the NE policy compared to the IDM policy. 
+
+(iii) Comparative studies 
+
+Next, we consider comparative studies between single-agent RL and MARL. For single-agent RL training, we let the surrounding vehicles follow the IDM policy, and the ego vehicle learns its optimal policy using a gradient ascent algorithm (similar to (9) but with others’ policies being fixed) using the same 5 random seeds and the same reward design as in MARL. The trained policies are then evaluated under the three surrounding-vehicle policies. The single-agent RL results are shown in Table III. By comparing Tables II and III, it is observed that the policy trained from MARL exhibits better safety, energy efficiency, and ride comfort than the single-agent RL, as reflected by the smaller collision rates, smaller acceleration magnitude, and smaller jerk, respectively. We also present the ego vehicle’s total rewards during training and testing (see Figures 9 and 10), which further confirms that the NE policy exhibits better robustness to drift in the initial state during testing, whereas single-agent RL tends to overfit the training data. 
+
+C. Verification on the naturalistic driving dataset 
+
+This section evaluates the performance of the MPG-based MARL framework using naturalistic traffic data from the Federal Highway Administration’s Next Generation Simula-tion (NGSIM) I-80 dataset [37]. In our simulation, both the roadway geometry and modeling parameters are selected to be consistent with empirical observations from the dataset. In particular, the prediction horizon is chosen to cover the longest merging duration observed in the data, and the conflict point is determined based on the road geometry. 
+
+(i) Data processing 
+
+We process the raw data to reduce measurement noise and obtain smooth estimates of positions and velocities. For each vehicle, the corresponding time series is first sorted by frame index to ensure temporal consistency. The longitudinal and lateral positions are then smoothed using a Savitzky–Golay filter (implemented via MATLAB’s sgolayfilt function [38], [39]). Vehicle velocities are recomputed by differentiating the smoothed positions. Lane indices are reassigned based on the vehicles’ lateral positions. Vehicle time series shorter than the filter window length are excluded from the smoothing procedure. 
+
+(ii) Specific scenarios 
+
+Scenario 1: In this scenario, the red ego vehicle, controlled by the trained policy NN, starts together with the human-driven purple vehicle (whose movement is recorded in the dataset), with the same initial position and speed. The ego vehicle first decelerates to create a sufficient time gap be-fore reaching the conflict point, then merges into the gap between vehicles “1623” and “1606,” and finally onto the target lane while maintaining a safe following distance. Three key moments are shown in Figure 7. In contrast, the human-driven vehicle appears to attempt a merge into the small gap between vehicles “1606” and “1589.” However, it progresses aggressively, closing in on vehicle “1589”, resulting in an abrupt deceleration later on. 
+
+Scenario 2: In this scenario, the ego vehicle starts from the same longitudinal position as another human-driven vehicle. The ego vehicle identifies an appropriate merging opportu-nity between vehicles “1079” and “1066” and maintains this position throughout the maneuver. In contrast, the human-driven vehicle, based on the recorded data, initially attempts to merge between vehicles “1066” and “1064”, but as vehicle “1066” refuses to yield, it is ultimately forced back into the gap between “1079” and “1066”. Three key moments are illustrated in Figure 8. 
+
+(iii) Statistical and comparative studies 
+
+We further conduct comparative studies on the naturalistic dataset. Specifically, we let the ego vehicle be controlled by (i) human driver as recorded in the dataset, (ii) single-agent RL with the same setting as in the simulated data case (i.e., Section V-B), and (iii) MARL. The results are reported in Table IV. From the tale, it is observed that:  
+
+> •
+
+Both human-driven and MARL-controlled ego vehicles achieve successful merging in all 100 scenarios without collisions or failures, whereas the single-agent RL policy results in an non-zero collision rate.  
+
+> •
+
+The MARL achieves the largest safety margin, as re-flected by the largest average minimum inter-vehicle distance.  
+
+> •
+
+Human drivers maintain the highest average speed, indi-cating the greatest travel efficiency. However, this is at the cost of safety: human drivers have the smallest inter-vehicle distance.  
+
+> •
+
+MARL achieves the best energy/fuel efficiency, as re-flected by the smallest acceleration magnitude.  
+
+> •
+
+MARL achieves the best ride comfort, as reflected by the smallest jerk magnitude. VI. C ONCLUSION 
+
+This paper studied MPG-based MARL and its use in au-tonomous driving. Sufficient conditions on the reward design and on the state transition probabilities are established to con-struct MPGs, which can ensure the NE attainability, including both the solution existence and the algorithm convergence, of the gradient play-based MARL. These conditions are shown to be able to accommodate general driving objectives, thus leading to MARL-based autonomous driving policy. Compre-hensive evaluations in forced-merge driving scenarios were performed in both simulated and naturalistic traffic datasets. The results demonstrated that the learned driving policy can enable safe and efficient autonomous vehicles in dense traffic, outperforming the single-agent RL and the recorded human-driven vehicles in terms of safety, energy/fuel efficiency, 12 
+
+TABLE II STATISTICAL RESULTS : MARL WITH MPG S ON SIMULATED DATA 
+
+Selected players’ policies NE IDM Constant speed Collision rate 0/500 0/500 15.4/500 Failure rate 0/500 0/500 0/500 Average minimum inter-vehicle distance (m) 40.7305 13.6459 25.7577 Average ego vehicle speed (m/s) 11.0292 5.7136 1.8372 Average acceleration magnitude (m/s2) 0.5017 0.5760 0.2167 Average jerk magnitude (m/s3) 0.2466 2.2602 0.0374 TABLE III STATISTICAL RESULTS : S INGLE -AGENT RL ON SIMULATED DATA 
+
+Surrounding vehicles’ policies NE IDM Constant speed Collision rate 0/500 0/500 15.6/500 Failure rate 0/500 0/500 0/500 Average minimum inter-vehicle distance (m) 30.2177 14.8224 11.4778 Average ego vehicle speed (m/s) 12.0469 9.7332 2.1027 Average acceleration magnitude (m/s2) 3.0121 2.9777 0.6665 Average jerk magnitude (m/s3) 11.2172 9.7573 1.1170 TABLE IV COMPARATIVE RESULTS ON THE NATURALISTIC DATASET 
+
+Ego vehicle’s policy Human driver Single-agent RL MARL Collision rate 0/100 3.6/100 0/100 Failure rate 0/100 0/100 0/100 Average minimum inter-vehicle distance (m) 9.5395 10.5108 11.5422 Average ego vehicle speed (m/s) 7.8863 6.8050 7.0615 Average acceleration magnitude (m/s2) 1.1258 1.7345 0.7092 Average jerk magnitude (m/s3) 2.6284 4.0728 0.7280 
+
+and ride comfort. Future research will consider real-world autonomous vehicle testbeds to further verify the algorithm performance. REFERENCES [1] B. R. Kiran, I. Sobh, V. Talpaert, P. Mannion, A. A. A. Sallab, S. Yo-gamani, and P. P´ erez, “Deep reinforcement learning for autonomous driving: A survey,” IEEE Transactions on Intelligent Transportation Systems , vol. 23, no. 6, pp. 4909–4926, 2022. [2] Z. Zhu and H. Zhao, “A survey of deep rl and il for autonomous driv-ing policy learning,” IEEE Transactions on Intelligent Transportation Systems , vol. 23, no. 9, pp. 14 043–14 065, 2022. [3] M. Wang, Z. Wang, J. Talbot, J. C. Gerdes, and M. Schwager, “Game-theoretic planning for self-driving cars in multivehicle competitive scenarios,” IEEE Transactions on Robotics , vol. 37, no. 4, pp. 1313– 1325, 2021. [4] J. Jiang and Z. Lu, “I2q: A fully decentralized q-learning algorithm,” in 
+
+Advances in Neural Information Processing Systems , vol. 35, 2022, pp. 20 469–20 481. [5] R. Zhang, J. Hou, F. Walter, S. Gu, J. Guan, F. R¨ ohrbein, Y. Du, P. Cai, G. Chen, and A. Knoll, “Multi-agent reinforcement learning for autonomous driving: A survey,” 2024, arXiv:2408.09675. [6] H. Nekoei, A. Badrinaaraayanan, A. Sinha, M. Amini, J. Rajendran, A. Mahajan, and S. Chandar, “Dealing with non-stationarity in decen-tralized cooperative multi-agent deep reinforcement learning via multi-timescale learning,” in Proceedings of The 2nd Conference on Lifelong Learning Agents , vol. 232, 22–25 Aug 2023, pp. 376–398. [7] R. Chandra and D. Manocha, “Gameplan: Game-theoretic multi-agent planning with human drivers at intersections, roundabouts, and merging,” 
+
+IEEE Robotics and Automation Letters , vol. 7, no. 2, pp. 2676–2683, 2022. [8] P. Hang, C. Lv, C. Huang, J. Cai, Z. Hu, and Y. Xing, “An integrated framework of decision making and motion planning for autonomous vehicles considering social behaviors,” IEEE Transactions on Vehicular Technology , vol. 69, no. 12, pp. 14 458–14 469, 2020. [9] N. Li, D. W. Oyler, M. Zhang, Y. Yildiz, I. Kolmanovsky, and A. R. Girard, “Game theoretic modeling of driver and vehicle interactions for verification and validation of autonomous vehicle control systems,” IEEE Transactions on Control Systems Technology , vol. 26, no. 5, pp. 1782– 1797, 2018. [10] F. A. Oliehoek and C. Amato, A Concise Introduction to Decentralized POMDPs , ser. SpringerBriefs in Intelligent Systems. Cham, Switzer-land: Springer, May 2016. [11] J. Zhang, C. Chang, X. Zeng, and L. Li, “Multi-agent DRL-based lane change with right-of-way collaboration awareness,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 1, pp. 854–869, 2023. [12] G.-P. Antonio and C. Maria-Dolores, “Multi-agent deep reinforcement learning to manage connected autonomous vehicles at tomorrow’s inter-sections,” IEEE Transactions on Vehicular Technology , vol. 71, no. 7, pp. 7033–7043, 2022. [13] L. Brunke, M. Greeff, A. W. Hall, Z. Yuan, S. Zhou, J. Panerati, and A. P. Schoellig, “Safe learning in robotics: From learning-based control to safe reinforcement learning,” Annual Review of Control, Robotics, and Autonomous Systems , vol. 5, no. 1, pp. 411–444, 2022. [14] X. He, B. Lou, H. Yang, and C. Lv, “Robust decision making for autonomous vehicles at highway on-ramps: A constrained adversarial reinforcement learning approach,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 4, pp. 4103–4113, 2023. [15] Q. Dai, X. Xu, W. Guo, S. Huang, and D. Filev, “Towards a systematic computational framework for modeling multi-agent decision-making at micro level for smart vehicles in a smart world,” Robotics and Autonomous Systems , vol. 144, p. 103859, Oct. 2021. [16] X. Chen, Z. Li, and X. Di, “Social learning in markov games: Empower-ing autonomous driving,” in 2022 IEEE Intelligent Vehicles Symposium (IV) , 2022, pp. 478–483. [17] G. Qiao, G. Quan, R. Qu, and G. Liu, “Modelling competitive behaviors in autonomous driving under generative world model,” in European Conference on Computer Vision , 2024. [18] D. Chen, M. R. Hajidavalloo, Z. Li, K. Chen, Y. Wang, L. Jiang, and Y. Wang, “Deep multi-agent reinforcement learning for highway on-ramp merging in mixed traffic,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 11, pp. 11 623–11 638, 2023. [19] D. Fudenberg and J. Tirole, Game Theory . Cambridge, MA, USA: MIT Press, 1991. 13 
+
+[20] Y. Bai, C. Jin, and T. Yu, “Near-optimal reinforcement learning with self-play,” in Advances in Neural Information Processing Systems , vol. 33, 2020, pp. 2159–2170. [21] S. Emmons, C. Oesterheld, A. Critch, V. Conitzer, and S. Russell, “For learning in symmetric teams, local optima are global Nash equilibria,” in 
+
+Proceedings of the 39th International Conference on Machine Learning ,vol. 162, 17–23 Jul 2022, pp. 5924–5943. [22] R. Zhang, Z. Ren, and N. Li, “Gradient play in stochastic games: Sta-tionary points, convergence, and sample complexity,” IEEE Transactions on Automatic Control , vol. 69, no. 10, pp. 6499–6514, 2024. [23] E.-V. Vlatakis-Gkaragkounis, L. Flokas, T. Lianeas, P. Mertikopoulos, and G. Piliouras, “No-regret learning and mixed Nash equilibria: They do not mix,” in Advances in Neural Information Processing Systems ,vol. 33, 2020, pp. 1380–1391. [24] Q. D. L˜ a, Y. H. Chew, and B.-H. Soong, Potential Game Theory: Ap-plications in Radio Resource Allocation . Cham, Switzerland: Springer, 2016. [25] D. Monderer and L. S. Shapley, “Potential games,” Games and Economic Behavior , vol. 14, no. 1, pp. 124–143, 1996. [26] M. Liu, I. Kolmanovsky, H. E. Tseng, S. Huang, D. Filev, and A. Girard, “Potential game-based decision-making for autonomous driving,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 8, pp. 8014–8027, 2023. [27] M. Liu, H. E. Tseng, D. Filev, A. Girard, and I. Kolmanovsky, “Safe and human-like autonomous driving: A predictor-corrector potential game approach,” IEEE Transactions on Control Systems Technology , vol. 32, no. 3, pp. 834–848, 2024. [28] F. Fabiani and S. Grammatico, “Multi-vehicle automated driving as a generalized mixed-integer potential game,” IEEE Transactions on Intelligent Transportation Systems , vol. 21, no. 3, pp. 1064–1073, 2020. [29] M. Liu, H. Eric Tseng, D. Filev, A. Girard, and I. Kolmanovsky, “Game projection and robustness for game-theoretic autonomous driving,” IEEE Transactions on Intelligent Transportation Systems , vol. 26, no. 3, pp. 3446–3457, 2025. [30] S. Leonardos, W. Overman, I. Panageas, and G. Piliouras, “Global convergence of multi-agent policy gradient in Markov potential games,” in International Conference on Learning Representations , 2022. [31] R. Rajamani, Vehicle Dynamics and Control , 2nd ed. New York, NY, USA: Springer, 2012. [32] A. Agarwal, N. Jiang, and S. M. Kakade, “Reinforcement learning: Theory and algorithms,” Dept. Comput. Sci. Eng., Univ. Washington, Seattle, WA, USA, Tech. Rep., 2019. [33] J. K. Terry, N. Grammel, S. Son, B. Black, and A. Agrawal, “Revisiting parameter sharing in multi-agent deep reinforcement learning,” 2023, arXiv:2005.13625. [34] F. Christianos, G. Papoudakis, M. A. Rahman, and S. V. Albrecht, “Scaling multi-agent reinforcement learning with selective parameter sharing,” in Proceedings of the 38th International Conference on Ma-chine Learning , vol. 139, 18–24 Jul 2021, pp. 1989–1998. [35] C. Yu, A. Velu, E. Vinitsky, J. Gao, Y. Wang, A. Bayen, and Y. WU, “The surprising effectiveness of PPO in cooperative multi-agent games,” in Advances in Neural Information Processing Systems , vol. 35, 2022, pp. 24 611–24 624. [36] M. Treiber, A. Hennecke, and D. Helbing, “Congested traffic states in empirical observations and microscopic simulations,” Phys. Rev. E ,vol. 62, pp. 1805–1824, Aug 2000. [37] U.S. Department of Transportation Federal Highway Administration, “Next generation simulation (NGSIM) program I-80 dataset,” 2016, ITS DataHub. Dataset. doi: http://doi.org/10.21949/1504477. [38] A. Savitzky and M. J. E. Golay, “Smoothing and differentiation of data by simplified least squares procedures.” Analytical Chemistry , vol. 36, no. 8, pp. 1627–1639, 1964. [39] The MathWorks, Inc., “MATLAB, version R2025a,” 2025, Natick, Massachusetts, United States.

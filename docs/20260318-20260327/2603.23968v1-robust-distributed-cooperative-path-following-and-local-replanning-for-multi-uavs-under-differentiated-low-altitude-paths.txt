@@ -1,0 +1,833 @@
+Title: Robust Distributed Cooperative Path-Following and Local Replanning for Multi-UAVs Under Differentiated Low-Altitude Paths
+
+URL Source: https://arxiv.org/pdf/2603.23968v1
+
+Published Time: Thu, 26 Mar 2026 00:37:58 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Robust Distributed Cooperative Path-Following and Local Replanning for Multi-UAVs Under Differentiated Low-Altitude Paths 
+
+Zimao Sheng, Zirui Yu and Hong’an Yang *,
+
+Abstract —Multiple fixed-wing unmanned aerial vehicles (multi-UAVs) encounter significant challenges in cooperative path following over complex Digital Elevation Model (DEM) low-altitude airspace, including wind field disturbances, sudden obstacles, and requirements of distributed temporal synchronization during differentiated path tracking. Existing methods lack efficient distributed coordination mechanisms for time-consistent tracking of 3D differentiated paths, fail to quantify robustness against disturbances, and lack effective online obstacle avoidance replanning capabilities. To address these gaps, a cooperative control strategy is proposed: first, the distributed cooperative path-following problem is quantified via time indices, and consistency is ensured through a distributed communication protocol; second, a longitudinal-lateral look-ahead angle adjustment method coupled with a robust guidance law is developed to achieve finite-time stabilization of path following error to zero under wind disturbances; third, an efficient local path replanning method with minimal time cost is designed for real-time online obstacle avoidance.Experimental validations demonstrate the effectiveness and superiority of the proposed strategy. 
+
+Keywords —multi-UAVs system, distributed cooperative path following, robust guidance law, local path replanning, online obstacle avoidance. 
+
+I. INTRODUCTION 
+
+A. Motivation 
+
+# IN recent years, the multiple unmanned aerial vehicles (multi-UAVs) system has garnered widespread attention owing to its distinct advantages, including low cost, strong survivability, and excellent scalability. It plays a pivotal role in critical domains such as joint target tracking [1], suppression of enemy air defense [2], [3], and cooperative low-altitude rescue [4], which aligns with the operational requirements of large-scale, high-intensity, and fast-paced multi-domain joint missions. In these practical applications, mission areas are typically characterized by complex environments modeled via Digital Elevation Models (DEM) and dotted with ground threats, encompassing undulating mountainous terrain, scat-tered hills, dense building clusters, and air defense fire zones. Such environments not only pose direct risks to the flight safety of individual UAVs but also impose stringent require-ments on multi-UAV cooperative operations. The core objec-tive of cooperative path following for multi-fixed-wing UAV systems is to ensure that all UAVs accurately track predefined 
+
+Zimao Sheng, Hong’an Yang is with the School of Mechanical Engineering, Northwestern Polytechnical University, Xi’an, Shaanxi, China, e-mail: (see hpShengZimao@163.com). Zirui Yu is with Tianjin University of Science and Technology, Tianjin, China. 
+
+> *
+
+Corresponding author: Hong’an Yang (e-mail: yhongan@nwpu.edu.cn). 
+
+waypoints in complex DEM environments while achieving optimal flight speed allocation, with full consideration of each UAV’s inherent flight performance constraints. The ultimate goal is to maintain stable temporal and spatial synchronization to facilitate the efficient completion of collective tasks. Specifically, temporal synchronization requires that multiple UAVs arrive at their respective target points as synchronously as possible. Traditional methods predominantly rely on cen-tralized speed allocation schemes for multi-UAV systems, which impose substantial computational and communication loads on the central node (i.e., the ground base station). Furthermore, damage to the central node will result in the breakdown of the entire cooperative path following strategy of the multi-UAV system. On the other hand, spatial safety requires that multiple UAVs minimize the risk of collisions with both the surrounding en-vironment and other UAVs during cooperative path following. However, the dynamic variability of low-altitude environments further increases the difficulty of cooperative path following in real-world mission scenarios. For one thing, complex DEM environments may harbor unexpected temporary obstacles such as emergent low-altitude aircraft and temporarily erected facilities, which necessitates the UAV system to be equipped with real-time obstacle perception and path replanning capa-bilities for timely avoidance. For another, airflow disturbances in low-altitude environments, such as gusts and turbulence, directly degrade UAV flight attitudes and trajectory tracking accuracy. Collectively, these factors impose higher demands on the online robust path following capability of UAVs. These challenges motivate us to design a novel cooperative path following control strategy. The proposed strategy is expected to enable multi-UAV systems to achieve temporal coordination and efficient obstacle avoidance via peer-to-peer communication with adjacent UAVs when tracking differenti-ated paths over complex DEM terrain, even in the presence of sudden obstacle threats and individual UAV malfunctions. Meanwhile, it should ensure that the cooperative following strategy exhibits favorable robustness against wind field dis-turbances. 
+
+B. Related Work 
+
+Current mainstream distributed cooperative path following methods for multi-UAV systems primarily focus on strategies for tracking identical or similar paths [5], [6]. In essence, these approaches achieve multi-UAV formation control through con-sensus algorithms, while ensuring that each UAV’s tracking 
+
+> arXiv:2603.23968v1 [cs.RO] 25 Mar 2026
+
+error relative to its predefined trajectory converges to zero [7]. However, in DEM environments, the feasible low-altitude paths for individual UAVs vary significantly, and there remains a significant gap in research on guidance laws that enable the coordinated tracking of such differentiated paths with approximately synchronized mission completion times in the time domain. The core challenges mainly lie in two aspects. First, it is challenging to design reference velocity profiles that can achieve temporal synchronization among UAVs under dis-tributed cooperative communication protocols. Second, low-altitude terrain usually gives rise to additional turbulent dis-turbances, which impair the path following accuracy of UAVs. While existing works [8], [9] have proposed cooperative formation following strategies for 2D curves at fixed alti-tudes, these methods are based solely on 2D particle mod-els. Although the associated algorithms integrate distributed communication mechanisms and exhibit a certain degree of robustness, they cannot guarantee both the precise tracking of differentiated 3D paths in complex DEM terrain and temporal synchronization across the UAV fleet. On another front, existing path following strategies for fixed-wing UAVs under wind disturbances, including optimal control [10], quasi-linear parameter-varying model predictive control (MPC) [11], and look-ahead pursuit (LP) guidance laws [12], [13], can achieve robust stabilization of fixed trajectory tracking errors. Nevertheless, these methods do not quantify the robustness metrics of perturbed nonlinear error systems, let alone further optimize these metrics. Fur-thermore, in low-altitude path following scenarios, sudden obstacle threats are prevalent, and research on online waypoint replanning methods that can ensure smooth real-time path re-tracking while satisfying all flight constraints of UAVs remains relatively scarce. 
+
+C. Contributions 
+
+First, we formulate the distributed cooperative path-following problem of low-altitude differentiated paths under wind field disturbances from the perspective of temporal in-dices, and ensure temporal index consistency via a distributed communication protocol. Second, a longitudinal-lateral pre-view angle adjustment method is proposed to counteract wind field disturbances, which, combined with a robust guidance law, achieves finite-time convergence of path following errors to zero. Additionally, an efficient local path replanning method with minimized time cost is designed to meet the requirements of low-altitude online obstacle avoidance, with comprehensive experiments validating the effectiveness of the proposed meth-ods. II. PRELIMINARIES AND PROBLEM FORMULATION 
+
+A. System Model 
+
+Consider a multi-UAV system comprising N small and miniature fixed-wing UAVs (MAVs) operating at low altitude. These UAVs are tasked with tracking distinct low-altitude paths defined on a DEM, while achieving simultaneous arrival at a common target point ptarget = [ pn, target , y e, target , h target ]T ∈
+
+R3 via local communication. Incorporating wind field distur-bances, the kinematic model of i-th UAV is formulated as [14] 
+
+
+
+˙pn,i = Vg,i cos γi cos χi
+
+˙pe,i = Vg,i cos γi sin χi
+
+˙hi = Vg,i sin γi
+
+˙χi = gVg,i tan ϕi cos( χi − ψi) + dχ,i 
+
+˙γi = gVg,i (nlf,i cos ϕi − cos γi) + dγ,i 
+
+(1) where pi = [ pn,i , p e,i , h i]T is the position along the North, East and Down-axis in inertia coordinate frame, respectively. 
+
+ψi, γ i, χ i, V g,i are the yaw angle, flight path angle, course angle, ground velocity vector, respectively. g is gravitational constant. ϕi, n lf,i are the roll angle, load factor, respectively. Beyond wind field disturbances, the signals Vg,i , ϕi, and nlf,i 
+
+of i-th UAV must be limited as follows to ensure stable and robust flight and avoid aerial instability. 
+
+
+
+V g,i ≤ Vg,i ≤ V g,i 
+
+ϕi ≤ ϕi ≤ ϕi
+
+nlf,i ≤ nlf,i ≤ nlf,i 
+
+(2) The non-predictable windy force disturbances generated by the wind field along the χ and γ-axes is di = [ dχ,i , d γ,i ]T [15]. 
+
+B. Communication Topology 
+
+To enable coordination among UAVs, coordination infor-mation must be exchanged via the communication network. Within the proposed framework, each UAV exchanges coordi-nation information exclusively with its neighbors, where the symbol Ni denotes the neighborhood set of the i-th UAV. Such interactions between neighboring UAVs are bidirectional. The set of adjacent nodes Ni capable of communicating for i-th UAV determines the communication topology of the multi-UAV system. Such communication topology is often restricted by various performance constraints. Due to the payload limita-tions of communication modules, the communication topology of UAVs performing missions can only adopt simple struc-tures, such as chain topology or star topology. For industrial-grade UAV data transmission radios (e.g., 433 MHz), the line-of-sight (LOS) communication range is approximately 5–20 km, while for data transmission modules (e.g., 2.4 GHz), this range is about 1–5 km. Beyond these distances, the topology will be disrupted. Assume that the communication radius of UAV i when attempting to communicate with other UAVs 
+
+j is Rcom  
+
+> i
+
+. The communication strength βji of each UAV i
+
+attempting to communicate with other UAVs is calculated as follows: 
+
+βji = γdji 
+
+(3) where dji is the relative distance between the i-th UAV and j-th UAV, γ is a parameter describing the signal strength per unit distance. The set of nodes within the adjacent communication range is defined as Ni. The set of indices of UAVs that are within the communication range Rcom  
+
+> i
+
+, sorted in descending com 
+
+iRii1j2j3j4j1 ,j i
+
+# 2 ,j i
+
+# 3 ,j i
+
+# 4 ,j i
+
+# Fig. 1. Communication topology between UAVs. 
+
+order of signal strength, and with the number not exceeding 
+
+Ci is: 
+
+Ni = {j : dji ≤ Rcom  
+
+> i
+
+, β k,i ≥ βk+1 ,i , k ∈ N i, |N i| ≤ Ci}
+
+(4) These constraints impose two key limitations on UAVs: they can only communicate with adjacent UAVs within a radius of 
+
+Rcom  
+
+> i
+
+, and the number of other UAVs they can communicate with is limited to a maximum number. For scenarios where the number of adjacent nodes exceeds this maximum, the most suitable nodes in Ci should be selected based on the principle of ”nearest adjacent-node priority for communication” to avoid congestion. 
+
+C. Problem Formulation 
+
+This section focuses on developing a robust path-following solution for fixed-wing UAVs in the presence of disturbances such as wind fields and model simplifications. For the i-th UAV, it is assumed to adhere to a set of generic, predefined reference waypoints denoted as Pi =
+
+n
+
+p(j)
+
+> n,i,c
+
+, p (j)
+
+> e,i,c
+
+, h (j)
+
+> i,c
+
+onj=1 
+
+.The look-ahead pursuit path-following control for UAVs for-mulates the predefined path-following problem of Pi as a tracking problem for moving virtual waypoints. The virtual target point 
+
+yc,i = p∗
+
+> n,i,c
+
+, p ∗
+
+> e,i,c
+
+, h ∗
+
+> i,c
+
+T (5) traverses along the reference path Pi, with a Line-of-Sight (LOS) vector extends from the UAV to this point. Specifically, the virtual target point yc,i is defined as the nearest point located ahead along the predefined Pi in the UAV’s velocity direction [12]. 
+
+ASSUMPTION 1. It is assumed that at any arbitrary instant, the i-th UAV can obtain measurements of position and attitude by means of sensors including GPS, barometers, airspeed sensors, and inertial measurement units (IMUs), and derive the optimal estimate ˆxi of the current state xi through the Ex-tended Kalman Filter (EKF) for observation yi. Additionally, this estimate is assumed to be unbiased, i.e. xi ≈ ˆxi.
+
+PROBLEM 1. (Distributed cooperative path-following) The distributed cooperative path-following of multi-UAVs is said to achieve attaining simultaneous arrival at the target 
+
+ptarget , i.e., lim t→∞ |θi − θj | = 0 for any UAVs i, j , through a distributed communication protocol for each reference 
+
+Vg,c,i (t) is regulated, and 
+
+θi = Ti(ptarget ) = d(pi, y c,i ) + lP (yc,i , p target )
+
+Vg,i 
+
+(6) 
+
+Here, Ti(ptarget ) can be approximately estimated as the time from location of i-th UAV to ptarget . lP (yc,i , p target ) denotes the length from the starting waypoint yc,i to the terminal waypoint 
+
+ptarget at the trajectory P.target p12341p2p4p3p,1 gV,1 ,1 1[ , , ]Tn ep p h* * *,1, ,1, 1, [ , , ]Tn c e c cp p h,1 e
+
+> ,1 e
+> Reference waypoint 12
+
+34 
+
+23 
+
+
+
+> Communication
+> Topology 21
+
+41 
+
+32 
+
+14 
+
+43 
+
+ 
+
+> Wind disturbance 1
+
+w2w3w4w 
+
+> Fig. 2. Schematic diagram of distributed cooperative path following for multi-UAVs system.
+
+The objective of distributed cooperative path-following problem is to design an appropriate coordination reference groundspeed command Vg,c,i for i-th UAV, which can be effectively solved in a distributed optimization manner. III. DISTRIBUTED COOPERATIVE ROBUST PATH-FOLLOWING AND LOCAL REPLANNING 
+
+A. Robust Stabilization for Path-Following Error 
+
+During the process of the UAV tracking along the current waypoint yc,i , the position errors along the North, East, Height-axis directions are defined as 
+
+epn,i = p∗ 
+
+> n,i,c
+
+− pn,i , e pe,i = p∗ 
+
+> e,i,c
+
+− pe,i , e h,i = h∗ 
+
+> i,c
+
+− hi
+
+(7) We propose the following assumption about the general struc-ture of the UAV flight control system: 
+
+ASSUMPTION 2. Each UAV i’s flight control system (autopi-lot) is capable of robustly tracking the reference load factor signal nlf,c,i , roll angle signal ϕc,i , and reference groundspeed 
+
+Vg,c,i [11]. As the core of this study, an robust path-following controller is designed in this section. The objective of this paper is to design the desired control commands ϕc,i , nlf,c,i and Vg,c,i to ensure that the path following errors can be robust stablized even when subject to bounded path angles disturbances. The sufficient conditions for ensuring the fast finite-time stability of longitudinal-lateral look-ahead pursuit guidance law are derived. With the lateral flight path angle χc,i , longitudinal flight path angle γc,i of the i-th UAV given by 
+
+χc,i = tan −1 p∗ 
+
+> e,i,c
+
+− pe,i 
+
+p∗ 
+
+> n,i,c
+
+− pn,i 
+
+(8) 
+
+γc,i = tan −1 h∗ 
+
+> i,c
+
+− hi
+
+q
+
+(p∗ 
+
+> e,i,c
+
+− pe,i )2 + ( p∗ 
+
+> n,i,c
+
+− pn,i )2
+
+(9) and Vg,i is determined by the distributed temporal coordination protocol. During the process of tracking a virtual target point, its lateral look-ahead angle ηlat i and longitudinal look-ahead angle ηlon i can be defined as 
+
+ηlat i = χc,i − χi, ηlon i = γc,i − γi (10) where ηlat i and ηlon i are limited within the certain ranges as follows: 
+
+ηlat ≤ ηlat i ≤ ηlat , ηlon ≤ ηlon i ≤ ηlon (11) In our previous work Ref. [15], we demonstrated that the look-ahead angle pairs (ηlat i , η lon i ) do not necessarily need to be stabilized to zero. Even when ηlat i and ηlon i are within a disturbance range, the path following errors epn,i , e pe,i , e h,i 
+
+can be stabilized to zero in finite time, which indicates that the system has good robustness. 
+
+THEOREM 1. If for any reference waypoint yc,i ∈ P i is con-strained by 
+
+q
+
+˙p∗2 
+
+> n,i,c
+
++ ˙ p∗2 
+
+> e,i,c
+
++ ˙h∗2 
+
+> i,c
+
+≤ L c, γi
+
+ hi − h∗
+
+> i,c
+
+ ≤ 0,and there exists 0 ≤ δlon , δ lat < π 
+
+> 2
+
+, here Vg cos δlon cos δlat >
+
+Lc such that |ηlon i | ≤ δlon , |ηlat i | ≤ δlat . Then epn,i , e pe,i , e h,i 
+
+will be stablized to 0 within a finite time T (e0), where e0 is the initial position error [15]. 
+
+Further, the specific form of the adopted reference roll angle 
+
+ϕc,i and load factor nlf,c,i is expressed by: 
+
+ϕc,i = − sin −1
+
+ Vg,i cos ϕi
+
+g fχ
+
+ ηlat i , η lon i
+
+
+
+∈
+
+h
+
+ϕi, ϕ i
+
+i
+
+nlf,c,i = g cos γi − Vg,i fγ
+
+ ηlat i , η lon i
+
+
+
+g cos ϕc,i 
+
+∈ nlf,i , n lf,i 
+
+ (12) where the ηi = [ ηlat i , η lon i ]T , and f (ηi) = [ fχ(ηi), f γ (ηi)] T
+
+determine the specific formulation of the guidance law, 
+
+λmax 
+
+ ∂f (0) 
+
+∂η i
+
+T
+
++
+
+ ∂f (0) 
+
+∂η i
+
+!
+
+< 0 (13) here we set fχ(ηi) = −kχ sin ηlat i , fγ (ηi) = −kγ sin ηlon i ,
+
+kχ, k γ > 0 are the gain coefficients. 
+
+B. Efficient Local Path Replanning 
+
+As shown in Fig.3, when the i-th UAV is tracking the virtual waypoint yc,i , if a sudden obstacle threat Ω blocks its path, it is necessary to perform multiple random samplings ahead of the original waypoint yc,i to locally replan a new optimal waypoint ˜yc,i as the current target waypoint. Repeating this process multiple times allows us to sample a series of optimal waypoints, which serve as the UAV’s current local replanned path. max max +   iip,c i y,c i y( )    
+
+> ,,DEM ,n i e i pp
+
+## ( )   
+
+> ,,,n w e w ppi
+
+i
+
+    
+
+> Fig. 3. Schematic diagram of the i-th UAV sampling a new waypoint ˜yc,i
+> within the local region Γi
+
+ASSUMPTION 3. Assuming each UAV can detect the con-tour coordinates of the current obstacle Ω via its detection radar, it can further deduce the lateral coordinates of the obstacle’s center of gravity as (pn,w , p e,w ) and measure the altitude DEM (pn,i , p e,i ) under the current terrain using its sensors. Thus, based on the center of gravity coordinates of 
+
+Ω, the maximum lateral expansion radius of the region can be calculated by 
+
+¯R = sup 
+
+> (pn,p e,h )∈Ω
+
+dlat 
+
+ pn
+
+pe
+
+
+
+,
+
+pn,w 
+
+pe,w 
+
+ 
+
+(14) 
+
+where dlat (a, b ) denotes the lateral distance between coordi-nates a and b.
+
+Given the search radius increment ∆R, included angle δi
+
+and the i-th UAV’s altitude increment ∆hi, the optimal new waypoint ˜yc,i is sought in the the following feasible regions 
+
+Γi:
+
+Γi =
+
+(pn, p e, h ) ∈ Θi :
+
+*
+
+μi,
+
+
+
+pn − pn,i 
+
+pe − pe,i 
+
+h − hi
+
++
+
+≤ δi
+
+ (15) where ⟨a, b ⟩ denotes the included angle between vector a
+
+and b, μi = [cos γi cos χi, cos γi sin χi, sin γi]T is the velocity vector of the UAV, 
+
+Θi = (pn, p e, h ) : ¯R ≤ dlat 
+
+ pn
+
+pe
+
+
+
+,
+
+pn,w 
+
+pe,w 
+
+ 
+
+≤ ¯R + ∆ R
+
+DEM (pn,i , p e,i ) ≤ h ≤ DEM (pn,i , p e,i ) + ∆ hi
+
+(16) According to Ref. [15], the upper bound of the flight time from the UAV’s coordinate pi to ˜yc,i (denoted as T (pi, ˜yc,i )), and the upper bound of the flight time from ˜yc,i to yc,i (denoted as T (˜ yc,i , y c,i )) can be described as: 
+
+T (pi, ˜yc,i ) = d∗ (pi, ˜yc,i )
+
+Vg,i cos ηlon  
+
+> 1
+
+cos ηlat 
+
+> 1
+
+T (˜ yc,i , y c,i ) = d∗ (˜ yc,i , y c,i )
+
+Vg,i cos ηlon  
+
+> 2
+
+cos ηlat 
+
+> 2
+
+(17) where d∗(a, b ) denotes the 3D distance between coordinates 
+
+a and b, ηlat  
+
+> 1
+
+, η lon  
+
+> 1
+
+can be described as 
+
+ηlat  
+
+> 1
+
+= tan −1 ˜pe,i − pe,i 
+
+˜pn,i − pn,i 
+
+− χi
+
+ηlon  
+
+> 1
+
+= tan −1 ˜hi − hi
+
+q
+
+(˜ pe,i − pe,i )2 + (˜ pn,i − pn,i )2
+
+− γi
+
+(18) and ηlat  
+
+> 2
+
+, η lon  
+
+> 2
+
+can be approximately estimated as 
+
+ηlat  
+
+> 2
+
+≈ tan −1 p∗ 
+
+> e,i
+
+− ˜pe,i 
+
+p∗ 
+
+> n,i
+
+− ˜pn,i 
+
+− tan −1 ˜pe,i − pe,i 
+
+˜pn,i − pn,i 
+
+ηlon  
+
+> 2
+
+≈ tan −1 h∗ 
+
+> i
+
+− ˜hi
+
+q p∗ 
+
+> e,i
+
+− ˜pe,i 
+
+2 +  p∗ 
+
+> n,i
+
+− ˜pn,i 
+
+2
+
+− tan −1 ˜hi − hi
+
+q
+
+(˜ pe,i − pe,i )2 + (˜ pn,i − pn,i )2
+
+(19) We aim to find ˜y∗ 
+
+> c,i
+
+that minimizes the total time T (pi, ˜yc,i ) + 
+
+T (˜ yc,i , y c,i ) through K random explorations within the feasi-ble region Γi, i.e., 
+
+˜y∗ 
+
+> c,i
+
+= argmin ˜yc,i ∈Γi
+
+ d∗ (pi, ˜yc,i )cos ηlon  
+
+> 1
+
+cos ηlat 
+
+> 1
+
++ d∗ (˜ yc,i , y c,i )cos ηlon  
+
+> 2
+
+cos ηlat 
+
+> 2
+
+
+
+(20) This process is repeated iteratively until the obstacle-free waypoints sequence Yc relative to the target point yc,i is obtained. The specific code is provided in Alg. 1. 
+
+Algorithm 1 Pseudocode for local path replanning 
+
+Require: i-th UAV’s coordinate pi, target point coordinate 
+
+yc,i , obstacle Ω, parameters K, ∆R, ∆hi, δ i.
+
+Ensure: The waypoints sequence Yc. 
+
+> 1:
+
+Initialize Yc = ∅. 
+
+> 2:
+
+while The straight-line between pi and yc,i is obstructed by Ω do  
+
+> 3:
+
+Safe feasible region Γi is determined by (15).  
+
+> 4:
+
+Calculate the optimal waypoint ˜y∗ 
+
+> c,i
+
+via (20) through K
+
+random explorations.  
+
+> 5:
+
+Yc ← Yc ∪ ˜y∗
+
+> c,i
+
+. 
+
+> 6:
+
+pi ← ˜y∗
+
+> c,i
+
+. 
+
+> 7:
+
+end while Algorithm 2 Pseudocode for distributed cooperative robust path-following controller 
+
+Require: The virtual waypoint yc,i to be path-followed. 
+
+Ensure: Reference inputs ui. 
+
+> 1:
+
+for UAV i = 1 , 2 . . . N do  
+
+> 2:
+
+The i-th UAV determines the current virtual waypoint 
+
+yc,i to be path-followed.  
+
+> 3:
+
+if The path from the UAV to yc,i is blocked by the obstacle Ω then  
+
+> 4:
+
+Call the Alg.1 to obtain the new waypoint sequences 
+
+Yc, and let yc,i ← Yc(1) . 
+
+> 5:
+
+end if  
+
+> 6:
+
+Establish the communication topology Ni for the i-th UAV via (4).  
+
+> 7:
+
+Compute the cooperativity metric θi by (6).  
+
+> 8:
+
+Compute the Vg,c,i via (21)-(23).  
+
+> 9:
+
+Compute the ϕc,i and nlf,c,i via (12).  
+
+> 10:
+
+end for 
+
+C. Distributed Temporal Coordination Protocol 
+
+To achieve the coordination objective in PROBLEM 1, under the guarantee of ASSUMPTION 4 regarding the com-munication topology, we adopt the following purely distributed coordination control law mentioned in Ref. [16] as follows 
+
+˙θi = − X
+
+> j∈N i
+
+βji tanh ( kθ (θi − θj )) + γd (21) where kθ , γ d are positive constants proposed based on the consensus theory, and γd is used to constrain the the pro-gression rate. This coordination strategy in the paper can achieve leaderless synchronization and is thus more robust to malfunctions of certain UAVs. 
+
+ASSUMPTION 4. In this paper, we assume that the com-munication topology connectivity satisfies the ”persistency of excitation” (PE-like) condition [17]. These assumptions can be readily ensured in practice and are widely adopted in the literature. This condition permits the communication topology to lose connectivity, provided that connectivity is established in the integral sense. 
+
+when adopting the distributed coordination strategy pro-posed in (21), this will ensure that |θi − θj | → 0 and ˙θi → γd
+
+for any i-th and j-th UAVs in the communication topology of the multi-UAV system [16]. Subject to the aforementioned communication protocol, further discretization results in the ideal reference θi,c as 
+
+θi,c = θi + ˙θi∆t (22) where ∆t denotes the sampling time. We further update the current reference airspeed input for the i-th UAV using θi,c as follows: 
+
+Vg,c,i = clip  Vg,i − kVg (θi,c − θi) , V g,i , V g,i 
+
+ (23) where kVg > 0 is a coefficient for tuning the acceleration of the reference speed update, and clip (x, a, b ) is a clipping function restricting x to [a, b ].(5704, 8068, 294)        
+
+> (5882, 11366, 287)
+> (10877, 11366, 239)
+> (10877, 8068 , 279)
+> (8261, 10012, 300)
+> Obstacle Fig. 4. Starting coordinates, target coordinates ptarget , and path Pito be followed for each UAV i.
+
+In summary, the complete pseudocode of distributed coop-erative robust path-following controller of multi-UAVs system is shown in Alg. 2. IV. SIMULATION In this section, we verify the effectiveness and scalability of the proposed algorithm for path following in low altitude complex terrain with obstacle. The experimental environment is configured as a low altitude path following experiment. The waypoints of the path, respective starting points and target points, designed to mimic real-world navigation tasks, are shown in Fig.4, featuring sharp turns and altitude changes. The UAV model required for simulations is a small Miniature Air Vehicle (MAV), Aerosonde, specifically a fixed wing configuration with a 1.2 m wingspan, and its physical and aerodynamic parameters specified below are given in Ref. [14]. Meanwhile, we also apply wind field disturbances. Here, the non steady gust portion is modeled using white noise filtered through a linear time invariant system based on the von K´ arm´ an turbulence spectrum [18] within the Dryden transfer functions [14]. The Dryden gust model parameters specified in MIL-F-8785C [19] are: turbulence intensities along body frame axes σu = σv = 2 .12 m/s, σw = 1 .4 m/s; spatial wavelengths Lu = Lv = 200 m, Lw = 50 m. The ambient wind is typically expressed in the inertial frame as 
+
+Vws = [2 .5, 0, 0] T . The influence mechanisms of specific aerodynamic forces and moments are detailed in Ref. [14]. A cooperative path following experiment of 4 UAVs is carried out on the DEM shown in Fig.4, and a sudden obstacle as shown in the figure is deployed on the waypoints of the 1st UAV to test its online path replanning capability. We set Ci = 2 for each UAV, and the upper limit of their mutual communication range Rcom i = 30 km. The sampling time ∆t is set as 1 s, the flight speed range [V g,i , V g,i ] is 9–18 m/s, the roll angle range [ϕi, ϕ i] is −0.6 rad to 0.6 rad, and the load factor range [nlf,i , n lf,i ] is 0 to 2.1. Configurations of other algorithm parameters: kχ = kγ = 8 .8844 , K = 2000 , ∆R = 500 m, 
+
+∆hi = 20 m, kθ = 1 , kVg = 0 .001 .
+
+A. Validation of Effectiveness 
+
+We select the cooperative path following simulation of the multi-UAVs system from 0 s to 260 s, and the experimental                                
+
+> Fig. 5. Time-series curves of θifor each UAV iduring 0s - 260s. TABLE I THE COMPARISON OF ¯AE, ¯RMSE, MD AND REPLANNING TIME FOR DIFFERENT NUMBER OF UAV S FROM 0S TO 100 S.Number of UAVs ¯AE (m)¯RMSE (m)MD(s) RT(s) 49.7817 26.7499 13.9428 3.7138 74.3812 11.4767 25.5534 3.653 10 3.1742 9.1567 9.8762 2.9872 13 4.5678 12.3907 15.5623 2.5940
+
+results are shown in Fig. 6. Subfigure (a) shows that each UAV can achieve accurate and robust following of the low altitude path under wind field disturbances. In addition, subfigure (b) shows that at 75 s, emergency online path replanning for the sudden obstacle can be completed within no more than 2 s, and the obstacle is bypassed smoothly. This process is realized by the switched accurate path following of the replanned waypoints. On the other hand, regarding the coordinated consistency of the time index θi, referring to Fig.5, it can be found that even after path replanning, through the interaction of the distributed communication topology, the time indices of multiple UAVs still show a good fitting effect at the final moment, and the maximum difference of θi among all UAVs does not exceed 15 s, which indicates that good consistency is achieved. In the tracking process of the autopilot, we investigated the reference signal tracking effects of ϕc,i , γc,i , and Vg,c,i for each UAV i from 75 s to 100 s, as shown in Fig.7. Good signal tracking is achieved for ϕc,i , and the maximum tracking error for γc,i does not exceed 0.15 rad, which indicates the effectiveness of the autopilot in tracking its reference commands, verifying the feasibility of its actual deployment. 
+
+B. Validation of Scalability 
+
+To verify the scalability of the proposed algorithm in scenar-ios with a larger fleet of UAVs, we compared the performance metrics of the system under four different UAV quantities (i.e., 4, 7, 10, and 13 UAVs) over the time interval of 0–100 s. The target pUAVs’  actual  trajectories 
+
+> Communication
+> Topology Waypoints to be followed
+> Replanned waypoints
+> Local path replanning
+> UAV 1
+> UAV 2
+> UAV 3
+> UAV 4
+
+(a) (b) 
+
+Fig. 6. Robust cooperative path-following and local path replanning process of the multi-UAV system. (a): Simulation of the cooperative path-following process from 0s to 260s; (b): Simulation of the local path replanning at 75s. 
+
+(a) (b) (c) 
+
+Fig. 7. Tracking performance of the autopilot for the reference commands generated by the guidance law during 75s – 100s. (a): Signal tracking curves of 
+
+ϕc,i for each UAV i; (b): Signal tracking curves of γc,i for each UAV i; (c): Signal tracking curves of Vg,c,i for each UAV i.
+
+selected metrics include the Average Error 
+
+¯AE = 1
+
+N
+
+> N
+
+X
+
+> i=1
+> |P i|
+
+X
+
+> j=1
+
+q
+
+e2
+
+> pn,i
+
+(tj ) + e2
+
+> pe,i
+
+(tj ) + e2
+
+> h,i
+
+(tj ) (24) Average Root Mean Square Error, 
+
+¯RMSE = 1
+
+N
+
+> N
+
+X
+
+> i=1
+
+vuut 1
+
+|P i| − 1
+
+> |P i|
+
+X
+
+> j=1
+
+(∥ei(tj )∥ − ∥ ¯ei∥)2 (25) Herein, tj denotes the time instant when UAV i is closest to the waypoint yc,i , ei(tj ) = [ epn,i (tj ), e pe,i (tj ), e h,i (tj )] T ,and ¯ei = 1
+
+> |P i|
+
+P|P i| 
+
+> j=1
+
+ei(tj ), where |P i| represents the number of waypoints on the path Pi. Maximum θ Deviation (MD =max i,j ∥θi − θj ∥) and Replanning Time (RT). Specifically, ¯AE and ¯RMSE are employed to characterize the robustness of UAV path following [20]; MD quantifies the degree of agree-ment of the consistency metric; and RT is used to evaluate the real-time performance of the path replanning process. In each experiment, the initial coordinates of the UAVs were randomly selected three times on the circle centered at ptarget 
+
+with a radius of 2.74 km, and the corresponding metrics were calculated by averaging the results of the three trials. The experimental results of the algorithm are presented in Table I. Evidently, as the number of UAVs increases, ¯AE exhibits a distinct decreasing trend, which indicates that the average path following error of all UAVs can be effectively constrained within 10 m even under wind field disturbances. Meanwhile, the path replanning time is consistently limited to less than 3 s when encountering sudden obstacles, which further demon-strates the excellent real-time responsiveness of the proposed algorithm. In terms of the temporal consistency metric (MD), it can be sufficiently controlled within 20 s, which verifies that the algorithm achieves high-precision temporal coordination among UAVs while satisfying all flight constraints. Notably, the above conclusions are not restricted by the communication topology constraints of the UAV network, which indirectly validates the superior scalability of our algorithm in complex low-altitude environments with wind disturbances and obstacles. V. CONCLUSION In this study, we address the problem of robust cooperative path following for multi-UAV systems operating in complex low-altitude terrain with airflow disturbances. To this end, we propose a robust path following controller that realizes finite-time stabilization of path following errors. For sudden obstacles encountered during flight, we design an optimal waypoint replanning algorithm to enable timely and smooth obstacle avoidance. For the temporal index coordination prob-lem among multiple UAVs, we develop a distributed com-munication protocol that enables effective coordination across the fleet. Extensive experiments are conducted to verify the robustness, efficiency, and coordination performance of the proposed algorithms, demonstrating their promising potential for practical deployment in complex low-altitude mission scenarios. REFERENCES [1] Boyang Zhang, Yueqi Hou, Hang Yin, Maolong Lv, Aiwu Yang, and Lirong Wu. Cooperative dynamic target tracking: Distributed time-varying optimization for multi-uav system. IEEE Transactions on Aerospace and Electronic Systems , 61(5):12245–12257, 2025. [2] Bowen Wu and Renbin Xiao. Attention-embedded lion pride labor division algorithm for solving dynamic coupling sead task allocation problem. IEEE Transactions on Aerospace and Electronic Systems ,61(5):11187–11207, 2025. [3] Zimao Sheng, Hong’an Yang, Jiakang Wang, Li Jing, and Li Haifeng. Improved bfs-based path planning algorithm with finite time generalized suboptimal search incorporating fixed-wing uav flight constraints for complex low-altitude airspace. Robotics and Autonomous Systems ,194:105164, 2025. [4] Linjie Xing, Xiaoyan Fan, Yaxin Dong, Zenghui Xiong, Lin Xing, Yang Yang, Haicheng Bai, and Chengjiang Zhou. Multi-uav cooperative system for search and rescue based on yolov5. International Journal of Disaster Risk Reduction , 76:102972, 2022. [5] Hao Chen, Yirui Cong, Xiangke Wang, Xin Xu, and Lincheng Shen. Coordinated path-following control of fixed-wing unmanned aerial ve-hicles. IEEE Transactions on Systems, Man, and Cybernetics: Systems ,52(4):2540–2554, 2021. [6] Boyang Zhang, Yueqi Hou, Hang Yin, Maolong Lv, Aiwu Yang, and Lirong Wu. Cooperative dynamic target tracking: Distributed time-varying optimization for multi-uav system. IEEE Transactions on Aerospace and Electronic Systems , 2025. [7] Shulong Zhao, Feng Yi, Qipeng Wang, Jiayi Zheng, and Xiangke Wang. Cooperative tracking of fixed-wing uavs with arbitrary convergence time: Theory and experiment. IEEE Transactions on Industrial Informatics ,20(8):9918–9927, 2024. [8] Hao Chen, Xiangke Wang, Lincheng Shen, and Yangguang Yu. Coor-dinated path following control of fixed-wing unmanned aerial vehicles in wind. ISA transactions , 122:260–270, 2022. [9] Chao Ma, Jun Yang, Jianyun Chen, and Chao Zhou. Path following identification of unmanned aerial vehicles for navigation spoofing and its application. ISA transactions , 108:393–405, 2021. [10] Jun Yang, Cunjia Liu, Matthew Coombes, Yunda Yan, and Wen-Hua Chen. Optimal path following for small fixed-wing uavs under wind disturbances. IEEE Transactions on Control Systems Technology ,29(3):996–1008, 2020. [11] Ahmed S Rezk, Horacio M Calder´ on, Herbert Werner, Benjamin Her-rmann, and Frank Thielecke. Predictive path following control for fixed wing uavs using the qlmpc framework in the presence of wind disturbances. In AIAA SCITECH 2024 Forum , page 1594, 2024. [12] Zian Wang, Zheng Gong, Jinfa Xu, Jin Wu, and Ming Liu. Path follow-ing for unmanned combat aerial vehicles using three-dimensional nonlin-ear guidance. IEEE/ASME Transactions on Mechatronics , 27(5):2646– 2656, 2021. [13] Saurabh Kumar, Shashi Ranjan Kumar, and Abhinav Sinha. Three-dimensional path-following nonlinear guidance for unmanned aerial vehicles. Journal of Guidance, Control, and Dynamics , 47(6):1231– 1240, 2024. [14] Randal W Beard and Timothy W McLain. Small unmanned aircraft: Theory and practice . Princeton university press, 2012. [15] Zimao Sheng, Hong’an Yang, Shuxiang Yang, and Zirui Yu. Ro-bust longitudinal-lateral look-ahead pursuit path-following control: Fast finite-time stability guarantee, 2025. [16] Hao Chen, Xiangke Wang, Lincheng Shen, and Yangguang Yu. Coor-dinated path following control of fixed-wing unmanned aerial vehicles in wind. ISA Transactions , 122:260–270, 2022. [17] Murat Arcak. Passivity as a design tool for group coordination. IEEE Transactions on Automatic Control , 52(8):1380–1390, 2007. [18] Robert F Stengel. Flight dynamics . Princeton university press, 2005. [19] Jack W Langelaan, Nicholas Alley, and James Neidhoefer. Wind field estimation for small unmanned aerial vehicles. Journal of guidance, control, and dynamics , 34(4):1016–1030, 2011. [20] Zhouyu Zhang, Chenyuan He, Hongshen Chen, Yiqun Zhang, Hai Wang, Yingfeng Cai, Long Chen, Haitong Li, and Tongwei Lu. Small fixed-wing unmanned aerial vehicle path following under low altitude wind shear disturbance. IEEE Transactions on Intelligent Transportation Systems , 25(10):13991–14003, 2024.

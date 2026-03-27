@@ -1,0 +1,647 @@
+Title: Goal-Oriented Reactive Simulation for Closed-Loop Trajectory Prediction
+
+URL Source: https://arxiv.org/pdf/2603.24155v1
+
+Published Time: Thu, 26 Mar 2026 01:07:09 GMT
+
+Number of Pages: 21
+
+Markdown Content:
+# Goal-Oriented Reactive Simulation for Closed-Loop Trajectory Prediction 
+
+Harsh Yadav and Tobias Meisen 
+
+University of Wuppertal, 42119, Germany 
+
+harsh.yadav@uni-wuppertal.de 
+
+Abstract. Current trajectory prediction models are primarily trained in an open-loop manner, which often leads to covariate shift and compounding errors when deployed in real-world, closed-loop settings. Furthermore, relying on static datasets or non-reactive log-replay simulators severs the interactive loop, preventing the ego agent from learning to actively negotiate surrounding traffic. In this work, we propose an on-policy closed-loop training paradigm optimized for high-frequency, receding horizon ego prediction. To ground the ego prediction in a realistic representation of traffic interactions and to achieve reac-tive consistency, we introduce a goal-oriented, transformer-based scene decoder, resulting in an inherently reactive training simulation. By exposing the ego agent to a mixture of open-loop data and simulated, self-induced states, the model learns recovery behaviors to correct its own execution errors. Extensive evaluation demonstrates that closed-loop train-ing significantly enhances collision avoidance capabilities at high replanning frequencies, yielding relative collision rate reductions of up to 27.0% on nuScenes and 79.5% in dense DeepScenario intersections compared to open-loop baselines. Additionally, we show that a hybrid simulation combining reactive with non-reactive surrounding agents achieves optimal balance between immediate interactivity and long-term behavioral stability. Code will be made publicly available upon publication. 
+
+1 Introduction 
+
+Currently, the autonomous driving stack operates sequentially: Perception → Prediction 
+
+→ Planning [21,22,24,39,47]. In this pipeline, the prediction module forecasts trajectories for surrounding agents, which the planner uses to generate a safe ego path. However, this creates information gaps when the ego-agent encounters unfamiliar maneuvers not covered by the training distribution. To mitigate this,  state-of-the-art  (SOTA ) systems employ con-tingency planning, either via proactive branching (solving for multiple potential futures) or reactive safety filters (triggering fail-safe stops upon deviation) [53]. While effective, these methods can become overly conservative loosing ego’s assertiveness in complex scenarios. To address this, we propose integrating prediction and planning in a manner inspired by robust control theory, specifically  Model-Predictive-Control  (MPC ) [26]. Rather than relying on a perfect long-term scene forecast, we focus on building an ego prediction model that remains stable under high-frequency replanning. The intuition follows a receding horizon strategy: much like a human driver who mentally plans a full route through traffic but only physically commits to immediate steering adjustments, our setup generates a long-term ego trajectory to ensure feasibility but only executes the initial step. This process anchors immediate action within a coherent future trajectory. By instantly discarding and re-generating the remaining trajectory whenever the states of surrounding agents update, ego can dynamically adapt to unforeseen maneuvers by others. However, rapid replanning imposes strict stability requirements. Static open-loop datasets never expose the model to the compounding consequences of its own execution errors. Fur-thermore, naively incorporating simulation feedback to correct this, risks collapsing the ego’s multimodal predictions (forcing all modes toward a single outcome) or introducing severe off-policy bias (penalizing individual modes for outcomes caused by other modes). 
+
+> arXiv:2603.24155v1 [cs.RO] 25 Mar 2026
+
+To overcome these challenges, we introduce a structurally isolated closed-loop training strategy. By combining open-loop data with on-policy simulated rollouts of individual modes, we force the modes to iteratively predict from its own self-induced drifted states. This teaches the network to actively stabilize and return to a safe, collision-free path without sacrificing route adherence. Generating valid closed-loop samples to train this recovery behavior requires accurate trajectory modeling for surrounding traffic. Traditional benchmarks [13,20] typically simu-late traffic via non-reactive log replay or rule-based models, which severs the causal link be-tween the ego’s actions and the environment’s response. Because surrounding agents rigidly follow pre-recorded trajectories, the ego is encouraged to exploit dataset artifacts—such as passively waiting for a guaranteed merge gap rather than actively negotiating space. To resolve this by grounding the ego prediction in a realistic representation of traffic, and achieve reactive consistency, we employ a goal-oriented, transformer-based scene decoder to generate a reactive simulation. By conditioning surrounding predictions on the ego’s state, the scene decoder generates plausible immediate reactions that respect both the ego’s presence and original goals. Our contributions are summarized as follows: 
+
+– We develop an ego prediction model optimized for high frequency receding horizon execution. By combining open-loop data with on-policy rollouts of individual modes, the model learns to recover from self-induced deviations. 
+
+– We eliminate the interaction disconnect in static benchmarks using a goal-oriented, transformer-based simulation for surrounding agents. By explicitly conditioning sur-rounding predictions on the ego state, we ensure simulated closed-loop samples capture plausible reactive consistency. 
+
+– We demonstrate that closed-loop training improves collision avoidance at high re-planning frequency without compromising route adherence, yielding relative collision rate reductions of up to 27.0% on nuScenes and 79.5% in DeepScenario. Further-more, our hybrid strategy—mixing reactive predictions with non-reactive log-replay anchors—optimizes the balance between immediate interactivity and long-term be-havioral stability. 
+
+2 Related Work 
+
+2.1 Motion Prediction 
+
+Trajectory prediction research is broadly classified into marginal and joint multi-modal prediction. Marginal prediction aims to generate future trajectories independently for each agent. To address the inherent ambiguity of human behavior, the field has largely pro-gressed towards probabilistic modeling, which estimates both a mean μ and covariance 
+
+Σ. Early approaches [5, 10, 17, 34, 50] leveraged rasterized  Bird-Eye-View  (BEV ) inputs and  Convolution Neural Network  (CNN )s, while adopting these stochastic formulations to capture multi-modality. However, the rise of transformers shifted the field toward effi-cient vectorized input processing [7,16,27,29,31,32,35,44,45]. A significant paradigm shift within vectorized approaches was introduced by GoRela [9] and QCNet [54], which utilized relative position embeddings to achieve equivariance (treating all agents symmetrically) and eliminate re-computation overhead during ego motion updates. While subsequent works [25, 51] achieved  SOTA  results using this architecture, recent studies [2, 12] reveal a critical disconnect: these open-loop trained models do not result in closed-loop safety. This stems from covariate shift, where compounding prediction errors cause the ego agent to drift into unfamiliar states during deployment that lie outside the training distribution. 2In this work, we introduce a closed-loop training paradigm that enables the model to learn recovery behaviors, improving safety under distribution shift. By contrast, joint prediction [4, 8, 18, 36, 41, 46, 55] aims to forecast all agents simulta-neously, capturing the interactions neglected by marginal models. However, these models assume idealized cooperation, rendering the ego prediction unreliable when facing the un-expected maneuvers of surrounding agents deviating from the predicted joint norm. We resolve this using a hybrid prediction strategy, where the ego agent is predicted separately and the surrounding agents are predicted jointly. This prevents the ego from over-fitting to an idealized cooperative future, improving safety against non-cooperative behaviors. 
+
+2.2 Closed-Loop Trajectory Prediction 
+
+In robotics, DAGGER [38] and DART [28] propose methods to alleviate the issue of covariate shift by relying on experts to interactively label actions for unfamiliar states. However, due to this manual bottleneck, these approaches are not scalable to large-scale autonomous driving. In contrast,  Reinforcement Learning  (RL )-based methods such as CaRL [23] and GIGAFlow [11] completely remove the dependency on expert supervision, instead relying on handcrafted rewards and progression metrics. However, these methods are notoriously unstable to tune and often suffer from sim-to-real gaps. To avoid these pitfalls, some works have pursued closed-loop imitation learning without unstable rewards or manual labeling. ChauffeurNet [1] shapes the model’s behavior via auxiliary losses (e.g., collision, off-road), but this reliance on heuristics can lead to brittle policies. Cat-K [52] improves robustness by fine-tuning the model on its own closed-loop rollouts. However, it restricts itself to tokenized action spaces, limiting its applicability to continuous control actions, which are common in modern end-to-end architectures [22, 24, 42, 47]. Finally, methods suitable for continuous action spaces, such as Urban Driver [40], TrafficSim [43], and UniMM [30], use differentiable simulation to generate closed-loop samples directly within the optimization graph. However, full differentiability introduces a critical risk of shortcut learning [30], as future closed-loop samples can inadvertently leak non-causal information into intermediate predictions. While recent work [49] mitigates this by detaching the computation graph between simulation steps, their framework is restricted to non-reactive surrounding agents. 
+
+2.3 Evaluation Paradigms, Benchmarks & Simulations 
+
+In recent years, evaluating ego prediction has shifted from open-loop metrics to closed-loop assessments. Pure forecasting benchmarks like nuScenes [3], Waymo [15], and Argoverse-2 [48] rely on displacement errors (ADE/FDE), which fail to penalize collisions or account for the ego’s impact on the scene. To address this, the CARLA [14] benchmark introduced a closed-loop simulation, motivating goal-oriented open-loop methods like PlanT [37] and PlanTF [6] to address the covariant shift using data augmentation and transformers. How-ever, CARLA’s simplified physics and rule-based traffic results in sim-to-real gap. Recent data-driven benchmarks like nuPlan [20], Waymax [19], and NAVSIM [13] attempt to improve realism using real-world driving data. Yet, they largely rely on rule-based or log-replayed surrounding agents, limiting their ability to model complex, re-active social interactions. Although Waymax distinguishes itself by offering an efficient GPU-based simulation strategy, its reliance on the JAX ecosystem introduces integration barriers for predominantly PyTorch-based workflows. We bridge this gap by implement-ing a PyTorch-native, GPU-accelerated simulation with fully reactive surrounding agents, combining hardware efficiency with the flexibility of learning based scene simulation. 33 Method 
+
+3.1 Network Architecture 
+
+Our method employs the query-centric attention mechanism from QCNet [54] for its com-putational advantages compared to the traditional transformer’s attention mechanism. Following DONUT [25], we adopt a decoder-only architecture rather than a standard encoder-decoder to leverage its autoregressive nature for iterative predictions. As suggested by DONUT and CASPFormer [50], this setup is further enhanced by iteratively updating of query reference points. Consequently, they generate predictions in the instantaneous frame of query rather than in the frame of agent, which necessitates a post-processing coordinate transformation. However, existing approaches restrict this transformation to the mean po-sition ( μ), neglecting the orientation of the uncertainty ( Σ). We address this suboptimal formulation by explicitly transforming the covariance matrix via Σagent = RΣ query RT ,where R is the rotation matrix from the query to the agent frame. Finally, to ensure tra-jectory smoothness, we adopt the iterative refinement strategy from LMFormer [51], due to its computational efficiency compared to the two-stage refinement used in QCNet and DONUT. As motivated in Section 2.1, we decouple the forecasting task into two distinct modules: Ego Decoder and Scene Decoder. While both modules ingest the same dynamic and static context (i.e., agents history and map elements), they are distinguished by their specific conditioning and output objectives. Leveraging the equivariance of query-centric attention [54], we utilize identical architectures for both decoders, ensuring efficient processing of this shared representation. 
+
+Ego Decoder : Unlike PlanT [37] and PlanTF [6], which predict a single trajectory based on navigation commands, our Ego Decoder is designed to generate multimodal forecasts based on the agent’s history and map information. This diversity is crucial for real-world deployment, enabling flexible downstream planning strategies, such as velocity profiling (e.g., setting target velocity ranges for each mode), handling fallback modes with distinct maneuvers (e.g., overtaking, turning right, or staying still), or extending to uni-modal prediction conditioned on additional information (e.g., traffic lights, GPS routes). 
+
+Scene Decoder : The Scene Decoder is explicitly designed to model reactive consistency rather than full multi-agent reasoning. This intentional design choice prevents the ego prediction from overfitting to an idealized cooperative future. To unroll these reactive agents directly in simulation without external planners, we generate a single, consistent scene realization. We achieve this unimodal output by broadcasting a single learnable scene mode embedding to all surrounding agents. Furthermore, to guide these reactive behaviors appropriately, we condition each agent’s prediction on a specific goal token. While this formulation theoretically supports counterfactual scene generation via manual or heuristic goals, we automate this process for scalability. During training, we generate a goal token for each surrounding agent from its ground truth at a random future timestep 
+
+Tgoal ∈ [1 , T pred ]. By instructing the decoder to predict the full trajectory of each agent based on this sparse signal, we compel the model to interpret the goal token as naviga-tional intent rather than a fixed endpoint (refer to Supplementary Material Figure 4 for comparison). Technically, these goal positions and their timestamps are embedded and injected into the scene decoder, where they are cross-attended to by the respective agents’ mode embeddings. The full network architecture is illustrated in Figure 1. 4Fig. 1: Network design with multimodal ego and joint unimodal scene predictions 
+
+3.2 Closed-Loop Training 
+
+Our primary objective is to learn robust ego prediction by leveraging both open-loop data and generated closed-loop rollouts, while strictly maintaining the ego’s multimodal behavior. Crucially, this requires that each predicted mode is optimized solely based on the closed-loop samples generated by its own execution in the simulation. This isolation is necessary because the state transitions observed in the closed-loop rollout depend on that specific mode’s actions. Using this feedback to update an unexecuted mode would introduce severe off-policy bias, penalizing a mode for outcomes it did not cause. Conse-quently, it necessitates an on-policy training setup for each mode individually. This creates a structural distinction in our data: while open-loop samples train the full multi-modal distribution, each closed-loop sample represents a uni-modal realization. By exposing the ego prediction to these self-induced state distribution shifts, the model learns to actively recover from compounding drift. 
+
+Simulation and Rollout Strategy: As highlighted in Section 2.3, we adopt the delta-action dynamics methodology from Waymax [19], implementing it natively in PyTorch to integrate seamlessly with our training pipeline. Our simulator focuses solely on updating the dynamic context (positions, headings, and velocities), treating map elements as static. The approximation is valid for our short prediction horizon ( Tpred = 6 s), where local map generated from onboard sensors remains sufficiently stable. During training, we utilize a scene simulation mask ( Msim ) to select a random subset of surrounding agents for active simulation. This exposes the ego agent to a mixed environment containing both reactive agents (simulated by the scene decoder) and non-reactive agents (log-replay), forcing ego to account for diverse levels of interactivity. The complete logic of our simulator is detailed in Algorithm 2 (Supplementary Material). A critical hyperparameter in our framework is the simulation rollout duration ( Tsim ), bounded strictly between the duration of a single time step and the full prediction horizon (∆t ≤ Tsim ≤ Tpred ). This parameter governs a fundamental trade-off: it must be long enough to expose the model to the cumulative errors of its own predictions (drift), yet short enough to allow meaningful optimization of the generated closed-loop samples within the remaining prediction horizon. In our preliminary experiments, we found that Tsim = 2 s(with ∆t = 0 .5s and Tpred = 6 s) strikes the optimal balance (Supplementary Section 7.5). 5Ego Loss Formulation: Existing open-loop approaches [25, 51, 54, 55] decouple mixture model optimization into classification (assigning high probability to the mode closest to the ground truth) and regression (refining the predicted trajectory of each mode). We main-tain this separation but introduce a key structural distinction. Since closed-loop samples are uni-modal realizations of a specific ego mode, they exclusively supervise regression, whereas open-loop samples supervise both classification and regression. Equations (1) and (2) describe the classification and regression losses. The best mode (m∗) is identified via the initial open-loop sample (Equation (3)) and remains fixed during subsequent closed-loop generation, while the weighting factor ( λn) balances each samples’ contribution within the regression objective. The rollout iteration is tracked by index n.Conceptually, the learning objective shifts across these iterations: at n = 0 (open-loop), the model predicts full ego trajectory from static samples. For n ≥ 1 (closed-loop), the ego predictions are generated from drifted states caused by its own prior actions. Optimizing the predictions from these drifted states against the original ground-truth trajectory ( Yego )explicitly penalizes deviation, teaching the ego to recover and steer back to the nominal path. 
+
+Lcls (ϕ) = 
+
+> M
+
+X
+
+> m=1
+
+Pm(ϕ)
+
+> Tpred
+
+X
+
+> t=1
+
+− log 
+
+
+
+L(Y tego |(μ, Σ )t
+
+> (0 ,m,ego )
+
+(θ)
+
+
+
+(1) 
+
+Lreg (θ) = 
+
+> N
+
+X
+
+> n=0
+
+λnTpred 
+
+X
+
+> t=nT sim +1
+
+− log 
+
+
+
+L(Y tego |(μ, Σ )t
+
+> (n,m ∗,ego )
+
+(θ)
+
+
+
+(2) 
+
+m∗ = argmin 
+
+> mTpred
+
+X
+
+> t=1
+
+|| Y tego , μ t
+
+> (0 ,m,ego )
+
+|| 2 (3) As discussed in Section 3.1, the coordinate transformation from the query frame to the agent frame generates a non-diagonal covariance matrix Σ. Consequently, the  Negative Log Likelihood  (NLL ) functions utilized in QCNet [54], DONUT [25], and LMFormer [51], which rely on a strict diagonal covariance assumption, cannot be directly applied to our setup. We therefore propose a full-covariance  NLL  loss that explicitly models the correlated spatial uncertainty using the Mahalanobis distance. As shown in Equation (4), this method models the spatial error of the prediction by the full inverse covariance matrix: 
+
+L =
+
+q
+
+(Yego − μ)T Σ−1(Yego − μ) + λ log( |Σ|) (4) in which, the first term computes the Mahalanobis distance, capturing the correlated variance of the predictions in the transformed space. The second term, λ log( |Σ|), serves as a covariance regularization penalty scaled by λ to prevent the predicted uncertainty from collapsing. 
+
+Joint Optimization of Scene and Ego: As detailed in Section 3.1, consistent realization of surrounding agents relies on uni-modal prediction of the scene, thereby eliminating the need for a classification loss. Furthermore, we empirically found that the scene prediction performs optimally when trained exclusively on open-loop samples (indexed n = 0 ). We hypothesize this is due to the random sampling of goal intents ( Tgoal ∈ [1 , T pred ]). During 6closed-loop rollouts ( n ≥ 1), a sampled goal intent might fall into the simulated past (Tgoal < n ·Tsim +1 ), corrupting the conditioning signal and causing the learning process to diverge. Because surrounding agents are inherently goal-conditioned, they naturally avoid drift over time. Consequently, they do not require closed-loop training to learn recovery behaviors, making open-loop training entirely sufficient for scene prediction. Consequently, the scene regression loss is strictly formulated as: 
+
+Lscene (θ) = 
+
+> Tpred
+
+X
+
+> t=1
+
+− log 
+
+
+
+L(Y tscene |(μ, Σ )t
+
+> (0 ,scene )
+
+(θ)
+
+
+
+(5) Although our hybrid strategy explicitly decouples the ego prediction from the scene forecast to avoid reliance on idealized cooperation, both modules are still optimized jointly. The purpose of this co-training is not to causally entangle their future trajectories, but rather to cultivate a rich, shared feature representation of the environment (Supplementary Table 11). This gives the isolated ego prediction head a robust contextual foundation that is not affected by non-cooperative maneuvers. Synthesizing these design choices, the complete closed-loop training procedure is shown in Algorithm 1 with parameters in Table 6 (Supplementary). 
+
+4 Experimental Setup 
+
+4.1 Evaluation Protocol 
+
+To assess the closed-loop performance of our model, we employ a deterministic planning strategy that executes the single highest-confidence mode throughout the rollout. While we acknowledge that real-world navigation necessitates dynamic mode switching to adapt to evolving traffic, our primary objective is to assess the intrinsic safety and robustness of the prediction itself. By strictly evaluating the execution of the dominant mode, we separate the quality of the prediction from the downstream planning setup. This provides a clear indication of the model’s ability to generate feasible and safe trajectories. In parallel, we standardize our evaluation of ego prediction by utilizing log-replay simu-lation for all surrounding agents. While reactive agents are essential for training, employing them during testing would conflate the ego’s performance with the scene predictor’s accu-racy. By restricting the simulation to log-replay, we eliminate this confounding variable, ensuring a reproducible benchmark that strictly measures the ego’s prediction capability. 
+
+4.2 Datasets 
+
+Adopting a log-replay evaluation strategy requires strict data accessibility: complete ground-truth future trajectories for all surrounding agents must be available in the training, val-idation, and test sets. This constraint significantly narrows the pool of viable datasets. Waymo Open Dataset [15] does not release future trajectory logs for surrounding agents in its test split, prohibiting the closed-loop benchmarking. Argoverse-2 [48] exhibits a se-vere data bias in its test set, providing future logs for only 7.53% of agents compared to 
+
+∼77.5% in train and val splits. nuPlan [20] and NAVSIM [13] being planning benchmarks designed to evaluate a single, actionable trajectory conditioned on high-level navigation commands (e.g., "Turn Left") or route goals. This contradicts our primary objective of 
+
+unconditioned multimodal prediction , where the goal is to forecast the full distribution of 7Algorithm 1: Closed-Loop Training 
+
+Input: MLP embedding parameters for static context ( θstatic ), dynamic context ( θdynamic ), and goal intent ( θgoal )Regression parameters for ego ( θego ) and scene ( θscene ) decoders Classification parameters for ego ( ϕ) decoder Total prediction horizon Tpred 
+
+Simulation step duration Tsim (≤ Tpred )
+
+Number of modes for ego prediction mN ← ⌊ (Tpred − 1) /T sim ⌋ // no. of closed-loop samples 
+
+repeat 
+
+// Sample inputs (upto t = 0 ) and ground truths Get static ( S) and dynamic ( D0) context of open-loop sample Generate the simulation mask ( Msim )Extract goals for surrounding agents ( Gscene )Get the ground truth for ego ( Yego ) and scene ( Yscene )
+
+// perform simulation rollout to generate N closed-loop samples 
+
+for n ← 0 to N do 
+
+Zn = {MLP θstatic (S) ∪ MLP θdynamic (Dn)} // joint embeddings 
+
+[( μ, Σ )(n,m,ego )]Tpred  
+
+> n·Tsim +1
+
+← πθego (Zn) // multimodal ego pred. 
+
+Zg = MLP θgoal (Gscene ) // scene goal embeddings 
+
+[( μ, Σ )(n,scene )]Tpred  
+
+> n·Tsim +1
+
+← πθscene (Zn, Z g ) // uni-modal scene pred. 
+
+if n==0 then 
+
+Pm ← πϕ(Z0) // ego’s mode prob. 
+
+m∗ ← argmin 
+
+> mTpred
+
+P
+
+> t=1
+
+|| Y tego , μ t
+
+> (0 ,m,ego )
+
+|| 2 // ego’s best-mode // update dynamic context based on the ego and scene prediction 
+
+Dn+1 ← Simulate 
+
+
+
+Msim , [μ(n,m ∗,ego )](n+1) ·Tsim  
+
+> n·Tsim +1
+
+, [μ(n,scene )](n+1) ·Tsim 
+
+> n·Tsim +1
+
+
+
+// update params. based on ego’s open-loop mode classification 
+
+ϕ ← ϕ − λcls ∇ϕ
+
+> M
+
+P
+
+> m=1
+
+Pm(ϕ)
+
+> Tpred
+
+P
+
+> t=1
+
+− log  L(Y tego |(μ, Σ )t
+
+> (0 ,m,ego )
+
+(θ)!
+
+// update params. based on ego’s open- & closed-loop trajectory regression 
+
+θ ← θ − λ(reg,ego )∇θ
+
+> N
+
+P
+
+> n=0
+
+λnTpred P
+
+> t=nT sim +1
+
+− log  L(Y tego |(μ, Σ )t
+
+> (n,m ∗,ego )
+
+(θ)!
+
+// update params. based on scene’s open-loop trajectory regression 
+
+θ ← θ − λ(reg,scene )∇θ
+
+> Tpred
+
+P
+
+> t=1
+
+− log  L(Y tscene |(μ, Σ )t
+
+> (0 ,scene )
+
+(θ)!
+
+until Convergence 
+
+potential ego behaviors based solely on environmental context, rather than executing a specific, pre-defined directive. Consequently, we select nuScenes [3] as our primary benchmark, as it provides complete ground-truth future trajectories for surrounding agents across the training, validation, and test sets. To further validate our model’s robustness in dense, highly interactive environ-ments, we additionally adopt the DeepScenario dataset [33]. Its aerial drone perspective captures complex intersection dynamics often missed by vehicle-mounted sensors. Cru-cially, DeepScenario provides open access to its dataset, allowing us to construct custom test splits with guaranteed future log availability, thereby overcoming the hidden test set limitations of standard forecasting benchmarks. 84.3 Metrics 
+
+Standard open-loop prediction benchmarks [3, 15, 48] primarily evaluate predictions by comparing the model’s output against ground-truth trajectories using displacement errors (minADE/minFDE). However, these geometric metrics often fail to fully capture interac-tive driving behavior or safety. To address this, closed-loop environments like CARLA [14] and nuPlan [20] introduced simulation-based metrics such as Collision Rate, Route Com-pletion, and the composite Driving Score. In our work, rather than relying on a composite Driving Score, which aggregates various penalties into a single scalar, we adopt a granu-lar evaluation strategy to isolate distinct sources of error. We explicitly report Collision Rates (measuring safety) and L2 displacement errors (measuring precision) at every inter-mediate timestep ( t ∈ 0.5, 1.0, . . . , 6.0s). This temporal breakdown allows us to visualize the accumulation of drift and pinpoint how  open-loop-trained  (OL ) baseline diverge from 
+
+closed-loop-trained  (CL ) models. Furthermore, we utilize the L2 distance metric as a proxy for evaluating route progression. Because the ground-truth trajectory captures the nomi-nal progression of the ego agent, minimizing the spatial displacement across all timesteps ensures a high degree of fidelity to both the intended path and the required longitudinal traversal. 
+
+5 Results and Discussion 
+
+5.1 Closed-Loop performs better at high frequencies 
+
+To evaluate the impact of replanning frequency on safety and trajectory adherence, we analyze the performance of the ego agent across varying simulation steps Tsim . A smaller 
+
+Tsim corresponds to a higher frequency of scene updates.                                      
+
+> Table 1: nuScenes: Ego collisions (%) over 6.0 s closed-loop rollouts across replanning frequencies ( Tsim ). Values represent mean ( ±1σ) over seven runs (three seeds).
+> Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) OL 2.98 (±.08 )2.69 (±.11 )2.49 (±.13 )2.53 (±.17 )2.74 (±.18 )3.95 (±.19 )
+> CL 2.91 (±.13 )2.49 (±.12 )2.18 (±.14 )2.06 (±.11 )2.00 (±.16 )3.10 (±.24 )
+> Improv.(CL/OL) 12.3 %7.4 %12.4 %18.6 %27.0 %21.5 %
+
+Table 1 illustrates the findings of our experiments. The average collision rate of the 
+
+OL  baseline initially improves as Tsim is reduced to 2.0 s, but its performance begins to deteriorate at higher frequencies ( Tsim < 2 s). In contrast, the  CL  model effectively lever-ages these faster closed-loop updates, achieving its best performance at a high replanning frequency of Tsim = 1 .0 s. Notably, the performance gap between the  OL  and  CL  models widens as the replanning frequency is increased, achieving performance improvements of 21.5% and 27.0% at Tsim = 0 .5 s and 1.0 s respectively. This demonstrates that closed-loop training makes the model more robust in high-frequency replanning regimes. Additionally, Figure 2 details how the collision rates evolve over the rollout duration corresponding to each frequency. We observe that at higher frequencies ( Tsim < 2 s), the  CL  model consistently results in lower collision rates than the  OL  model across all predicted time steps, t ∈ [1 , T pred ]. Furthermore, as observed in the L2 distance evaluation, this reduction in collision rate does not come at the cost of trajectory tracking. The L2 distance curves for the  OL  and  CL  models remain identical across all Tsim values. This         
+
+> 1Improvement (a/b )≡(b−a)∗100 /b
+
+9Fig. 2: Rollout analysis across varying replanning frequencies. Granular analysis of collision (Top) and L2 (Bottom) for t ∈ [1 , T pred ] ≡ [0 .5s, 6.0s] on nuScenes. 
+
+indicates that the closed-loop ego agent achieves safer interactions through subtle, targeted regenerations of its predictions rather than through drastic deviations from the nominal route. 
+
+5.2 Safety Scaling in High-Density Intersections 
+
+To evaluate the scalability of our approach in dense, highly interactive environments, we test the ego agent on the DeepScenario dataset. As shown in Table 2, the  OL  baseline experiences a severe performance collapse as the replanning frequency increases, with collision rates spiking to 14.04% at Tsim = 0 .5 s. In contrast, the  CL  model maintains significantly higher stability, achieving a peak relative improvement of 79.47% at Tsim =1.0 s and a peak absolute improvement of 8.23 percentage points at Tsim = 0 .5 s. Analysis on multiple other intersections is provided in Section 7.4 (Supplementary material). This substantial collision gap confirms that while open-loop models may suffice for sparse data, closed-loop training is essential for mastering the complex interactions required at high-density intersections.                                              
+
+> Table 2: DeepScenario (Unparalleled Frankfurt): Ego collisions (%) over 6.0 s closed-loop rollouts across varying Tsim . Values represent mean ( ±1σ).
+> Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) OL 1.43 (±.12 )2.07 (±.21 )3.19 (±.30 )5.88 (±.15 )10.13 (±.18 )14.04 (±.55 )
+> CL 1.31 (±.10 )1.31 (±.12 )1.33 (±.15 )1.51 (±.22 )2.08 (±.51 )5.81 (±.58 )
+> ∆(% points) 0.12 0.76 1.86 4.37 8.05 8.23
+> Improv. (CL/OL) 8.39% 36.71% 58.31% 74.32% 79.47% 58.62%
+
+5.3 Safety Dynamics in Reactive vs. Non-Reactive Simulation 
+
+Table 3 illustrates the collision rate of the ego agent over the full 6-second rollout. While a fully reactive simulation generally outperforms a non-reactive one, this advantage appears to diminish at the highest replanning frequency ( Tsim = 0 .5 s). However, this aggregate 10 Table 3: nuScenes: Reactive vs. Non-Reactive agents: Non-Reactive simulation (log replay); Fully Reactive simulation (scene decoder); Hybrid simulation (50% scene, 50% log). Values represent mean (±1σ) ego collisions (%) over 6.0 s closed-loop rollouts. 
+
+Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) Non-Reactive (N) 2.96 (±.10 ) 2.59 (±.08 ) 2.38 (±.10 ) 2.31 (±.11 ) 2.24 (±.16 ) 3.08 (±.22 )
+
+Reactive (R) 2.89 (±.11 ) 2.51 (±.10 ) 2.24 (±.10 ) 2.13 (±.12 ) 2.10 (±.15 ) 3.35 (±.44 )
+
+Improv. (R/N) 2.4 % 3.1 % 5.9 % 7.8 % 6.3 % -8.8 %Hybrid 2.90 (±.12 ) 2.49 (±.12 ) 2.18 (±.14 ) 2.06 (±.15 ) 2.00 (±.16 ) 3.10 (±.25 )
+
+Improv. (H/Best) -0.3 % 0.8 % 2.7 % 3.3 % 4.8 % -0.6 %
+
+view (average over whole trajectory) masks a critical trade-off between immediate interac-tivity and long-term stability. By decomposing the rollouts into short-term and long-tail segments in Figure 3, we isolate the specific regimes where each strategy excels. Specifically, during the initial rollout phase of 1 second (Figure 3a), fully reactive configuration yields >23% improvement over the non-reactive setup across all Tsim . This confirms that reactive training is essential for the ego agent to learn nuanced negotiation and conflict resolution with surrounding agents that respond to its presence. Conversely, in long-tail rollouts between 4.0 s to 6.0 s (Figure 3b), training the ego agent with non-reactive agents leads to better performance than with fully reactive agents, especially at the highest replanning frequency, Tsim = 0 .5 s. We hypothesize this occurs because log-replay agents act as behavioral anchors. While scene predictions for surrounding agents may drift or become passive over 6-second horizons under high-frequency replanning, log-replay agents provide assertive, expert trajectories. These trajectories force the ego agent to maintain its behavioral consistency and assertiveness, reducing collisions in extended horizons. Ultimately, Hybrid simulation (Table 3) leverages the best of both worlds: the realistic negotiation of reactive agents and the long-term behavioral stability of the expert log, achieving the most robust performance across all frequencies. For analysis of simu-lation mask Msim , i.e., the ratio of reactive to non-reactive agents, refer to Section 7.5 (Supplementary).                 
+
+> (a) Comparison of average collision in the initial 1 sec-ond, t∈[1 ,2] ≡[0 .5s,1.0s]2
+> (b) Comparison of average collision in the last 2 sec-onds, t∈[8 ,12] ≡[4 .0s,6.0s]
+
+Fig. 3: Figure 3a displays ego agent’s collisions with surrounding agents occurring at the beginning of the closed-loop rollouts, while Figure 3b shows collisions happening in the long-tail of the closed-loop rollouts.  
+
+> 2
+
+For evaluations with lower replanning frequencies ( Tsim ≥ 1 s), closed-loop trajectories are not updated until t = 1 .0 s. Consequently, the predictions during t ∈ [0 .5s, 1.0s] window remain identical, resulting in the same collision values. 
+
+11 5.4 Ablations 
+
+To isolate the impact of explicit covariance matrix Σ transformation, without the com-pounding variables of closed-loop dynamics, we ablate this feature on the open-loop base-line (Table 4). The results demonstrate consistent collision improvements across replanning frequencies, validating that correctly rotating spatial uncertainty is crucial for accurate ego predictions. Next, we evaluate our on-policy approach against an off-policy baseline. Unlike on-policy training, which fixes the best mode based on the initial open-loop state, the off-policy variant re-selects it per rollout sample based on ground-truth proximity. To isolate the training policy from environmental feedback, we conduct this comparison in a non-reactive (log-replay) simulation. While off-policy training achieves lower collision rates at low and moderate frequencies, our on-policy strategy reduces collisions at higher frequencies (Table 5). Crucially, the on-policy method consistently preserves the quality of multi-modal ego prediction, resulting in lower minADE across all replanning frequencies.                                                                                                       
+
+> Table 4: nuScenes : Effect of explicit covariance scale transformation on ego col.
+> Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) OL-Σ_rot 3.02 (±.10 )2.70 (±.11 )2.57 (±.12 )2.74 (±.10 )3.06 (±.11 )3.93 (±.25 )
+> OL 2.98 (±.08 )2.69 (±.11 )2.49 (±.13 )2.53 (±.17 )2.74 (±.18 )3.95 (±.19 )
+> Improv. 1.7 %0.4 %3.1 %7.7 %10.5 %-0.5 %
+> Table 5: nuScenes : Comparison of on- vs. off-policy training on ego col. & minADE Log Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) off-policy Col 2.83 (±0.20 )2.18 (±0.12 )1.92 (±0.04 )1.97 (±0.01 )2.40 (±0.10 )3.50 (±0.05 )
+> on-policy 2.96 (±0.10 )2.59 (±0.08 )2.38 (±0.10 )2.31 (±0.11 )2.24 (±0.16 )3.08 (±0.22 )
+> Improv. (on/off) -4.6 %-18.8 %-24.0 %-17.3 %6.7 %12.0 %off-policy minADE 1.15 (±0.00 )1.19 (±0.01 )1.28 (±0.02 )1.42 (±0.04 )1.71 (±0.07 )2.35 (±0.11 )
+> on-policy 1.15 (±0.02 )1.12 (±0.02 )1.11 (±0.02 )1.12 (±0.02 )1.15 (±0.02 )1.39 (±0.03 )
+> Improv. (on/off) 0.0 %5.9 %13.3 %21.1 %32.8 %40.9 %
+
+6 Conclusion 
+
+This paper demonstrates that reactive closed-loop training significantly enhances the ro-bustness of ego predictions at high replanning frequencies, reducing collision rates by up to 27.0% on nuScenes and 79.5% in dense DeepScenario environments compared to open-loop baselines, all without compromising route adherence. To facilitate realistic behavior, we also introduced a hybrid simulation strategy that integrates reactive surrounding agents predictions with non-reactive log-replay anchors. Ultimately, this coupled approach suc-cessfully optimizes the trade-off between immediate interactivity and long-term behavioral stability, providing a more reliable and scalable foundation for deploying autonomous sys-tems in complex, real-world traffic. 
+
+References   
+
+> 1. Bansal, M., Krizhevsky, A., Ogale, A.: Chauffeurnet: Learning to drive by imitating the best and synthesizing the worst. arXiv preprint arXiv:1812.03079 (2018) 2. Bouzidi, M.K., Schlauch, C., Scheuerer, N., Yao, Y., Klein, N., Göhring, D., Reichardt, J.: Closing the loop: Motion prediction models beyond open-loop benchmarks. arXiv preprint arXiv:2505.05638 (2025)
+
+12 3. Caesar, H., Bankiti, V., Lang, A.H., Vora, S., Liong, V.E., Xu, Q., Krishnan, A., Pan, Y., Baldan, G., Beijbom, O.: nuscenes: A multimodal dataset for autonomous driving. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 11621–11631 (2020) 4. Casas, S., Gulino, C., Suo, S., Luo, K., Liao, R., Urtasun, R.: Implicit latent variable model for scene-consistent motion forecasting. In: European Conference on Computer Vision. pp. 624–641. Springer (2020) 5. Chai, Y., Sapp, B., Bansal, M., Anguelov, D.: Multipath: Multiple probabilistic anchor trajectory hypotheses for behavior prediction. arXiv preprint arXiv:1910.05449 (2019) 6. Cheng, J., Chen, Y., Mei, X., Yang, B., Li, B., Liu, M.: Rethinking imitation-based planners for autonomous driving. In: 2024 IEEE International Conference on Robotics and Automation (ICRA). pp. 14123–14130. IEEE (2024) 7. Cheng, J., Mei, X., Liu, M.: Forecast-mae: Self-supervised pre-training for motion forecasting with masked autoencoders. In: Proceedings of the IEEE/CVF International Conference on Computer Vi-sion. pp. 8679–8689 (2023) 8. Cui, A., Casas, S., Sadat, A., Liao, R., Urtasun, R.: Lookout: Diverse multi-future prediction and planning for self-driving. In: Proceedings of the IEEE/CVF International Conference on Computer Vision. pp. 16107–16116 (2021) 9. Cui, A., Casas, S., Wong, K., Suo, S., Urtasun, R.: Gorela: Go relative for viewpoint-invariant motion forecasting. arXiv preprint arXiv:2211.02545 (2022) 10. Cui, H., Radosavljevic, V., Chou, F.C., Lin, T.H., Nguyen, T., Huang, T.K., Schneider, J., Djuric, N.: Multimodal trajectory predictions for autonomous driving using deep convolutional networks. In: 2019 international conference on robotics and automation (icra). pp. 2090–2096. IEEE (2019) 11. Cusumano-Towner, M., Hafner, D., Hertzberg, A., Huval, B., Petrenko, A., Vinitsky, E., Wijmans, E., Killian, T., Bowers, S., Sener, O., et al.: Robust autonomy emerges from self-play. arXiv preprint arXiv:2502.03349 (2025) 12. Dauner, D., Hallgarten, M., Geiger, A., Chitta, K.: Parting with misconceptions about learning-based vehicle motion planning. In: Conference on Robot Learning. pp. 1268–1281. PMLR (2023) 13. Dauner, D., Hallgarten, M., Li, T., Weng, X., Huang, Z., Yang, Z., Li, H., Gilitschenski, I., Ivanovic, B., Pavone, M., et al.: Navsim: Data-driven non-reactive autonomous vehicle simulation and bench-marking. Advances in Neural Information Processing Systems 37 , 28706–28719 (2024) 14. Dosovitskiy, A., Ros, G., Codevilla, F., Lopez, A., Koltun, V.: Carla: An open urban driving simulator. In: Conference on robot learning. pp. 1–16. PMLR (2017) 15. Ettinger, S., Cheng, S., Caine, B., Liu, C., Zhao, H., Pradhan, S., Chai, Y., Sapp, B., Qi, C.R., Zhou, Y., et al.: Large scale interactive motion forecasting for autonomous driving: The waymo open motion dataset. In: Proceedings of the IEEE/CVF international conference on computer vision. pp. 9710–9719 (2021) 16. Gao, J., Sun, C., Zhao, H., Shen, Y., Anguelov, D., Li, C., Schmid, C.: Vectornet: Encoding hd maps and agent dynamics from vectorized representation. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 11525–11533 (2020) 17. Gilles, T., Sabatini, S., Tsishkou, D., Stanciulescu, B., Moutarde, F.: Home: Heatmap output for future motion estimation. In: 2021 IEEE International Intelligent Transportation Systems Conference (ITSC). pp. 500–507. IEEE (2021) 18. Girgis, R., Golemo, F., Codevilla, F., Weiss, M., D’Souza, J.A., Kahou, S.E., Heide, F., Pal, C.: Latent variable sequential set transformers for joint multi-agent motion prediction. arXiv preprint arXiv:2104.00563 (2021) 19. Gulino, C., Fu, J., Luo, W., Tucker, G., Bronstein, E., Lu, Y., Harb, J., Pan, X., Wang, Y., Chen, X., et al.: Waymax: An accelerated, data-driven simulator for large-scale autonomous driving research. Advances in Neural Information Processing Systems 36 , 7730–7742 (2023) 20. H. Caesar, J. Kabzan, K.T.e.a.: Nuplan: A closed-loop ml-based planning benchmark for autonomous vehicles. In: CVPR ADP3 workshop (2021) 21. Hu, S., Chen, L., Wu, P., Li, H., Yan, J., Tao, D.: St-p3: End-to-end vision-based autonomous driving via spatial-temporal feature learning. In: European Conference on Computer Vision. pp. 533–549. Springer (2022) 22. Hu, Y., Yang, J., Chen, L., Li, K., Sima, C., Zhu, X., Chai, S., Du, S., Lin, T., Wang, W., et al.: Planning-oriented autonomous driving. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 17853–17862 (2023) 23. Jaeger, B., Dauner, D., Beißwenger, J., Gerstenecker, S., Chitta, K., Geiger, A.: Carl: Learning scalable planning policies with simple rewards. arXiv preprint arXiv:2504.17838 (2025) 24. Jiang, B., Chen, S., Xu, Q., Liao, B., Chen, J., Zhou, H., Zhang, Q., Liu, W., Huang, C., Wang, X.: Vad: Vectorized scene representation for efficient autonomous driving. In: Proceedings of the IEEE/CVF International Conference on Computer Vision. pp. 8340–8350 (2023) 
+
+13 25. Knoche, M., de Geus, D., Leibe, B.: Donut: A decoder-only model for trajectory prediction. arXiv preprint arXiv:2506.06854 (2025) 26. Kouvaritakis, B., Cannon, M.: Model predictive control. Switzerland: Springer International Publish-ing 38 (13-56), 7 (2016) 27. Lan, Z., Jiang, Y., Mu, Y., Chen, C., Li, S.E.: Sept: Towards efficient scene representation learning for motion prediction. arXiv preprint arXiv:2309.15289 (2023) 28. Laskey, M., Lee, J., Fox, R., Dragan, A., Goldberg, K.: Dart: Noise injection for robust imitation learning. In: Conference on robot learning. pp. 143–156. PMLR (2017) 29. Liang, M., Yang, B., Hu, R., Chen, Y., Liao, R., Feng, S., Urtasun, R.: Learning lane graph represen-tations for motion forecasting. In: European Conference on Computer Vision. pp. 541–556. Springer (2020) 30. Lin, L., Lin, X., Xu, K., Lu, H., Huang, L., Xiong, R., Wang, Y.: Revisit mixture models for multi-agent simulation: Experimental study within a unified framework. arXiv preprint arXiv:2501.17015 (2025) 31. Liu, M., Cheng, H., Chen, L., Broszio, H., Li, J., Zhao, R., Sester, M., Yang, M.Y.: Laformer: Tra-jectory prediction for autonomous driving with lane-aware scene constraints. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 2039–2049 (2024) 32. Liu, Y., Zhang, J., Fang, L., Jiang, Q., Zhou, B.: Multimodal motion prediction with stacked trans-formers. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 7577–7586 (2021) 33. Lu, C., Yue, T., Ali, S.: Deepscenario: An open driving scenario dataset for autonomous driving system testing. In: 2023 IEEE/ACM 20th International Conference on Mining Software Repositories (MSR). pp. 52–56. IEEE (2023) 34. Makansi, O., Ilg, E., Cicek, O., Brox, T.: Overcoming limitations of mixture density networks: A sampling and fitting framework for multimodal future prediction. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. pp. 7144–7153 (2019) 35. Nayakanti, N., Al-Rfou, R., Zhou, A., Goel, K., Refaat, K.S., Sapp, B.: Wayformer: Motion forecasting via simple & efficient attention networks. In: 2023 IEEE International Conference on Robotics and Automation (ICRA). pp. 2980–2987 (2023). https://doi.org/10.1109/ICRA48891.2023.10160609 
+
+36. Ngiam, J., Caine, B., Vasudevan, V., Zhang, Z., Chiang, H.T.L., Ling, J., Roelofs, R., Bewley, A., Liu, C., Venugopal, A., et al.: Scene transformer: A unified architecture for predicting multiple agent trajectories. arXiv preprint arXiv:2106.08417 (2021) 37. Renz, K., Chitta, K., Mercea, O.B., Koepke, A.S., Akata, Z., Geiger, A.: Plant: Explainable planning transformers via object-level representations. In: Conference on Robot Learning. pp. 459–470. PMLR (2023) 38. Ross, S., Gordon, G., Bagnell, D.: A reduction of imitation learning and structured prediction to no-regret online learning. In: Proceedings of the fourteenth international conference on artificial in-telligence and statistics. pp. 627–635. JMLR Workshop and Conference Proceedings (2011) 39. Sadat, A., Casas, S., Ren, M., Wu, X., Dhawan, P., Urtasun, R.: Perceive, predict, and plan: Safe mo-tion planning through interpretable semantic representations. In: European Conference on Computer Vision. pp. 414–430. Springer (2020) 40. Scheel, O., Bergamini, L., Wolczyk, M., Osiński, B., Ondruska, P.: Urban driver: Learning to drive from real-world demonstrations using policy gradients. In: Conference on Robot Learning. pp. 718– 728. PMLR (2022) 41. Shi, S., Jiang, L., Dai, D., Schiele, B.: Motion transformer with global intention localization and local movement refinement. Advances in Neural Information Processing Systems 35 , 6531–6543 (2022) 42. Sun, W., Lin, X., Shi, Y., Zhang, C., Wu, H., Zheng, S.: Sparsedrive: End-to-end autonomous driving via sparse scene representation. In: 2025 IEEE International Conference on Robotics and Automation (ICRA). pp. 8795–8801. IEEE (2025) 43. Suo, S., Regalado, S., Casas, S., Urtasun, R.: Trafficsim: Learning to simulate realistic multi-agent be-haviors. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. pp. 10400–10409 (2021) 44. Varadarajan, B., Hefny, A., Srivastava, A., Refaat, K.S., Nayakanti, N., Cornman, A., Chen, K., Douil-lard, B., Lam, C.P., Anguelov, D., et al.: Multipath++: Efficient information fusion and trajectory aggregation for behavior prediction. In: 2022 International Conference on Robotics and Automation (ICRA). pp. 7814–7821. IEEE (2022) 45. Wang, J., Ye, T., Gu, Z., Chen, J.: Ltp: Lane-based trajectory prediction for autonomous driving. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. pp. 17134–17142 (2022) 46. Wang, M., Ren, X., Jin, R., Li, M., Zhang, X., Yu, C., Wang, M., Yang, W.: Futurenet-lof: Joint trajectory prediction and lane occupancy field prediction with future context encoding. In: 2025 IEEE International Conference on Robotics and Automation (ICRA). pp. 8841–8848. IEEE (2025) 
+
+14 47. Weng, X., Ivanovic, B., Wang, Y., Wang, Y., Pavone, M.: Para-drive: Parallelized architecture for real-time autonomous driving. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. pp. 15449–15458 (2024) 48. Wilson, B., Qi, W., Agarwal, T., Lambert, J., Singh, J., Khandelwal, S., Pan, B., Kumar, R., Hart-nett, A., Pontes, J.K., et al.: Argoverse 2: Next generation datasets for self-driving perception and forecasting. arXiv preprint arXiv:2301.00493 (2023) 49. Yadav, H., Bohn, C., Meisen, T.: Rectify, don’t regret: Avoiding pitfalls of differentiable simulation in trajectory prediction. arXiv preprint arXiv:2603.23393 (2026) 50. Yadav, H., Schaefer, M., Zhao, K., Meisen, T.: Caspformer: Trajectory prediction from bev images with deformable attention. In: International Conference on Pattern Recognition. pp. 420–434. Springer (2024) 51. Yadav, H., Schaefer, M., Zhao, K., Meisen, T.: Lmformer: Lane based motion prediction transformer. In: Proceedings of the Computer Vision and Pattern Recognition Conference. pp. 2435–2444 (2025) 52. Zhang, Z., Karkus, P., Igl, M., Ding, W., Chen, Y., Ivanovic, B., Pavone, M.: Closed-loop super-vised fine-tuning of tokenized traffic models. In: Proceedings of the Computer Vision and Pattern Recognition Conference. pp. 5422–5432 (2025) 53. Zheng, L., Zhang, L., Yu, P., Sun, Y., Grammatico, S., Ma, J., Liu, C.: Contingency planning for safety-critical autonomous vehicles: A review and perspectives. arXiv preprint arXiv:2601.14880 (2026) 54. Zhou, Z., Wang, J., Li, Y.H., Huang, Y.K.: Query-centric trajectory prediction. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 17863–17873 (2023) 55. Zhou, Z., Ye, L., Wang, J., Wu, K., Lu, K.: Hivt: Hierarchical vector transformer for multi-agent motion prediction. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 8823–8833 (2022) 
+
+15 7 Supplementary Material 
+
+7.1 Analysis of Random Goal Sampling 
+
+We employ a randomized goal sampling strategy to train the Scene Decoder. To validate this design choice, Figure 4 presents a comparison against a baseline approach where the goal is fixed to the final observed state, Tobs . Note that Tobs represents the limit of the surrounding agents’ observation window, which is distinct from and bounded by the full prediction horizon, Tpred (where Tobs ≤ Tpred ).          
+
+> Fig. 4: We compare scene predictions conditioned solely on the final observed position, tgoal =Tobs (≤
+> Tpred )(Top Row), against our proposed strategy of randomly sampling goal tokens from the full obser-vation window, tgoal ∼ U [1 , T obs ](Bottom Row). Relying exclusively on the final observed state causes the model to over-fixate on the trajectory up to the goal position, often leading to divergent behavior for t > T obs . In contrast, our randomized goal sampling forces the decoder to interpret the goal token as a latent navigational intent rather than a rigid endpoint, resulting in robust, map-compliant predictions that extend smoothly beyond the observation horizon.
+
+7.2 Closed-Loop Simulator 
+
+Our simulator introduces two critical modifications to Waymax’s [19] logic. First, to ensure 
+
+kinematic consistency , we explicitly derive heading and velocity updates from positional changes rather than relying on separate heading predictions. Second, following the previous work [49], we detach the intermediate predictions from the computational graph before state updates. The design of our simulator is detailed in Algorithm 2, with its inputs defined as follows: 
+
+– Ego and Scene Predictions ([μ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+): The predicted positional trajectories for the current simulation rollout. Here, n denotes the index of the closed-loop iteration (where n = 0 corresponds to the initial open-loop sample and n ≥ 1 to subsequent closed-loop samples). 
+
+– Scene Simulation Mask (Msim ): A binary mask selecting a random subset of sur-rounding agents to be actively simulated. 
+
+– Future Logs (Fn): The ground truth states (position, heading, velocity) for updating the dynamic context of non-simulated surrounding agents. 16 – Current Agent Positions ([pos ]n·Tsim ): Agents positions at the start of the roll-out. This is mathematically necessary to compute the finite differences (velocity and heading) for the first prediction step. 
+
+– Length of time step (∆t ≤ Tsim ): The duration of single time step (e.g., 0.5s), required to compute velocities from positional displacements. 
+
+Algorithm 2: Closed-Loop Simulator 
+
+Input: Ego position prediction [μego ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+∈ R1×Tsim ×2
+
+Scene position prediction [μscene ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+∈ RA−1×Tsim ×2
+
+Scene simulation mask Msim ∈ { 0, 1}A−1
+
+Future logs Fn = [ pos, head, vel ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+∈ RA×Tsim ×5
+
+Current agents position [pos ]n·Tsim ∈ RA×2
+
+Length of single time step ∆t 
+
+Output: Updated dynamic context D(n+1) // history till (n + 1) · Tsim 
+
+[μ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+←
+
+
+
+[μego ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+∥ [μscene ](n+1) ·Tsim 
+
+> n·Tsim +1
+
+
+
+// concat ego & scene 
+
+[μ′](n+1) ·Tsim  
+
+> n·Tsim +1
+
+← stop_gradients 
+
+
+
+[μ](n+1) ·Tsim 
+
+> n·Tsim +1
+
+
+
+// detach predictions 
+
+[pos ](n+1) ·Tsim  
+
+> n·Tsim
+
+←
+
+
+
+[pos ]n·Tsim ∥ [μ′](n+1) ·Tsim 
+
+> n·Tsim +1
+
+
+
+// concat curr pos & pred. 
+
+M ′ 
+
+> sim
+
+← (True ∥ Msim ) ∈ { 0, 1}A // set ego simulation to True 
+
+D(n+1) ← Fn // initialize dynamic context // update dynamic context of unmasked agents using predictions 
+
+for a ← 1 to A do if M ′
+
+> sim
+
+[i] == True then 
+
+∆x i ←
+
+
+
+[pos i,x ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+− [pos i,x ](n+1) ·Tsim −1
+
+> n·Tsim
+
+
+
+// ∆x of agent i∆y i ←
+
+
+
+[pos i,y ](n+1) ·Tsim  
+
+> n·Tsim +1
+
+− [pos i,y ](n+1) ·Tsim −1
+
+> n·Tsim
+
+
+
+// ∆y of agent i
+
+[head i](n+1) ·Tsim  
+
+> n·Tsim +1
+
+← atan2 (∆y i, ∆x i) // headings of agent i
+
+[vel i](n+1) ·Tsim  
+
+> n·Tsim +1
+
+← (∆x i, ∆y i) /∆t // velocities of agent iD(n+1) ,i ← [pos i, head i, vel i](n+1) ·Tsim  
+
+> n·Tsim +1
+
+// dynamic context of agent i
+
+return D(n+1) 
+
+17 7.3 Hyper-parameters 
+
+Table 6 summarizes the key hyperparameters governing our dataset configuration, train-ing protocol, and network architecture. Specific training parameters were selected based on performance trends observed in preliminary ablation studies. Our code will be made publicly available. 
+
+Table 6: Hyperparameters used in our experimental setup. Dataset Parameters Prediction Horizon ( Tpred ) 6 s History Horizon ( Tin ) 1 s Time Step ( ∆t ) 0.5 s Training Optimization Optimizer AdamW Learning Rate 1 × 10 −3
+
+Batch Size 32 Weight Decay 5 × 10 −5
+
+Max Epochs 60 (with Early Stopping) LR Scheduler (ReduceLROnPlateau) Metric Validation Loss Factor 0.1 Patience 3 epochs Min Learning Rate 1 × 10 −5
+
+Loss Coefficients Classification Weight ( λcls ) 1.0 Ego Regression Weight ( λreg,ego ) 0.4 Scene Regression Weight ( λreg,scene ) 0.4 Ego CL Weight ( λn) 0.1 n
+
+Simulation Parameters Simulation Step ( Tsim ) 2 s CL samples / OL samples ( N ) 2CL samples History Horizon 1 s Network Architecture Ego Modes ( M ) 5Hidden Dimension 64 Num. Decoder Layers 4Num. Attention Heads 8
+
+18 7.4 Generalizability to Dense Interaction Scenarios 
+
+The results in Tables 7, 8, and 9 compare the performane of  OL  and  CL  model across the different intersections in DeepScenerio. The network was not trained on any of these scenarios. Across all evaluated intersections, a consistent scaling pattern emerges: while the  OL  baseline performance varies at lower frequencies, it experiences a universal and severe performance collapse as replanning updates become more frequent. In contrast, the 
+
+CL  model exhibits better safety, especially at higher replanning frequencies. This confirms that the safety gap is not intersection-dependent but rather a fundamental characteristic of the training paradigms. 
+
+Table 7: DeepScenario (Diverse Kronach): Average ego collisions (%) over 6.0 s closed-loop rollouts across varying Tsim . Values represent mean ( ±1σ). 
+
+Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) OL 1.28 (±.10 ) 1.84 (±.12 ) 2.60 (±.21 ) 4.40 (±.22 ) 7.25 (±.25 ) 10.00 (±.21 )
+
+CL 1.43 (±.11 ) 1.32 (±.15 ) 1.30 (±.18 ) 1.41 (±.28 ) 2.15 (±.31 ) 4.56 (±.28 )
+
+∆ (% points) -0.15 0.52 1.30 2.99 5.10 5.44 
+
+Improv. -11.72% 28.26% 50.00% 67.95% 70.34% 54.40% Table 8: DeepScenario (Euphoric Wuppertal): Average ego collisions (%) over 6.0 s closed-loop rollouts across varying Tsim . Values represent mean ( ±1σ). 
+
+Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) OL 2.60 (±.22 ) 2.71 (±.16 ) 2.76 (±.12 ) 3.17 (±.10 ) 4.41 (±.10 ) 6.22 (±.16 )
+
+CL 2.45 (±.15 ) 2.39 (±.14 ) 2.32 (±.10 ) 2.28 (±.08 ) 2.56 (±.16 ) 4.06 (±.45 )
+
+∆ (% points) 0.15 0.32 0.44 0.89 1.85 2.16 
+
+Improv. 5.77% 11.81% 15.94% 28.08% 41.95% 34.73% Table 9: DeepScenario (Busy Frankfurt): Average ego collisions (%) over 6.0 s closed-loop rollouts across varying Tsim . Values represent mean ( ±1σ). 
+
+Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) OL 2.58 (±.15 ) 2.92 (±.35 ) 3.94 (±.30 ) 6.37 (±.15 ) 11.31 (±.25 ) 16.59 (±.95 )
+
+CL 2.58 (±.20 ) 2.26 (±.25 ) 2.31 (±.30 ) 2.47 (±.30 ) 3.26 (±.50 ) 7.37 (±.75 )
+
+∆ (% points) 0.00 0.66 1.63 3.90 8.05 9.22 
+
+Improv.(CL/OL) 0.0 % 22.6 % 41.4 % 61.2 % 71.2 % 55.6 %
+
+19 7.5 Additional Ablation 
+
+We evaluate the impact of simulation differentiability, again utilizing log-replay setup to strictly isolate the effects only on the ego agent (Table 10). While differentiable simulation yields benefits at lower frequencies, it suffers severe performance degradation during high-frequency replanning due to ground truth information leakage into the closed-loop samples inputs, hindering generalization. Detaching the computational graph prevents this shortcut learning, ensuring stable and robust ego predictions under high-frequencies.                                     
+
+> Table 10: nuScenes: Effect of Non-Differentiable Simulation on ego collision.
+> Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) Log+Diff_sim 2.79 (±.18 )2.43 (±.16 )2.13 (±.14 )3.09 (±.92 )3.53 (±.82 )4.00 (±.26 )
+> Log+No_diff_sim 2.96 (±.10 )2.59 (±.08 )2.38 (±.10 )2.31 (±.11 )2.24 (±.16 )3.08 (±.22 )
+> Improv. -6.1 %-6.6 %-11.7 %25.2 %36.5 %23.0 %
+
+Next, we evaluate the benefit of joint scene embeddings (Table 11) by using scene as auxiliary loss during the closed-loop training. To ensure a fair comparison, scene predic-tions are excluded from simulations, with both configurations relying entirely on log-replay for surrounding agents. This auxiliary scene loss reduces ego collision on moderate frequen-cies, confirming that cultivating a shared representation of multi-agent dynamics enhances the ego predictions. Finally                                     
+
+> Table 11: nuScenes: Effect of joint scene embeddings on ego collision
+> Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) Log (Non-React.) 2.96 (±.10 )2.59 (±.08 )2.38 (±.10 )2.31 (±.11 )2.24 (±.16 )3.08 (±.22 )
+> Log+Scene_aux 2.96 (±.01 )2.57 (±.06 )2.30 (±.09 )2.19 (±.08 )2.17 (±.11 )3.10 (±.01 )
+> Improv. 0.0 %0.8 %3.4 %5.2 %3.1 %-0.1 %
+
+Table 12 presents the impact of varying the training rollout duration ( Tsim ) on collision across different evaluation frequencies. Here, we utilize a log-replay setup to strictly isolate the effect of the training rollout duration Tsim from the influence of reactive surrounding agents. As shown, model trained with a longer rollout ( Tsim = 3 .0 s) degrades significantly during high-frequency replanning, exhibiting sharp increases in collisions at the 1.0 s and 
+
+0.5 s evaluation marks. Conversely, the model trained with the shortest rollout ( Tsim =1.0 s) demonstrates the highest robustness at these elevated replanning frequencies. Despite this, we select Tsim = 2 .0 s as our default training configuration. This setup achieves comparable performance to the 1.0 s model across most frequencies but benefits from a significantly lower computational cost, as the longer simulation step reduces the total number of closed-loop samples required during training.                                                
+
+> Table 12: nuScenes: Effect of training rollout duration ( Tsim ) on ego collision Evaluation Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s) Train Tsim = 1 .0(s) 2.83 (±.04 )2.49 (±.03 )2.26 (±.06 )2.25 (±.09 )2.18 (±.03 )3.05 (±.14 )
+> Train Tsim = 2 .0(s) 2.96 (±.10 )2.59 (±.08 )2.38 (±.10 )2.31 (±.11 )2.24 (±.16 )3.08 (±.22 )
+> Train Tsim = 3 .0(s) 2.81 (±.05 )2.36 (±.15 )2.21 (±.19 )2.30 (±.27 )2.66 (±.28 )3.42 (±.17 )
+
+20 Table 13 evaluates the effect of the simulation mask ( Msim ) on collision, which con-trols the ratio of reactive surrounding agents to non-reactive log-replay anchors during training. The results indicate that heavily skewing the simulation towards either mostly reactive or mostly non-reactive environments yields suboptimal outcomes across the pri-mary operating frequencies. While a higher ratio of reactive agents performs marginally better at the absolute extremes of the replanning spectrum, the balanced configuration (Msim = 0 .50 ) consistently demonstrates the most robust ego predictions across the criti-cal mid- to high-frequency range. Therefore, we select this equally weighted setup as our default, as it provides the optimal trade-off between accommodating interactive surround-ing agent predictions and maintaining necessary behavioral stability.                                                 
+
+> Table 13: nuScenes: Effect of simulation mask Msim on ego collision
+> Tsim 6.0(s) 3.0(s) 2.0(s) 1.5(s) 1.0(s) 0.5(s)
+> Msim = 0 .25 2.90 (±.11 )2.55 (±.16 )2.31 (±.16 )2.21 (±.18 )2.13 (±.20 )3.08 (±.11 )
+> Msim = 0 .50 2.91 (±.13 )2.49 (±.12 )2.18 (±.14 )2.06 (±.11 )2.00 (±.16 )3.10 (±.24 )
+> Msim = 0 .75 2.85 (±.07 )2.59 (±.08 )2.32 (±.09 )2.25 (±.04 )2.13 (±.04 )3.05 (±.17 )
+
+21

@@ -1,0 +1,1382 @@
+Title: Hierarchical Decision-Making under Uncertainty: A Hybrid MDP and Chance-Constrained MPC Approach
+
+URL Source: https://arxiv.org/pdf/2603.17634v1
+
+Published Time: Thu, 19 Mar 2026 01:17:50 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+> JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 1
+
+# Hierarchical Decision-Making under Uncertainty: A Hybrid MDP and Chance-Constrained MPC Approach 
+
+Siyuan Li, Member, IEEE, Chengyuan Liu*, Senior Member, IEEE, and Wen-hua Chen, Fellow, IEEE 
+
+Abstract —This paper presents a hierarchical decision-making framework for autonomous systems operating under uncer-tainty, demonstrated through autonomous driving as a repre-sentative application. Surrounding agents are modeled using Hybrid Markov Decision Processes (HMDPs) that jointly cap-ture maneuver-level and dynamic-level uncertainties, enabling the multi-modal environmental prediction. The ego agent is modeled using a separate HMDP and integrated into a Model Predictive Control (MPC) framework that unifies maneuver selection with dynamic feasibility within a single optimization. A set of joint chance constraints serves as the bridge between environmental prediction and optimization, incorporating multi-modal environment predictions into the MPC formulation and ensuring safety across all plausible interaction scenarios. The proposed framework provides theoretical guarantees on recursive feasibility and asymptotic stability, and its benefits in terms of safety and efficiency are validated through comprehensive evaluations in highway and urban environments, together with comparisons against a rule-based baseline. 
+
+Index Terms —Autonomous systems, decision-making, hybrid markov decision processes (HMDPs), model prediction control (MPC), autonomous driving 
+
+I. I NTRODUCTION 
+
+Autonomous systems operate in uncertain and dynamically evolving environments shared with humans, robots, and other intelligent agents [1]. To make reliable decisions under such uncertainty, they must not only perceive the scene accurately but also reason about the behavioral uncertainty of neighboring agents, which manifests at two coupled levels: the maneuver level (e.g., lane-change intent, route choice, or task assign-ment) and the dynamic level (e.g., velocity, heading, and pose). Capturing and predicting these uncertainties are essential for anticipating how surrounding agents (SAs) will interact with the ego system. This necessitates robust environment model-ing, which forms the foundation for reliable decision-making under uncertainty. Recent studies on environment modeling have made no-table progress along two complementary research lines, fo-cusing respectively on maneuver-level and dynamic-level un-certainty. Regarding maneuver-level uncertainty, the modeling approaches have evolved from early physics-based motion models [2], [3], which fail to capture strategic maneuver shifts, 
+
+Siyuan Li and Chengyuan Liu are with the Department of Aeronautical and Automotive Engineering, Loughborough University, Loughborough, UK. (e-mail: s.li8@lboro.ac.uk, c.liu10@lboro.ac.uk). Wen-hua Chen is with the Department of Aeronautical and Aviation Engineering, The Hong Kong Polytechnic University, Hong Kong. ( e-mail: wenhua.chen@polyu.edu.hk). 
+
+to more expressive maneuver reasoning frameworks. Logic-based methods explicitly treat interacting agents as rational decision-makers that optimize certain objectives, enabling intuitive and interpretable reasoning about their high-level intentions [4], [5]. In parallel, discriminative deep models, such as LSTMs [6], Transformers [7], or GNNs [8], learn maneuver patterns from motion sequences and interaction cues for intent classification. While these methods offer high accuracy in identifying maneuver modes, their outputs are of-ten decoupled from downstream trajectory generation, lacking structured integration. For dynamic-level uncertainty, classical approaches in con-trol theory are typically grounded in stochastic system theory. For example, Kalman filters and their nonlinear extensions provide real-time state estimates and the associated uncer-tainty covariance [9], [10]; reachability analysis offers for-mal boundary guarantees for dynamics prediction, especially in safety-critical verification scenarios [11], [12]. In recent years, the emergence of deep generative models has fueled the development of data-driven approaches. Representative architectures such as LSTMs [13], Transformers [14], dif-fusion models [15], and CVAEs [16] generate multi-modal and nonlinear distributions over future dynamics, capturing complex motion patterns and interaction features. However, both control-based and learning-based models often rely on predefined or independently inferred maneuvers as a prerequi-site. They typically lack an integrated framework that connects maneuver reasoning with dynamics forecasting, and thus fail to explain the decision-making motivations underlying agent maneuver. Overall, most existing studies treat maneuver and dynamics forecasting as decoupled subproblems, limiting the decision-making system’s ability to reason about joint risk in a co-herent manner. Therefore, developing a structured predic-tion framework that jointly models both maneuver-level and dynamic-level uncertainty, while maintaining interpretability and planning compatibility, is a critical step toward reliable environment understanding. While accurate environmental prediction is essential, safe and goal-directed autonomy ultimately depends on how these environmental predictions are incorporated into the decision-making process. Existing decision-making paradigms can be broadly categorized into rule-based, learning-based, and model-based approaches. Rule-based strategies [17]–[19] are widely adopted for their simplicity and interpretability, but they rely heavily on manually designed heuristics, making  
+
+> arXiv:2603.17634v1 [eess.SY] 18 Mar 2026 JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 2
+
+them rigid and reactive in uncertain environments. Learning-based methods, such as reinforcement learning [20], [21] and imitation learning [22], [23], can achieve strong empirical performance but often suffer from limited interpretability and lack of safety guarantees. Model-based frameworks, particu-larly those based on Model Predictive Control (MPC) [24]– [26], provide a principled optimization structure that explicitly accounts for system dynamics and safety constraints, offering better transparency and adaptability. Despite their advantages, existing MPC-based frameworks still exhibit structural limitations in representing the ego agent (EA)’s decision-making process. Specifically, most existing MPC-based decision frameworks treat the EA’s maneuver selection and motion planning as separate processes, without explicitly constraining high-level maneuver decisions by the agent’s dynamic feasibility. Moreover, environment-derived predictions are rarely incorporated in an explicit form, lim-iting the planner’s ability to reason about future interaction uncertainties. Therefore, developing a unified decision-making framework that couples the EA’s maneuver reasoning and dynamic feasibility with environmental predictions within a MPC framework remains an open challenge. To tackle these challenges, this paper proposes a hierarchical decision-making framework that combines Hybrid Markov Decision Processes (HMDPs) [27] with MPC. In this frame-work, each SA is represented as an HMDP that explicitly distinguishes and jointly models maneuver-level and dynamic-level uncertainties. The maneuver-level uncertainty is captured by a probabilistic action-selection distribution that encodes the likelihood of discrete maneuver transitions, whereas the dynamic-level uncertainty is represented by Gaussian process noise added to the state evolution, thereby accounting for stochastic deviations around nominal motion. To further miti-gate maneuver uncertainty, a likelihood-based filtering mech-anism suppresses low-probability transitions over both single-step and multi-step horizons, yielding compact multi-modal predictions that retain only the most plausible interaction outcomes, which are subsequently propagated to the EA’s decision layer as inputs for optimization. Building upon the structured environment representation, the EA’s decision-making process is formulated in a hybrid manner consistent with that of the environment model. Unlike the generative HMDPs used for SAs, its HMDP serves as a decision structure. Discrete maneuver options are treated as decision variables, each explicitly linked to the EA’s dynamic model. Embedding this hybrid structure into the MPC formu-lation couples maneuver selection with continuous dynamics, allowing the dynamic feasibility of each maneuver to be explicitly evaluated and enforced through the optimization constraints. This integration eliminates inconsistency between high-level maneuver planning and low-level motion control, yielding decisions that are both dynamically feasible and behaviorally consistent. The multi-modal predictions generated by the environmental HMDPs are incorporated into the MPC optimization via joint chance constraints, which link environment prediction with decision-making and enforce probabilistic safety across all retained scenarios. Under standard affine-Gaussian assump-tions, these chance constraints admit a deterministic refor-mulation, allowing environment-derived safety margins to be efficiently enforced. Overall, the proposed framework unifies environment prediction and decision-making within a coherent optimization framework, producing decisions that are both forward-looking and adaptive to the stochastic evolution of the surrounding environment. The main contributions of this paper are as follows:  
+
+> •
+
+An HMDP-based environment modeling framework is developed for SAs, which jointly captures maneuver-level and dynamic-level uncertainties to generate structured, multi-modal predictions of their future behaviors.  
+
+> •
+
+A unified HMDP-MPC framework is developed for the EA, integrating maneuver selection with dynamic feasi-bility and embedding multi-modal environment predic-tions through joint chance constraints for probabilistically safe planning.  
+
+> •
+
+Theoretical guarantees on recursive feasibility and asymptotic stability are established for the proposed decision-making framework.  
+
+> •
+
+Comprehensive simulations in both highway and urban autonomous driving scenarios are performed to validate the effectiveness of the proposed framework and to demonstrate its key differences from a rule-based base-line. The rest of the paper is organized as follows: Section II introduces the proposed hierarchical decision-making frame-work. Section III provides theoretical proofs of recursive feasi-bility and asymptotic stability. Section IV presents simulation results in the context of an autonomous driving scenario. Section V offers a discussion of the results and outlines potential directions for future research. II. H IERARCHICAL DECISION -M AKING FRAMEWORK 
+
+Building upon the modeling principles introduced in Sec-tion I, this section formulates the proposed hierarchical decision-making framework. As illustrated in Fig. 1, data from the Perception Layer provide the current states of the EA and all SAs. These states form the initial conditions for both the environment side and the decision-making layer. On the ego side, the EA HMDP Modelling block (Section II-B) specifies the EA’s discrete maneuver modes and action-dependent dy-namics for use in the MPC optimization. On the environment side, the SAs Modelling & Prediction block uses HMDP models (Section II-A) to propagate these states and employs probabilistic filtering (Section II-C, Section II-D) to prune low-likelihood maneuver branches, yielding multi-step reachability sets that describe all plausible future evolutions of the SAs. These reachability sets are then passed to the Optimization Layer, where they define joint chance constraints that restrict the EA’s feasible decision space (Section II-D). The MPC solver (Section II-E) computes an action sequence that is dynamically feasible and probabilistically safe, and its first control input is sent to the Low-Level Layer. 
+
+A. HMDP Formulation for the SAs 
+
+Unlike our previous work [27], [28], which assumed fully observable environment dynamics, the present formulation JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 3
+
+> Fig. 1: Schematic overview of the proposed hierarchical decision-making framework.
+
+explicitly incorporates maneuvers-level and dynamic-level un-certainty through independent HMDPs for SAs. A 3-tuple MDP, denoted (Ssa , A sa , π sa ), is employed to model the maneuver evolution of SAs. The set Ssa con-tains discrete states, which represent high-level or abstract maneuvers, while Asa denotes the set of actions that induce transitions between these states. The policy πsa specifies a probability distribution over the action space Asa conditioned on the current state ssa . More specifically, for the i-th SA at time step k, the probability of selecting action asa,i k ∈ Asa,i 
+
+given the current state ssa,i k ∈ Ssa,i is defined as: 
+
+P(asa,i k | ssa,i k ) = πsa,i (asa,i k | ssa,i k ).
+
+The maneuver-level uncertainty is captured by the stochastic policy πsa,i (asa,i k | ssa,i k ), which assigns probabilities to feasible maneuvers. However, due to physical or structural constraints, some actions are rendered infeasible in specific states, resulting in P(asa,i k | ssa,i k ) = 0 . This motivates defining a state-dependent admissible action set, restricting the policy to actions that are feasible in a given state. Formally, for the 
+
+i-th SA, we have 
+
+Asa (ssa,i k ) ⊆ Asa ,
+
+where Asa (ssa,i k ) denotes the set of actions feasible at state 
+
+ssa,i k , excluding transitions that violate system-level or phys-ical feasibility conditions, thereby ensuring that the resulting policy remains realizable. Once a feasible action is selected according to the policy, the next discrete state evolves according to a deterministic transition function: 
+
+ssa,i k+1 = f sa (ssa,i k , a sa,i k ), ssa,i k+1 ∈ Ssa,i 
+
+which captures predefined transition rules governing the discrete-mode evolution. 
+
+Remark 1. This formulation can be extended to stochastic tran-sitions by introducing uncertainty into the transition function 
+
+f sa , or by modeling the next state as a distribution conditioned on the current state-action pair: 
+
+ssa,i k+1 ∼ P(· | ssa,i k , a sa,i k ).
+
+In other words, although transitions are designed to follow predefined rules, stochasticity may arise from environmental variability, modeling approximations, or external disturbances, leading to deviations from the deterministic maneuver. For clarity, this work adopts deterministic mode transitions, how-ever, the same framework can accommodate stochastic transi-tions by replacing f sa with a transition kernel P(·| s, a ).Building upon the MDP formulation of discrete maneuver modes, we further specify a set of action-dependent dynamics, enabling the framework to explicitly capture how each high-level decision drives the dynamic evolution of the agent’s physical states. The evolution of the i-th SA can then be represented by the following affine dynamic model 
+
+xsa,i k+1 = Asa,i k (asa,i k )xsa,i k + Bsa,i k (asa,i k )Fik(asa,i k ) + wik, (1) where xsa,i k ∈ Rn denotes the state of the i-th SA at time step k, Asa,i k (·) and Bsa,i k (·) are the system matrices associated with the selected action asa,i k , Fik(·) denotes a hypothetical control input associated with the selected action asa,i k , and 
+
+wik represents stochastic modeling uncertainty arising from unmodeled dynamics and approximation errors. It is modeled as zero-mean Gaussian noise, wik ∼ N (0 , Ξsa,i k (asa,i k )) , and is assumed independent across agents and time. 
+
+Assumption 1. We assume that the matrices Asa,i k (·) and 
+
+Bsa,i k (·), as well as the mode-dependent input Fik(·), are known. It is worth to note that the input Fik(·) is not the actual control input applied by the SAs, but a hypothetical proxy signal inferred from high-level maneuver features associated with action asa,i k .
+
+Remark 2. The formulation in (1) adopts an action-dependent representation of system dynamics, where the matrices 
+
+Asa,i k (·), Bsa,i k (·), and Fik(·) are parameterized by the discrete action asa,i k . However, in certain scenarios, the system dy-namics may primarily depend on the state. In such cases, these matrices can alternatively be expressed as functions of the state ssa,i k , or jointly as functions of both the state and the action. This modeling choice depends on the specific application context and is not strictly deterministic. 
+
+Remark 3. We adopt a linear affine function to describe the action-dependent dynamics of SAs for modeling simplicity without compromising generality. However, nonlinear dynam-ics may arise in practical cases, for example: 
+
+xsa,i k+1 = gasa,i k
+
+(xsa,i k , Fik(asa,i k )) + wik,
+
+where gasa,i k
+
+(·) is a nonlinear function associated with the action asa,i k , which can be approximated using linearization methods. In particular, techniques such as Taylor series ex-pansion around nominal operating points are commonly used JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 4
+
+to obtain linearized models. Therefore, adopting a linear affine representation is both reasonable and accepted in practice. Due to the complexity of the environment, it is necessary to consider all SAs that may influence the EA. To better characterize the interaction between the EA and all relevant SAs, we define the aggregated external state at time k + 1 as: 
+
+Zsa k+1 := 
+
+n
+
+ssa,i k+1 , x sa,i k+1 
+
+oIi=1 
+
+,
+
+where I denotes the number of SAs included in the envi-ronment model. This aggregated representation Zsa k+1 provides the necessary information for the EA to evaluate interaction constraints and determine the set of feasible actions. 
+
+B. HMDP Formulation for the EA 
+
+In contrast to the modeling of SAs, the EA integrates both its internal state information and the aggregated external state 
+
+Zsa (see Section II-A), so that the policy simultaneously considers ego performance and interaction safety. The EA’s HMDP is formulated as: 
+
+(Sea , A ea , X ea , Z sa , J ea ) ,
+
+where Sea denotes the set of ego maneuvers, Aea is the set of candidate actions, Xea ⊂ Rn represents the EA’s dynamic states space, Zsa captures the state information of relevant SAs, and Jea is a cost function used to evaluate each action. As discussed earlier, not all actions are admissible in every discrete mode sea k ∈ Sea at time step k. Therefore, each state 
+
+sea k is associated with a subset of feasible actions: 
+
+Aea (sea k ) ⊆ Aea . (2) Given a feasible action aea k ∈ Aea (sea k ), the EA transitions to the next discrete state according to a deterministic transition function: 
+
+sea k+1 = f ea (sea k , a ea k ), sea k+1 ∈ Sea . (3) Meanwhile, the EA’s dynamic state evolves according to action-dependent dynamics: 
+
+xea k+1 = gaea k (xea k , a ea k ), (4) where gaea k (·) denotes the dynamic function conditioned on the discrete action aea k . For instance, if aea k corresponds to a left lane change for autonomous vehicles, then gaea k (·)
+
+characterizes lateral polynomial trajectory generation. This action-conditioned dynamic formulation establishes a direct mapping between maneuver selection and dynamic evolution, enabling the dynamic feasibility of each maneuver to be evaluated and enforced within the optimization framework. In addition to internal constraints, the EA’s feasible actions are further restricted by external conditions derived from the aggregated external state Zsa k+1 |k. For each candidate action, the evolution of the EA’s dynamic state can be predicted via (4), enabling the assessment of potential interactions with SAs. The externally constrained feasible action set at state sea k
+
+is therefore defined as 
+
+Aea 
+
+> fea
+
+(sea k , Z sa k+1 |k) ⊆ Aea (sea k ) ⊆ Aea ,
+
+where Zsa k+1 |k denotes the one-step-ahead predicted states of SAs. 
+
+Remark 4. The external constraints considered here may arise from safety margins imposed by the environment. For instance, for autonomous driving, if a SV is predicted to occupy a neighboring lane in the near future, a lane change action by the EA may lead to a collision risk, rendering it infeasible. In this case, such an action would be excluded from the externally constrained feasible action set Aea 
+
+> fea
+
+(sea k , Z sa k+1 |k).The mechanism for incorporating environment information into action feasibility assessment will be detailed in the next section. 
+
+C. Probabilistic Interaction Modeling with Chance Con-straints 
+
+For SAs, it is essential to predict the possible maneuver ranges associated with each action asa,i k ∈ Asa (ssa,i k ), so as to capture diverse maneuver possibilities and facilitate informed decision-making. However, in certain cases, the action space 
+
+Asa (ssa,i k ) is considerably large, thereby increasing the num-ber of state-action sequences to be evaluated and resulting in substantial computational demands. To address this, we propose an action filtering mechanism based on policy distribution. In practice, many actions within the admissible set have negligible probability. This filtering mechanism focuses on plausible and high-likelihood inter-actions by discarding low-probability actions. More specifi-cally, we define a threshold δ, and retain only those actions 
+
+asa,i k ∈ Asa (ssa,i k ) whose policy probabilities exceed δ. The resulting filtered action set is defined as: 
+
+˜Asa (ssa,i k ) = 
+
+n
+
+a ∈ Asa (ssa,i k ) πsa,i (ssa,i k , a ) ≥ δ
+
+o
+
+.
+
+This naturally induces the following hierarchical relation: 
+
+˜Asa (ssa,i k ) ⊆ Asa (ssa,i k ) ⊆ Asa .
+
+For each retained high-likelihood action asa,i k ∈ ˜Asa (ssa,i k ),we propagate the dynamics forward to obtain the next state of the i-th SA: 
+
+˜xsa,i k+1 = Asa,i k (asa,i k )˜ xsa,i k + Bsa,i k (asa,i k )Fik(asa,i k ) + wik. (5) Accordingly, the set of all reachable surrounding dynamic states at time step k + 1 can be constructed as: 
+
+X sa,i k+1 := S    
+
+> asa,i k∈˜Asa (ssa,i k)
+
+˜xsa,i k+1 . (6) Then, the filtered external information is incorporated into the decision-making process to eliminate actions that may violate safety or other constraints. Since the future states of SAs are subject to inherent uncertainty and model mismatch represented by wik, we incor-porate chance constraints into the EA’s decision process. This prevents overly conservative maneuver while still ensuring safety and other required guarantees. Moreover, as each SA may execute multiple filtered admis-sible actions, the EA must ensure safety under all plausible future evolutions to guarantee robustness. Accordingly, for the JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 5
+
+i-th SAs, the feasible ego action set at time step k + 1 must satisfy the following chance constraint: 
+
+P
+
+T 
+
+> xsa,i k+1 ∈X sa,i k+1
+
+n
+
+h(xea k+1 , x sa,i k+1 ) ≥ 0
+
+o 
+
+≥ 1 − ϵ, 
+
+where h(·) encodes application-specific constraints (e.g., safety margins), and ϵ denotes a user-defined tolerance for allowable risk. For tractability, h(xea k+1 , x sa,i k+1 ) is typically designed to be affine in the stochastic argument xsa,i k+1 . When 
+
+h is nonlinear, we adopt a first-order Taylor approximation with respect to xsa,i k+1 around a nominal prediction, yielding an affine surrogate on which the chance constraint is enforced. 
+
+Remark 5. Concretely, for a nominal prediction ¯xsa,i k+1 ,
+
+h(xea k+1 , x sa,i k+1 ) ≈ h(xea k+1 , ¯xsa,i k+1 )+ ∇h(xea k+1 , ¯xsa,i k+1 )⊤ xsa,i k+1 − ¯xsa,i k+1 
+
+,
+
+which provides an affine, computationally tractable surrogate. Extending this to the multi-agent case, the EA must ensure joint safety with respect to all SAs: 
+
+P
+
+TIi=1 
+
+T 
+
+> xsa,i k+1 ∈X sa,i k+1
+
+n
+
+h(xea k+1 , x sa,i k+1 ) ≥ 0
+
+o 
+
+≥ 1 − ϵ (7) This formulation ensures that the EA remains safe under all likely interactions, accounting for multi-agent uncertainty in a principled and tractable way. 
+
+D. Chance-Constrained MPC Formulation 
+
+In practical decision-making scenarios, prediction over an extended horizon is crucial, as it provides richer contextual information and allows the system to anticipate future in-teractions. MPC is widely adopted in these settings because it optimizes control inputs over a finite prediction horizon while explicitly accounting for constraints. This predictive optimization structure naturally enables the integration of future information into real-time decision-making. However, extending the prediction horizon inevitably leads to a combinatorial growth in the number of possible maneuver sequences. To address this, we extend the previously proposed filtering mechanism to a multi-step setting, where cumulative probability threshold is used to prune low-likelihood maneuver sequences. For each SA i, we define the feasible action sequence set 
+
+Asa,i δ under a cumulative probability constraint as: 
+
+Asa,i δ =
+
+(
+
+asa,i 
+
+> 1: H
+> H
+
+Y
+
+> k=1
+
+πsa,i (ssa,i k , a sa,i k ) ≥ δseq 
+
+)
+
+, (8) where asa,i  
+
+> 1: H
+
+= [ asa,i  
+
+> 1
+
+, . . . , a sa,i H ] is a candidate action sequence of length H, and δseq is a scenario-level probability threshold. For a given action sequence asa,i  
+
+> 1: H
+
+, the corresponding discrete state sequence ssa,i  
+
+> 2: H+1
+
+= [ ssa,i  
+
+> 2
+
+, . . . , s sa,i H+1 ] is deterministically generated according to equation (3). The prediction of the SA’s system state follows the same affine stochastic dynamics as introduced in (5), which serve as the prediction model for forward propagation: 
+
+xsa,i k+1 |k = Asa,i k (asa,i k ) xsa,i k|k +Bsa,i k (asa,i k ) Fik(asa,i k )+ wik. (9)    
+
+> Fig. 2: Illustration of multi-modal prediction and reachability-set construction of a SV. Low-probability branch is pruned, while the remaining hypotheses are propagated to obtain predicted means, covariances, and ellipsoidal reachable regions whose union approximates the reachability set Xsa used in the joint chance constraint (12).
+
+To quantify the uncertainty associated with this prediction, we also propagate the state covariance through the linearized system. The covariance is updated by: 
+
+Qsa,i k+1 |k = Asa,i k (asa,i k ) Qsa,i k|k
+
+
+
+Asa,i k (asa,i k )
+
+⊤
+
++ Ξ sa,i k (asa,i k ).
+
+(10) Here, Qsa,i k|k and Qsa,i k+1 |k denote the posterior and predicted state covariance of SA i, respectively, while Ξsa,i k (asa,i k ) is the process-noise covariance capturing model uncertainty. For each retained action sequence asa,i  
+
+> 1: H
+
+∈ A sa,i δ , we denote the corresponding predicted state trajectory as: 
+
+˜xsa,i (asa,i  
+
+> 1: H
+
+) = [ xsa,i  
+
+> 2|1
+
+, x sa,i  
+
+> 3|1
+
+, . . . , x sa,i H+1 |1],
+
+which is derived from the dynamics defined in Equation (9). Then, the predicted dynamic state reachability set in Equa-tion (6) becomes: 
+
+X sa,i := S 
+
+> asa,i
+> 1: H∈A sa,i δ
+
+˜xsa,i (asa,i  
+
+> 1: H
+
+). (11) To ensure safety under multi-step interaction uncertainty, the chance constraint (7) is extended to: 
+
+P
+
+
+
+> I
+
+\
+
+> i=1
+> H
+
+\
+
+> j=1
+
+\ 
+
+> ˜xsa,i ∈X sa,i
+
+n
+
+h
+
+
+
+xea k+j|k, ˜xsa,i k+j|k
+
+
+
+≥ 0
+
+o ≥ 1 − ϵ. 
+
+(12) Equations (8)-(12) provide an abstract description of the probabilistic interaction model and the resulting multi-step joint chance constraints. To give intuition, Fig. 2 illustrates this construction for a single surrounding vehicle (SV) in a three-lane scenario. Having specified the probabilistic interaction model, the multi-step reachability sets, and the associated joint chance constraints, we now define the cost function used to select among the feasible actions. This cost function is formulated as 
+
+Jea : Sea × Aea × Xea × X sa → R.
+
+In practical implementations, the specific structure of the cost function Jea may vary depending on the application. Not all elements of the input tuple need to be explicitly used, the function can be simplified to depend only on the subset of variables relevant to the specific task. At each time step k, the EA solves a finite-horizon optimiza-tion problem over a prediction horizon H, aiming to select JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 6
+
+a sequence of high-level actions {aea k , a ea k+1 , . . . , a ea H−1} that minimize the cumulative cost: 
+
+min 
+
+> aea
+> H−1
+
+X
+
+> j=0
+
+Jea (sea k+j+1 |k, a ea k+j|k, x ea k+j+1 |k, X sa k+j+1 |k)+ JH (sea k+H|k, x ea k+H|k)
+
+s.t. 
+
+(2) − (4) , and (8) − (12) .
+
+where JH (·) represents a terminal cost associated with the finite-horizon problem, the explicit definition of which will be introduced in Section III. 
+
+E. Reformulation for the MPC Optimization Program 
+
+The direct evaluation of chance constraints (12) involves multivariate probability integrals, which are computation-ally prohibitive for real-time applications. To address this intractability, we reformulate these probabilistic constraints into deterministic algebraic surrogates under standard affine-Gaussian assumptions. This transformation allows safety mar-gins to be efficiently computed from the predicted state means and covariances, thereby enabling the evaluation of candidate discrete decision sequences within the optimization framework. Specifically, the affine constraint function h(·) is expressed as: 
+
+h(xea k+1 |k, ˜xsa,i k+1 |k) = cea xea k+1 |k + csa ˜xsa,i k+1 |k + c, 
+
+where cea , c sa , and c are known constants. Moreover, ˜xsa,i k+1 |k
+
+is assumed to follow a Gaussian distribution with mean ¯xsa,i k+1 |k
+
+and covariance Qsa,i k+1 |k.Thus, the chance constraint: 
+
+P
+
+
+
+h(xea k+1 |k, ˜xsa,i k+1 |k) ≥ 0
+
+
+
+≥ 1 − ϵ (13) can be equivalently written as [29]: 
+
+cea xea k+1 |k + csa ¯xsa,i k+1 |k + c ≥ Φ−1(1 − ϵ) ·
+
+q
+
+(csa )⊤Qsa,i k+1 |kcsa ,
+
+where Φ−1(·) denotes the inverse cumulative distribution function of the standard Gaussian distribution. Accordingly, the multi-agent chance constraint (12) can be deterministically represented as 
+
+TIi=1 
+
+THj=1 
+
+n
+
+cea xea k+j|k + csa ¯xsa,i k+j|k + c
+
+≥ Φ−1(1 − ϵ)
+
+q
+
+(csa )⊤Qsa,i k+j|kcsa 
+
+o
+
+, (14) which must hold for all predicted sequences ˜xsa,i through their induced ¯xsa,i k+j|k and Qsa,i k+j|k.Finally, the resulting chance-constrained MPC problem is formulated as: 
+
+min 
+
+> aea
+> H−1
+
+X
+
+> j=0
+
+Jea (sea k+j+1 |k, a ea k+j|k, x ea k+j+1 |k, X sa k+j+1 |k) (15) 
+
++ JH (sea k+H|k, x ea k+H|k)
+
+s.t. 
+
+(2) − (4) , (8) − (11) , and (14) .
+
+By solving (15), an optimal action sequence is obtained, of which only the first action is applied to the low-level controller. III. RECURSIVE FEASIBILITY AND ASYMPTOTIC 
+
+STABILITY 
+
+Building upon the complete formulation, the following sec-tion establishes theoretical guarantees of recursive feasibility and stability, which are fundamental to safe and reliable decision-making. 
+
+Assumption 2 (Goal mode and baseline policy) . Let sea  
+
+> goal
+
+∈Sea denote a goal mode of the EA. The stage cost 
+
+Jea (sea , x ea , a ea ) is nonnegative and can be normalised such that 
+
+Jea (sea , a ea , x ea , X sa ) = 0 ⇔ sea = sea 
+
+> goal
+
+. (16) Moreover, there exists a (possibly conservative) baseline deci-sion policy ¯π such that, for any feasible initial pair (sea  
+
+> 0
+
+, x ea  
+
+> 0
+
+), 
+
+> •
+
+the closed-loop system under ¯π satisfies all state-input and safety constraints;  
+
+> •
+
+the closed-loop state process reaches the goal mode sea 
+
+> goal
+
+in finite time and then remains in this mode thereafter. 
+
+Remark 6. Given Assumption 2, the terminal cost at the prediction horizon can be defined as the cost-to-go under the baseline policy until the goal mode is reached, i.e., 
+
+JH (sea H , x ea H ) :=   
+
+> τ(xea H)−1
+
+X
+
+> t=0
+
+Jea 
+
+sea H+t, ¯π sea H+t, x ea H+t, X sa H+t
+
+
+
+.
+
+where τ (sea H ) denotes the first hitting time of sea 
+
+> goal
+
+. This quantity is finite for all feasible (sea H , x ea H ).
+
+Remark 7. Assumption 2 is standard and practically well-justified. It only requires the existence of a conservative baseline policy ¯π that can drive the system to a goal state sea 
+
+> goal
+
+in finite time while ensuring that all constraints are satisfied. In many autonomous systems, such a baseline policy can be constructed using simple rule-based strategies that guarantee constraint satisfaction by design. These rule-based strategies [18], [30], [31] are commonly used in practice to ensure safe fallback behaviors in uncertain or dynamic environments and can thus serve as feasible baseline policies. Therefore, although ¯π is not required to be performance-optimal, the assumption that such a conservative baseline policy exists is both theoretically standard and very reasonable for the class of autonomous systems considered in this work. 
+
+Theorem 1. Suppose Assumption 2 holds. If at the initial time 
+
+k = 0 , the MPC optimization (15) can find an action sequence that satisfies all safety and feasibility requirements within the prediction horizon, then for all time steps k ≥ 1, it can still find an action sequence that satisfies the same requirements. In other words, the system maintains recursive feasibility. 
+
+Proof. Let the optimal action sequence and corresponding predicted state sequence at time k be: 
+
+a∗ 
+
+> k
+
+=
+
+n
+
+a∗
+
+> k|k
+
+, a ∗
+
+> k+1 |k
+
+, . . . , a ∗
+
+> k+H−1|k
+
+o
+
+, (17) 
+
+s∗ 
+
+> k
+
+=
+
+n
+
+s∗
+
+> k+1 |k
+
+, s ∗
+
+> k+2 |k
+
+, . . . , s ∗
+
+> k+H|k
+
+o
+
+. (18) At time k + 1 , we construct a feasible candidate 
+
+¯ak+1 = ¯ak+1 |k+1 , ¯ak+2 |k+1 , . . . , ¯ak+H|k+1 ,JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 7
+
+where 
+
+¯ak+1+ j|k+1 = a∗
+
+> k+j+1 |k
+
+, j = 0 , . . . , H − 2, (19) 
+
+¯ak+H|k+1 = ¯ π(s∗
+
+> k+H|k
+
+), (20) where ¯π(·) is a known baseline policy from Assumption 2 that satisfies all constraints. Correspondingly, the candidate state trajectory at time k + 1 
+
+is: 
+
+¯sk+1+ j|k+1 = s∗
+
+> k+j+1 |k
+
+, j = 1 , . . . , H − 2, (21) and the final state: 
+
+¯sk+H|k+1 = f ea (¯ sk+H−1|k+1 , ¯ak+H−1|k+1 ). (22) By Assumption 2, the baseline action associated with the terminal reachable mode satisfies all constraints. Since all constraints are satisfied by the original optimal sequence and the terminal policy ¯π ensures feasibility at the final step, the shifted sequence (¯ ak+1 , ¯sk+1 ) constitutes a feasible candidate at time k + 1 . Hence, recursive feasibility is ensured. 
+
+Theorem 2. Suppose Assumption 2 holds. Then the receding-horizon policy generated by the proposed MPC scheme stabi-lizes the EA HMDP with respect to the goal mode. 
+
+Remark 8. For clarity and representativeness, the stage cost 
+
+Jea (s, a ) is written as a compact form of the complete ex-pression Jea (sea , a ea , x ea , X sa ), and the terminal cost JH (s)
+
+denotes JH (sea , x ea ). This simplified form is mainly adopted in the stability analysis to facilitate theoretical derivations, while a similar state-action-dependent cost structure is also reflected in the cost design of the simulation studies. 
+
+Proof. Define the optimal cost at time k as: 
+
+V ∗ 
+
+> k
+
+=
+
+> H−1
+
+X
+
+> j=0
+
+Jea (s∗
+
+> k+j|k
+
+, a ∗
+
+> k+j|k
+
+) + JH (s∗
+
+> k+H|k
+
+)= Jea (s∗
+
+> k|k
+
+, a ∗
+
+> k|k
+
+) + 
+
+> H−1
+
+X
+
+> j=1
+
+Jea (s∗
+
+> k+j|k
+
+, a ∗
+
+> k+j|k
+
+)+ JH (s∗
+
+> k+H|k
+
+).
+
+At time k + 1 , the candidate cost is: 
+
+Vk+1 =
+
+> H−1
+
+X
+
+> j=1
+
+Jea (s∗
+
+> k+j|k
+
+, a ∗
+
+> k+j|k
+
+) + Jea (s∗
+
+> k+H|k
+
+, π (s∗
+
+> k+H|k
+
+)) + JH (¯ sk+H+1 |k+1 ).
+
+Define the terminal difference as: 
+
+∆ := Jea (s∗
+
+> k+H|k
+
+, π (s∗
+
+> k+H|k
+
+)) + JH (¯ sk+H+1 |k+1 )
+
+− JH (s∗
+
+> k+H|k
+
+) ≤ 0.
+
+Thus: 
+
+Vk+1 − V ∗ 
+
+> k
+
+= ∆ − Jea (s∗
+
+> k|k
+
+, a ∗
+
+> k|k
+
+) ≤ 0.
+
+By optimality, V ∗ 
+
+> k+1
+
+≤ Vk+1 , hence V ∗ 
+
+> k+1
+
+≤ V ∗ 
+
+> k
+
+. Since 
+
+Jea (s, a ) ≥ 0 for all non-goal states, the system converges to the goal state sea  
+
+> goal
+
+and asymptotic stability is ensured. 
+
+Remark 9. Note that s∗ 
+
+> k+H|k
+
+and s∗ 
+
+> k+H|k+1
+
+both refer to the predicted state at time k + H, though derived from different prediction steps. Therefore, the terminal cost ¯J(s∗
+
+> k+H|k
+
+), de-signed as an upper bound of the future cost under the baseline policy, satisfies ∆ ≤ 0.IV. SIMULATION 
+
+To evaluate the effectiveness of the proposed decision-making algorithm, we consider an autonomous driving sce-nario set in a three-lane road environment. The following sections provide the formulation of HMDPs for both the ego vehicle (EV) and SVs, design of the cost function, specifi-cation of safety constraints, and simulation studies and result analysis under various scenarios. At the low level, a rule-based MPC method is adopted to generate the EV’s acceleration and steering commands, fol-lowing the implementation described in the Appendix of [27]. The vehicle dynamics are modeled using a nonlinear kinematic bicycle model, which captures realistic motion behavior during simulation. 
+
+A. HMDP Formulation for SVs 
+
+To capture the maneuver planning of the SVs, the i-th SV’s discrete action at time step k is denoted by asv,i k =(alat ,i k , a long ,i k ), where the two elements represent the lateral and longitudinal action, respectively. The lateral component 
+
+alat ,i k includes lane keeping, left lane change, and right lane change, while the longitudinal component along ,i k consists of constant-speed motion, accelerate, and decelerate. The Carte-sian combination of these two maneuver dimensions yields a discrete action space containing nine representative maneuver actions, as summarized in Table I.                      
+
+> TABLE I: Maneuver actions of the SVs
+> Action Symbol (alat ,i , a long ,i )Description
+> a(1) (0, 0) Keep lane at constant speed
+> a(2) (0, 1) Keep lane and accelerate
+> a(3) (0, -1) Keep lane and decelerate
+> a(4) (-1, 0) Change to left lane at constant speed
+> a(5) (-1, 1) Change to left lane and accelerate
+> a(6) (-1, -1) Change to left lane and decelerate
+> a(7) (1, 0) Change to right lane at constant speed
+> a(8) (1, 1) Change to right lane and accelerate
+> a(9) (1, -1) Change to right lane and decelerate
+
+Based on the lane topology and semantic map information, a discrete state set ssv,i k = ( slat ,i k , s long ,i k ) is constructed, where each state encodes the SV’s target lane and longitudinal motion maneuver. In the three-lane road environment, lanes are indexed from left to right as Lane 1, Lane 2, and Lane 3. The complete set of discrete states is listed in Table II. The transitions between different discrete states are illustrated in Table III. The dynamic state vector of the i-th SV at time step k is defined as 
+
+xsv,i k = xsv,i k , y sv,i k , v sv,i x,k 
+
+⊤,
+
+where xsv,i k and ysv,i k denote the longitudinal and lateral positions, respectively, and vsv,i x,k represents the longitudinal JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 8
+
+TABLE II: Maneuver states of the SVs 
+
+State Symbol (slat ,i , s long ,i ) Description 
+
+s(1) (1, 0) Intending to be in Lane 1 with cruise speed 
+
+s(2) (1, 1) Intending to be in Lane 1 with acceleration 
+
+s(3) (1, -1) Intending to be in Lane 1 with deceleration 
+
+s(4) (2, 0) Intending to be in Lane 2 with cruise speed 
+
+s(5) (2, 1) Intending to be in Lane 2 with acceleration 
+
+s(6) (2, -1) Intending to be in Lane 2 with deceleration 
+
+s(7) (3, 0) Intending to be in Lane 3 with cruise speed 
+
+s(8) (3, 1) Intending to be in Lane 3 with acceleration 
+
+s(9) (3, -1) Intending to be in Lane 3 with deceleration Note: Each discrete state represents the EV’s high-level maneuver intent rather than its physical position. For example, a state such as “Intending to be in Lane 2 with acceleration” may indicate that the EV is already in Lane 2 or in the process of changing lanes towards it. TABLE III: State transition mapping of the SVs. 
+
+a(1) a(2) a(3) a(4) a(5) a(6) a(7) a(8) a(9) 
+
+s(1) s(1) s(2) s(3) / / / s(4) s(5) s(6) 
+
+s(2) s(2) / s(1) / / / s(5) / s(4) 
+
+s(3) s(3) s(1) / / / / s(6) s(4) /
+
+s(4) s(4) s(5) s(6) s(1) s(2) s(3) s(7) s(8) s(9) 
+
+s(5) s(5) / s(4) s(2) / s(1) s(8) / s(7) 
+
+s(6) s(6) s(4) / s(3) s(1) / s(9) s(7) /
+
+s(7) s(7) s(8) s(9) s(4) s(5) s(6) / / /
+
+s(8) s(8) / s(7) s(5) / s(4) / / /
+
+s(9) s(9) s(7) / s(6) s(4) / / / /Note: Each row corresponds to the current discrete state s(p), and each column represents a possible action a(q). The table entry indicates the next state s(r) reached when action a(q) is executed at state s(p).For example, when the system is in state s(1) , executing a(1) keeps it in s(1) , while executing a(2) leads to s(2) . “/” denotes infeasible transitions that violate physical or logical constraints. 
+
+velocity. The dynamic state evolves according to the following discrete-time prediction model: 
+
+xsv,i k+1 |k = Asv,i k (alat ,i k ) xsv,i k|k + Bsv,i k (alat ,i k ) Fik + wik,
+
+where Asv,i k and Bsv,i k are the state and input matrices deter-mined by the discrete lateral action alat ,i k . The disturbance wik
+
+is modeled as zero-mean Gaussian noise, and its propagation over the prediction horizon is computed using (10). The vector 
+
+Fik =
+
+"
+
+ax(slong ,i k )
+
+uy (alat ,i k )
+
+#
+
+represents a hypothetical control signal, where ax denotes the nominal longitudinal acceleration determined by the current longitudinal mode slong ,i k ∈ {− 1, 0, 1}. Each mode corresponds to a representative average acceleration value that reflects the driver’s decision to decelerate, maintain speed, or accel-erate, while uy is a virtual lateral control generated by a proportional-derivative (PD) law: 
+
+uiy,k = K1
+
+ yref − ysv,i k
+
+ + K2
+
+ vy, ref − v iy,k 
+
+,
+
+with v iy,k is the lateral velocity. The action-dependent matrices are defined as 
+
+Asv (LK ) = 
+
+1 0 Th
+
+0 1 00 0 1
+
+ , Bsv (LK ) = 
+
+ 
+
+> 12
+
+T 2 
+
+> h
+
+00 0
+
+Th 0
+
+ ,
+
+and for lane-change maneuvers (both left and right): 
+
+Asv (LC ) = 
+
+
+
+1 0 Th
+
+0 1 − 12 K1T 2 
+
+> h
+
+00 0 1
+
+ ,
+
+Bsv (LC ) = 
+
+ 
+
+> 12
+
+T 2 
+
+> h
+
+00 12 T 2
+
+> h
+
+Th 0
+
+ .
+
+Accordingly, the pair  Asv,i k , B sv,i k
+
+ is selected as 
+
+ Asv,i k , Bsv,i k
+
+ =
+
+ ALK , BLK 
+
+, alat ,i k = 0 ,
+
+ ALC , BLC 
+
+, alat ,i k ∈ {− 1, 1}.
+
+Based on the above model, the potential maneuvers and corresponding dynamic evolution of the SVs are predicted and subsequently utilized for safety assessment. 
+
+Remark 10 . In this formulation, the lateral action alat ,i k and the longitudinal state slong ,i k jointly serve as the basis for predicting the state evolution, rather than relying solely on either actions or states. This design choice reflects the underlying semantics of driving behaviors: lateral dynamic states evolution depend on whether a lane-change action occurs, rather than on the specific lane identity; whereas longitudinal dynamic states evolution depends on the ongoing maneuver state, being in an accelerating or decelerating phase, rather than on the instant of initiating such actions. A similar principle is reflected in the subsequent cost-function design. 
+
+B. HMDP Formulation for EV 
+
+The MDP formulation of the EV follows a similar modeling principle to that of the SVs, encompassing the definition of discrete maneuver states, admissible actions, and transition rules. Specifically, the discrete state and action of the EV are denoted as 
+
+sea k = ( slat  
+
+> k
+
+, s long  
+
+> k
+
+), aea k = ( alat  
+
+> k
+
+, a long  
+
+> k
+
+).
+
+Note that the subscript i is omitted for the EV since there is only one EV. The subscript i is reserved for SVs to distinguish multiple surrounding agents. Thus, the presence or absence of 
+
+i indicates whether the variable refers to SVs or the EV. The EV’s discrete states and actions share the same struc-tural definitions as those of the SVs, following Tables I and II. Their transitions are governed by the same rule set summarized in Table III. The dynamic state of the EV is subsequently expressed as 
+
+xev k = xev k , y ev k , v ev x,k 
+
+⊤,
+
+where xev,i k and yev,i k denote the longitudinal and lateral positions of EV, respectively, and vev,i x,k is its longitudinal velocity. Given a high-level sampling period Th, the state evolution for prediction is described by 
+
+xev k+1 |k = Aev xev k|k + Bev  alat  
+
+> k
+
+, s long 
+
+> k+1
+
+, (23) JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 9
+
+where the system and input matrices are defined as 
+
+Aev =
+
+1 0 Th
+
+0 1 00 0 1
+
+ , Bev  alat  
+
+> k
+
+, s long 
+
+> k+1
+
+ =
+
+
+
+12 slong  
+
+> k+1
+
+aave T 2
+
+> h
+
+∆yk
+
+slong  
+
+> k+1
+
+aave Th
+
+ ,
+
+with aave denoting the nominal longitudinal acceleration mag-nitude. The lateral displacement ∆yk is generated following a fifth-order polynomial lane-change profile: 
+
+∆yk = alat  
+
+> k
+
+rd
+
+c1τ3(k) + c2τ4(k) + c3τ5(k),
+
+where rd is the lane width, c1, c 2, c 3 are fixed coefficients, and τi(k) denotes the normalized polynomial basis function of order i corresponding to the longitudinal maneuver. In summary, the above equations couple the discrete vari-ables  alat  
+
+> k
+
+, s long 
+
+> k+1
+
+ with the dynamics, thereby enabling consis-tent motion prediction across all high-level maneuver modes. 
+
+C. Cost Function 
+
+The cost function serves as an interface between human driving preferences and the EV’s decision-making process. It encodes subjective priorities across different maneuver combinations and transfers them to the autonomous vehicles. As discussed earlier, the EV’s state evolution is primarily governed by the lateral action alat  
+
+> k
+
+and the longitudinal state 
+
+slong  
+
+> k
+
+. To systematically represent all possible combinations of these variables and ensure a unified, unbiased evaluation during optimization, a one-hot representation is adopted for both the lateral and longitudinal variables. For the longitudinal dimension, the one-hot vector  sacc 
+
+> k+1
+
+, s cru 
+
+> k+1
+
+, s dec 
+
+> k+1
+
+ corresponding to acceleration, cruising, and deceleration, respectively, is defined, We then impose the following mode-consistency constraint: 
+
+slong  
+
+> k+1
+
+= sacc  
+
+> k+1
+
+− sdec 
+
+> k+1
+
+,
+
+which ensures that the longitudinal mode used in the prediction dynamics (23) matches the discrete mode selected by the optimizer, where selecting  sacc 
+
+> k+1
+
+, s cru 
+
+> k+1
+
+, s dec 
+
+> k+1
+
+ activates the corresponding dynamic submodel. Similarly, for the lateral dimension, a one-hot vector  aleft  
+
+> k
+
+, a keep  
+
+> k
+
+, a right 
+
+> k
+
+, corresponding to left lane change, lane keeping, and right lane change, respectively, is defined. The following constraint is then imposed: 
+
+alat  
+
+> k
+
+= aright  
+
+> k
+
+− aleft  
+
+> k
+
+,
+
+which ensures that the lateral action used in the prediction dynamics (23) matches the action variable selected in the cost function, where choosing  aleft  
+
+> k
+
+, a keep  
+
+> k
+
+, a right 
+
+> k
+
+ activates the corresponding dynamic submodel. 
+
+Remark 11 . In the MPC optimization, directly using the discrete variables alat  
+
+> k
+
+, s long  
+
+> k+1
+
+∈ {− 1, 0, 1} may introduce nu-merical bias, as the cost minimization tend to favor negative-valued modes (e.g., alat  
+
+> k
+
+= −1), which appear to lower the objective value. The one-hot formulation removes this imbalance by assigning binary indicators (1 for the selected mode and 0 otherwise), enabling all maneuver options to be evaluated fairly within a unified cost structure. The cost function is then defined over the prediction horizon as 
+
+Jev =
+
+> H
+
+X
+
+> k=1 3
+
+X
+
+> m=1 3
+
+X
+
+> n=1
+
+cm,n a(n) 
+
+> k
+
+s(m)
+
+> k+1
+
+, (24) where:  
+
+> •
+
+a(n) 
+
+> k
+
+∈ { aleft  
+
+> k
+
+, a keep  
+
+> k
+
+, a right  
+
+> k
+
+} denotes the lateral action at time step k; 
+
+> •
+
+s(m) 
+
+> k+1
+
+∈ { sacc 
+
+> k+1
+
+, scru 
+
+> k+1
+
+, sdec 
+
+> k+1
+
+} denotes the longitudinal maneuver state at the next time step;  
+
+> •
+
+cm,n is the cost coefficient associated with the (m, n )-th maneuver combination. These cost coefficients cm,n encode the relative preference among different maneuver pairs in the decision-making pro-cess. Stable and smooth driving behaviors, such as lane keep-ing combined with cruising, are assigned smaller coefficients, making them more likely to be selected. Conversely, aggres-sive combinations, such as lane changing while decelerating, are assigned larger coefficients, discouraging their selection unless necessary. 
+
+D. Safety Constraints 
+
+Safety constraints are formulated to guarantee that the EV maintains a sufficient longitudinal separation from SVs. These constraints are conditionally activated based on the maneuver states. Specifically, a safety constraint is enforced whenever the EV and a SV share the same intended target lane, i.e., 
+
+slat ,i k+1 |k = slat 
+
+> k+1 |k
+
+.
+
+We begin with the standard chance-constraint formulation defined in (13), and specify the constraint function as 
+
+h xev k+1 |k, x sv,i k+1 |k
+
+ = xev k+1 |k − xsv,i k+1 |k − dsafe .
+
+Accordingly, the chance constraint is expressed as 
+
+P
+
+
+
+h xev k+1 |k, x sv,i k+1 |k
+
+ ≥ 0
+
+
+
+≥ 1 − ϵ, 
+
+which enforces that the predicted longitudinal separation sat-isfies the safety margin dsafe with confidence level 1 − ϵ.As xsv,i k+1 |k follows a Gaussian distribution while xev k+1 |k is deterministic, the relative distance ∆xk+1 |k = xev k+1 |k −xsv,i k+1 |k
+
+also follows a Gaussian distribution with mean and variance 
+
+μ∆,k +1 |k = xev k+1 |k − ¯xsv,i k+1 |k, Q∆,k +1 |k = Qsv,i k+1 |k.
+
+where ¯xsv,i k+1 |k represents the predicted mean position of the i-th SV. Consequently, the chance constraint can be reformulated into the following deterministic inequality: 
+
+μ∆,k +1 |k ≥ dsafe + zϵ
+
+q
+
+Q∆,k +1 |k.
+
+When the EV is predicted to be following the SV, the con-straint takes the symmetric form: 
+
+−μ∆,k +1 |k ≥ dsafe + zϵ
+
+q
+
+Q∆,k +1 |k.
+
+This completes the deterministic reformulation of the safety constraint, enabling its direct incorporation into the MPC optimization framework. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 10 
+
+E. Case 1: Validation under Lateral Maneuver Uncertainty 
+
+In this scenario, the SVs are assumed to maintain a constant longitudinal velocity to isolate the effect of lateral uncertainty, and the resulting EV decisions are analyzed accordingly. 
+
+1) Scenario Description: A three-lane urban expressway scenario is examined, where the EV (depicted in red) initially cruises in the middle lane at a constant speed. Two SVs are initialized in the left and right lanes, respectively. Each SV has two potential lateral maneuvers: (i) to maintain cruising in its current lane, or (ii) to perform a lane change into the middle lane. Their predicted trajectories under different maneuvers are illustrated in different colors. The ellipses along the predicted trajectories visualize the propagated uncertainty, and are constructed from the covariance matrices associated with each predicted state. 
+
+2) Key Parameters: The key simulation parameters and initial conditions of the vehicles are summarized in Tables IV and V, respectively.                                                 
+
+> TABLE IV: Simulation and vehicle parameters (Case 1)
+> Parameter Description Value
+> Tsim Simulation duration 50 s
+> TlLow-level control sampling period 0.2 s
+> ThHigh-level decision update period 0.8 s
+> HHigh-level prediction horizon 3 steps (2.4 s)
+> wlane Lane width 4 m
+> dsafe Minimum longitudinal safe distance 40 m
+> K1, K 2PD gains for lateral control 3, 1
+> aavg Nominal acceleration magnitude ∗2 m/s 2
+> δCumulative probability threshold 10 −5
+> cmn Cost coefficients in (24)
+> 65620211 911
+> 
+> ∗Positive value denotes acceleration; a negative value (not shown) would indicate the same magnitude of deceleration. TABLE V: Initial conditions (Case 1)
+> Vehicle Initial Lane x0(m) y0(m) v0(m/s) EV (red) Lane 2 35 020 SV1 (blue) Lane 1 100 415 SV2 (green) Lane 3 60 -4 19
+
+3) Observations and Results: The simulation results demonstrate the EV’s adaptive maneuvering behavior in re-sponse to the SVs’ lateral-maneuver uncertainty. Figure 3 presents six snapshots of the traffic scene. Each snapshot corresponds to the state resulting from the decisions taken at the sampling instants marked by yellow circles in Fig. 4. Initially, the EV (red) cruises in Lane 2 at a constant speed. Because both SVs are predicted to merge into Lane 2, the EV refrains from a straightforward overtaking maneuver. As the simulation progresses, the right-lane vehicle (green) gradually passes the left-lane vehicle (blue). Aware of this evolution, the EV performs a lane change to Lane 3, positions itself behind the faster SV, and temporarily follows it to benefit from its higher speed. After the green SV overtakes the blue SV, the EV returns to Lane 1 and resumes cruising. Fig. 4 depicts the evolution of the EV’s discrete MDP states and selected actions in Case 1. The upper subplot shows the     
+
+> Fig. 3: Snapshots of the EV (red) at six representative time instants. Each snapshot shows the vehicle state at tk+1 resulting from the decision computed at the sampling instant tkmarked in Fig. 4. Subfigures (a)–(f) correspond to 12.2, 21.0, 23.4, 29.8, 30.6, and 41.0 s, respectively.
+
+lateral decisions, while the lower subplot displays the longitu-dinal decisions. The yellow circles mark the sampling instants at which decisions are computed. The resulting continuous states at the subsequent sampling instants are visualized in Fig. 3. The complete trajectories of the EV (red) and both SVs (blue and green) are given in Fig. 5. 
+
+> Fig. 4: Time histories of the EV’s lateral (top) and longitudinal (bottom) MDP states and actions in Case 1. Yellow circles indicate the sampling instants at which the six decisions are taken, while Fig. 3 shows the resulting states at the next sampling instants.
+> Fig. 5: Complete EV trajectory in Case 1.
+
+In summary, Case 1 focuses on the framework’s response to lateral-maneuver uncertainty from SVs. The results show that the EV can anticipate and adapt to uncertain lane-change behaviors of neighboring vehicles while maintaining safe distances and smooth motion, confirming the framework’s ability to handle lateral interaction uncertainty effectively. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 11 
+
+F. Case 2: Validation under Longitudinal Maneuver Uncer-tainty 
+
+In Case 1, the focus was on the uncertainty in the SVs’ lat-eral maneuvers. In this case, the analysis shifts to longitudinal uncertainty, specifically variations in velocity, to examine how the EV adapts its decisions to changing traffic dynamics. 
+
+1) Scenario Description: This scenario is set on a three-lane expressway, where Lane 3 is typically reserved for heavy trucks. As a result, the EV tends to avoid this lane unless under unavoidable circumstances. Two SVs are involved: one drives ahead of the EV in Lane 2, while the other occupies the adjacent Lane 1. Each vehicle is assumed to exhibit one of three possible longitudinal maneuvers: cruising, accelerating, or decelerating. The EV must evaluate the potential maneuvers of both SVs and determine whether to follow, overtake, or maintain its current maneuver. 
+
+2) Key Parameters: Most parameters remain consistent with Case 1; however, the minimum safety distance is in-creased to 75 m, while the low-level sampling period and the high-level decision update period are adjusted to 0.15 s and 0.6 s, respectively, to account for the higher vehicle speeds in this scenario. The initial conditions of the vehicles are summarized in Table VI.                    
+
+> TABLE VI: Initial conditions (Case 2)
+> Vehicle Initial Lane x0(m) y0(m) v0(m/s) EV (red) Lane 2 35 030 SV1 (blue) Lane 1 0425 SV2 (green) Lane 2 150 025
+
+3) Observations and Results: Fig. 6 and Fig. 7 jointly illustrate the EV’s behavior under longitudinal uncertainty arising from the SVs’ velocity variations. The EV adapts its strategy dynamically in response to these changes. In Fig. 6, the colored strips represent the predicted longitudi-nal trajectories of SVs under different maneuver modes: green for deceleration, purple for cruising, and red for acceleration. The transparency of each strip encodes the likelihood of the corresponding mode, with deeper color indicating higher probability. We assume that the SV1 (blue) initially cruises with a high probability of 0.9 in Lane 1, while the acceleration and deceleration modes each have a probability of 0.05 before 
+
+t = 7 .8 s. After t = 7 .8 s, the dominant mode switches to acceleration with 0.9 probability. For the SV2 (green) in Lane 2, the cruise mode remains dominant throughout the entire episode with a fixed probability of 0.8, while the acceleration and deceleration modes each retain a probability of 0.1. As shown in Fig. 6, initially, the EV accelerates to initiate an overtaking maneuver while the rear vehicle in the target lane (SV1) maintains a cruising speed. During the lane-change process, SV1 continues to accelerate and close in from behind, prompting the EV to perform a secondary acceleration to maintain a safe separation before completing the maneuver. After overtaking the slower leading vehicle (SV2), the EV gradually reduces its speed to return toward the desired cruis-ing velocity. When the faster SV1 approaches from behind, the EV proactively returns to the middle lane, effectively yielding the overtaking lane while maintaining sufficient safety margins. The corresponding velocity profile is shown in Fig. 7(solid lines), which captures these adaptive behaviors, with five key decision points, marked by yellow circles, indicating distinct speed transitions associated with maneuver changes. The complete spatial trajectory is depicted in Fig. 8, where the path marked with red circles confirms that the EV successfully executes the overtaking maneuver and returns to the original lane. In summary, Case 2 demonstrates that the proposed frame-work is also capable of producing optimal decisions under longitudinal uncertainty, ensuring both safety and efficiency. The EV’s decision-making mechanism has been validated under both isolated lateral and longitudinal uncertainties in Case 1 and Case 2, respectively. Since the longitudinal and lateral components are formulated within the same decision-making architecture, considering them jointly only increases the dimensionality of the optimization. Consequently, the proposed framework can be readily extended to scenarios in which lateral and longitudinal uncertainties coexist. 
+
+> Fig. 6: Snapshots of EV maneuver at six key decision moments under longitudinal uncertainty. Subfigures (a)-(f) correspond to the time points 0.00 s, 5.85 s, 12.45 s, 14.85 s, 29.25 s, and 36.15 s, respectively.
+
+4) Comparison with Rule-Based Method: To highlight the performance distinctions between the proposed framework and conventional reactive strategies, we compare it against a rule-based method based on the IDM [32] and MOBIL models [33] 1. Fig. 7-Fig. 9 present the comparative results under this baseline. Fig. 9 illustrates six snapshots of the traffic scene at key decision moments under the rule-based baseline. Initially, the EV maintains cruising in Lane 2 while SV1 in the adjacent lane is cruising. At t = 5 .85 s, the EV initiates a lane-change maneuver toward Lane 1. When t = 7 .8 s, SV1 has begun to accelerate (see Fig. 7 dashed lines) and is continuously            
+
+> 1The implementation details and simulation code for the rule-based baseline are available at: https://github.com/SIYUANLI2023/IDM-MOBIL/tree/main. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 12
+> Fig. 7: Comparison of velocity profiles between the proposed HMDP-MPC framework (solid lines) and the rule-based baseline (dashed lines). The markers indicate key decision moments corresponding to the snapshots in Fig. 6 and Fig. 9.
+> Fig. 8: Comparison of EV trajectories in Case 2. The red circles denote the EV trajectory under the proposed HMDP-MPC framework, and the yellow triangles denote the EV trajectory under the rule-based baseline.
+
+closing in from behind while the EV is lane changing. De-spite the decreasing gap, the EV continues the lane-change maneuver without adjustment, leading SV1 to perform an abrupt deceleration to avoid a potential collision. The EV then completes the lane change and overtakes the slower leading vehicle (SV2). However, after overtaking, it continues cruising in the overtaking lane without autonomously returning to its original lane (see Fig. 8 yellow triangles). Compared with the proposed HMDP-MPC framework, sev-eral distinct differences can be identified: 
+
+a) Efficiency: During the 45 s simulation, the EV and SV1 under the rule-based baseline cover approximately 1250 m and 1150 m, respectively, whereas in the proposed framework they reach about 1400 m and 1300 m, respec-tively. This indicates that the proposed approach achieves higher motion efficiency by anticipating future interactions and maintaining smoother velocity evolution without oscillatory corrections. 
+
+b) Underlying mechanism difference: Rule-based strate-gies rely on explicitly defined instructions that specify what an agent should do under given conditions (e.g., “if the vehicle ahead is close, then decelerate”). In the considered rule-based baseline, no rule is defined for situations where a vehicle rapidly approaches from behind during lane change process. As a result, the EV fails to adjust its behavior in time, forcing the following vehicle to perform abrupt deceleration and leaving the EV occupying the overtaking lane without yielding. In contrast, the proposed framework specifies what the agent must not do by formulating safety constraints (e.g., “the inter-vehicle distance must not fall below a threshold”). These con-straints are inherently embedded in the optimization process, allowing the EV to automatically select feasible actions that satisfy safety requirements without additional decision rules. 
+
+> Fig. 9: Snapshots of EV maneuver under the rule-based method at six decision moments. Subfigures (a)-(f) correspond to the time points 0.00 s, 5.85 s, 7.80 s, 12.45 s, 18.00 s, and 29.25 s, respectively.
+
+Even when the following vehicle accelerates unexpectedly, the EV naturally adapts its maneuver within the safe constraint set, thereby demonstrating a higher level of autonomy. Furthermore, the proposed framework enables proactive responses to potential interactions before they occur. This predictive capability prevents sudden braking or unnecessary lane occupation, resulting in both safer and more efficient maneuvers compared with the reactive rule-based controller. 
+
+G. Case 3: Risk Threshold Analysis in Urban Environments 
+
+To systematically examine the effect of the risk threshold ϵ
+
+on the EV’s decision-making process, we construct an urban scenario and compare the resulting maneuvers under different risk levels. 
+
+1) Scenario Description: The scenario emulates an urban road segment characterized by lower velocities. The EV is ini-tially positioned in Lane 1, accompanied by two SVs. Owing to the complexity of urban environments, shorter control and decision intervals are adopted to enable timely responses. In this scenario, the EV is simulated under multiple risk thresholds ϵ. The resulting trajectories are visualized within a single figure, where each trajectory is distinguished by a unique outline color corresponding to a specific ϵ value. This setup facilitates a direct comparison of how varying risk sensitivity affects the timing and position of the lane change maneuver under identical environmental conditions. Additionally, a relatively large cumulative probability threshold ( δ = 0 .2) is adopted, such that for each SV only the most probable maneuver (longitudinal cruising in the current lane) is retained. 
+
+2) Key Parameters: The simulation and vehicle parameters are summarized in Table VII, and the initial conditions of all agents are listed in Table VIII. JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 13                                    
+
+> TABLE VII: Simulation and vehicle parameters (Case 3)
+> Parameter Description Value
+> Tsim Simulation duration 5 s
+> TlLow-level sampling period 0.02 s
+> ThHigh-level update period 0.08 s
+> dsafe Minimum longitudinal safe distance 6 m
+> Qxy Covariance in (x, y )dimensions diag {0.9, 0.9 }
+> δCumulative probability threshold 0.2 TABLE VIII: Initial conditions (Case 3)
+> Vehicle Initial Lane x0(m) y0(m) v0(m/s) EV Lane 1 90 410 SV 1 (blue) Lane 1 100 48SV-Right (green) Lane 2 60 09
+
+3) Observations and Results: Fig. 10 illustrates the EV’s decision-making process during the stage of a lane-change maneuver under five different risk thresholds. Each subfigure corresponds to the system state at t = 0 , 1, 2, 3, and 4 seconds, respectively. As shown in the figure, the choice of 
+
+ϵ has a significant impact on the timing and spatial position of the lane change decision. Smaller values of ϵ prompt earlier decisions both temporally and longitudinally, reflecting a more conservative planning maneuver. Conversely, larger risk thresholds delay the maneuver initiation, as the planner tolerates a higher level of uncertainty before executing the action. A more quantitative comparison of the lane change timing and position under different risk levels is provided in Fig. 11.     
+
+> Fig. 10: Lane change decision under different risk thresholds ϵ. Subfigures (a)-(e) correspond to t= 0 -4s, respectively.
+
+In summary, Case 3 focuses on validating the framework’s risk-aware planning behavior under different safety confidence    
+
+> Fig. 11: First lane change decision under different risk probabilities: lane change position xLC and decision time tLC .
+
+levels. As the chance-constraint confidence parameter ϵ varies, the EV adapts its trajectory to trade off between conser-vativeness and efficiency, demonstrating that the proposed formulation enables explicit regulation of interaction risk in probabilistic terms. 
+
+Remark 12 . The policy of SVs are predefined and not the focus of this study. Accordingly, the cumulative probability thresholds δseq is manually selected to balance scenario cov-erage. Small values are used in Case 1 and Case 2 to preserve all plausible behaviours, while a higher threshold is used in Case 3 to simplify analysis. Collectively, the three cases validate the proposed frame-work’s effectiveness across different layers of uncertainty and risk. Case 1 and Case 2 demonstrate reliable decision-making under isolated lateral and longitudinal uncertainties, respectively, with Case 2 further highlighting the key dif-ference in decision-making philosophy between the proposed framework and a conventional rule-based approach. Case 3 verifies that the chance-constraint formulation can explicitly regulate probabilistic risk in the integrated optimization. To-gether, these results confirm the framework’s capability for safe, adaptive, and risk-aware decision-making in complex driving environments. V. C ONCLUSION 
+
+This paper presents a decision-making framework for au-tonomous systems operating under uncertainty. SAs are mod-eled using HMDPs, which capture both maneuver-level and dynamic-level uncertainty, thereby enabling multi-modal pre-dictions of future behaviors. At the decision layer, an HMDP-MPC framework is developed that unifies the EA’s maneuver selection with dynamic feasibility within a single optimiza-tion process. Environment-derived multi-modal predictions are explicitly incorporated into the optimization via joint chance constraints to ensure probabilistic safety. Theoretical analysis establishes recursive feasibility and asymptotic stability of the proposed MPC scheme. Simulation studies based on autonomous driving scenarios validate the effectiveness of the proposed framework in un-certain traffic environments and further investigate the influ-ence of varying risk thresholds on decision-making behavior. Comparative evaluations against rule-based baselines highlight JOURNAL OF L ATEX CLASS FILES, VOL. 14, NO. 8, DEC 2025 14 
+
+the fundamental differences in decision-making philosophy, demonstrating the proposed framework’s capability in antici-pation and autonomous operation. Future work will focus on probabilistic prediction of ma-neuver modes to learn more accurate distributions over MDP states, enabling more robust multi-modal reasoning and im-proving the reliability of decision-making in uncertain and dynamic environments. REFERENCES [1] Y. Yang, N. M. Negash, and J. Yang, “Recent advances in interactive driving of autonomous vehicles: Comprehensive review of approaches,” 
+
+Automotive Innovation , pp. 1–31, 2025. [2] N. Uhlemann, F. Fent, and M. Lienkamp, “Evaluating pedestrian tra-jectory prediction methods with respect to autonomous driving,” IEEE Transactions on Intelligent Transportation Systems , 2024. [3] J. Ivanchev, D. Eckhoff, and A. Knoll, “System-level optimization of longitudinal acceleration of autonomous vehicles in mixed traffic,” in 2019 IEEE Intelligent Transportation Systems Conference (ITSC) .IEEE, 2019, pp. 1968–1974. [4] H. Bai, S. Cai, N. Ye, D. Hsu, and W. S. Lee, “Intention-aware online pomdp planning for autonomous driving in a crowd,” in 2015 ieee international conference on robotics and automation (icra) . IEEE, 2015, pp. 454–460. [5] Y. Chen, G. Yan, H. Yu, and J. Xi, “Intention-guided heuristic par-tially observable monte carlo planning for off-ramp decision-making of autonomous vehicles,” IEEE Transactions on Intelligent Transportation Systems , 2025. [6] W. Wang, T. Qie, C. Yang, W. Liu, C. Xiang, and K. Huang, “An intel-ligent lane-changing behavior prediction and decision-making strategy for an autonomous vehicle,” IEEE transactions on industrial electronics ,vol. 69, no. 3, pp. 2927–2937, 2021. [7] L. Li, R. Yang, M. Lv, A. Wu, and Z. Zhao, “From behavior to natural language: Generative approach for unmanned aerial vehicle intent recognition,” IEEE Transactions on Artificial Intelligence , vol. 5, no. 12, pp. 6196–6209, 2024. [8] Y. Zhang, W. Guo, J. Su, P. Lv, and M. Xu, “Bip-tree: Tree variant with behavioral intention perception for heterogeneous trajectory prediction,” 
+
+IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 9, pp. 9584–9598, 2023. [9] A. Carvalho, Y. Gao, S. Lefevre, and F. Borrelli, “Stochastic predictive control of autonomous vehicles in uncertain environments,” in 12th international symposium on advanced vehicle control , vol. 9, 2014. [10] W. Xu, J. Pan, J. Wei, and J. M. Dolan, “Motion planning under un-certainty for on-road autonomous driving,” in 2014 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2014, pp. 2507–2512. [11] Q. Xu, Y. Liu, J. Pan, J. Wang, J. Wang, and K. Li, “Reachability analysis plus satisfiability modulo theories: An adversary-proof control method for connected and autonomous vehicles,” IEEE Transactions on Industrial Electronics , vol. 70, no. 3, pp. 2982–2992, 2022. [12] A. Shetty and G. X. Gao, “Predicting state uncertainty for gnss-based uav path planning using stochastic reachability,” in Proceedings of the 32nd International Technical Meeting of the Satellite Division of The Institute of Navigation (ION GNSS+ 2019) , 2019, pp. 131–139. [13] S. Li, C. Wei, and Y. Wang, “Combining decision making and trajectory planning for lane changing using deep reinforcement learning,” IEEE Transactions on Intelligent Transportation Systems , vol. 23, no. 9, pp. 16 110–16 136, 2022. [14] Z. Ma, H. Gong, and X. Wang, “Multiagent trajectory decision-making for complex systems based on transformer large model structure,” 
+
+International Journal of Robust and Nonlinear Control , 2024. [15] J. Wang, J. Guo, M. Feng, C. Li, X. Xue, and J. Pu, “Trajectory grid diffusion for multimodal trajectory prediction in autonomous vehicles,” 
+
+IEEE Transactions on Intelligent Vehicles , 2024. [16] B. Ivanovic, K. Leung, E. Schmerling, and M. Pavone, “Multimodal deep generative models for trajectory prediction: A conditional variational autoencoder approach,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 295–302, 2020. [17] L. Pickering, K. Cohen, and B. De Baets, “A narrative review on the interpretability of fuzzy rule-based models from a modern interpretable machine learning perspective,” International Journal of Fuzzy Systems ,pp. 1–20, 2025. [18] C. Xu, W. Zhao, J. Liu, C. Wang, and C. Lv, “An integrated decision-making framework for highway autonomous driving using combined learning and rule-based algorithm,” IEEE Transactions on Vehicular Technology , vol. 71, no. 4, pp. 3621–3632, 2022. [19] H.-Y. Kang, J.-G. Lu, K.-X. Li, Q.-H. Zhang, and Y. Wang, “A decision-making algorithm of multiple reactive tasks for autonomous driving sweepers based on behavior trees,” IEEE/ASME Transactions on Mechatronics , 2025. [20] Z. Zhang, H. Li, T. Chen, N. Sze, W. Yang, Y. Zhang, and G. Ren, “Decision-making of autonomous vehicles in interactions with jay-walkers: A risk-aware deep reinforcement learning approach,” Accident Analysis & Prevention , vol. 210, p. 107843, 2025. [21] J. Wu, Z. Wang, Y. Song, X. Zhou, and L. Cheng, “A reinforcement learning-assisted search and rescue resource allocation decision-making approach for maritime emergencies,” Computers & Industrial Engineer-ing , p. 110933, 2025. [22] A. Andreychuk, K. Yakovlev, A. Panov, and A. Skrynnik, “Mapf-gpt: Imitation learning for multi-agent pathfinding at scale,” in Proceedings of the AAAI Conference on Artificial Intelligence , vol. 39, no. 22, 2025, pp. 23 126–23 134. [23] T. Yang, Y. Chen, S. Cheng, X. Wang, and X. Zhang, “Optimization of jamming type selection for countering multifunction radar based on generative adversarial imitation learning,” IEEE Access , 2025. [24] Z. Wang, X. Jin, T. Zhang, J. Li, D. Yu, K. H. Cheong, and C. P. Chen, “Expert system-based multiagent deep deterministic policy gradient for swarm robot decision making,” IEEE Transactions on Cybernetics ,vol. 54, no. 3, pp. 1614–1624, 2022. [25] A. Caregnato-Neto, M. R. Maximo, and R. J. Afonso, “Real-time motion planning and decision-making for a group of differential drive robots under connectivity constraints using robust mpc and mixed-integer programming,” Advanced Robotics , vol. 37, no. 5, pp. 356–379, 2023. [26] K. Yang, S. Li, M. Wang, and X. Tang, “Interactive decision-making integrating graph neural networks and model predictive control for autonomous driving,” IEEE Transactions on Intelligent Transportation Systems , 2025. [27] X.-F. Wang, J. Jiang, and W.-H. Chen, “High-level decision making in a hierarchical control framework: Integrating hmdp and mpc for autonomous systems,” IEEE Transactions on Cybernetics , 2025. [28] S. Li, C. Liu, and W.-H. Chen, “An integrated mpc decision-making method based on mdp for autonomous driving in urban traffic,” in 2024 6th International Conference on Industrial Artificial Intelligence (IAI) .IEEE, 2024, pp. 1–6. [29] G. C. Calafiore and L. E. Ghaoui, “On distributionally robust chance-constrained linear programs,” Journal of Optimization Theory and Ap-plications , vol. 130, no. 1, pp. 1–22, 2006. [30] K. Shu, M. Ning, A. R. Alghooneh, S. Li, M. Pirani, and A. Khajepour, “Decision making in urban traffic: A game theoretic approach for autonomous vehicles adhering to traffic rules,” IEEE Transactions on Intelligent Transportation Systems , 2025. [31] M. Vitelli, Y. Chang, Y. Ye, A. Ferreira, M. Wołczyk, B. Osi´ nski, M. Niendorf, H. Grimmett, Q. Huang, A. Jain et al. , “Safetynet: Safe planning for real-world self-driving vehicles using machine-learned policies,” in 2022 International Conference on Robotics and Automation (ICRA) . IEEE, 2022, pp. 897–904. [32] M. Treiber, A. Hennecke, and D. Helbing, “Congested traffic states in empirical observations and microscopic simulations,” Physical review E ,vol. 62, no. 2, p. 1805, 2000. [33] A. Kesting, M. Treiber, and D. Helbing, “General lane-changing model mobil for car-following models,” Transportation Research Record , vol. 1999, no. 1, pp. 86–94, 2007.
