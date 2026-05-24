@@ -3076,20 +3076,9 @@ article.markdown-section {
   border-bottom: 1px solid rgba(21, 101, 192, 0.12);
 }
 
-#arxiv-search-panel.is-conference-tab .dpr-display-card,
-#arxiv-search-panel.is-conference-tab .dpr-input-card {
-  background: #ffffff;
-  border: 1px solid rgba(21, 101, 192, 0.08);
-  border-radius: 16px;
-  box-shadow: 0 8px 22px rgba(21, 101, 192, 0.06);
-}
-
 #arxiv-search-panel.is-conference-tab .dpr-display-card {
-  padding: 8px;
-}
-
-#arxiv-search-panel.is-conference-tab .dpr-input-card {
-  padding: 8px;
+  border-color: rgba(21, 101, 192, 0.1);
+  box-shadow: 0 8px 22px rgba(21, 101, 192, 0.06);
 }
 
 #arxiv-search-panel-body {
@@ -3710,7 +3699,11 @@ article.markdown-section {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 4px;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(46, 125, 50, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(38, 86, 55, 0.045);
 }
 
 .dpr-input-card {
