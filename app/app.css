@@ -7103,51 +7103,12 @@ body.dpr-sidebar-v2 .content {
   margin: 0;
   padding: 0;
 }
-
-/* 日期 / 会议 折叠头 */
-.dpr-sidebar-day,
-.dpr-sidebar-conf,
-.dpr-sidebar-conf-topic {
-  margin: 0;
-  display: list-item !important;
-}
-.dpr-sidebar-axis-section {
-  display: block !important;
-}
-.dpr-sidebar-day-header,
-.dpr-sidebar-conf-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 14px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font: inherit;
-  color: #334155;
-  text-align: left;
-  transition: background .12s ease;
-}
-.dpr-sidebar-day-header:hover,
-.dpr-sidebar-conf-header:hover {
-  background: #f1f5f9;
-}
 .dpr-sidebar-day-arrow {
   display: inline-block;
   width: 12px;
   font-size: 10px;
   color: #94a3b8;
   transition: transform .15s ease;
-}
-.dpr-sidebar-day.is-expanded > .dpr-sidebar-day-header .dpr-sidebar-day-arrow,
-.dpr-sidebar-conf.is-expanded > .dpr-sidebar-conf-header .dpr-sidebar-day-arrow {
-  transform: rotate(90deg);
-}
-.dpr-sidebar-day-label {
-  flex: 1;
-  font-weight: 500;
-  font-size: 12.5px;
 }
 .dpr-sidebar-day-counts {
   font-size: 11px;
@@ -7158,44 +7119,23 @@ body.dpr-sidebar-v2 .content {
   color: #ef4444;
   font-weight: 600;
 }
-.dpr-sidebar-day.is-all-read .dpr-sidebar-day-unread,
-.dpr-sidebar-conf.is-all-read .dpr-sidebar-day-unread {
+.dpr-sidebar-panel.is-all-read .dpr-sidebar-day-unread,
+.dpr-sidebar-axis-section.is-all-read .dpr-sidebar-day-unread {
   color: #cbd5e1;
   font-weight: 400;
 }
-
-/* 论文列表 */
-.dpr-sidebar-day-papers,
-.dpr-sidebar-topic-papers,
-.dpr-sidebar-conf-topics {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: block !important;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height .2s ease;
+.dpr-sidebar-axis-toggle[disabled] {
+  opacity: 0.45;
+  cursor: default;
 }
-.dpr-sidebar-day.is-expanded > .dpr-sidebar-day-papers,
-.dpr-sidebar-conf.is-expanded > .dpr-sidebar-conf-topics,
-.dpr-sidebar-conf-topic.is-expanded > .dpr-sidebar-topic-papers {
-  max-height: none;
-}
-/* 会议展开时，内部 topic 的论文列表一并展开（topic 不独立折叠；
-   会议折叠时由 .dpr-sidebar-conf-topics 的 max-height:0 统一收纳） */
-.dpr-sidebar-conf.is-expanded .dpr-sidebar-topic-papers {
-  max-height: none;
-}
-.dpr-sidebar-conf-topic-label {
-  padding: 4px 14px 4px 28px;
-  font-size: 11px;
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.dpr-sidebar-conf-topic-count {
-  margin-left: auto;
+.dpr-sidebar-empty {
+  margin: 10px 12px;
+  padding: 10px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
 }
 
 /* 单篇论文 */
@@ -7353,27 +7293,8 @@ body.dpr-sidebar-v2 .content {
 #dpr-sidebar-v2.is-filter-unread .dpr-sidebar-paper[data-read="1"] {
   display: none;
 }
-#dpr-sidebar-v2.is-filter-unread .dpr-sidebar-day.is-all-read,
-#dpr-sidebar-v2.is-filter-unread .dpr-sidebar-conf.is-all-read,
 #dpr-sidebar-v2.is-filter-unread .dpr-sidebar-axis-section.is-all-read {
   display: none;
-}
-.dpr-sidebar-paper[data-search-hidden] {
-  display: none !important;
-}
-.dpr-sidebar-day[data-search-hidden],
-.dpr-sidebar-conf[data-search-hidden],
-.dpr-sidebar-axis-section[data-search-hidden] {
-  display: none !important;
-}
-/* 搜索时强制展开所有可见组 */
-#dpr-sidebar-v2.is-searching .dpr-sidebar-day-papers,
-#dpr-sidebar-v2.is-searching .dpr-sidebar-conf-topics {
-  max-height: none !important;
-}
-#dpr-sidebar-v2.is-searching .dpr-sidebar-day-arrow,
-#dpr-sidebar-v2.is-searching .dpr-sidebar-conf-header .dpr-sidebar-day-arrow {
-  transform: rotate(90deg);
 }
 
 /* 暗色模式 */
@@ -7404,10 +7325,6 @@ body.dpr-dark .dpr-sidebar-filter {
 body.dpr-dark .dpr-sidebar-filter-btn.is-active {
   background: #0f172a;
   color: #f1f5f9;
-}
-body.dpr-dark .dpr-sidebar-day-header:hover,
-body.dpr-dark .dpr-sidebar-conf-header:hover {
-  background: #1e293b;
 }
 body.dpr-dark .dpr-sidebar-paper:hover {
   background: #1e293b;

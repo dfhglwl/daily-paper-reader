@@ -35,6 +35,9 @@ function setupBrowserStub(hash) {
         set innerHTML(value) {
           text = decodeEntities(value).replace(/<[^>]*>/g, '');
         },
+        get innerHTML() {
+          return text;
+        },
         get textContent() {
           return text;
         },
@@ -166,6 +169,108 @@ function testRenderBodyPutsConferenceAboveDaily() {
   assert.ok(html.includes('data-axis-mode="date"'));
 }
 
+function testPanelCountsUseFullModel() {
+  const sidebar = loadSidebarForTest('#/202606/24/paper-a');
+  const tools = sidebar.__test;
+  const model = tools.parseSidebar(sampleSidebar);
+  assert.equal(typeof tools.computeModelReadSummary, 'function');
+
+  const summary = tools.computeModelReadSummary(model, {
+    '202606/24/paper-a': 'read',
+    'conference/neurips-2024/paper-c': 'good',
+  });
+
+  assert.deepEqual(summary.total, { papers: 5, unread: 3 });
+  assert.deepEqual(summary.daily, { papers: 3, unread: 2 });
+  assert.deepEqual(summary.conference, { papers: 2, unread: 1 });
+
+  const html = tools.renderBodyHtml(model, {
+    expandedGroups: { conference: true, daily: true },
+    conferenceViewMode: 'conf',
+    dailyViewMode: 'date',
+    activeConference: 'neurips-2024',
+    activeDailyDate: '20260624',
+    readMap: {
+      '202606/24/paper-a': 'read',
+      'conference/neurips-2024/paper-c': 'good',
+    },
+  });
+  assert.ok(html.includes('<span class="dpr-sidebar-day-unread">1</span>/<span class="dpr-sidebar-day-total">2</span>'));
+  assert.ok(html.includes('<span class="dpr-sidebar-day-unread">2</span>/<span class="dpr-sidebar-day-total">3</span>'));
+}
+
+function testSearchResultsComeFromFullModel() {
+  const sidebar = loadSidebarForTest('#/202606/24/paper-a');
+  const tools = sidebar.__test;
+  const model = tools.parseSidebar(sampleSidebar);
+  assert.equal(typeof tools.buildDailyResultView, 'function');
+
+  const view = tools.buildDailyResultView(model, {
+    keyword: 'paper d',
+    readMap: {},
+    unreadOnly: false,
+  });
+
+  assert.equal(view.resultMode, true);
+  assert.deepEqual(view.groups.map((group) => group.label), ['2026-06-23']);
+  assert.deepEqual(view.groups[0].papers.map((paper) => paper.title), ['Paper D']);
+
+  const html = tools.renderBodyHtml(model, {
+    expandedGroups: { conference: true, daily: true },
+    conferenceViewMode: 'conf',
+    dailyViewMode: 'date',
+    activeConference: 'neurips-2024',
+    activeDailyDate: '20260624',
+    search: 'paper d',
+    filter: 'all',
+    readMap: {},
+  });
+  assert.ok(html.includes('Paper D'));
+  assert.ok(!html.includes('Paper A'));
+  assert.ok(!html.includes('dpr-sidebar-group-conference'));
+  assert.ok(html.includes('dpr-sidebar-group-daily'));
+}
+
+function testSearchNoResultsShowsEmptyState() {
+  const sidebar = loadSidebarForTest('#/202606/24/paper-a');
+  const tools = sidebar.__test;
+  const model = tools.parseSidebar(sampleSidebar);
+
+  const html = tools.renderBodyHtml(model, {
+    expandedGroups: { conference: true, daily: true },
+    conferenceViewMode: 'conf',
+    dailyViewMode: 'date',
+    activeConference: 'neurips-2024',
+    activeDailyDate: '20260624',
+    search: 'not in sidebar',
+    filter: 'all',
+    readMap: {},
+  });
+
+  assert.ok(!html.includes('dpr-sidebar-group-conference'));
+  assert.ok(!html.includes('dpr-sidebar-group-daily'));
+  assert.ok(html.includes('dpr-sidebar-empty'));
+}
+
+function testUnreadResultsComeFromFullModel() {
+  const sidebar = loadSidebarForTest('#/202606/24/paper-a');
+  const tools = sidebar.__test;
+  const model = tools.parseSidebar(sampleSidebar);
+  assert.equal(typeof tools.buildDailyResultView, 'function');
+
+  const view = tools.buildDailyResultView(model, {
+    keyword: '',
+    readMap: {
+      '202606/24/paper-a': 'read',
+      '202606/24/paper-b': 'read',
+    },
+    unreadOnly: true,
+  });
+
+  assert.deepEqual(view.groups.map((group) => group.label), ['2026-06-23']);
+  assert.deepEqual(view.groups[0].papers.map((paper) => paper.title), ['Paper D']);
+}
+
 function testReadStatusNormalization() {
   const sidebar = loadSidebarForTest('#/202606/24/paper-a');
   const tools = sidebar.__test;
@@ -183,6 +288,10 @@ function testReadStatusNormalization() {
 testSidebarNavigationContract();
 testAxisViewsForDailyAndConference();
 testRenderBodyPutsConferenceAboveDaily();
+testPanelCountsUseFullModel();
+testSearchResultsComeFromFullModel();
+testSearchNoResultsShowsEmptyState();
+testUnreadResultsComeFromFullModel();
 testReadStatusNormalization();
 
 console.log('dpr sidebar v2 tests passed');

@@ -455,6 +455,139 @@
     return records;
   }
 
+  function paperSearchText(paper) {
+    return [
+      paper && paper.title || '',
+      paper && paper.evidence || '',
+      (paper && paper.tags || []).map(function (t) { return (t && t.label) || ''; }).join(' '),
+    ].join(' ').toLowerCase();
+  }
+
+  function paperReadStatus(paper, readMap) {
+    var id = (paper && paper.id) || paperIdFromHref(paper && paper.href);
+    return normalizeReadStatus(id && readMap && readMap[id]);
+  }
+
+  function resolveResultOptions(options) {
+    var opts = options || {};
+    return {
+      keyword: String(opts.keyword || '').trim().toLowerCase(),
+      readMap: opts.readMap || {},
+      unreadOnly: !!opts.unreadOnly,
+    };
+  }
+
+  function paperMatchesResult(paper, options) {
+    var opts = resolveResultOptions(options);
+    if (opts.keyword && paperSearchText(paper).indexOf(opts.keyword) === -1) return false;
+    if (opts.unreadOnly && paperReadStatus(paper, opts.readMap)) return false;
+    return true;
+  }
+
+  function resultTabLabel(options) {
+    var opts = resolveResultOptions(options);
+    if (opts.keyword && opts.unreadOnly) return '未读搜索';
+    if (opts.keyword) return '搜索结果';
+    if (opts.unreadOnly) return '未读';
+    return '全部';
+  }
+
+  function buildResultView(groups, options) {
+    var total = 0;
+    groups.forEach(function (group) {
+      total += (group.papers || []).length;
+    });
+    return {
+      activeKey: '__results__',
+      resultMode: true,
+      tabs: [{ key: '__results__', label: resultTabLabel(options), count: total }],
+      groups: groups,
+      totalCount: total,
+    };
+  }
+
+  function buildDailyResultView(model, options) {
+    var opts = resolveResultOptions(options);
+    var groups = [];
+    (model && model.daily || []).forEach(function (day) {
+      var papers = (day.papers || []).filter(function (paper) {
+        return paperMatchesResult(paper, opts);
+      });
+      if (!papers.length) return;
+      groups.push({
+        key: day.dateKey,
+        label: day.dateLabel || formatDateLabel(day.dateKey),
+        papers: papers,
+      });
+    });
+    return buildResultView(groups, opts);
+  }
+
+  function buildConferenceResultView(model, options) {
+    var opts = resolveResultOptions(options);
+    var groups = [];
+    (model && model.conferences || []).forEach(function (conf) {
+      var confKey = conferenceKey(conf);
+      (conf.topics || []).forEach(function (topic) {
+        var papers = (topic.papers || []).filter(function (paper) {
+          return paperMatchesResult(paper, opts);
+        });
+        if (!papers.length) return;
+        groups.push({
+          key: confKey + ':' + (topic.label || 'General'),
+          label: (conf.label || confKey) + ' / ' + (topic.label || 'General'),
+          papers: papers,
+        });
+      });
+    });
+    return buildResultView(groups, opts);
+  }
+
+  function countUnreadPapers(papers, readMap) {
+    var unread = 0;
+    (papers || []).forEach(function (paper) {
+      if (!paperReadStatus(paper, readMap || {})) unread += 1;
+    });
+    return unread;
+  }
+
+  function countPapersInView(view) {
+    var total = 0;
+    (view && view.groups || []).forEach(function (group) {
+      total += (group.papers || []).length;
+    });
+    return total;
+  }
+
+  function countUnreadInView(view, readMap) {
+    var unread = 0;
+    (view && view.groups || []).forEach(function (group) {
+      unread += countUnreadPapers(group.papers || [], readMap || {});
+    });
+    return unread;
+  }
+
+  function computeModelReadSummary(model, readMap) {
+    var dailyPapers = flattenDailyPapers(model).map(function (record) { return record.paper; });
+    var conferencePapers = flattenConferencePapers(model).map(function (record) { return record.paper; });
+    var allPapers = dailyPapers.concat(conferencePapers);
+    var map = readMap || {};
+    return {
+      total: {
+        papers: allPapers.length,
+        unread: countUnreadPapers(allPapers, map),
+      },
+      daily: {
+        papers: dailyPapers.length,
+        unread: countUnreadPapers(dailyPapers, map),
+      },
+      conference: {
+        papers: conferencePapers.length,
+        unread: countUnreadPapers(conferencePapers, map),
+      },
+    };
+  }
+
   function findDailyRecordByHref(model, href) {
     var target = normalizeRouteHref(href);
     var records = flattenDailyPapers(model);
@@ -605,8 +738,6 @@
     filter: 'all', // 'all' | 'unread'
     search: '',
     lastFetchAt: 0,
-    expandedDates: null, // Set<dateKey>
-    expandedConfs: null, // Set<confLabel>
     expandedGroups: { conference: true, daily: true },
     dailyViewMode: 'date',
     conferenceViewMode: 'conf',
@@ -636,8 +767,6 @@
       var obj = JSON.parse(raw);
       if (!obj || typeof obj !== 'object') return null;
       return {
-        expandedDates: Array.isArray(obj.dates) ? new Set(obj.dates) : null,
-        expandedConfs: Array.isArray(obj.confs) ? new Set(obj.confs) : null,
         expandedGroups: obj.groups && typeof obj.groups === 'object' ? {
           conference: obj.groups.conference !== false,
           daily: obj.groups.daily !== false,
@@ -650,8 +779,6 @@
   function persistCollapse() {
     try {
       var payload = {
-        dates: state.expandedDates ? Array.prototype.slice.call(state.expandedDates) : [],
-        confs: state.expandedConfs ? Array.prototype.slice.call(state.expandedConfs) : [],
         groups: state.expandedGroups || { conference: true, daily: true },
       };
       window.localStorage && window.localStorage.setItem(COLLAPSE_KEY, JSON.stringify(payload));
@@ -718,6 +845,7 @@
     state.bodyEl = $('.dpr-sidebar-body', root);
     state.searchInput = $('.dpr-sidebar-search', root);
     state.unreadCountEl = $('.dpr-sidebar-unread-count', root);
+    if (state.searchInput) state.searchInput.value = state.search || '';
     // 渲染后立刻剥离 docsify 注入的 .app-nav / .no-badge（防下拉菜单定位）
     stripAppNav(state.bodyEl);
   }
@@ -732,43 +860,91 @@
       activeDailyTag: vs.activeDailyTag || '',
       activeConference: vs.activeConference || '',
       activeConferenceTag: vs.activeConferenceTag || '',
+      search: String(vs.search || ''),
+      filter: vs.filter === 'unread' ? 'unread' : 'all',
+      readMap: vs.readMap || {},
     };
   }
 
   function renderBodyHtml(model, viewState) {
     var html = [];
     var vs = resolveViewState(viewState);
+    var unreadOnly = vs.filter === 'unread';
+    var keyword = vs.search.trim();
+    var resultMode = !!keyword || unreadOnly;
+    var resultOptions = {
+      keyword: keyword,
+      readMap: vs.readMap,
+      unreadOnly: unreadOnly,
+    };
+    var summary = computeModelReadSummary(model, vs.readMap);
+    var renderedGroups = 0;
     if (model && model.conferences && model.conferences.length) {
-      html.push(renderAxisGroup({
-        group: 'conference',
-        title: '会议论文',
-        icon: '🏛️',
-        mode: vs.conferenceViewMode,
-        expanded: vs.expandedGroups.conference !== false,
-        view: vs.conferenceViewMode === 'tag'
+      var conferenceView = resultMode
+        ? buildConferenceResultView(model, resultOptions)
+        : (vs.conferenceViewMode === 'tag'
           ? buildConferenceTagView(model, vs.activeConferenceTag)
-          : buildConferenceConfView(model, vs.activeConference),
-        toggleLabel: vs.conferenceViewMode === 'tag' ? '按会议' : '按标签',
-      }));
+          : buildConferenceConfView(model, vs.activeConference));
+      var conferenceTotal = resultMode ? countPapersInView(conferenceView) : summary.conference.papers;
+      var conferenceUnread = resultMode ? countUnreadInView(conferenceView, vs.readMap) : summary.conference.unread;
+      if (!resultMode || conferenceTotal > 0) {
+        renderedGroups += 1;
+        html.push(renderAxisGroup({
+          group: 'conference',
+          title: '会议论文',
+          icon: '🏛️',
+          mode: vs.conferenceViewMode,
+          expanded: vs.expandedGroups.conference !== false,
+          view: conferenceView,
+          toggleLabel: vs.conferenceViewMode === 'tag' ? '按会议' : '按标签',
+          totalCount: conferenceTotal,
+          unreadCount: conferenceUnread,
+        }));
+      }
     }
     if (model && model.daily && model.daily.length) {
-      html.push(renderAxisGroup({
-        group: 'daily',
-        title: '日报',
-        icon: '📅',
-        mode: vs.dailyViewMode,
-        expanded: vs.expandedGroups.daily !== false,
-        view: vs.dailyViewMode === 'tag'
+      var dailyView = resultMode
+        ? buildDailyResultView(model, resultOptions)
+        : (vs.dailyViewMode === 'tag'
           ? buildDailyTagView(model, vs.activeDailyTag)
-          : buildDailyDateView(model, vs.activeDailyDate),
-        toggleLabel: vs.dailyViewMode === 'tag' ? '按日期' : '按标签',
-      }));
+          : buildDailyDateView(model, vs.activeDailyDate));
+      var dailyTotal = resultMode ? countPapersInView(dailyView) : summary.daily.papers;
+      var dailyUnread = resultMode ? countUnreadInView(dailyView, vs.readMap) : summary.daily.unread;
+      if (!resultMode || dailyTotal > 0) {
+        renderedGroups += 1;
+        html.push(renderAxisGroup({
+          group: 'daily',
+          title: '日报',
+          icon: '📅',
+          mode: vs.dailyViewMode,
+          expanded: vs.expandedGroups.daily !== false,
+          view: dailyView,
+          toggleLabel: vs.dailyViewMode === 'tag' ? '按日期' : '按标签',
+          totalCount: dailyTotal,
+          unreadCount: dailyUnread,
+        }));
+      }
+    }
+    if (resultMode && renderedGroups === 0) {
+      html.push('<div class="dpr-sidebar-empty">没有匹配的论文</div>');
     }
     return html.join('');
   }
 
   function renderBody() {
-    state.bodyEl.innerHTML = renderBodyHtml(state.model, state);
+    var viewState = {
+      expandedGroups: state.expandedGroups,
+      dailyViewMode: state.dailyViewMode,
+      conferenceViewMode: state.conferenceViewMode,
+      activeDailyDate: state.activeDailyDate,
+      activeDailyTag: state.activeDailyTag,
+      activeConference: state.activeConference,
+      activeConferenceTag: state.activeConferenceTag,
+      search: state.search,
+      filter: state.filter,
+      readMap: ReadState.getAll(),
+    };
+    state.bodyEl.innerHTML = renderBodyHtml(state.model, viewState);
     syncResolvedAxisState();
   }
 
@@ -787,13 +963,14 @@
     var html = [];
     var groupClass = opts.group === 'conference' ? 'dpr-sidebar-group-conference' : 'dpr-sidebar-group-daily';
     var expandedClass = opts.expanded ? ' is-expanded' : '';
-    var count = 0;
-    (opts.view.groups || []).forEach(function (group) { count += (group.papers || []).length; });
-    html.push('<section class="dpr-sidebar-group dpr-sidebar-panel ' + groupClass + expandedClass + '" data-panel="' + safeAttr(opts.group) + '">');
+    var resultClass = opts.view && opts.view.resultMode ? ' is-result-mode' : '';
+    var totalCount = typeof opts.totalCount === 'number' ? opts.totalCount : countPapersInView(opts.view);
+    var unreadCount = typeof opts.unreadCount === 'number' ? opts.unreadCount : 0;
+    html.push('<section class="dpr-sidebar-group dpr-sidebar-panel ' + groupClass + expandedClass + resultClass + '" data-panel="' + safeAttr(opts.group) + '">');
     html.push('  <button type="button" class="dpr-sidebar-panel-header" data-panel-toggle="' + safeAttr(opts.group) + '" aria-expanded="' + (opts.expanded ? 'true' : 'false') + '">');
     html.push('    <span class="dpr-sidebar-day-arrow" aria-hidden="true">▸</span>');
     html.push('    <span class="dpr-sidebar-panel-title">' + safeText(opts.icon + ' ' + opts.title) + '</span>');
-    html.push('    <span class="dpr-sidebar-day-counts"><span class="dpr-sidebar-day-unread">0</span>/<span class="dpr-sidebar-day-total">' + count + '</span></span>');
+    html.push('    <span class="dpr-sidebar-day-counts"><span class="dpr-sidebar-day-unread">' + unreadCount + '</span>/<span class="dpr-sidebar-day-total">' + totalCount + '</span></span>');
     html.push('  </button>');
     html.push('  <div class="dpr-sidebar-panel-content">');
     html.push(renderAxisTabs(opts.group, opts.mode, opts.view, opts.toggleLabel));
@@ -805,8 +982,12 @@
 
   function renderAxisTabs(group, mode, view, toggleLabel) {
     var html = [];
-    html.push('<div class="dpr-sidebar-axis-row" data-axis-group="' + safeAttr(group) + '" data-axis-mode="' + safeAttr(mode) + '">');
-    html.push('  <button type="button" class="dpr-sidebar-axis-toggle" data-axis-toggle="' + safeAttr(group) + '" title="' + safeAttr(toggleLabel) + '">⇄</button>');
+    var resultMode = !!(view && view.resultMode);
+    var axisMode = resultMode ? 'results' : mode;
+    var disabled = resultMode ? ' disabled aria-disabled="true"' : '';
+    var rowClass = resultMode ? ' dpr-sidebar-axis-row-results' : '';
+    html.push('<div class="dpr-sidebar-axis-row' + rowClass + '" data-axis-group="' + safeAttr(group) + '" data-axis-mode="' + safeAttr(axisMode) + '">');
+    html.push('  <button type="button" class="dpr-sidebar-axis-toggle" data-axis-toggle="' + safeAttr(group) + '" title="' + safeAttr(toggleLabel) + '"' + disabled + '>⇄</button>');
     html.push('  <div class="dpr-sidebar-axis-tabs" role="tablist">');
     (view.tabs || []).forEach(function (tab) {
       var active = tab.key === view.activeKey ? ' is-active' : '';
@@ -824,7 +1005,9 @@
     var html = [];
     html.push('<div class="dpr-sidebar-axis-content" data-axis-content="' + safeAttr(group) + '">');
     (view.groups || []).forEach(function (item) {
-      var sectionClass = group === 'conference' ? ' dpr-sidebar-conf' : ' dpr-sidebar-day';
+      var sectionClass = group === 'conference'
+        ? ' dpr-sidebar-axis-section-conference'
+        : ' dpr-sidebar-axis-section-daily';
       html.push('<section class="dpr-sidebar-axis-section' + sectionClass + '" data-axis-section="' + safeAttr(item.key) + '">');
       html.push('  <div class="dpr-sidebar-axis-section-label">' + safeText(item.label) + ' <span>' + safeText((item.papers || []).length) + '</span></div>');
       html.push('  <ul class="dpr-sidebar-axis-papers">');
@@ -838,65 +1021,14 @@
     return html.join('');
   }
 
-  function renderDay(day) {
-    var expanded = state.expandedDates && state.expandedDates.has(day.dateKey);
-    var label = day.dateLabel || formatDateLabel(day.dateKey);
-    var out = [];
-    out.push('<li class="dpr-sidebar-day' + (expanded ? ' is-expanded' : '') + '" data-date="' + safeAttr(day.dateKey) + '">');
-    out.push('  <button type="button" class="dpr-sidebar-day-header" aria-expanded="' + (expanded ? 'true' : 'false') + '">');
-    out.push('    <span class="dpr-sidebar-day-arrow" aria-hidden="true">▸</span>');
-    out.push('    <span class="dpr-sidebar-day-label">' + safeText(label) + '</span>');
-    out.push('    <span class="dpr-sidebar-day-counts" data-total="' + day.papers.length + '"><span class="dpr-sidebar-day-unread">0</span>/<span class="dpr-sidebar-day-total">' + day.papers.length + '</span></span>');
-    out.push('  </button>');
-    out.push('  <ul class="dpr-sidebar-day-papers">');
-    day.papers.forEach(function (p) {
-      out.push(renderPaper(p));
-    });
-    out.push('  </ul>');
-    out.push('</li>');
-    return out.join('');
-  }
-
-  function renderConference(conf) {
-    var expanded = state.expandedConfs && state.expandedConfs.has(conf.label);
-    var totalPapers = 0;
-    conf.topics.forEach(function (t) { totalPapers += t.papers.length; });
-    var out = [];
-    out.push('<li class="dpr-sidebar-conf' + (expanded ? ' is-expanded' : '') + '" data-conf-label="' + safeAttr(conf.label) + '">');
-    out.push('  <button type="button" class="dpr-sidebar-conf-header" aria-expanded="' + (expanded ? 'true' : 'false') + '">');
-    out.push('    <span class="dpr-sidebar-day-arrow" aria-hidden="true">▸</span>');
-    out.push('    <span class="dpr-sidebar-day-label">' + safeText(conf.label) + '</span>');
-    out.push('    <span class="dpr-sidebar-day-counts"><span class="dpr-sidebar-day-unread">0</span>/<span class="dpr-sidebar-day-total">' + totalPapers + '</span></span>');
-    out.push('  </button>');
-    out.push('  <ul class="dpr-sidebar-conf-topics">');
-    conf.topics.forEach(function (topic) {
-      out.push('<li class="dpr-sidebar-conf-topic">');
-      out.push('  <div class="dpr-sidebar-conf-topic-label">' + safeText(topic.label) + ' <span class="dpr-sidebar-conf-topic-count">' + topic.papers.length + '</span></div>');
-      out.push('  <ul class="dpr-sidebar-topic-papers">');
-      topic.papers.forEach(function (p) {
-        out.push(renderPaper(p));
-      });
-      out.push('  </ul>');
-      out.push('</li>');
-    });
-    out.push('  </ul>');
-    out.push('</li>');
-    return out.join('');
-  }
-
   function renderPaper(p) {
     var sectionClass = p.section ? ' dpr-sidebar-paper-' + p.section : '';
     var paperId = p.id || '';
-    var searchHaystack = [
-      p.title || '',
-      p.evidence || '',
-      (p.tags || []).map(function (t) { return (t && t.label) || ''; }).join(' '),
-    ].join(' ').toLowerCase();
     var dataAttrs = [
       'data-paper-id="' + safeAttr(paperId) + '"',
       'data-href="' + safeAttr(p.href) + '"',
       'data-section="' + safeAttr(p.section || '') + '"',
-      'data-search="' + safeAttr(searchHaystack) + '"',
+      'data-search="' + safeAttr(paperSearchText(p)) + '"',
       'data-read="0"',
       'data-read-status=""',
     ].join(' ');
@@ -920,16 +1052,38 @@
   function updateReadStateMarks() {
     if (!state.bodyEl) return;
     var readMap = ReadState.getAll();
-    var totalUnread = 0;
+    var summary = computeModelReadSummary(state.model, readMap);
     $$('.dpr-sidebar-paper', state.bodyEl).forEach(function (li) {
       var id = li.getAttribute('data-paper-id');
       var status = normalizeReadStatus(id && readMap[id]);
       li.setAttribute('data-read', status ? '1' : '0');
       li.setAttribute('data-read-status', status);
-      if (!status) totalUnread += 1;
     });
-    // 每个一级面板 / 竖向分组的 unread 计数
-    $$('.dpr-sidebar-panel, .dpr-sidebar-axis-section', state.bodyEl).forEach(function (group) {
+    $$('.dpr-sidebar-panel', state.bodyEl).forEach(function (panel) {
+      var panelKey = panel.getAttribute('data-panel');
+      var header = $('.dpr-sidebar-panel-header', panel);
+      var totalEl = header && $('.dpr-sidebar-day-total', header);
+      var unreadEl = header && $('.dpr-sidebar-day-unread', header);
+      var papers = $$('.dpr-sidebar-paper', panel);
+      var unread = 0;
+      papers.forEach(function (li) {
+        if (li.getAttribute('data-read') === '0') unread += 1;
+      });
+      var resultMode = panel.classList.contains('is-result-mode');
+      var counts = panelKey === 'conference' ? summary.conference : summary.daily;
+      if (resultMode) {
+        counts = { papers: papers.length, unread: unread };
+      }
+      if (totalEl) totalEl.textContent = String(counts.papers);
+      if (unreadEl) unreadEl.textContent = String(counts.unread);
+      if (counts.unread === 0) {
+        panel.classList.add('is-all-read');
+      } else {
+        panel.classList.remove('is-all-read');
+      }
+    });
+    // 竖向分组的计数只描述当前结果/当前轴切片。
+    $$('.dpr-sidebar-axis-section', state.bodyEl).forEach(function (group) {
       var papers = $$('.dpr-sidebar-paper', group);
       var unread = 0;
       papers.forEach(function (li) {
@@ -946,39 +1100,14 @@
       }
     });
     if (state.unreadCountEl) {
-      state.unreadCountEl.textContent = String(totalUnread);
-      state.unreadCountEl.setAttribute('data-count', String(totalUnread));
+      state.unreadCountEl.textContent = String(summary.total.unread);
+      state.unreadCountEl.setAttribute('data-count', String(summary.total.unread));
     }
   }
 
   function applyFilterAndSearch() {
     if (!state.rootEl) return;
     state.rootEl.classList.toggle('is-filter-unread', state.filter === 'unread');
-    var keyword = state.search.trim().toLowerCase();
-    state.rootEl.classList.toggle('is-searching', !!keyword);
-    if (!state.bodyEl) return;
-    if (!keyword) {
-      $$('.dpr-sidebar-paper', state.bodyEl).forEach(function (li) {
-        li.removeAttribute('data-search-hidden');
-      });
-      $$('.dpr-sidebar-axis-section', state.bodyEl).forEach(function (g) {
-        g.removeAttribute('data-search-hidden');
-      });
-      return;
-    }
-    $$('.dpr-sidebar-paper', state.bodyEl).forEach(function (li) {
-      var hay = li.getAttribute('data-search') || '';
-      if (hay.indexOf(keyword) === -1) {
-        li.setAttribute('data-search-hidden', '1');
-      } else {
-        li.removeAttribute('data-search-hidden');
-      }
-    });
-    $$('.dpr-sidebar-axis-section', state.bodyEl).forEach(function (g) {
-      var visible = $$('.dpr-sidebar-paper:not([data-search-hidden])', g).length;
-      if (visible === 0) g.setAttribute('data-search-hidden', '1');
-      else g.removeAttribute('data-search-hidden');
-    });
   }
 
   function syncActive() {
@@ -1072,7 +1201,7 @@
           b.classList.toggle('is-active', b.getAttribute('data-filter') === state.filter);
         });
         persistFilter();
-        applyFilterAndSearch();
+        rerenderSidebarBody({ syncActive: false });
         return;
       }
       // 移动端切换
@@ -1115,30 +1244,6 @@
         rerenderSidebarBody({ syncActive: false });
         return;
       }
-      // 日期折叠
-      var dayHeader = e.target.closest('.dpr-sidebar-day-header');
-      if (dayHeader) {
-        var li = dayHeader.parentElement;
-        var key = li.getAttribute('data-date');
-        var open = li.classList.toggle('is-expanded');
-        dayHeader.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (open) state.expandedDates.add(key);
-        else state.expandedDates.delete(key);
-        persistCollapse();
-        return;
-      }
-      // 会议折叠
-      var confHeader = e.target.closest('.dpr-sidebar-conf-header');
-      if (confHeader) {
-        var li2 = confHeader.parentElement;
-        var label = li2.getAttribute('data-conf-label');
-        var open2 = li2.classList.toggle('is-expanded');
-        confHeader.setAttribute('aria-expanded', open2 ? 'true' : 'false');
-        if (open2) state.expandedConfs.add(label);
-        else state.expandedConfs.delete(label);
-        persistCollapse();
-        return;
-      }
       // 论文点击：移动端自动关闭抽屉
       var paperLink = e.target.closest('.dpr-sidebar-paper-link');
       if (paperLink) {
@@ -1164,12 +1269,12 @@
 
     state.searchInput.addEventListener('input', debounce(function () {
       state.search = state.searchInput.value || '';
-      applyFilterAndSearch();
+      rerenderSidebarBody({ syncActive: false });
     }, SEARCH_DEBOUNCE_MS));
 
     window.addEventListener('hashchange', function () { syncActive(); });
     document.addEventListener('dpr-paper-read-state-changed', function () {
-      updateReadStateMarks();
+      rerenderSidebarBody({ syncActive: false });
     });
 
     document.addEventListener('visibilitychange', function () {
@@ -1185,12 +1290,8 @@
     // 默认展开两个一级面板；若用户在本地保留过折叠状态则尊重它
     var persisted = loadPersistedCollapse();
     if (persisted) {
-      state.expandedDates = persisted.expandedDates || new Set();
-      state.expandedConfs = persisted.expandedConfs || new Set();
       state.expandedGroups = persisted.expandedGroups || { conference: true, daily: true };
     } else {
-      state.expandedDates = new Set();
-      state.expandedConfs = new Set();
       state.expandedGroups = { conference: true, daily: true };
     }
     var href = findActivePaper();
@@ -1237,7 +1338,7 @@
     if (!state.searchInput) return;
     state.searchInput.addEventListener('input', debounce(function () {
       state.search = state.searchInput.value || '';
-      applyFilterAndSearch();
+      rerenderSidebarBody({ syncActive: false });
     }, SEARCH_DEBOUNCE_MS));
   }
 
@@ -1251,7 +1352,7 @@
   var DPRSidebarApi = {
     refresh: function () { return loadAndRender(); },
     syncActive: syncActive,
-    notifyReadStateChanged: function () { updateReadStateMarks(); },
+    notifyReadStateChanged: function () { rerenderSidebarBody({ syncActive: false }); },
     getReadState: function () { return ReadState.getAll(); },
     getPaperHrefs: function () { return collectPaperHrefsFromModel(state.model); },
     getReportHrefs: function () { return collectReportHrefsFromModel(state.model); },
@@ -1277,8 +1378,11 @@
         findCurrentReportHrefFromModel: findCurrentReportHrefFromModel,
         buildDailyDateView: buildDailyDateView,
         buildDailyTagView: buildDailyTagView,
+        buildDailyResultView: buildDailyResultView,
         buildConferenceConfView: buildConferenceConfView,
         buildConferenceTagView: buildConferenceTagView,
+        buildConferenceResultView: buildConferenceResultView,
+        computeModelReadSummary: computeModelReadSummary,
         renderBodyHtml: renderBodyHtml,
         normalizeReadStatus: normalizeReadStatus,
       },
