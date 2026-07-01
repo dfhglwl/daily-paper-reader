@@ -11,11 +11,19 @@ function extractAssetLoaderScript(html) {
 
 async function runAssetLoader(hostname, assets, windowOverrides = {}) {
   const appended = [];
+  const fetches = [];
   const timers = new Set();
   const sandbox = {
     console,
     location: { hostname },
     window: { ...windowOverrides },
+    fetch(url, options) {
+      fetches.push({ url, options: options || {} });
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ ok: true }),
+      });
+    },
     setTimeout() {
       const id = Symbol('timer');
       timers.add(id);
@@ -42,12 +50,15 @@ async function runAssetLoader(hostname, assets, windowOverrides = {}) {
       },
     },
   };
+  sandbox.window.fetch = sandbox.fetch;
   sandbox.window.setTimeout = sandbox.setTimeout;
   sandbox.window.clearTimeout = sandbox.clearTimeout;
 
   const script = extractAssetLoaderScript(fs.readFileSync('index.html', 'utf8'));
   vm.runInNewContext(script, sandbox, { filename: 'index.html' });
   await sandbox.window.DPRLoadAssets(assets);
+  appended.fetches = fetches;
+  appended.jsonPromises = sandbox.window.DPR_ASSET_JSON_PROMISES || {};
   return appended;
 }
 
@@ -101,11 +112,25 @@ async function testLatestIsRejectedAsAppAssetVersion() {
   assert.ok(urls.includes('app/dpr-sidebar.js'));
 }
 
+async function testJsonAssetsArePrefetchedWithAssetBatch() {
+  const appended = await runAssetLoader('example.github.io', [
+    { type: 'json', path: 'app/conference-stats.json' },
+    { type: 'script', path: 'app/subscriptions.manager.js' },
+  ]);
+  const urls = appended.map((el) => el.href || el.src || '');
+
+  assert.ok(!urls.includes('app/conference-stats.json'));
+  assert.deepEqual(appended.fetches.map((item) => item.url), ['app/conference-stats.json']);
+  assert.equal(appended.fetches[0].options.cache, 'force-cache');
+  assert.ok(appended.jsonPromises['app/conference-stats.json']);
+}
+
 Promise.resolve()
   .then(testProjectAssetsPreferLocalOnCdnHosts)
   .then(testExplicitCdnBaseStillUsesVendorCdnOnly)
   .then(testVersionedAppAssetsUseImmutableCdnPath)
   .then(testLatestIsRejectedAsAppAssetVersion)
+  .then(testJsonAssetsArePrefetchedWithAssetBatch)
   .then(() => {
     console.log('index asset loader tests passed');
   })

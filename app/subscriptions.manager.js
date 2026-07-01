@@ -295,15 +295,21 @@ window.SubscriptionsManager = (function () {
     .join('');
   const loadConferenceStatsSnapshot = () => {
     if (conferenceStatsLoadPromise) return conferenceStatsLoadPromise;
-    if (typeof fetch !== 'function') return Promise.resolve(null);
-    conferenceStatsLoadPromise = fetch(CONFERENCE_STATS_SNAPSHOT_URL, { cache: 'force-cache' })
+    const preloadedStats =
+      window.DPR_ASSET_JSON_PROMISES &&
+      window.DPR_ASSET_JSON_PROMISES[CONFERENCE_STATS_SNAPSHOT_URL];
+    if (!preloadedStats && typeof fetch !== 'function') return Promise.resolve(null);
+    conferenceStatsLoadPromise = (preloadedStats
+      ? Promise.resolve(preloadedStats)
+      : fetch(CONFERENCE_STATS_SNAPSHOT_URL, { cache: 'force-cache' })
       .then((response) => {
         if (!response || !response.ok) {
           throw new Error(`conference stats load failed: ${response ? response.status : 'no-response'}`);
         }
         return response.json();
-      })
+      }))
       .then((snapshot) => {
+        if (!snapshot) return null;
         setConferenceStatsSnapshot(snapshot);
         renderConferenceChoiceButtons();
         return snapshot;
@@ -714,6 +720,7 @@ window.SubscriptionsManager = (function () {
   };
 
   const renderConferenceChoiceButtons = () => {
+    if (!document || typeof document.getElementById !== 'function') return;
     const conferenceWrap = document.getElementById('arxiv-admin-conference-choice-group');
     if (conferenceWrap) {
       conferenceWrap.innerHTML = buildConferenceChoiceRowsHtml();
@@ -1897,6 +1904,11 @@ window.SubscriptionsManager = (function () {
       normalizePaperSources: (values, options) => normalizePaperSources(values, options),
       isConferenceYearSelectable: (conference, year) => isConferenceYearSelectable(conference, year),
       __setConferenceStatsSnapshot: (snapshot) => setConferenceStatsSnapshot(snapshot),
+      __loadConferenceStatsSnapshot: () => loadConferenceStatsSnapshot(),
+      __resetConferenceStatsLoadPromise: () => {
+        conferenceStatsLoadPromise = null;
+        setConferenceStatsSnapshot(null);
+      },
       __buildConferenceChoiceRowsHtml: () => buildConferenceChoiceRowsHtml(),
       formatConferenceYearStatsLabel: (conference, year) => formatConferenceYearStatsLabel(conference, year),
       __setQuickRunMsgEl: (el) => {

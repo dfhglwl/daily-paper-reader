@@ -162,6 +162,7 @@
       window.DPR_ASSET_BASE = preferCdn ? candidateBase : '';
       window.DPR_APP_ASSET_VERSION = appAssetVersion;
       window.DPR_VERSIONED_APP_CDN_ACTIVE = versionedAppCdnActive;
+      window.DPR_ASSET_JSON_PROMISES = window.DPR_ASSET_JSON_PROMISES || {};
 
       function normalizePath(path) {
         return String(path || '').replace(/^\/+/, '');
@@ -240,6 +241,10 @@
         return !/\/katex\.min\.css$/i.test(normalizePath(path));
       }
 
+      function shouldLoadJsonFromCdn(path, useCdn) {
+        return !!useCdn && shouldLoadAppAssetFromVersionedCdn(path, useCdn);
+      }
+
       function appendStylesheet(path, useCdn) {
         return new Promise(function (resolve) {
           var useRemoteStylesheet = shouldLoadStylesheetFromCdn(path, useCdn);
@@ -291,6 +296,34 @@
           ? cdnUrl(path, shouldLoadAppAssetFromVersionedCdn(path, useCdn))
           : localUrl(path);
         document.head.appendChild(link);
+      }
+
+      function preloadJsonAsset(path, useCdn) {
+        var key = normalizePath(path);
+        if (!key || typeof fetch !== 'function') return Promise.resolve(null);
+        if (window.DPR_ASSET_JSON_PROMISES[key]) return window.DPR_ASSET_JSON_PROMISES[key];
+
+        function requestJson(useRemoteJson) {
+          var url = useRemoteJson
+            ? cdnUrl(path, shouldLoadAppAssetFromVersionedCdn(path, useCdn))
+            : localUrl(path);
+          return fetch(url, { cache: 'force-cache' }).then(function (response) {
+            if (!response || !response.ok) {
+              throw new Error('静态 JSON 加载失败：' + path);
+            }
+            return response.json();
+          }).catch(function (err) {
+            if (useRemoteJson) {
+              console.warn('[DPR] CDN JSON 加载失败，回退本地：' + path);
+              return requestJson(false);
+            }
+            console.warn('[DPR] 静态 JSON 预取失败：' + path, err);
+            return null;
+          });
+        }
+
+        window.DPR_ASSET_JSON_PROMISES[key] = requestJson(shouldLoadJsonFromCdn(path, useCdn));
+        return window.DPR_ASSET_JSON_PROMISES[key];
       }
 
       function appendScript(path, useCdn) {
@@ -348,12 +381,17 @@
       window.DPRLoadAssets = function (assets) {
         var styles = [];
         var scripts = [];
+        var jsons = [];
         assets.forEach(function (asset) {
           if (asset.type === 'style') styles.push(asset.path);
           if (asset.type === 'script') scripts.push(asset.path);
+          if (asset.type === 'json') jsons.push(asset.path);
         });
         scripts.forEach(function (path) {
           preloadScript(path, preferCdn);
+        });
+        jsons.forEach(function (path) {
+          preloadJsonAsset(path, preferCdn);
         });
         return Promise.all(styles.map(function (path) {
           return appendStylesheet(path, preferCdn);
@@ -458,6 +496,7 @@
       document.addEventListener('dpr-docsify-ready', function loadDeferredAssetsOnce() {
         document.removeEventListener('dpr-docsify-ready', loadDeferredAssetsOnce);
         window.DPRLoadAssets([
+          { type: 'json', path: 'app/conference-stats.json' },
           { type: 'style', path: 'app/vendor/katex/0.16.9/dist/katex.min.css' },
           { type: 'script', path: 'app/vendor/katex/0.16.9/dist/katex.min.js' },
           { type: 'script', path: 'app/vendor/katex/0.16.9/dist/contrib/auto-render.min.js' },

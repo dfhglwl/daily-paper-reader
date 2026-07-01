@@ -21,6 +21,8 @@ const {
   __initializeConferenceChoices,
   __getSelectedConferenceYearPairs,
   __setConferenceStatsSnapshot,
+  __loadConferenceStatsSnapshot,
+  __resetConferenceStatsLoadPromise,
   __buildConferenceChoiceRowsHtml,
   formatConferenceYearStatsLabel,
   runQuickConferenceRetrieval,
@@ -214,6 +216,32 @@ function testConferenceYearChoicesShowTwoDigitYearAndStoredTotalOnly() {
   assert.equal(html.includes('拒稿'), false);
   assert.equal(html.includes('379'), false);
   assert.ok(html.includes('aria-pressed="true"'));
+}
+
+async function testConferenceStatsLoadReusesBootstrappedJsonPromise() {
+  const oldFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = () => {
+    fetchCalls += 1;
+    return Promise.reject(new Error('late fetch should not be used'));
+  };
+  global.window.DPR_ASSET_JSON_PROMISES = {
+    'app/conference-stats.json': Promise.resolve({
+      items: [
+        { conference_key: 'iclr', year: 2025, stored_total_count: 321 },
+      ],
+    }),
+  };
+  __resetConferenceStatsLoadPromise();
+
+  await __loadConferenceStatsSnapshot();
+
+  assert.equal(fetchCalls, 0);
+  assert.equal(formatConferenceYearStatsLabel('ICLR', '2025'), '25 (321)');
+
+  delete global.window.DPR_ASSET_JSON_PROMISES;
+  __resetConferenceStatsLoadPromise();
+  global.fetch = oldFetch;
 }
 
 function testQuickRunUnsavedMessageClearsAfterSave() {
@@ -442,6 +470,7 @@ async function testConferenceRetrievalDispatchesUnifiedConferencePairs() {
   testConferenceCurrentYearDisabledForPendingSources();
   testConferenceDefaultYearOnlySelects2025();
   testConferenceYearChoicesShowTwoDigitYearAndStoredTotalOnly();
+  await testConferenceStatsLoadReusesBootstrappedJsonPromise();
   testQuickRunUnsavedMessageClearsAfterSave();
   testConferenceRunDisabledWhenUnsaved();
   testConferenceRunAllowsMoreThanFiveYearsWhenStoredTotalUnderLimit();
