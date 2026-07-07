@@ -1059,6 +1059,8 @@ function testSidebarStickyHierarchyCssContract() {
   assert.ok(/z-index:\s*16/i.test(sectionHeaderRule));
   assert.ok(/isolation:\s*isolate/i.test(sectionHeaderRule));
   assert.ok(/background:\s*var\(--dpr-sidebar-sticky-mask-bg\)/i.test(sectionHeaderRule));
+  const dailySectionHeaderRule = cssRule(css, '.dpr-sidebar-panel.is-expanded.dpr-sidebar-group-daily .dpr-sidebar-axis-section-header');
+  assert.ok(/top:\s*var\(--dpr-sidebar-sticky-axis-top\)/i.test(dailySectionHeaderRule));
 
   const panelHeaderMaskRule = cssRule(css, '.dpr-sidebar-panel.is-expanded > .dpr-sidebar-panel-header::before');
   assert.ok(/content:\s*""/i.test(panelHeaderMaskRule));

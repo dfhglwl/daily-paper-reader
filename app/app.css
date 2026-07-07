@@ -7574,6 +7574,9 @@ body.dpr-sidebar-resizing {
   background: var(--dpr-sidebar-sticky-mask-bg);
   box-shadow: 0 1px 0 #f8fafc;
 }
+.dpr-sidebar-panel.is-expanded.dpr-sidebar-group-daily .dpr-sidebar-axis-section-header {
+  top: var(--dpr-sidebar-sticky-axis-top);
+}
 .dpr-sidebar-panel.is-expanded > .dpr-sidebar-panel-content > .dpr-sidebar-axis-row::before,
 .dpr-sidebar-panel.is-expanded .dpr-sidebar-axis-section-header::before {
   content: "";
