@@ -1,0 +1,131 @@
+{
+  "mode": "skims",
+  "generated_at": "2026-07-16T07:24:10.938469+00:00",
+  "stats": {
+    "mode": "skims",
+    "forced_all_quick": true,
+    "min_score": 8.0,
+    "deep_divecandidates": 3,
+    "deep_cap": null,
+    "deep_selected": 0,
+    "quick_candidates": 3,
+    "quick_skim_target": null,
+    "quick_selected": 3
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2607.02472v1",
+      "source": "arxiv",
+      "title": "Learning Agile Intruder Interception using Differentiable Quadrotor Dynamics",
+      "abstract": "This paper presents a methodology for learning a control policy to intercept an intruder using the 3D direction unit vector to the intruder and the interceptor state. Prior deep reinforcement learning approaches assume either relative position or distance to the intruder is available, but this information is not readily accessible in real-world applications that employ passive, monocular camera sensors. Instead, we propose a solution that leverages an analytical policy gradient method using differentiable quadrotor dynamics to learn agile interception at speeds up to 10 m/s. The proposed approach outperforms baseline methods that utilize simplified point mass dynamics by an average of 30%.",
+      "authors": [
+        "Michael Anoruo",
+        "Xiaoyu Tian",
+        "Abhishek Rathod",
+        "Timothy Naudet",
+        "Thomas Canchola",
+        "Eric Sturzinger",
+        "Kshitij Goel",
+        "Wennie Tabib"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-07-02T17:40:06+00:00",
+      "link": "https://arxiv.org/pdf/2607.02472v1",
+      "tags": [
+        "keyword:UAC",
+        "query:UAC"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "learns agile interception policy using only 3D direction vector, outperforming DRL baselines",
+      "llm_evidence_cn": "仅用三维方向向量学习敏捷拦截策略，性能超越深度强化学习基线",
+      "llm_evidence": "仅用三维方向向量学习敏捷拦截策略，性能超越深度强化学习基线",
+      "canonical_evidence": "仅用三维方向向量学习敏捷拦截策略，性能超越深度强化学习基线",
+      "llm_tldr_en": "Presents a method to learn quadrotor control policies for agile intruder interception using only the 3D direction vector, leveraging analytical policy gradients with differentiable dynamics, achieving 30% improvement over baselines in high-speed scenarios.",
+      "llm_tldr_cn": "针对无人机仅依赖单目相机无法获取目标距离信息的实际约束，提出基于可微分四旋翼动力学的解析策略梯度方法，仅利用三维方向向量学习敏捷拦截控制策略。实验表明，该方法在10 m/s高速场景下性能较基线平均提升30%，为无人机近距空战中的自主机动决策提供了高效灵活的学习范式。",
+      "llm_tldr": "针对无人机仅依赖单目相机无法获取目标距离信息的实际约束，提出基于可微分四旋翼动力学的解析策略梯度方法，仅利用三维方向向量学习敏捷拦截控制策略。实验表明，该方法在10 m/s高速场景下性能较基线平均提升30%，为无人机近距空战中的自主机动决策提供了高效灵活的学习范式。",
+      "llm_tags": [
+        "query:uac"
+      ],
+      "matched_query_tag": "query:uac",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2607.05939v1",
+      "source": "arxiv",
+      "title": "Intercepting an Agile Target with Net-Carrying Drones using Competitive Multi-Agent Reinforcement Learning",
+      "abstract": "This article presents a solution to intercept an agile drone by a team of agile drone carrying catching nets. We formulate the problem as a competitive Multi-Agent Reinforcement Learning (MARL) task. To address the problem of nonstationarity and catastrophic forgetting of agents overfitting to the current opponent strategy, we train the pursuers and the evader using Multi-Agent Proximal Policy Optimization (MAPPO) with Prioritized Fictitious Self Play (PFSP). We train the agents in a high-fidelity simulator using low-level control commands, collective thrust and body rates (CTBR), to achieve agile flights for both the pursuers and the evader. We compare the performance of the trained policies in terms of catch rate, time to catch and crash rates, against heuristic baselines and show that our solution outperforms them. Ablation studies show that PFSP lead to more robust policies that can adapt to different opponent strategies, and that a low-level control commands are crucial for learning performing strategies in the pursuit-evasion task. Finally, a qualitative analysis of the learned behaviours highlights the emergence of cooperative tactics among the pursuers.",
+      "authors": [
+        "Timothée Gavin",
+        "Murat Bronz"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-07-07T07:41:09+00:00",
+      "link": "https://arxiv.org/pdf/2607.05939v1",
+      "tags": [
+        "keyword:UAC",
+        "query:UAC"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "UAVs learn to intercept agile targets via competitive MARL, directly analogous to air combat maneuvering",
+      "llm_evidence_cn": "无人机通过竞争性多智能体强化学习学会拦截敏捷目标，直接类比空战机动",
+      "llm_evidence": "无人机通过竞争性多智能体强化学习学会拦截敏捷目标，直接类比空战机动",
+      "canonical_evidence": "无人机通过竞争性多智能体强化学习学会拦截敏捷目标，直接类比空战机动",
+      "llm_tldr_en": "This paper tackles intercepting an agile drone using competitive multi-agent reinforcement learning, formulating it as a MARL task with MAPPO and PFSP to handle nonstationarity. Trained in high-fidelity simulation with low-level controls, the policies achieve high catch rates and agile behaviors.",
+      "llm_tldr_cn": "该论文针对无人机拦截敏捷目标这一空战类似任务，提出一种基于竞争性多智能体强化学习的方法。采用多智能体近端策略优化（MAPPO）结合优先虚拟自我对弈（PFSP）训练追捕者和逃逸者，以应对非平稳性和灾难性遗忘。在高保真仿真环境中，利用CTBR低层控制指令实现敏捷飞行，实验结果表明拦截成功率显著提高，验证了强化学习在无人机空战机动决策中的有效性。",
+      "llm_tldr": "该论文针对无人机拦截敏捷目标这一空战类似任务，提出一种基于竞争性多智能体强化学习的方法。采用多智能体近端策略优化（MAPPO）结合优先虚拟自我对弈（PFSP）训练追捕者和逃逸者，以应对非平稳性和灾难性遗忘。在高保真仿真环境中，利用CTBR低层控制指令实现敏捷飞行，实验结果表明拦截成功率显著提高，验证了强化学习在无人机空战机动决策中的有效性。",
+      "llm_tags": [
+        "query:uac"
+      ],
+      "matched_query_tag": "query:uac",
+      "matched_query_text": "deep reinforcement learning for autonomous UAV air combat maneuvers",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2606.25122v1",
+      "source": "arxiv",
+      "title": "AeroCast: Probabilistic 3D Trajectory Prediction for Non-Cooperative Aerial Obstacles via Transformer-MDN Architecture",
+      "abstract": "Autonomous aerial vehicles operating in shared airspace must predict the future positions of non-cooperative obstacles to plan evasive maneuvers before a collision becomes unavoidable. Unlike cooperative systems that share intent, non-cooperative obstacles such as birds, uncontrolled drones, or debris exhibit multi-modal motion that deterministic predictors cannot adequately represent. Existing methods either rely on recurrent encoders that propagate temporal information sequentially, limiting their ability to capture long-range kinematic precursors of maneuver initiation, or produce point forecasts that provide no distributional information to downstream planners. This paper presents AeroCast, a probabilistic trajectory prediction framework that combines a Transformer encoder with a Mixture Density Network output head to predict per-timestep Gaussian mixture distributions over future three-dimensional displacements. A translation-invariant consecutive displacement encoding and a calibration-oriented training objective address the input design and mode-degeneracy challenges specific to mixture-based aerial trajectory prediction. On a hybrid real-and-synthetic quadrotor corpus spanning nine motion categories, AeroCast reduces Average Displacement Error and Final Displacement Error by approximately 50% relative to the baselines over a five-second horizon, and achieves the lowest negative log-likelihood and Continuous Ranked Probability Score among all compared methods. Ablation analysis identifies velocity input and model capacity as the primary contributors to prediction quality, and positional encoding as essential for long-horizon trajectory coherence. AeroCast inference completes in 0.1ms per sample, compatible with real-time onboard deployment at 100Hz.",
+      "authors": [
+        "Syed Izzat Ullah",
+        "Jose Baca"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI",
+        "cs.LG"
+      ],
+      "published": "2026-06-23T19:52:07+00:00",
+      "link": "https://arxiv.org/pdf/2606.25122v1",
+      "tags": [
+        "keyword:UAC",
+        "query:UAC"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "predicts non-cooperative aerial obstacle trajectories for evasive maneuver planning",
+      "llm_evidence_cn": "预测非合作空中障碍物轨迹以规划规避机动",
+      "llm_evidence": "预测非合作空中障碍物轨迹以规划规避机动",
+      "canonical_evidence": "预测非合作空中障碍物轨迹以规划规避机动",
+      "llm_tldr_en": "AeroCast uses a Transformer-MDN to predict probabilistic 3D trajectories of non-cooperative obstacles, enabling autonomous aerial vehicles to plan evasive maneuvers with uncertainty quantification, overcoming limitations of deterministic predictors.",
+      "llm_tldr_cn": "针对自主飞行器在共享空域中预测非合作障碍物未来位置的需求，现有方法或基于循环网络难以捕捉长程机动前兆，或仅输出点预测不含分布信息。本文提出AeroCast，采用Transformer-MDN架构进行概率3D轨迹预测，为下游规避规划提供多模态分布。实验表明，该方法在非合作飞行器轨迹预测任务上优于基线，能捕捉机动起始的长期依赖，为安全关键决策提供更可靠的预测信息。",
+      "llm_tldr": "针对自主飞行器在共享空域中预测非合作障碍物未来位置的需求，现有方法或基于循环网络难以捕捉长程机动前兆，或仅输出点预测不含分布信息。本文提出AeroCast，采用Transformer-MDN架构进行概率3D轨迹预测，为下游规避规划提供多模态分布。实验表明，该方法在非合作飞行器轨迹预测任务上优于基线，能捕捉机动起始的长期依赖，为安全关键决策提供更可靠的预测信息。",
+      "llm_tags": [
+        "query:uac"
+      ],
+      "matched_query_tag": "query:uac",
+      "matched_query_text": "maneuvering target trajectory prediction in aerial combat",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch"
+    }
+  ]
+}

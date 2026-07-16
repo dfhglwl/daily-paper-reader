@@ -1,0 +1,700 @@
+Title: Learning Agile Intruder Interception using Differentiable Quadrotor Dynamics
+
+URL Source: https://arxiv.org/pdf/2607.02472v1
+
+Published Time: Fri, 03 Jul 2026 01:26:50 GMT
+
+Number of Pages: 17
+
+Markdown Content:
+# Learning Agile Intruder Interception using Differentiable Quadrotor Dynamics 
+
+Michael Anoruo †,∗, Xiaoyu Tian †,∗, Abhishek Rathod †, Timothy Naudet §
+
+Thomas Canchola §, Eric Sturzinger §, Kshitij Goel †, and Wennie Tabib ††Carnegie Mellon University, §Artificial Intelligence Integration Center 
+
+http://rislab.github.io/projects/catchrl.html 
+
+Abstract: This paper presents a methodology for learning a control policy to in-tercept an intruder using the 3D direction unit vector to the intruder and the inter-ceptor state. Prior deep reinforcement learning approaches assume either relative position or distance to the intruder is available, but this information is not read-ily accessible in real-world applications that employ passive, monocular camera sensors. Instead, we propose a solution that leverages an analytical policy gradi-ent method using differentiable quadrotor dynamics to learn agile interception at speeds up to 10 m /s. The proposed approach outperforms baseline methods that utilize simplified point mass dynamics by an average of 30%. 
+
+Keywords: Aerial Robots, Deep Reinforcement Learning, Interception 0
+
+> 5
+> 10
+> 15
+> 20
+> 25
+> Acceleration (m/s 2)
+
+Figure 1: Plot of a rollout in simulation using the proposed control policy. The interceptor (blue) aggressively pursues the intruder (red) flying at 5.8 m /s and collides with it at the star (yellow) labeled interception. The acceleration along the trajectories taken by each agent is plotted from blue (low acceleration) to yellow (high acceleration). Both vehicles are assumed to operate in open air environments in the absence of obstacles. 
+
+## 1 Introduction 
+
+Agile unmanned aerial systems have the potential to disrupt airport operations and damage critical urban infrastructure [1]. The ubiquity and low-cost of commercial off-the-shelf unmanned aerial 
+
+> ∗
+
+Equal contribution. 
+
+> arXiv:2607.02472v1 [cs.RO] 2 Jul 2026
+
+systems pose challenges for defending restricted airspaces. Thus, the demand for cost-effective countermeasures against unauthorized drone activity is increasing [2]. In this work, we propose a solution that intercepts an intruder drone through forced collisions. Prior works leveraging Deep Reinforcement Learning (DRL) for interception require relative 3D position or distance information during inference for interception; however, this information is not readily available in real-world applications. Instead, we assume the interceptor is equipped with multiple cameras whose images provide 360 ◦ coverage. Given this sensing model, object detection is possible on a unit sphere around the interceptor, which determines the direction of the intruder relative to the interceptor. The problem we address is how to train a policy that uses only the unit direction vector to the intruder and interceptor state as inputs during inference. To this end, we make the following contributions: (1) an end-to-end control policy trained via differentiable simulation for interception; (2) exten-sive evaluations in simulation that compare the approach against state-of-the-art RL algorithms and multiple dynamics models; and (3) an open source software release 1.
+
+## 2 Related Work 
+
+This section provides an overview of prior work most closely aligned with our approach. These works can be broadly categorized as autonomous interception and learning-based navigation. 
+
+Interception: Prior works have leveraged DRL for drone interception [2, 3, 4, 5, 6]; however, these approaches assume that the intruder’s 3D position relative to the interceptor is known during infer-ence, which is challenging to estimate using passive monocular sensing. Our approach assumes that only the 3D direction vector without distance to the intruder is known. In practice, this information could be obtained from an object detector (e.g. YOLO [7]) through a set of onboard cameras. LiDAR-based intruder detection and interception has been demonstrated in [8, 9], but LiDARs are active sensors that emit pulses of infrared laser light [10], which makes them detectable [11] com-pared to passive sensors like RGB cameras. LiDARs are also relatively expensive, so methods that leverage passive sensors are preferred. Yan et al. [12], Guo et al. [13] develop visual servoing for intercepting a dynamic intruder, but the approaches are evaluated using simple trajectories that vary the z-altitude exclusively or move along the xy -plane. In contrast, we evaluate our approach with agile 3D trajectories. Liu et al. [14] have proposed using noisy distance observations via a micro-phone for interception but require two communicating vehicles to intercept one intruder. We propose a strategy that requires one interceptor per intruder. Prior works have also considered how jamming could be used to interfere with GNSS receivers to intercept drones [15, 16, 17, 18]; however, this is ineffective for systems that can operate in GPS-denied environments (e.g., using visual inertial odometry instead of GPS to navigate). Nets have also been considered to catch rogue drones [19], but multiple systems are required to coordinate to transport the net, which necessitates precise localization using a differential GNSS solution. Further, the solution requires external target detection and tracking [19], which limits real-world deployment. 
+
+Learning-based Quadrotor Navigation using Differentiable Physics: Learning-based quadrotor navigation methods using differentiable quadrotor physics models [20, 21, 22] have demonstrated performance gains and improved sample efficiency over imitation learning methods [23]. Zhang et al. [20] contribute a neural policy that processes a depth image and quadrotor state to output acceleration commands. Instead of leveraging a critic network, their method relies on a simplified point mass dynamics model through which gradients can flow during backpropagation. Extensions to this work have been proposed towards improving yaw control [21] and training stability [22]. To the best of our knowledge, differentiable simulation has not been used in prior work to address the interception problem. We address this gap in this paper by developing an end-to-end interception policy trained via differentiable simulation. 
+
+> 1https://github.com/rislab/catchrl
+
+2Latent from t-1  
+
+> (B, 192)
+> (B, 192)
+> Output
+> Thrust
+> (B, 3)
+> Yaw
+> (B, 1) State:
+> Velocity
+> Rotation
+> Matrix
+> (B, 12)
+> Intruder
+> Direction:
+> (B, 3)
+> GRUCell
+> Target Extractor
+> Layer Norm Linear
+> State Extractor
+> Linear Layer Norm
+> (192)
+> (B, 192)
+> (B, 192)
+> New Latent
+> (B, 192)
+> Linear
+> (192)
+> (B, 192)
+> (192)
+> Layer Norm
+> Input
+> Linear
+> (4)
+
+Figure 2: Overview of the network architecture for the interception control policy. The 3D direction vector to the intruder from the interceptor is used as an input to the policy along with the interceptor linear velocity and rotation matrix flattened to a 9-dimensional vector. MLP encoders process the intruder and interceptor data separately to produce 192-dimensional embeddings, which are summed and passed to a GRU with 192 hidden units. The output of the GRU is fed through a single hidden layer before a linear head to generate the interceptor control commands. 
+
+## 3 Methodology 
+
+We design a learning-based control policy for a quadrotor agent intercepting a dynamic intruder in an open 3D workspace. The policy (see Fig. 2) receives quadrotor proprioception and a unit direction vector to the intruder. A recurrent neural network (RNN) maps the onboard observations to a 3D thrust and heading command which are used to intercept the intruder. At time t, let the state of this system be xt ∈ X , where X is the continuous state space for the interceptor and the intruder. The interceptor observes ot = vt, Rt, ˆdt
+
+, where vt ∈ R3 is the inter-ceptor’s linear velocity, Rt ∈ SO(3) is the interceptor body-to-start rotation matrix, and ˆdt ∈ S2 is the unit direction vector to the intruder from the interceptor, expressed in the frame aligned with the starting pose of the interceptor. The policy outputs ut = acmd  
+
+> t
+
+, ψ t
+
+ consist of the 3D commanded mass-normalized thrust vector for the interceptor acmd  
+
+> t
+
+∈ R3 and a scalar yaw angle ψt ∈ R. These outputs are tracked using a PD attitude controller [24] onboard the quadrotor interceptor. In general, all the inputs and outputs of the policy are expressed in the start frame. The policy ut = πθ (ot) is represented using a neural network with θ parameters. We leverage the Analytical Policy Gradient (APG) method [25] which backpropagates gradients through time (BPTT) using a differentiable dynamics model to optimize the network parameters via gradient descent [20]. Formally, we want to find the optimal policy parameters that minimize the loss over a trajectory containing T timesteps, θ∗ = arg min θ
+
+PTt=0 L(xt, π θ (ot)) , where L is the per-step loss. To this end, the following sections describe the network architecture for πθ , the differentiable dynamics model used for APG, and the objective functions that contribute to L and enable dynamic intruder interception. 
+
+3.1 Policy Network Architecture 
+
+The policy network is designed to exploit the temporal structure of the interception task while remaining compatible with BPTT-based optimization [20] (see Fig. 2). The proprioceptive state 
+
+[vt, Rt] and the 3D unit direction vector to the intruder ˆdt are processed by two separate MLP en-coders, each producing a 192-dimensional embedding. The two embeddings are summed and passed to a Gated Recurrent Unit (GRU) with 192 hidden units, whose output is fed through a single hidden layer (192 units) before a linear head emitting the four-dimensional action [acmd  
+
+> t
+
+, ψ t]. The recurrent state enables the policy to integrate information across timesteps, implicitly estimating intruder ve-locity and acceleration from the temporal sequence of 3D direction measurements. This is essential for predictive interception given that the intruder velocity and absolute position are unobservable during inference. 33.2 Differentiable Dynamics Model 
+
+Recent works that leverage APG and BPTT for training a quadrotor navigation policy opt for a simplified point mass dynamics model to enable higher sample efficiency and shorter training times [20, 21]. However, for the dynamic interception task, we found that the nonlinear quadrotor dynamics model provides a higher interception accuracy relative to the point mass approximation. The quadrotor is modeled as a rigid body with state [p, v, q, ω] representing position, linear velocity, attitude quaternion, and body-frame angular velocity, respectively. Its dynamics evolve according to 
+
+˙p = v, ˙v = 1 
+
+> m
+
+Rwb (f + d(v)) − gˆz, (1) 
+
+˙q = 12 q ⊗ ω, ˙ω = J−1 τ − ω × Jω, (2) where Rwb is the body-to-world rotation, f = [0 , 0, u 1]⊤ is the collective thrust in the body frame, 
+
+τ is the body torque, J is the inertia matrix, and g is gravity. The aerodynamic drag is modeled as 
+
+d(v) = −kd, 1∥v∥v − kd, 2v, (3) where kd, 1 and kd, 2 are drag coefficients. The collective thrust u1 and body torque τ are produced by four rotors. An attitude-rate controller converts the policy’s high-level thrust-and-yaw command into desired rotor speeds Ωcmd ,i . To capture real-world latency, the actual rotor speeds Ωi are modeled with a first-order delay: 
+
+˙Ωi = 1
+
+τr
+
+(Ω cmd ,i − Ωi), (4) where τr is the rotor time constant. The forces and torques are then generated via a quadratic thrust model and mixer matrix. The ordinary differential equation above is integrated with the fixed-step 4th order Runge–Kutta (RK4) method. This model is differentiable and can be used within the APG-based policy optimization. 
+
+3.3 Objective Functions 
+
+The training objective minimizes the weighted sum of the guidance and regularization terms. The total per-step loss is 
+
+Lt = λalign Lalign + λclose Lclose + λacc Lacc + λjerk Ljerk + λvmax Lvmax + λyaw Lyaw . (5) Each term is described below. We leverage the intruder’s position and velocity as privileged in-formation for loss computation. This information is not provided as an input to the policy dur-ing deployment. This setup encourages emergent interception behavior while maintaining re-alistic observation constraints at inference time. All terms are calculated in the world frame. pagt 
+
+> vagt
+> ˆdt
+> LOS
+> vtgt
+> ptgt
+
+Guidance: Inspired by parallel navigation [26], these terms enable intruder interception (see inset figure). Let dt = ptgt − pagt be the relative po-sition and vrel ,t = vtgt − vagt the relative velocity of the interceptor ( agt ) and the intruder ( tgt ). The unit line-of-sight (LOS) vector is ˆdt = dt/∥dt∥.The parallel-navigation criterion decomposes into two scalar quantities. The first term captures the an-gular drift of the LOS, 
+
+mt = Lalign = ˆdt × ˆvrel ,t = sin ∠ dt, vrel ,t 
+
+, (6) which vanishes when the relative velocity is aligned with the LOS. The second term captures the rate of approach along the LOS, 
+
+vc,t = −L close = −ˆd⊤ 
+
+> t
+
+vrel ,t , (7) 4raxis    
+
+> ar
+> 10 15 20 25
+> Acceleration ( m/s2)
+
+(a) Ellipse raxis     
+
+> zrate
+> 12 13 14 15
+> Acceleration ( m/s2)
+
+(b) Spiral raxis     
+
+> ar
+> 10 20 30 40
+> Acceleration ( m/s2)
+
+(c) Lemniscate 
+
+Figure 3: Example (a) ellipse, (b) spiral, and (c) lemniscate intruder trajectories. The ellipse trajec-tories are used for training while all are used in evaluation. The parameters of the trajectories are randomly sampled (Appendix A.1). A subset of these parameters, raxis , ρar , and zrate , are visualized and denote the semi-axis, aspect ratio, and vertical ascent rate for the spiral, respectively. The tra-jectories are colorized according to the magnitude of the acceleration. (a)–(c) present increasingly challenging interception tasks. which is positive when the gap is shrinking. The policy is trained to minimize mt and maximize vc,t .The alignment term penalizes the sine of the angle between the relative position and relative velocity vectors, vanishing when the agent moves along the LOS to the intruder. The closing term (note the sign — minimizing the loss maximizes closing speed) drives the agent to shrink the gap rather than pointing to the intruder. 
+
+Regularization: To produce smooth trajectories, we penalize commanded acceleration, jerk, and speed: 
+
+Lacc = ∥at∥2, Ljerk = ∥jt∥2, Lvmax = max  0, ∥vt∥ − vdes 
+
+2. (8) The acceleration penalty discourages excessive control effort; the jerk penalty enforces temporal smoothness, mitigating high-frequency oscillations that destabilize BPTT; and the one-sided veloc-ity penalty keeps trajectories within the platform’s flight envelope while leaving the agent free to operate below the desired speed vdes .
+
+Yaw Alignment: We add a loss term that helps the policy align the body x-axis with the intruder direction: 
+
+Lyaw = −ˆd⊤ 
+
+> t
+
+ˆb1,t , (9) where ˆb1,t is the world-frame projection of the body x-axis onto the horizontal xy -plane. 
+
+## 4 Results 
+
+Experimental Design: Our method is evaluated using a custom-built parallelized, GPU-accelerated simulator written in PyTorch [27]. The intruder is successfully intercepted if its position is within a capture radius cr at any time. If after Tep timesteps or when the distance between the intruder and interceptor exceeds the escape radius er , the interception is considered to have failed. Each timestep is ∆tctrl seconds long. The success rate is measured as the number of rollouts that terminate in success divided by the total number of rollouts. For each rollout, the interceptor’s initial position and orientation are randomized within a box of side length sbox , and the intruder is initialized on a sampled trajectory. All evaluation rollouts utilize the nonlinear quadratic dynamics model. We sweep loss coefficients of our approach as detailed in Section A.2. The values for all parameters are provided in Section A.4. The sampled trajectories consist of three types: ellipse, spiral, and lemniscate (see Fig. 3). Ellipse trajectories are used for both training and evaluation, whereas the lemniscate and spiral trajectories 50 10M 20M 30M 40M      
+
+> Environment Steps
+> 0
+> 1
+> Success Rate
+> PMD APG
+> PMD PPO (a) Success rate during training 010M 20M 30M 40M
+> Environment Steps
+> 0
+> 2
+> 4
+> 6
+> 8
+> 10
+> 12
+> Ep. Length  PMD APG
+> PMD PPO (b) Episode length during training
+
+Figure 4: Training success rate and episode length variation with environment steps demonstrate that APG is more sample-efficient than PPO. 0 1 2 3 4          
+
+> Intruder Speed (m/s)
+> 0
+> 0.5
+> 1.0
+> Success Rate
+> PMD APG
+> PMD PPO
+> (a) Ellipse 01234
+> Intruder Speed (m/s)
+> 0
+> 0.5
+> 1.0
+> Success Rate
+> PMD APG
+> PMD PPO (b) Spiral 01234
+> Intruder Speed (m/s)
+> 0
+> 0.5
+> 1.0
+> Success Rate
+> PMD APG
+> PMD PPO (c) Lemniscate
+
+Figure 5: The success rates obtained while varying intruder speeds during evaluation demonstrate that using APG enables a higher interception accuracy than PPO for all three types of intruder trajectories. are used only for evaluation. The ellipse trajectories used during training expose the interceptor to a wide range of maneuvers to intercept the intruder. The lemniscate and spiral trajectories evaluate the generalizability of the approach to more complex motions. Each trajectory is generated by randomly sampling parameters (see Appendix A.1), including a constant speed for the intruder to follow and geometric parameters such as the major axis, aspect ratio, orientation, and ascent rate. 
+
+Implementation Details: During both training and evaluation, rollouts that terminate early due to either successful interception or exceeding environment bounds, are frozen until all parallel rollouts complete execution to synchronously update the policy parameters. Experiments were conducted on an NVIDIA RTX 5090 GPU. Unless otherwise specified, policies were trained for 1500 updates using a horizon length of 64 steps across 512 parallel environments, corresponding to approximately 49.15 million steps. We evaluate the learnt policies in 110,000 environments. 
+
+Evaluation of APG and PPO using Point Mass Dynamics (PMD): Prior works [20, 21] have leveraged simplified point mass dynamics and differentiable physics for quadrotor navigation tasks due to their computational efficiency. Given this prior work, we conduct an analysis to evaluate the performance of APG using a simplified point mass dynamics model and compare its performance against the state-of-the-art model-free baseline PPO [28]. Consistent with prior work, we employ domain randomization (see Table 5) to help the PMD policies generalize to the quadrotor dynamics. The baseline PPO policy is implemented using GAE [29] and two separate networks for the actor and critic. The actor and critic networks leverage the same architecture used in our proposed method (the parameters used for PPO training may be found in Table 3). For a fair comparison, both policies share the same state and action space, and are trained against the same objective function in Eq. (5). The interceptor is initialized in a stable hover state at the beginning of each episode. To analyze the performance, we generate two sets of plots. First, we provide a mean and standard error plot (Fig. 4) for success rate and episode length observed during training for both approaches based on 10 training runs with different random number generator seeds. The second set of plots (Fig. 5) evaluates the generalizability of each approach across different trajectories and velocity profiles of the intruder. We find that APG is more sample-efficient than PPO (Fig. 4a), which is consistent with prior work [20]. Figure 4b shows that PPO takes longer to intercept the intruder. Figure 5 shows the success rates for the ellipse, spiral, and lemniscate trajectories. The PMD APG 60 10M 20M 30M 40M      
+
+> Environment Steps
+> 0
+> 1
+> Success Rate
+> PMD APG
+> Quad APG (a) Success rate during training 010M 20M 30M 40M
+> Environment Steps
+> 0
+> 2
+> 4
+> 6
+> 8
+> 10
+> 12
+> Ep. Length  PMD APG
+> Quad APG (b) Episode length during training
+
+Figure 6: Training success rate and episode length variation with environment steps show a similar rate of convergence when simplified point mass dynamics and nonlinear quadrotor dynamics models are used with APG. 0 1 2 3 4 5 6 7 8 9 10                       
+
+> Intruder Speed (m/s)
+> 0
+> 0.5
+> 1.0
+> Success Rate
+> PMD APG
+> Quad APG
+> (a) Ellipse 012345678910
+> Intruder Speed (m/s)
+> 0
+> 0.5
+> 1.0
+> Success Rate
+> PMD APG
+> Quad APG (b) Spiral 012345678910
+> Intruder Speed (m/s)
+> 0
+> 0.5
+> 1.0
+> Success Rate
+> PMD APG
+> Quad APG (c) Lemniscate
+
+Figure 7: The success rates obtained while varying intruder speeds during evaluation demonstrate that using the nonlinear quadrotor dynamics model enables a higher interception accuracy compared to using simplified point mass dynamics for all three types of intruder trajectories. approach consistently outperforms the PMD PPO approach and widens the success gap as the speed of the intruder is increased. These analyses assume a relatively large platform (i.e., 2.65 kg ) with a thrust-to-weight ratio of 2.7,which affects the agility of the platform and causes motor saturation at high intruder speeds beyond 
+
+4 m /s. The PMD and Quad interceptor platform parameters are provided in Table 5 and Table 6, respectively. 
+
+Evaluation of PMD APG Compared to APG Trained with Quadrotor Dynamics: While prior works [20, 21] have shown that simplified point mass dynamics are sufficient for quadrotor nav-igation, the navigation problem seeks to achieve a single setpoint. The interception problem is fundamentally different as it requires more agile maneuvers to catch a high-speed moving intruder. For this reason, we opt for using the nonlinear quadrotor dynamics model. For these experiments, we reduce the interceptor mass to 1 kg effectively increasing the thrust-to-weight ratio and platform agility of the interceptor. In the next section, we provide results to quantify the performance for a larger and higher range of intruder speeds with a more agile interceptor. Given the superior performance of PMD APG compared to PMD PPO, we compare PMD APG against APG trained using quadrotor dynamics (Quad APG). To evaluate the performance of PMD APG and Quad APG, we provide two sets of plots. The first set evaluates the training performance (see Fig. 6). We observe PMD and Quad dynamics models require a similar number of environment steps for convergence. During evaluation, which is shown in Fig. 7, we see that the success rate for the Quad APG policy is substantially higher compared to the PMD APG policy. The Quad APG policy is able to intercept approximately 60% of intruders at speeds up to 8 m /s (compared to approximately 30% of intruders for PMD APG). For each of the ellipse, spiral, and lemniscate evaluation trajectories, the Quad APG policy outperforms the PMD APG policy on average by 37%, 33%, and 31%, respectively. Figure 8 provides qualitative examples of rollouts for the Quad APG policy using the three trajectory types. 
+
+Training Times: The Quad APG policy takes approximately 137 minutes, the PMD APG policy takes 10 minutes, and PMD PPO takes approximately 7 minutes. Though significantly faster to 70 5 10 15 20            
+
+> Acceleration (m/s 2)0510 15 20
+> Acceleration (m/s 2)0510 15
+> Acceleration (m/s 2)0510 15 20
+> Acceleration (m/s 2)
+
+(a) Ellipse 0 5 10 15 20 25  
+
+> Acceleration (m/s 2)
+
+(b) Spiral 0 10 20 30  
+
+> Acceleration (m/s 2)
+
+(c) Lemniscate 
+
+Figure 8: Example rollouts with acceleration heatmaps of the proposed Quad APG policy. Collision between the intruder (red) and the interceptor (blue) occurs at the point marked with a star. train, the low fidelity of the point mass model means it cannot capture the full range of rigid-body dynamics that a true quadrotor model exhibits. 
+
+## 5 Conclusion 
+
+This paper presented a methodology to intercept an intruder by learning agile maneuvers using differentiable simulation. The interceptor state and 3D unit direction vector to the intruder are provided as inputs to the policy to infer the high-level control commands for interception. The policy parameters are optimized using the sample-efficient analytical policy gradients. Training through the quadrotor dynamics instead of simplified point mass dynamics yields higher interception rates ( ≥
+
+30% on average) for a wide range of intruder speeds (up to 10 m /s). 
+
+Limitations: The current approach assumes that the intruder uses a constant speed to execute the trajectory; however, this is not representative of an adversarial scenario. Future work includes de-veloping a policy that intercepts adversarial evaders. Our approach also assumes that the intruder is always within the field of view of the interceptor and does not incorporate sensor or detection uncertainty. Hardware validation also remains an area of future work. 
+
+Acknowledgments 
+
+This research was supported in part by an AI2C Seed grant and the NVIDIA Academic Grant Pro-gram. 8References 
+
+[1] A. N. Skraparlis, K. S. Ntalianis, and N. Tsapatsoulis. A novel framework to intercept gps-denied, bomb-carrying, non-military, kamikaze drones: Towards protecting critical infras-tructures. Defence Technology , 40:225–241, 2024. ISSN 2214-9147. doi:https://doi.org/ 10.1016/j.dt.2024.05.001. URL https://www.sciencedirect.com/science/article/ pii/S2214914724001089 .[2] T. Gavin, S. Lacroix, and M. Bronz. Agile interception of a flying target using competitive reinforcement learning, 2026. URL https://arxiv.org/abs/2603.16279 .[3] A. S. Roncero, Y. Cai, O. Andersson, and P. Ogren. Learned controllers for agile quadrotors in pursuit-evasion games. 2026. URL https://arxiv.org/abs/2506.02849 .[4] C. Zheng, Z. Guo, Z. Yin, C. Wang, Z. Wang, and S. Zhao. Non-equilibrium mav-capture-mav via time-optimal planning and reinforcement learning, 2026. URL https://arxiv.org/ abs/2503.06578 .[5] J.-E. Pierre, X. Sun, and R. Fierro. Multi-agent partial observable safe reinforcement learning for counter uncrewed aerial systems. IEEE Access , 11:78192–78206, 2023. doi:10.1109/ ACCESS.2023.3298601. [6] R. Logiewa, F. Hoffmann, F. Govaers, and W. Koch. Dynamic pursuit-evasion scenarios with a varying number of pursuers using deep sets. In 2023 IEEE Symposium Sensor Data Fusion and International Conference on Multisensor Fusion and Integration (SDF-MFI) , pages 1–7, 2023. doi:10.1109/SDF-MFI59545.2023.10361514. [7] J. Redmon, S. Divvala, R. Girshick, and A. Farhadi. You only look once: Unified, real-time object detection. In 2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , pages 779–788, 2016. doi:10.1109/CVPR.2016.91. [8] M. Pliska, M. Vrba, T. B´ aˇ ca, and M. Saska. Towards safe mid-air drone interception: Strategies for tracking and capture. IEEE Robotics and Automation Letters , 9(10):8810–8817, 2024. doi: 10.1109/LRA.2024.3451768. [9] M. Vrba, V. Walter, V. Pritzl, M. Pliska, T. B´ aˇ ca, V. Spurn´ y, D. Heˇ rt, and M. Saska. On onboard lidar-based flying object detection. IEEE Transactions on Robotics , 41:593–611, 2025. doi: 10.1109/TRO.2024.3502494. [10] J. Ryde and N. Hillier. Performance of laser and radar ranging devices in adverse environmen-tal conditions. Journal of Field Robotics , 26(9):712–727, 2009. doi:https://doi.org/10.1002/ rob.20310. URL https://onlinelibrary.wiley.com/doi/abs/10.1002/rob.20310 .[11] M. Zygmunt and K. Kopczynski. Laser warning system as an element of optoelectronic bat-tlefield surveillance. In P. Kaniewski and J. Matuszewski, editors, Radioelectronic Systems Conference 2019 , volume 11442, page 1144202. International Society for Optics and Photon-ics, SPIE, 2020. doi:10.1117/12.2565139. URL https://doi.org/10.1117/12.2565139 .[12] H. Yan, K. Yang, Y. Cheng, Z. Wang, and D. Li. Precise interception flight targets by image-based visual servoing of multicopter. IEEE Transactions on Industrial Electronics , 72(11): 11499–11509, 2025. doi:10.1109/TIE.2025.3559951. [13] H. Guo, T. Song, and J. Ye. Dynamic interception image-based visual servoing under gust interference and model uncertainty. In P. of Acta Aero et Astro Sinica, editor, Proceedings of the 2nd Aerospace Frontiers Conference (AFC 2025) , pages 410–420, Singapore, 2026. Springer Nature Singapore. ISBN 978-981-95-3037-3. doi:10.1007/978-981-95-3037-3 28. 9[14] F. Liu, S. Yuan, T.-M. Nguyen, and R. Su. Autonomous 3d moving target encirclement and interception with range measurement. In 2025 IEEE/RSJ International Conference on Intel-ligent Robots and Systems (IROS) , pages 4581–4588, 2025. doi:10.1109/IROS60139.2025. 11246819. [15] N. Souli, P. Kolios, and G. Ellinas. Multi-agent system for rogue drone interception. IEEE Robotics and Automation Letters , 8(4):2221–2228, 2023. doi:10.1109/LRA.2023.3245412. [16] P. Valianti, K. Malialis, P. Kolios, and G. Ellinas. Cooperative multi-agent jamming of multiple rogue drones using reinforcement learning. IEEE Transactions on Mobile Computing , 23(12): 12345–12359, 2024. doi:10.1109/TMC.2024.3409050. [17] X. Ma and M. Gao. “lure the enemy in deep”: Confronting rogue uav through diverse hybrid jamming. IEEE Access , 13:68351–68369, 2025. doi:10.1109/ACCESS.2025.3559659. [18] N. Souli, P. Kolios, and G. Ellinas. An enhanced autonomous counter-drone system with jamming and relative positioning capabilities. Robotics and Autonomous Systems , 194:105160, 2025. ISSN 0921-8890. doi:https://doi.org/10.1016/j.robot.2025.105160. URL https:// www.sciencedirect.com/science/article/pii/S092188902500257X .[19] J. Rothe, M. Strohmeier, and S. Montenegro. Autonomous multi-uav net defense system for aerial drone interception. In 2025 10th International Conference on Control and Robotics Engineering (ICCRE) , pages 171–177, 2025. doi:10.1109/ICCRE65455.2025.11093305. [20] Y. Zhang, Y. Hu, Y. Song, D. Zou, and W. Lin. Learning vision-based agile flight via differ-entiable physics. Nature Machine Intelligence , 7(6):954–966, 2025. ISSN 2522-5839. doi:10. 1038/s42256-025-01048-0. URL http://dx.doi.org/10.1038/s42256-025-01048-0 .[21] J. Lee, A. Rathod, K. Goel, J. Stecklein, and W. Tabib. Quadrotor navigation using reinforce-ment learning with privileged information, 2025. URL https://arxiv.org/abs/2509. 08177 .[22] F. Li, S. Wang, Y. Huang, F. Sun, S. Wu, Y. Yan, D. Zou, and W. Yu. Simple but stable, fast and safe: Achieve end-to-end control by high-fidelity differentiable simulation. 2026. URL 
+
+https://arxiv.org/abs/2604.10548 .[23] A. Loquercio, E. Kaufmann, R. Ranftl, M. M¨ uller, V. Koltun, and D. Scaramuzza. Learning high-speed flight in the wild. Science Robotics , 6(59):eabg5810, 2021. doi:10.1126/scirobotics.abg5810. URL https://www.science.org/doi/abs/10.1126/ scirobotics.abg5810 .[24] D. Mellinger, N. Michael, and V. Kumar. Trajectory generation and control for precise ag-gressive maneuvers with quadrotors. The International Journal of Robotics Research , 31 (5):664–674, 2012. doi:10.1177/0278364911434236. URL https://doi.org/10.1177/ 0278364911434236 .[25] N. Wiedemann, V. W¨ uest, A. Loquercio, M. M¨ uller, D. Floreano, and D. Scaramuzza. Train-ing efficient controllers via analytic policy gradient, 2023. URL https://arxiv.org/abs/ 2209.13052 .[26] L. C. Yuan. Homing and navigational courses of automatic target-seeking devices. Journal of Applied Physics , 19(12):1122–1128, 12 1948. ISSN 0021-8979. doi:10.1063/1.1715028. URL https://doi.org/10.1063/1.1715028 .[27] A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, G. Chanan, T. Killeen, Z. Lin, N. Gimelshein, L. Antiga, A. Desmaison, A. K¨ opf, E. Yang, Z. DeVito, M. Raison, A. Te-jani, S. Chilamkurthy, B. Steiner, L. Fang, J. Bai, and S. Chintala. Pytorch: An imperative style, high-performance deep learning library, 2019. URL https://arxiv.org/abs/1912. 01703 .10 [28] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov. Proximal policy optimization algorithms. 2017. URL https://arxiv.org/abs/1707.06347 .[29] J. Schulman, P. Moritz, S. Levine, M. Jordan, and P. Abbeel. High-dimensional continu-ous control using generalized advantage estimation, 2015. URL https://arxiv.org/abs/ 1506.02438 .11 A Appendix 
+
+A.1 Parametric Intruder Trajectories 
+
+Table 1: Intruder trajectory families. raxis = semi-axis, ρar = axis ratio, zrate = spiral climb per radian. Family In-plane h(s) Vertical z(s) Tilt Rtilt 
+
+Ellipse (raxis cos s, r axis ρar sin s, 0) 0 per-env (ϕ, θ )
+
+Spiral (raxis cos s, r axis ρar sin s, 0) zrate s identity (flat baseline) Lemniscate (raxis cos s, raxis ρar  
+
+> 2
+
+sin 2 s, 0) 0 per-env (ϕ, θ )
+
+Each intruder trajectory is a 3D curve parameterized by a scalar phase s,
+
+p(s) = c0 + Rtilt h(s) + z(s)ˆ z, (10) where c0 is the curve center, h(s) is an in-plane curve in the xy -plane, and z(s) is a vertical com-ponent along the world ˆz axis. We instantiate three families of trajectories: ellipse, spiral, and lemniscate (Table 1). The tilt Rtilt 
+
+is a per-rollout ZYX -Euler rotation Rtilt = Rz (ψ)Ry (θ)Rx(ϕ) that lifts the planar curve into 3D. During training, we use constant speed 3D elliptical trajectories without a dynamic feasibility check. For evaluation, we use all three trajectory types but with an upper bound on maximum acceleration. In the following, ˙() and () ′ denote derivatives with respect to time and phase, respectively. 
+
+A.1.1 Training 
+
+Let the desired intruder speed be vtgt . We ensure that the elliptical realization of the parametric curve in Eq. (10) follows this target speed by setting ˙s = vtgt / ∥c(s)∥ in ˙p = c(s) ˙ s, where c(s) = 
+
+Rtilt h′(s) + z′(s)ˆ z. The sign of vtgt determines the intruder’s direction of traversing the curve. 
+
+A.1.2 Evaluation 
+
+To impose an upper bound on acceleration, we derive a feasibility predicate directly from the quadro-tor model so the evaluation set of trajectories is realizable. The quadrotor produces net world-frame acceleration 
+
+anet = Tc
+
+m b − gˆz, (11) where b is the body thrust axis and Tc the collective thrust. To realize a demanded acceleration ad,the rotors must produce the thrust acceleration acmd  
+
+> t
+
+= ad + gˆz. This is feasible if 
+
+acmd  
+
+> t
+
+≤ Amax and acmd  
+
+> t,z
+
+≥ 0, (12) where Amax is a maximum acceleration chosen using the maximum RPM values of the four rotors (Nm = 4 ) and a degradation factor η to account for motor time constant, control bandwidth, and error-correction margin. Formally, 
+
+Amax = η NmFm
+
+m (13) such that Fm = f2Ω2max + f1Ωmax + f0 is the maximum available per-rotor force and η = 0 .6.A trajectory represented by the family in Eq. (10) is feasible if every point on the curve satis-fies Eq. (12). For the elliptical and lemniscate trajectories, we use a dense grid of phase values s and ensure 
+
+max  
+
+> s
+
+∥a(s) + g ˆz∥ ≤ Amax and min  
+
+> s
+
+az (s) ≥ − β g, (14) where the downward-acceleration fraction β = 0 .6 leaves margin so the attitude controller does not saturate on the descending arc of a tilted orbit. The expression for a(s) can be derived from Eq. (10) 12 as 
+
+a(s) = v2tgt 
+
+"
+
+c′(s)
+
+∥c(s)∥2 − c(s) c(s) · c′(s)
+
+∥c(s)∥4
+
+#
+
+. (15) The value az (s) in Eq. (14) is the z-component of Eq. (15). On the other hand, for the spiral trajectory, we impose v2tgt κmax ≤ mg , where κmax = max s κ(s) is the peak in-plane curvature, which is derived from Eq. (10) as κ(s) = ∥c(s) × c′(s)∥ / ∥c(s)∥3.We use the following algorithm to generate a desired number of these trajectories for different speed magnitudes. 
+
+Algorithm 1 Generating a pool of feasible trajectories for a range of speed magnitudes 
+
+Require: speed magnitudes, desired number of trajectories, shape-parameter ranges, feasibility test, pool size, draw budget  
+
+> 1:
+
+for each speed magnitude do  
+
+> 2:
+
+feasible pool ← empty  
+
+> 3:
+
+draws ← 0 
+
+> 4:
+
+while feasible pool < pool size and draws < draw budget do  
+
+> 5:
+
+draw shape parameters uniformly from the ranges ▷ semi-axis, axis ratio, tilt, zrate  
+
+> 6:
+
+draws ← draws + 1  
+
+> 7:
+
+if the shape is dynamically feasible at this speed then ▷ feasibility test  
+
+> 8:
+
+add the shape to the feasible pool  
+
+> 9:
+
+end if  
+
+> 10:
+
+end while  
+
+> 11:
+
+if size( feasible pool ) < desired number of trajectories then  
+
+> 12:
+
+abort : feasible region too thin ▷ widen the ranges or lower the top speed  
+
+> 13:
+
+end if  
+
+> 14:
+
+kept ← farthest-point selection from the feasible pool ▷ max-min in normalized parameter space  
+
+> 15:
+
+signed-split: assign traversal direction  
+
+> 16:
+
+output each kept shape and its signed speed  
+
+> 17:
+
+end for 
+
+The algorithm has three stages. First, rejection sampling draws shape parameters uniformly and keeps those that pass the feasibility test, building a pool up to a specified pool size. Second, farthest-point selection greedily selects the requested number of pool members that maximize the minimum pairwise distance in normalized parameter space, so the kept set is geometrically diverse rather than clumped by feasible-region density. Third, signed split assigns a positive direction to half and a negative direction to the other half (reverse traversal) pool of trajectories. Each generation run reports acceptance rate and diversity diagnostics (e.g., closest-pair spread, per-axis coverage, etc.) and aborts if any (family, speed) bucket cannot be filled, so a thin feasible region cannot silently degrade the evaluation trajectory set. 
+
+A.2 Hyperparameter Sweeping A.2.1 Loss Coefficients 
+
+For the loss coefficients, λalign , λ close , λ acc , λ jerk , λ vmax , and λyaw in Eq. (5), we set up hyperpa-rameter sweeping as follows. 
+
+Scale: The objective is nearly invariant to a global rescaling λ → αλ absorbed into the policy step size: only the ratios of the weights matter. We anchor λalign L = 5 and search for the remaining weights and the learning rate relative to the anchor. 
+
+Trial Objectives: Each trial trains a policy from scratch on the point mass dynamics under a can-didate λ, then evaluates it on the high-fidelity quadrotor model. This weight vector is used for all training runs in this paper. The objective is to minimize the scalar 
+
+J = 300(1 − SR) + Lp99 , (16) 13 0 1 2 3 4            
+
+> Intruder Speed (m/s)
+> 9.0
+> 10.0
+> 11.0
+> 12.0
+> 13.0
+> Avg. Accel. (m/s²)
+> PMD APG
+> PMD PPO 01234
+> Intruder Speed (m/s)
+> 9.0
+> 10.0
+> 11.0
+> 12.0
+> Avg. Accel. (m/s²)
+> PMD APG
+> PMD PPO 01234
+> Intruder Speed (m/s)
+> 9.0
+> 10.0
+> 11.0
+> 12.0
+> 13.0
+> Avg. Accel. (m/s²)
+> PMD APG
+> PMD PPO 01234
+> Intruder Speed (m/s)
+> 40.0
+> 60.0
+> 80.0
+> 100.0
+> Avg. Jerk (m/s³)
+> PMD APG
+> PMD PPO
+
+(a) Ellipse 0 1 2 3 4 
+
+> Intruder Speed (m/s)
+> 40.0
+> 60.0
+> 80.0
+> 100.0
+> Avg. Jerk (m/s³)
+> PMD APG
+> PMD PPO
+
+(b) Lemniscate 0 1 2 3 4 
+
+> Intruder Speed (m/s)
+> 40.0
+> 60.0
+> 80.0
+> 100.0
+> Avg. Jerk (m/s³)
+> PMD APG
+> PMD PPO
+
+(c) Spiral 
+
+Figure 9: Average acceleration (top row) and jerk (bottom row) across intruder speeds for successful rollouts using APG and PPO. We observe that using the PPO-trained policy leads to higher acceler-ation and jerk for the interceptor compared to APG. where SR ∈ [0 , 1] is the interception success rate over the evaluation episodes and Lp99 is the 99th-percentile episode length (time-to-intercept). Interceptions that take more than 12 seconds are considered failures. The main reason for introducing time-to-intercept into the objective is to break ties between policies with similar success rates, which is common in the high-success regime. The large weight on the success rate ensures that the optimizer prioritizes improving the success rate until it is close to 100%, at which point it will focus on reducing time-to-intercept. This design encourages the discovery of policies that not only succeed but also do so efficiently, rather than optimizing for speed at the expense of reliability. Specifically, 99th-percentile time-to-intercept is used instead of the mean or median to focus on improving the worst-case performance, which is critical for real-world applications where consistent performance is often more important than average performance. 
+
+Search procedure: We use Optuna’s TPE sampler via Hydra’s Optuna sweeper plugin 2. We run it in multivariate mode with an initial 16 random startup trials before the model engages. We run a total of 64 trials per study. All positive weights and the learning rate are given log-uniform priors (they span orders of magnitude); bounded ratios such as the learning-rate decay are also log-uniform. 
+
+Iterative range refinement: We first manually adjust the hyperparameters to a suboptimal set that achieves a baseline level of performance showing convergence. We then run a sweep over a wide range around the empirically tested weight sets. However, many trials will be spent in regions of the weight space that are suboptimal or even detrimental to learning. To address this, we run a sequence of studies, after each of which we re-compute the weight set. After every study we compute, per weight: (i) FANOVA and mean-decrease-impurity, (ii) the Spearman rank correlation between the log-weight and J which is a monotonicity measure, (iii) a summary of the top-10% trials, and (iv) the 1D slice plot of J against each weight. Using the shape of the 1D slice, we adjust the next weight set. 
+
+> 2
+
+https://hydra.cc/docs/plugins/optuna_sweeper/ 
+
+14 0 1 2 3 4 5 6 7 8 9 10                               
+
+> Intruder Speed (m/s)
+> 13.0
+> 14.0
+> 15.0
+> Avg. Accel. (m/s²)
+> PMD APG
+> Quad APG 012345678910
+> Intruder Speed (m/s)
+> 13.0
+> 14.0
+> 15.0
+> Avg. Accel. (m/s²)
+> PMD APG
+> Quad APG 012345678910
+> Intruder Speed (m/s)
+> 13.0
+> 14.0
+> 15.0
+> 16.0
+> Avg. Accel. (m/s²)
+> PMD APG
+> Quad APG 012345678910
+> Intruder Speed (m/s)
+> 40.0
+> 60.0
+> 80.0
+> Avg. Jerk (m/s³)
+> PMD APG
+> Quad APG
+
+(a) Ellipse 0 1 2 3 4 5 6 7 8 9 10  
+
+> Intruder Speed (m/s)
+> 40.0
+> 60.0
+> 80.0
+> Avg. Jerk (m/s³)
+> PMD APG
+> Quad APG
+
+(b) Lemniscate 0 1 2 3 4 5 6 7 8 9 10  
+
+> Intruder Speed (m/s)
+> 40.0
+> 60.0
+> 80.0
+> Avg. Jerk (m/s³)
+> PMD APG
+> Quad APG
+
+(c) Spiral 
+
+Figure 10: Average acceleration (top row) and jerk (bottom row) across intruder speeds for suc-cessful rollouts using the simplified point mass (PMD) and nonlinear quadrotor dynamics (Quad) models with APG. Leveraging the Quad dynamics model provides interception with lower control effort than the PMD case. 
+
+A.3 Additional Performance Analysis 
+
+In addition to the interception success rate and episode length, we characterize the behavior of the policies by analyzing their acceleration and jerk profiles. We calculated these values for: algorithm comparison (APG vs. PPO) and training dynamics (full quadrotor vs. PMD), and report per-step acceleration and jerk conditioned on the intruder speed. Policies that produce large acceleration commands tend to behave more aggressively when pur-suing the intruder. While aggressive acceleration commands can sometimes help with interception performance, they may also lead to catastrophic overshooting when tracking agile trajectories. Over-shooting can leave the policy in undesirable states that are difficult to recover from. Recovering from these scenarios often requires abrupt corrective actions, resulting in increased jerk and higher overall control effort. In our analysis, we study how the acceleration and jerk characteristics learned by a policy correlate with interception success across different trajectory classes. We first compare the acceleration and jerk profiles of APG and PPO, both trained using simplified point mass dynamics and evaluated on the nonlinear quadrotor dynamics model (see Fig. 9). Sim-ilarly, to further understand the performance differences between APG policies trained with these dynamics models, we compare their acceleration and jerk profiles in Fig. 10. For both analyses, we report results only for episodes that terminate with a successful interception of the intruder. In both cases we observe a lower control effort required by the interceptor when APG and nonlinear quadrotor dynamics are used for training. 
+
+A.4 Parameters 
+
+The experimental configuration is summarized in Tables 2 to 6. Table 2 reports the settings used for both the algorithm benchmark (PMD PPO vs. PMD APG) and the dynamics benchmark (PMD APG vs. Quad APG). In all experiments, Nenv = 512 parallel environments were trained for Nupd = 1500 updates, with episode capped at Tep = 600 steps. 15 Table 2: Shared across both benchmarks: training setup (left) and loss-signal weights (right). 
+
+Training setup Value 
+
+Environments [Nenv ] 512 Updates [Nupd ] 1500 Max episode steps [Tep ] 600 Seeds [Nseed ] 10 Capture radius [cr ] (m) 0.3 Escape radius [er ] (m) 100.0 Spawning box size [sbox ] (m) 10.0 
+
+Signal weight Value 
+
+λalign 5.0 
+
+λclosing 1.07 
+
+λacc 0.0015 
+
+λjerk 1.96 × 10 −4
+
+λvmax 0.4 
+
+λyaw 0.064 Table 3: Algorithm hyperparameters. Dashes indicate the entry is not applicable to that algorithm. 
+
+Parameter APG PPO 
+
+Horizon [H] 64 64 Number of environments [Nenv ] 512 512 Actor learning rate [ηa] 1.64 × 10 −3 1.51 × 10 −3
+
+Final learning rate [ηfinal ] 5 × 10 −4 —LR decay ratio [ρlr ] 0.186 —Weight decay [wd] 0.01 —Max gradient norm [gmax ] 5.0 1/1 Discount [γ] 1 0.99 Critic learning rate [ηc] — 1 × 10 −3
+
+Epochs per update [K] — 1Minibatches [Nmb ] — 8GAE [λGAE ] — 0.95 PPO clip [ε] — 0.2 Value loss weight [cv ] — 0.5 Entropy weight [cent ] — 0.01 Results were averaged across Nseed = 10 unique random seeds. For each seed, the policy was retrained from scratch. We set the control timestep and maximum episode length to be ∆tctrl =0.02 s and Tep = 600 respectively (total episode duration is 12 s). These parameters were selected to provide sufficient time for interception under the present configuration while keeping episodes short enough for efficient training and stable policy optimization. The capture radius was set to 
+
+cr = 0 .3 m, corresponding approximately to the physical extent of a large intruder vehicle. Observations and actions are expressed in the start frame, defined by the agent orientation at initial-ization rather than the global world frame. Anchoring commands to this frame removes dependence on a fixed global coordinate frame, allowing the learned policy to behave consistently regardless of the interceptor’s initial orientation. Table 3 lists the algorithm-specific hyperparameters for APG and PPO side by side, with dashes indicating entries that are not applicable to a given method. Table 4 specifies the intruder trajectory randomization applied at the start of each episode. Each parameter is sampled uniformly over the range shown in the table. Finally, Tables 5 and 6 report the parameters for the two dynamics models used throughout the exper-iments. For the point mass dynamics (PMD) model, we identify the subset of parameters subjected to domain randomization during training to improve transferability to nonlinear quadrotor dynamics evaluation. The nonlinear quadrotor dynamics model parameters include the low-level controller parameters used to track policy outputs. For the algorithm benchmark, the modeled quadrotor mass during evaluation was set to 2.65 kg. For the APG dynamics comparison, the mass was reduced to 
+
+1.0 kg to increase the thrust-to-weight ratio, thereby simulating a more agile interceptor capable of handling higher-speed intruders. 16 Table 4: Intruder trajectory randomization during training. The speed range depends on benchmark: 
+
+U(−4, 4) m/s for Figure 5 and U(−10 , 10) m/s for Figure 7. 
+
+Parameter Value 
+
+Speed [vtgt ] (m/s) U(−10 , 10) / U(−4, 4) 
+
+Tilt rpy [θtilt ] (rad) U(−0.5, 0.5) 
+
+Axis radius [raxis ] (m) U(4 , 8) 
+
+Aspect ratio [ρar ] U(0 .5, 1.5) 
+
+Curve type ellipse Table 5: Point mass dynamics parameters with domain-randomization ranges. 
+
+PMD Value 
+
+Sim. timestep [∆ tsim ] (s) 0.0025 Control timestep [∆ tctrl ] (s) 0.02 Gravity [g] (m/s 2) 9.807 Quadratic drag [kd, 1] 0.1 Linear drag [kd, 2] 0.1 Accel. smooth factor [βa] 12.0 Accel. smooth window [τa] (s) 1.0 Accel. ctrl delay [δa] (s) 0.02 Yaw smooth factor [βψ ] 12.0 Yaw smooth window [τψ ] (s) 1.0 Yaw ctrl delay [δψ ] (s) 0.02 Vel. smooth factor [βv ] 0.5 Vel. smooth window [τv ] (s) 2.0 
+
+Domain randomization 
+
+Accel. smooth factor [βa] U(5 , 12) 
+
+Accel. ctrl delay [δa] (s) U(0 .01 , 0.04) 
+
+Yaw smooth factor [βψ ] U(5 , 12) 
+
+Yaw ctrl delay [δψ ] (s) U(0 .01 , 0.05) 
+
+Table 6: Nonlinear quadrotor dynamics parameters. 
+
+Quadrotor Value 
+
+Sim. timestep [∆ tsim ] (s) 0.0025 Control timestep [∆ tctrl ] (s) 0.02 Mass ∗ [m] (kg) 2.65 / 1.0 Gravity [g] (m/s 2) 9.807 Quadratic drag [kd, 1] 0.1 Linear drag [kd, 2] 0.1 
+
+Ixx , I yy , I zz (kg m 2) 0.0143, 0.0175, 0.021 
+
+Ixy , I yz , I xz (kg m 2) 2.9139 × 10 −7, −4.25 × 10 −5, −1.91 × 10 −5
+
+Arm length [ℓarm ] (m) 0.15 Moment scale [kmoment ] 0.0108 Motor spread angle [θm] (rad) 0.7854 
+
+Rotor time constant [τr ] (s) 0.0186 RPM range [Ω min , Ωmax ] (rev/s) [2970, 20965] 
+
+Low-level controller 
+
+PD pos. gain (x,y,z) 6.25, 6.25, 16.0 PD vel. gain (x,y,z) 5.0, 5.0, 8.0 PD rot. gain (x,y,z) 110, 89, 70 PD ang. vel gain (x,y,z) 20, 15, 15 
+
+> ∗2.65 kg for Figure 5; 1.0 kg for Figure 7
+
+17

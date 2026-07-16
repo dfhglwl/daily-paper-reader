@@ -1,0 +1,1036 @@
+Title: AeroCast: Probabilistic 3D Trajectory Prediction for Non-Cooperative Aerial Obstacles via Transformer-MDN Architecture
+
+URL Source: https://arxiv.org/pdf/2606.25122v1
+
+Published Time: Thu, 25 Jun 2026 00:20:37 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+> 1
+
+# AeroCast: Probabilistic 3D Trajectory Prediction for Non-Cooperative Aerial Obstacles via Transformer-MDN Architecture 
+
+Syed Izzat Ullah and Jos´ e Baca 
+
+Abstract —Autonomous aerial vehicles operating in shared airspace must predict the future positions of non-cooperative obstacles to plan evasive maneuvers before a collision becomes unavoidable. Unlike cooperative systems that share intent, non-cooperative obstacles such as birds, uncontrolled drones, or debris exhibit multi-modal motion that deterministic predictors cannot adequately represent. Existing methods either rely on recurrent encoders that propagate temporal information se-quentially, limiting their ability to capture long-range kinematic precursors of maneuver initiation, or produce point forecasts that provide no distributional information to downstream planners. This paper presents AeroCast, a probabilistic trajectory predic-tion framework that combines a Transformer encoder with a Mixture Density Network output head to predict per-timestep Gaussian mixture distributions over future three-dimensional displacements. A translation-invariant consecutive displacement encoding and a calibration-oriented training objective address the input design and mode-degeneracy challenges specific to mixture-based aerial trajectory prediction. On a hybrid real-and-synthetic quadrotor corpus spanning nine motion categories, AeroCast reduces Average Displacement Error and Final Displacement Error by approximately 50% relative to the baselines over a five-second horizon, and achieves the lowest negative log-likelihood and Continuous Ranked Probability Score among all compared methods. Ablation analysis identifies velocity input and model capacity as the primary contributors to prediction quality, and positional encoding as essential for long-horizon trajectory coherence. AeroCast inference completes in 0.1 ms per sample, compatible with real-time onboard deployment at 100 Hz. 
+
+Index Terms —Trajectory prediction, aerial robotics, Trans-former networks, mixture density networks, uncertainty quan-tification, collision avoidance 
+
+I. INTRODUCTION THE proliferation of unmanned aerial vehicles (UAVs) in shared airspace introduces a core safety requirement: an au-tonomous vehicle must anticipate the future positions of sur-rounding non-cooperative obstacles to plan evasive maneuvers before a collision becomes geometrically unavoidable. Unlike cooperative multi-agent systems that share intent through com-munication protocols, non-cooperative obstacles such as birds, uncontrolled drones, or wind-borne debris provide no advance notice of their behavior. Reactive strategies that respond only to instantaneous obstacle positions offer insufficient safety margins at typical flight speeds, where the interval between detection and potential collision may be shorter than the 
+
+The authors are with the Department of Engineering, Texas A&M University–Corpus Christi, Corpus Christi, TX 78412 USA (e-mail: sizzat-ullah@islander.tamucc.edu; jose.baca@tamucc.edu). Corresponding author: Jos´ e Baca. 
+
+vehicle’s minimum stopping distance [1]. Proactive avoidance requires a predictor that maps a finite observation history to a distribution over future positions. This task is more challeng-ing in the aerial domain than in ground-domain forecasting [2]. Aerial obstacles move in unconstrained three-dimensional space without the road geometry or pedestrian social norms that regularize planar motion, and their behavior is inherently multi-modal: an approaching obstacle may continue straight, bank sharply, or climb, each with non-trivial probability. Existing methods address these challenges only partially. Physics-based estimators such as Kalman filters and Inter-acting Multiple Model (IMM) trackers assume predefined motion models (constant velocity, coordinated turn) that poorly capture the erratic behavior of non-cooperative obstacles [3], [4]. Learning-based recurrent architectures, notably the GRU-based VECTOR model for 3-D UAV prediction [5], achieve fast inference suitable for embedded deployment but produce deterministic point forecasts. A single-trajectory output gives a downstream planner no information about whether the pre-diction is confident or whether the obstacle is at a behavioral branch point, both situations are indistinguishable in the out-put. Transformer-based encoders offer a structural alternative: the self-attention mechanism provides every observation token with direct access to every other token in the window, shorten-ing the information path between temporally distant timesteps to O(1) and removing the sequential bottleneck inherent in recurrent processing [6]. To date, no prior work has applied a Transformer encoder specifically to non-cooperative aerial obstacle prediction with a multi-modal probabilistic output head targeting uncertainty. This paper presents AeroCast, a probabilistic trajectory prediction framework that pairs a Pre-LN Transformer encoder with a Mixture Density Network (MDN) output head to predict per-timestep Gaussian mixture distributions over future three-dimensional displacements. The input representation encodes consecutive positional displacements normalized by a scale that enforces translation invariance and produces bounded in-puts suited to Gaussian mixture modeling. The training objec-tive combines negative log-likelihood with a mode-anchoring mean-squared-error term and a variance floor matched to the sensor noise level, which prevents the mode degeneracy that arises under pure NLL optimization with multiple mixture components. AeroCast is evaluated on a hybrid real-and-synthetic quadrotor trajectory corpus spanning nine kinemati-cally diverse motion categories, with quantitative comparisons against four baselines at matched parameter budgets, per-
+
+> arXiv:2606.25122v1 [cs.RO] 23 Jun 2026 2
+
+category accuracy breakdowns, and a systematic ablation of all major design choices. A supplementary video demonstrating AeroCast predictions across various trajectories is available at https://syediu.github. io/assets/img/aerocast circle.mp4. The main contributions are: 1) A probabilistic Transformer-MDN predictor for non-cooperative aerial obstacles. AeroCast combines a Pre-LN Transformer encoder with MDN output heads to produce per-timestep Gaussian mixtures over future 3-D displacements, reducing ADE and FDE by approxi-mately 50% relative to the strongest recurrent baseline and achieving the lowest NLL and CRPS among all compared methods. 2) A translation-invariant displacement encoding and calibration-oriented training protocol. The consec-utive displacement representation provides translation invariance, bounded input distributions, and Gaussian compatibility. The combined NLL and mode-anchoring objective with a physically grounded sigma floor pre-vents variance collapse and produces uncertainty esti-mates through Expected Calibration Error. 3) A comprehensive experimental evaluation and bench-marking. We conduct quantitative comparisons against four trained baselines at matched parameter budgets, a per-trajectory-type accuracy breakdown across nine kinematically diverse motion categories, a prediction horizon analysis tracking error growth from 1 to 5 sec-onds, and a systematic ablation of all major architectural and training choices. 4) A hybrid real-and-synthetic benchmark for non-cooperative aerial obstacle prediction. We contribute a dataset of 90,116 sliding-window sequences from 113 quadrotor flight recordings across nine kinematically diverse motion categories that combines sub-millimeter Vicon ground truth with synthetic augmentation derived from a parametric trajectory generator. This dataset, to-gether with a standardized evaluation protocol covering ADE, FDE, best-of-K, NLL, and ECE metrics, to our knowledge, constitutes the first structured benchmark for 3-D non-cooperative aerial obstacle trajectory pre-diction. II. RELATED WORK 
+
+A. Classical Estimation and Recurrent Forecasting for Aerial Trajectories 
+
+The classical approach to aerial obstacle tracking relies on Bayesian state estimators that maintain a finite bank of kinematic hypotheses updated recursively as observations arrive. Kalman filters and their multi-model extensions, in-cluding Interacting Multiple Model trackers, are computation-ally efficient and interpretable, but their predictive quality is bounded by the fidelity of the assumed motion models to the underlying dynamics [3]. For non-cooperative aerial obstacles exhibiting abrupt heading reversals, irregular vertical excursions, or speed-coupled turn maneuvers, no compact set of constant-velocity or coordinated-turn hypotheses adequately ego-UAV  
+
+> Obstacle
+> 0.75
+> 0.07
+> 0.05
+> Observed
+> Trajectory
+> Predicted
+> Trajectories
+> ego-UAV Perception
+> 0.03
+> 0.10
+> UAV Planned
+> Trajectory
+> Fig. 1. A typical scenario where an ego-UAV encounters a non-cooperative dynamic obstacle (an uncontrolled drone). The ego-UAV predicts the K-future most plausible predictions of the obstacle
+
+spans the behavioral envelope, and the estimator systematically lags behind the true state evolution rather than anticipating it [7], [8]. Learning-based recurrent architectures displaced hand-crafted motion models by extracting temporal structure di-rectly from data. LSTM, GRU, and bidirectional GRU variants has been used as a standard components in trajectory fore-casting pipelines. For aerial trajectory prediction specifically, VECTOR [5] introduced a velocity-enhanced GRU formula-tion for 3D UAV prediction, that achieves fast inference suit-able for onboard deployment. However, the sequential update mechanism imposes an information path length proportional to observation length, so early kinematic signatures of an im-pending maneuver must propagate through every intermediate hidden transition before influencing the forecast. Moreover, all recurrent methods cited above produce deterministic point forecasts, providing no information to a downstream planner about whether the prediction reflects high confidence or an imminent behavioral bifurcation. 
+
+B. Transformer-Based Trajectory Forecasting 
+
+The Transformer formulation of Vaswani et al. [6] replaced recurrence with self-attention, allowing every observation to-ken to interact directly with every other within the window. Global connectivity shortens the information path length to a constant number of steps between any two timesteps. Stability of deep encoder stacks is improved by pre-layer normaliza-tion, which places normalization inside the residual branch and reduces the optimization fragility of post-normalization Transformers [9]. These properties have been exploited in vehicle and pedestrian forecasting through hierarchical and 3
+
+vectorized attention models [10], [11]. To our knowledge, no prior work applies a Transformer encoder specifically to non-cooperative aerial obstacle prediction, and none couples such an encoder with a multi-modal probabilistic output head tar-geting calibrated uncertainty estimation. This work adopts the same architectural motivation but applies it to non-cooperative aerial obstacles, using a Transformer encoder over a 2 s history of 3-D position and velocity so the model can attend globally to maneuver precursors over the full observation horizon. 
+
+C. Probabilistic Prediction and Calibration 
+
+Deterministic forecasts collapse distinct future behaviors into a single mean path, which is insufficient for risk-aware planning that treats uncertainty as a decision variable. Multi-modal output representations have become standard in ground-domain forecasting: Social-GAN [12] promotes diverse fu-tures through adversarial training and a variety loss; Trajec-tron++ [13] combines a graph-structured recurrent backbone with conditional latent variables; and AgentFormer [10] ex-tends multi-modal prediction to Transformer architectures with social context. These methods establish that single-hypothesis outputs are inadequate in dense or interactive scenes, but they were designed around ground-domain constraints (map topology, pedestrian norms) that have no counterpart in free-flight aerial prediction. A separate question is whether the predicted uncertainty is 
+
+calibrated , which means, whether a model’s stated confidence intervals match empirical coverage rates. Guo et al. [14] showed that modern deep networks are systematically mis-calibrated and formalized Expected Calibration Error (ECE) as a summary statistic for the confidence–coverage mismatch. Lakshminarayanan et al. [15] demonstrated that deep en-sembles produce well-calibrated uncertainty through multi-model averaging, at the cost of multiple forward passes that increase computational and memory requirements on embed-ded platforms. Kendall and Gal [16] distinguished aleatoric uncertainty (irreducible measurement noise and behavioral variability) from epistemic uncertainty (reducible with more data or richer models), a decomposition that clarifies which source of uncertainty a given architecture can represent. On the training side, Gneiting and Raftery [17] proved that strictly proper scoring rules, including negative log-likelihood, are the correct objective when the output is a probability distribution; mean squared error is not proper at the distribution level and can drive variance collapse. Ivanovic et al. [18] extended this perspective to trajectory forecasting by analyzing how predictive uncertainty propagates along the forecast horizon. Most multi-modal trajectory predictors evaluate probabilis-tic quality only indirectly, through best-of-K error or diversity measures, and none of the cited methods enforces calibration during training. AeroCast encodes aleatoric ambiguity in a per-timestep Gaussian mixture trained with NLL as the primary objective, augmented by a mode-anchoring MSE term and a sigma floor matched to the sensor noise level. This design targets single-pass inference compatible with onboard deploy-ment and produces uncertainty estimates that can be assessed through ECE.                                          
+
+> TABLE I POSITIONING OF AERO CAST RELATIVE TO REPRESENTATIVE TRAJECTORY PREDICTION METHODS .✓:PROPERTY IS PRESENT ; —: ABSENT OR NOT REPORTED .Attn. : T RANSFORMER SELF -ATTENTION ENCODER ;
+> Multi-modal :EXPLICIT MULTI -HYPOTHESIS OUTPUT DISTRIBUTION ;
+> Calib. :CALIBRATION ENFORCED DURING TRAINING OR REPORTED VIA
+> ECE; Aerial :TARGETS NON -COOPERATIVE 3-D AERIAL OBSTACLES .Method 3-D Attn. Multi-modal Calib. Aerial Social-GAN [12] ——✓——Trajectron++ [13] ——✓——AgentFormer [10] —✓✓——VECTOR [5] ✓———✓
+> AeroCast (ours) ✓✓✓✓✓
+
+D. Datasets for Non-Cooperative Aerial Prediction 
+
+Public trajectory datasets at the scale and structure available for ground-domain prediction do not exist for non-cooperative 3-D aerial obstacles. Pedestrian benchmarks such as ETH [19] and driving corpora such as nuScenes [20] and the Waymo Open Motion Dataset [21] contain planar, map-constrained, or cooperative traffic structure absent from free-flight aerial settings. Existing aerial corpora focus on cooperative multi-UAV operations or structured air-traffic recording, underrepre-senting the abrupt and vertically coupled maneuvers relevant to collision avoidance in shared airspace. SynTraG [22] in-troduced a parametric generator for non-cooperative dynamic obstacles in UAV navigation. The present work combines a Vicon-collected real-flight corpus [23] with synthetic [22] augmentation derived from an extension of these primitives, coupling real 3-D obstacle motion with synthetic samples that share the same physical and noise assumptions used by the predictor [24]–[26]. Table I summarizes the positioning of AeroCast relative to representative prior work across the design dimensions identified above. III. PROBLEM FORMULATION The trajectory prediction problem is formulated from the perspective of an ego aerial vehicle observing external dy-namic obstacles in its vicinity. Let X = {(xt, vt)}Tobs 
+
+> t=1
+
+denote the observed trajectory history of an obstacle, where 
+
+xt ∈ R3 is the three-dimensional position relative to the ego vehicle at time t and vt ∈ R3 is the corresponding velocity vector. Positions xt = [ xt, y t, z t]⊤ are expressed in a world-fixed inertial frame with the z-axis opposing gravity; for the experimental validation this frame coincides with the Vicon system origin. Velocities are computed through centered finite differences with Gaussian smoothing: 
+
+vt = xt+1 − xt−1
+
+2∆ t ∗ G (σ) (1) where ∆t is the sampling interval and G(σ) is a Gaussian kernel with σ = 0 .5 ∆ t, chosen to balance noise suppression and temporal resolution. The objective is to predict the obstacle’s future trajectory 
+
+Y = {yt}Tobs +Tpred  
+
+> t=Tobs +1
+
+, where yt ∈ R3 is the predicted position at time t. The prediction is model-free; no knowledge of the obstacle’s dynamics, control law, or physical parameters is 4
+
+assumed. The obstacle may be a bird, an autonomous drone, a remotely piloted vehicle, or any other aerial agent. This model-agnostic requirement motivates a learning-based approach that infers motion patterns purely from observed kinematics. 
+
+A. Temporal Specifications 
+
+Observations span Tobs = 2 .0 s sampled at 10 Hz, yielding input sequences of length 20. Predictions extend Tpred = 5 .0 sinto the future (50 timesteps at 10 Hz). The 10 Hz rate matches typical tracking-system update frequencies and provides suf-ficient temporal resolution to capture the motion dynamics of small agile platforms. The 5 s horizon provides a collision avoidance planner with enough lead time to identify conflicts and execute evasive maneuvers. 
+
+B. Consecutive Displacement Encoding 
+
+Raw position coordinates xt are translation-variant where the same motion pattern yields different input values de-pending on where in the workspace the obstacle is located. To remove this redundancy the input representation encodes consecutive displacements: 
+
+δt = xt+1 − xt, t = 1 , . . . , T obs −1 (2) The prediction target at horizon step τ is likewise a dis-placement: δTobs +τ = xTobs +τ +1 − xTobs +τ . The full input at timestep t concatenates the displacement with the contem-poraneous velocity: 
+
+st =
+
+δt
+
+vt
+
+
+
+∈ R6 (3) Displacements are normalized by a scale constant λ =2.5 m, chosen so that the 99th percentile of per-step dis-placement magnitudes in the training set falls within [−1, 1] 3.This encoding provides three properties: (i) translation in-variance , since st is unchanged by any rigid shift of the trajectory; (ii) bounded input distribution , since normalization by λ concentrates input mass within a compact region; and (iii) Gaussian compatibility , since step-to-step displacements of a smooth trajectory approximate a zero-mean distribution well matched to the GMM output parameterization. Future positions are recovered from predicted displacements by cumulative summation anchored at the last observed posi-tion: 
+
+ˆxTobs +τ = xTobs +
+
+> τ
+
+X
+
+> j=1
+
+ˆδj · λ (4) 
+
+C. Multi-Modal Distribution Representation 
+
+At each predicted timestep, the distribution over future dis-placements is modeled as a Gaussian Mixture Model (GMM): 
+
+p(yt | X ) = 
+
+> K
+
+X
+
+> k=1
+
+π(t) 
+
+> k
+
+N
+
+
+
+yt μ(t) 
+
+> k
+
+, Σ(t)
+
+> k
+
+
+
+(5) where K is the number of mixture components, π(t) 
+
+> k
+
+is the mixture weight for component k at time t with P 
+
+> k
+
+π(t) 
+
+> k
+
+=1, μ(t) 
+
+> k
+
+∈ R3 is the component mean, and Σ(t) 
+
+> k
+
+=diag( σ(t)
+
+> k,x
+
+, σ (t) 
+
+> k,y
+
+, σ (t) 
+
+> k,z
+
+) is a diagonal covariance. The mix-ture components represent alternative behavioral modes; their weights encode mode likelihoods, and their covariances quan-tify positional uncertainty. This formulation provides a down-stream planner with a richer signal than a scalar confidence score, where concentrated weights indicate high prediction confidence, and distributed weights indicate a behavioral de-cision point at which conservative planning is appropriate. IV. METHODOLOGY 
+
+A. Architecture Overview 
+
+The AeroCast architecture comprises three functional blocks: an input embedding that projects the six-dimensional state st to a dmodel -dimensional representation, a stack of 
+
+L Transformer encoder layers performing temporal self-attention over the observation window, and three linear output heads that jointly produce the GMM parameters {μ(τ ) 
+
+> k
+
+},
+
+{Σ(τ ) 
+
+> k
+
+}, and {π(τ ) 
+
+> k
+
+} for all Tpred × K mixture components in a single forward pass. Fig. 2 illustrates the complete pipeline. The model uses dmodel = 512 , L = 4 encoder layers, 
+
+H = 8 attention heads ( dk = 64 per head), feedforward inner dimension 4dmodel = 2048 , K = 5 GMM components, and dropout probability p = 0 .1. The total parameter count is 13.15 M. 
+
+B. Input Embedding with Positional Encoding 
+
+Each state vector st ∈ R6 is projected to a dmodel -dimensional embedding: 
+
+h(0)  
+
+> t
+
+= pdmodel Wemb st + epos  
+
+> t
+
+(6) where Wemb ∈ Rdmodel ×6 is a learned projection matrix and 
+
+epos  
+
+> t
+
+is the sinusoidal positional encoding [6]: 
+
+epos  
+
+> t
+
+[2 i] = sin 
+
+ t
+
+10000 2i/d model 
+
+
+
+(7) 
+
+epos  
+
+> t
+
+[2 i+1] = cos 
+
+ t
+
+10000 2i/d model 
+
+
+
+(8) for i = 0 , . . . , d model /2−1. The √dmodel scaling prevents the fixed positional signal from dominating the learned content embedding at large model widths. Because self-attention is permutation-equivariant, the positional encoding is the sole mechanism by which the model distinguishes temporal order within the observation window [6]. The ablation in Sec-tion VII-D quantifies the impact of removing it. 
+
+C. Transformer Encoder 
+
+The embedded sequence {h(0)  
+
+> t
+
+}Tobs  
+
+> t=1
+
+is processed through L
+
+identical encoder layers. Each layer applies pre-layer normal-ization (Pre-LN) [9]: 
+
+˜h(ℓ) 
+
+> t
+
+= h(ℓ−1)  
+
+> t
+
++ MHA  LN( H(ℓ−1) ) 
+
+> t
+
+(9) 
+
+h(ℓ) 
+
+> t
+
+= ˜h(ℓ) 
+
+> t
+
++ FFN  LN( ˜h(ℓ) 
+
+> t
+
+) (10) 5
+
+Trajectory History  
+
+> [px, py , pz , vx, vy , vz ]
+
+Linear Embedding     
+
+> z=We x·pdm
+
+Positional Encoding  
+
+> sinusoidal ⊕
+
+Transformer Encoder         
+
+> ×4Pre-LN Layers
+> dm =512 ,heads =8
+> FFN: 512 →2048 →512
+> dropout = 0 .1
+
+Last-Token Pooling      
+
+> h=z[: ,−1,:]
+> σ-Head
+> Lin (512 →750) ,exp( ·)
+> μ-Head
+> Lin (512 →750) , reshape
+> π-Head
+> Lin (512 →250) , softmax
+
+GMM Inference                               
+
+> k∗= arg max kπk
+> ∆ˆ p1: Tf=μk∗
+> ˆpt=p0 +Pti=1 ∆ˆ pi
+> (B, 20 ,6) (B, 20 ,512) (B, 20 ,512)
+> (B, 20 ,512)
+> (B, 512)
+> (B, 50 ,5,3)
+> (B, 50 ,5,3)
+> (B, 50 ,5)
+> (B, T f=50 ,3)
+> INPUT EMBEDDING TEMP. ENCODING
+> TRANSFORMER BACKBONE
+> CONTEXT
+> MDN OUTPUT HEADS
+> PREDICTION
+> One Pre-LN Encoder Layer (repeated ×4):
+> Layer Norm
+> Multi-Head Self-Attn
+> h=8
+
++ Layer Norm     
+
+> Feed-Forward Network
+> 512 →2048 →512
+
++xℓ xℓ+1 
+
+Fig. 2. AeroCast architecture. A 6-DoF trajectory history (B, 20 , 6) is projected to dmodel =512 dimensions, enriched with sinusoidal positional encoding, and processed by L=4 Pre-LN Transformer encoder layers. The last-token context vector feeds three parallel MDN heads that output per-waypoint Gaussian mixture parameters (μ, σ, π) with K=5 components. At inference, the dominant mixture component is selected and cumulative summation yields Tpred =50 
+
+3-D waypoints at ∆t=0 .1 s. 
+
+where H(ℓ−1) ∈ RTobs ×dmodel is the sequence matrix and 
+
+LN( ·) denotes layer normalization. The multi-head attention operation uses H parallel heads of dimension dk = dmodel /H :
+
+MHA( H) = Concat(head 1, . . . , head H ) WO (11) 
+
+head h = softmax 
+
+ QhK⊤
+
+h
+
+√dk
+
+
+
+Vh (12) with Qh=HW Qh , Kh=HW Kh , Vh=HW Vh , where 
+
+WQh , WKh , WVh ∈ Rdmodel ×dk and WO ∈ Rdmodel ×dmodel .The scaled dot-product produces a Tobs × Tobs affinity matrix, giving every timestep O(1) access to every other timestep in the window, compared with O(Tobs ) for recurrent encoders. The position-wise feed-forward network applies a two-layer MLP with ReLU activation: 
+
+FFN( h) = W2 ReLU( W1h + b1) + b2 (13) with W1 ∈ R4dmodel ×dmodel and W2 ∈ Rdmodel ×4dmodel .Dropout is applied after both the MHA and FFN outputs, before each residual addition. After the L-th layer, a terminal layer normalization is applied to the output at the last temporal position to produce the context vector: 
+
+c = LN 
+
+
+
+h(L)
+
+Tobs 
+
+
+
+∈ Rdmodel (14) This vector serves as the sole input to the three output heads; no recurrent or autoregressive decoding is employed. 
+
+D. GMM Output Heads 
+
+Three linear projections map c to the GMM parameters for all timesteps and components simultaneously: 
+
+ˆμ = Wμ c ∈ RTpred ×K×3 (15) 
+
+log ˆ σ = Wσ c ∈ RTpred ×K×3 (16) 
+
+ˆzπ = Wπ c ∈ RTpred ×K (17) Standard deviations and mixture weights are obtained via: 
+
+ˆσ(τ )
+
+k,d = max  elog ˆ σ(τ ) 
+
+> k,d
+
+, σ min 
+
+ (18) 
+
+ˆπ(τ )
+
+k = eˆz(τ )
+
+> π,k
+
+PKj=1 eˆz(τ )
+
+> π,j
+
+(19) The variance floor σmin = 0 .05 m matches the Vicon measure-ment noise level. This bound prevents degenerate point-mass predictions and ensures that predicted confidence intervals remain physically interpretable. The full output dimensionality per forward pass is Tpred × K × (3+3+1) scalars; with 
+
+Tpred = 50 and K = 5 this yields 50 × 5 × 7 = 1 ,750 outputs. 
+
+E. Training Objective 
+
+The model is trained to maximize the log-likelihood of observed displacements under the predicted GMM. The batch-averaged negative log-likelihood is: 
+
+LNLL = − 1
+
+N T pred 
+
+> N
+
+X
+
+> n=1
+> Tpred
+
+X 
+
+> τ=1
+
+log 
+
+> K
+
+X
+
+> k=1
+
+ˆπ(τ ) 
+
+> k
+
+N δ(n) 
+
+> τ
+
+ˆμ(τ ) 
+
+> k
+
+, ˆΣ(τ )
+
+> k
+
+
+
+(20) 
+
+computed via the standard log-sum-exp identity for numerical stability. Pure NLL training with K > 1 admits a degenerate solution in which all components spread to cover the data support without any single component being geometrically close to the ground truth. This degeneracy is consequential because ADE and FDE at evaluation time are computed from the dominant-weight component k∗ = arg max k ˆπ(τ )
+
+k . To break it without collapsing the predicted variance (as a large MSE weight would), a small auxiliary mean-squared error term is applied to k∗:
+
+LMSE = 1
+
+N T pred 
+
+NX
+
+n=1 
+
+Tpred 
+
+X
+
+τ =1 
+
+ˆμ(τ )
+
+k∗ − δ(n)
+
+τ
+
+2 (21) 6
+
+The combined objective is: 
+
+L(θ) = LNLL + λMSE LMSE (22) with λMSE = 0 .15 , chosen so that the MSE term contributes roughly 10–15% of the total loss magnitude. NLL remains the dominant signal, preserving the proper-scoring-rule property that encourages well-spread predictive distributions. 
+
+1) Curriculum Sequence-Length Scheduling: Sliding-window sequences drawn from short trajectory segments can exhibit irregular leading-edge behavior that destabilizes early training. A curriculum schedule addresses this by gradually increasing the effective observation length during the first 
+
+Ewarm = 20 epochs: 
+
+Teff (e) = min 
+
+
+
+Tobs , max  5, ⌊Tobs · e/E warm ⌋
+
+(23) At epoch e, the model processes only the most recent 
+
+Teff (e) timesteps of each window; the full 20-step window is used for all subsequent epochs. Additive Gaussian noise (σaug = 0 .02 m) and random scale perturbation (uniform in 
+
+[0 .95 , 1.05] ) are applied to inputs during the warmup phase. V. DATASET We constructed the dataset combining real-world flights captured in a motion-capture arena with synthetic trajecto-ries generated by an extension of our prior synthetic data framework SynTraG [22]. This section describes the physical collection methods, the synthetic augmentation procedure, the preprocessing pipeline, and the resulting dataset statistics. 
+
+A. Physical Data Collection 1) Hardware Platform: Real trajectories were collected with a Crazyflie 2.1 nano-quadrotor (Bitcraze AB, 92 × 92 ×
+
+29 mm, 27 g with a 250 mAh single-cell LiPo battery installed) flown as the obstacle agent in a Vicon-equipped indoor arena of dimensions 6 × 4 × 2 m. The arena is instrumented with twelve infrared cameras providing rigid-body 6-DoF pose at 100 Hz with sub-millimeter spatial accuracy. The platform was chosen for its small inertia and high agility, which enable the abrupt heading reversals and multi-axis maneuvers required to exercise the multi-modal regime of the prediction problem. 
+
+2) Trajectory Categories: Trajectories were collected across nine motion categories chosen to span the kinematic envelope an autonomous vehicle is likely to encounter when sharing airspace with non-cooperative agents. The categories fall into three groups: periodic (Circle, Oval, Figure-8), which approximate loitering and patrolling behaviors with strong temporal regularity; non-trivially 3-D (Helix, Trefoil, Lis-sajous, Staircase), which couple horizontal and vertical mo-tion in ways that challenge planar prediction; and aperiodic 
+
+(Star, Random), which contain abrupt heading reversals and unstructured motion that resist physics-based filter modeling. Reference paths for each category were generated as para-metric curves and tracked under closed-loop position control; parameter values (radius, amplitude, frequency, altitude offset) were randomized across flights to span the dataset’s diversity in speed and extent. 
+
+B. Synthetic Data Augmentation 
+
+Approximately 43% of the data corpus is synthetic, gen-erated by an extension of the SynTraG framework [22] that expands the four kinematic primitives described in the original work to the nine categories used here. Synthetic trajectories follow the same parametric structure as the physical reference paths and are generated with randomized speed profiles, radii, altitudes, and noise levels to fill regions of the kinematic state space that are under-represented in the physical collection, particularly in the high-speed and high-altitude regimes that the limited arena volume cannot accommodate. Heteroscedas-tic Gaussian noise consistent with the Vicon noise floor (σms = 0.05 m, the same value used as the sigma floor in the prediction head) is added to synthetic samples to match the distribution of measurement noise in the real data. Synthetic and real samples are pooled before splitting and treated identically downstream; no synthetic-versus-real label is provided to the model. 
+
+C. Preprocessing and Sliding-Window Sampling 
+
+Each recorded trajectory is downsampled from 100 Hz to 10 Hz to match the prediction-system update rate. Velocities are reconstructed from the position stream by the centered finite difference with Gaussian smoothing defined in Eq. (1). Sliding windows are extracted with stride one: each window comprises a 20-step observation followed by a 50-step predic-tion target, corresponding to 2 s of history and 5 s of horizon at 10 Hz. Stride one is chosen because temporally adjacent windows differ in their prediction targets by a single timestep at the leading edge, which exposes the model to maximum target diversity per trajectory; the implied correlation between adjacent samples is bounded by the trajectory-level split de-scribed next. The state vector at each input timestep is the displacement-velocity pair st = [ δ⊤ 
+
+> t
+
+, v⊤ 
+
+> t
+
+]⊤ ∈ R6 defined in Section III-B. The train/validation partition is performed at the trajectory level: each recording is assigned in its entirety to one split, ensuring that no observation from a validation trajectory appears in training and that each window’s 5-second prediction target is statistically independent of all training samples. The split ratio is 85/15 with a fixed random seed. Stratification by trajectory category ensures that all nine motion types appear in both splits in proportion to their frequency in the full corpus. 
+
+D. Dataset Statistics 
+
+Table II summarizes the full corpus by category, reporting the sliding-window sample count, mean per-window RMS speed, peak speed, and the percentage contributed by phys-ical and synthetic flights. The total sample count is 90 116 
+
+from 113 unique trajectory recordings. Sample counts are roughly comparable across the nine categories; the balanced distribution ensures that all motion types receive adequate representation during training and that aggregate metrics are not dominated by any single category. Mean per-window speeds range from 0.5 m/s on Staircase trajectories (slow vertical maneuvers) to 0.79 m/s on the more agile periodic categories. 7                                                                
+
+> TABLE II DATASET SUMMARY BY TRAJECTORY CATEGORY . S PEED IS THE MEAN PER -SEQUENCE RMS SPEED OVER THE 20-STEP (2 S)OBSERVATION WINDOW . R EAL /S YNTH INDICATES THE PERCENTAGE OF SEQUENCES CONTRIBUTED BY PHYSICAL FLIGHTS VERSUS SYNTHETIC GENERATION .Category Sequences Mean speed Max speed Real Synth. (m/s) (m/s) (%) (%) Circle 10,248 0.78 1.43 64 36 Oval 10,062 0.79 1.37 62 38 Figure-8 9,874 0.74 1.77 60 40 Helix 10,136 0.79 1.57 57 43 Trefoil 10,410 0.71 1.90 58 42 Lissajous 9,748 0.73 1.34 50 50 Staircase 9,512 0.50 0.88 46 54 Star 10,286 0.65 1.36 62 38 Random 9,840 0.55 1.04 53 47 Total 90,116 0.69 1.41 57 43
+
+VI. EXPERIMENTAL SETUP 
+
+A. Baseline Methods 
+
+Four baseline architectures are trained under conditions identical to AeroCast. All baselines share the same MDN output head ( K=5 mixture components), the same training objective as described in Section IV-E, and the same data splits. 
+
+GRU-MDN [5] uses a three-layer unidirectional GRU en-coder with hidden dimension 512. This baseline isolates the effect of replacing sequential temporal encoding with global self-attention. 
+
+LSTM-MDN [27] uses a three-layer LSTM encoder with hidden dimension 512. The explicit cell state provides a dis-tinct inductive bias relative to GRUs for retaining information over the full 20-step observation window. 
+
+BiGRU-MDN [28] uses a three-layer bidirectional GRU with hidden dimension 512. The backward pass gives the encoder access to future-looking context within the observa-tion window, at the cost of roughly doubling the recurrent parameter count relative to GRU-MDN. 
+
+MLP-MDN [29] uses a three-layer MLP with hidden di-mensions (2048 , 2048 , 1024) that receives the flattened 20-step observation window (120 input features) and maps it directly to GMM parameters. This baseline tests whether a feed-forward architecture with sufficient capacity can implicitly capture temporal structure. Parameter counts are 4.75 M (GRU-MDN), 6.07 M (LSTM-MDN), 13.17 M (BiGRU-MDN), and 7.63 M (MLP-MDN). AeroCast uses 13.15 M parameters, closely matching BiGRU-MDN. 
+
+B. Evaluation Metrics 
+
+Six metrics are used to evaluate trajectory accuracy, distri-butional quality, and calibration. 
+
+Average Displacement Error (ADE) is the mean Euclidean distance between predicted and ground-truth positions over all future timesteps: 
+
+ADE = 1
+
+N T pred 
+
+> N
+
+X
+
+> n=1
+> Tpred
+
+X 
+
+> τ=1
+
+ˆx(n) 
+
+> Tobs +τ
+
+− x(n) 
+
+> Tobs +τ2
+
+(24) 
+
+Final Displacement Error (FDE) is the Euclidean distance at the last predicted timestep: 
+
+FDE = 1
+
+N
+
+> N
+
+X
+
+> n=1
+
+ˆx(n) 
+
+> Tobs +Tpred
+
+− x(n)  
+
+> Tobs +Tpred 2
+
+(25) 
+
+minADE@ K and minFDE@ K are best-of-K variants ob-tained by drawing K=5 trajectory samples from the predicted GMM and reporting the minimum ADE or FDE across sam-ples. These metrics reward coverage of the ground truth by any mixture component. 
+
+Negative Log-Likelihood (NLL) is the mean per-timestep negative log-likelihood under the predicted GMM, as defined in Eq. (20). Lower values indicate higher probability assigned to observed future displacements. 
+
+Continuous Ranked Probability Score (CRPS) is an energy-score-based proper scoring rule that jointly rewards distribu-tional accuracy and calibration [17]: 
+
+CRPS = 1
+
+N KT pred 
+
+X
+
+> n,τ
+
+
+
+E ˆY ∥ ˆY − y(n) 
+
+> τ
+
+∥ − 12 E ˆY , ˆY ′ ∥ ˆY − ˆY ′∥
+
+
+
+(26) 
+
+estimated via Monte Carlo samples from the predicted GMM. 
+
+Expected Calibration Error (ECE) measures agreement between predicted uncertainty and empirical coverage. For z-score thresholds zℓ spanning [0 .1, 3.0] , the nominal coverage is pℓ = 2Φ( zℓ) − 1 (where Φ is the standard normal CDF) and the empirical coverage ˆpℓ is the fraction of ground-truth displacements falling within zℓ predicted standard deviations of the predicted mean: 
+
+ECE = 1
+
+|Z| 
+
+X
+
+> ℓ
+
+|pℓ − ˆpℓ| (27) A perfectly calibrated model achieves ECE = 0. All six metrics are computed on the held-out validation split; lower is better for each. 
+
+C. Training Protocol 
+
+All five models are trained with the combined NLL and mode-anchoring objective defined in Eq. (22) ( λMSE = 0 .15 ). Optimization uses AdamW [30] with β1 = 0 .9, β2 = 0 .999 ,and weight decay 10 −5. The batch size is 128 for all five models. The initial learning rate is η0 = 10 −4 with a minimum of ηmin = 10 −6. Gradients are clipped at ℓ2 norm 0.5. Training runs for up to 300 epochs with early stopping at patience 120 epochs based on validation NLL. The learning rate schedule is architecture-dependent. Aero-Cast uses CosineAnnealingLR [31] with Tmax = 300 . The four baselines use CosineAnnealingWarmRestarts with T0 = 20 
+
+and Tmult = 2 ; the periodic warm restarts empirically improve convergence for the shallower recurrent architectures. 
+
+D. Implementation Details 
+
+All projection matrices (embedding, attention, feed-forward, and output heads) are initialized with Xavier uniform ini-tialization [32]. The sinusoidal positional encoding is fixed (non-learnable); layer normalization modules use standard 8                                          
+
+> TABLE III QUANTITATIVE COMPARISON ON 13,500 HELD -OUT VALIDATION SEQUENCES (5-SECOND , 50-STEP HORIZON ). A LL MODELS USE K=5
+> MIXTURE COMPONENTS AND MATCHED TRAINING RECIPES .
+> MADE/ MFDE@5 ARE BEST -OF -5 SAMPLED TRAJECTORIES . A LL METRICS LOWER IS BETTER .BOLD :BEST PER COLUMN .Method ADE FDE mADE mFDE NLL CRPS ECE [m] [m] @5 [m] @5 [m] [m] GRU-MDN 0.127 0 .211 0.122 0.185 −10 .31 0 .169 0 .674
+> LSTM-MDN 0.149 0 .238 0.146 0.220 −9.37 0 .197 0 .676
+> BiGRU-MDN 0.111 0 .190 0.108 0.175 −10 .06 0 .145 0 .669
+> MLP-MDN 0.125 0 .219 0.115 0.183 −11 .40 0 .157 0.645 AeroCast (ours) 0.055 0.099 0.052 0.088 -13.28 0.049 0.647
+
+learnable affine parameters. The PyTorch implementation uses 
+
+TransformerEncoderLayer with Pre-LN and a terminal 
+
+LayerNorm after all L layers, as described in Eq. (14). All experiments are conducted on a single NVIDIA GPU. The total parameter count for AeroCast is 13.15 M, of which 12.61 M reside in the four Transformer encoder layers and the remainder is split across the input embedding and three output heads. VII. RESULTS AND ANALYSIS 
+
+A. Quantitative Comparison 
+
+Table III reports all evaluation metrics on the held-out validation split across nine trajectory types, evaluated over a 5-second (50-step) prediction horizon. All five models use 
+
+K=5 mixture components and are trained under the protocol described in Section VI. AeroCast achieves an ADE of 0.055 m and an FDE of 0.099 m, reducing both metrics by approximately 50% relative to BiGRU-MDN (ADE = 0.111 m, FDE = 0.190 m), which is the strongest baseline among the baselines. The best-of-5 metrics follow the same ordering: mADE@5 of 0.052 m and mFDE@5 of 0.088 m for AeroCast, compared with 0.108 m and 0.175 m for BiGRU-MDN. The small gap between single-mode and best-of-K results (0.055 vs. 0.052 m ADE) indi-cates that the dominant mixture component already tracks the ground truth closely; the remaining components contribute supplementary coverage rather than compensating for a mis-aligned primary mode. AeroCast also records the lowest NLL ( −13 .28 ) and CRPS (0.049 m). The NLL margin over the next-best method, MLP-MDN ( −11 .40 ), is 1.88 nats per timestep, and the remain-ing baselines fall further behind. On CRPS, AeroCast at-tains roughly one-third the value of BiGRU-MDN (0.049 vs. 0.145 m), which is consistent with predicted distributions that are both accurate in location and appropriately spread. Calibration, measured by ECE, is more tightly clustered across methods. MLP-MDN records 0.645, marginally below AeroCast at 0.647 while other baselines fall within a 0.03 band. This narrow spread suggests that the shared training elements, particularly the sigma floor at σmin =0 .05 m and the NLL-dominated loss, govern calibration more than the choice of encoder. The ECE values across all methods (0.64–0.68) 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0
+
+> Prediction horizon (s)
+> 0.00
+> 0.25
+> 0.50
+> 0.75
+> 1.00
+> Displacement error (m)
+> Ours GRU-MDN LSTM-MDN BiGRU-MDN MLP-MDN
+> Fig. 3. AeroCast position error at increasing prediction horizons over the full validation split.
+
+leave room for improvement through post-hoc recalibration or temperature scaling. Among the baselines themselves, BiGRU-MDN achieves the lowest trajectory error (ADE = 0.111 m), which is consis-tent with its bidirectional access to the observation window. LSTM-MDN places last on both ADE and FDE despite a larger parameter budget than GRU-MDN (6.07M vs. 4.75M), which suggests that the explicit cell-state mechanism does not confer an advantage at the 20-step observation length used here. MLP-MDN, which flattens the full window into a single vector, has achieved competitive NLL ( −11 .40 ) and the best ECE (0.645), though its trajectory-error performance (ADE = 0.125 m) lags behind the recurrent models with tem-poral inductive biases. 
+
+B. Prediction Horizon Analysis 
+
+Fig. 3 plots mean displacement error as a function of pre-diction horizon for all five methods. Error increases monoton-ically with horizon length for every model, as expected from displacement-based cumulative prediction. AeroCast maintains the lowest error at each evaluated horizon, and the gap relative to the baselines widens beyond the 2 s mark. At short horizons ( <1 s), all methods produce low errors that are within a narrow range of each other: near-future positions are tightly constrained by the current kinematic state regardless of encoder architecture. Beyond 2 s, the recurrent baselines diverge from the ground truth at a higher rate than AeroCast. This pattern is consistent with the hypothesis that global self-attention propagates early maneuver signatures across the full observation window more directly than the sequential hidden-state chain in recurrent encoders, though confirming this interpretation would require attention-map analysis beyond the scope of this evaluation. Fig. 4 shows the training and validation loss curves. The validation NLL decreases steadily and stabilizes without the oscillatory divergence sometimes observed in pure-NLL train-9−10        
+
+> −5
+> 0
+> 5
+> NLL loss
+> Train Val Best (ep. 165)
+> 025 50 75 100 125 150
+> Epoch
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> Error (m)
+> Val ADE Val FDE
+> Fig. 4. Validation and Training Loss Training Loss convergence over the epochs.
+
+ing of mixture models [33]. The combined objective and sigma floor appear to regularize the optimization effectively. 
+
+C. Per-Trajectory-Type Analysis 
+
+Table IV disaggregates ADE and FDE by trajectory category for all five methods. AeroCast achieves the lowest ADE and FDE on every category. The margin over the strongest baseline varies with the kinematic characteristics of each type. On periodic categories (Circle, Oval, Figure-8, Trefoil), AeroCast records ADE values between 0.040 m and 0.061 m. BiGRU-MDN, the strongest baseline on these types, ranges from 0.081 m to 0.124 m. The difference shows that the Transformer encoder captures periodic phase structure at least as effectively as the bidirectional recurrent model, without relying on an explicit recurrent inductive bias. Categories with non-trivial 3-D coupling (Helix, Lissajous, Staircase) show a similar pattern. AeroCast records 0.044 m on Helix, 0.069 m on Lissajous, and 0.059 m on Staircase; the corresponding BiGRU-MDN values are 0.089 m, 0.140 m, and 0.120 m. Staircase trajectories, characterized by slow vertical maneuvers with discrete altitude transitions, present a qualitatively different displacement distribution from the smooth periodic types, yet the relative improvement remains comparable. The largest absolute errors for all methods occur on Random trajectories. AeroCast obtains ADE of 0.109 m and FDE of 0.386 m; BiGRU-MDN reaches 0.221 m and 0.540 m. The FDE reduction on Random (28.5%) is smaller than the reduc-tions exceeding 45% observed on periodic types, which re-flects the greater intrinsic difficulty of long-horizon prediction on aperiodic motion with genuine behavioral multi-modality. Star trajectories, which contain abrupt heading reversals at each arm tip, produce the second-highest AeroCast FDE (0.198 m), though this still represents a 48% reduction relative to BiGRU-MDN (0.381 m). Fig. 5 corroborates these trends visually across representa-tive samples from multiple categories. On structured trajec-tories such as Trefoil and Oval, AeroCast predictions closely follow the ground-truth geometry, and the baselines exhibit visible drift at curvature maxima. On Star trajectories, all methods incur larger errors at the arm tips, but AeroCast recov-ers the correct heading more rapidly after each reversal. Fig. 6 presents a detailed view of a single Trefoil sequence with 3-D overlay, planar projections, and per-step displacement error. The per-step error curve shows that AeroCast maintains lower error throughout the prediction window. 
+
+D. Ablation Study 
+
+Table V reports results from a systematic ablation of four design dimensions: mixture cardinality, model capac-ity, positional encoding, and input feature set. Each variant modifies exactly one dimension relative to the full model (K=5 , d=512 , L=4 , sinusoidal positional encoding, 6-D displacement-velocity input). 
+
+1) Mixture Cardinality: Reducing K from 5 to 1 (unimodal Gaussian) raises ADE from 0.055 m to 0.133 m and worsens NLL from −13 .285 to −12 .377 which shows that the multi-modal output head provides more capacity for covering the kinematic diversity present in the dataset. At K=3 , ADE increases to 0.076 m, but ECE improves to 0.6405, the lowest among all ablation configurations. A fewer-component mixture thus yields slightly better-calibrated uncertainty at the expense of reduced trajectory accuracy. At K=10 , NLL improves to 
+
+−14 .021 , but ADE rises to 0.101 m and ECE degrades to 0.6665. The additional components improve the global density fit but do not individually anchor to the ground-truth path, so the argmax-weight mode used for ADE/FDE evaluation is less precise. K=5 offers the best trade-off between distributional fit and dominant-mode accuracy. 
+
+2) Model Capacity: The Tiny variant ( d=128 , L=2 , 1.85M parameters) incurs ADE of 0.247 m and FDE of 0.513 m, a fourfold degradation relative to the full model. Increasing to 
+
+d=256 , L=2 (Small) reduces ADE to 0.112 m; adding depth (d=256 , L=4 , Medium) brings it to 0.079 m. The full model (d=512 , L=4 ) achieves 0.055 m, a further 30% reduction over the Medium variant. NLL improvements are more modest across this progression ( −12 .354 for Tiny to −13 .285 for Full) that suggest that additional capacity improves the geometric precision of the dominant mixture component more than the overall distributional fit. 
+
+3) Positional Encoding: Removing the sinusoidal posi-tional encoding increases ADE from 0.055 m to 0.118 m and FDE from 0.099 m to 0.410 m. The asymmetry is notable as ADE roughly doubles, but FDE increases by a factor of four. Without explicit temporal ordering, the model retains some ability to produce reasonable displacement predictions on average by relying on token content alone, but it can-not maintain trajectory coherence through the full 50-step horizon, as reflected in the FDE degradation. NLL changes only modestly ( −13 .285 to −13 .146 ), so the contribution of positional encoding is primarily to geometric accuracy rather than distributional fit. 
+
+4) Input Features: Removing velocity and retaining only 3-D displacements raises ADE from 0.055 m to 0.098 m (78% increase) and FDE from 0.099 m to 0.187 m. NLL drops from 
+
+−13 .285 to −11 .684 , and ECE rises from 0.647 to 0.7883. 10 
+
+TABLE IV PER -TRAJECTORY -TYPE ADE / FDE ( M) ON THE HELD -OUT VALIDATION SPLIT (5-SECOND , 50-STEP HORIZON ). BOLD = BEST PER TYPE PER METRIC .
+
+AeroCast GRU-MDN LSTM-MDN BiGRU-MDN MLP-MDN Type ADE FDE ADE FDE ADE FDE ADE FDE ADE FDE Trefoil 0.060 0.121 0.141 0.261 0.165 0.292 0.122 0.233 0.138 0.270 Helix 0.044 0.085 0.103 0.183 0.120 0.206 0.089 0.165 0.092 0.204 Star 0.069 0.198 0.161 0.423 0.189 0.478 0.140 0.381 0.157 0.441 Oval 0.048 0.087 0.113 0.189 0.132 0.234 0.097 0.170 0.110 0.196 Figure-8 0.061 0.113 0.142 0.243 0.167 0.273 0.124 0.219 0.140 0.252 Circle 0.040 0.092 0.095 0.197 0.109 0.222 0.081 0.177 0.093 0.206 Random 0.109 0.386 0.254 0.824 0.297 0.931 0.221 0.540 0.249 0.857 Lissajous 0.069 0.116 0.161 0.249 0.189 0.281 0.140 0.223 0.158 0.259 Staircase 0.059 0.133 0.138 0.285 0.162 0.321 0.120 0.256 0.136 0.296 TABLE V ABLATION STUDY ON THE HELD -OUT VALIDATION SPLIT . BOLD = BEST IN COLUMN . K: MIXTURE COMPONENTS ; d: MODEL WIDTH ; L:
+
+> TRANSFORMER LAYERS
+
+; PE: POSITIONAL ENCODING ; I NP : INPUT FEATURES (6= POS +VEL , 3= POS ONLY ).                                                                                                     
+
+> Architecture ADE ↓FDE ↓NLL ↓ECE ↓
+> Variant KdLPE Inp [m] [m]
+> Full model (ours) 5512 4✓60.055 0.099 -13.285 0.647
+> Number of mixture components KK= 3 3512 4✓60.076 0.130 -12.806 0.6405
+> K= 10 10 512 4✓60.101 0.163 -14.021 0.6665
+> K= 1 (uni.) 1512 4✓60.133 0.213 -12.377 0.6536
+> Model depth & width
+> Tiny ( d=128, L=2) 5128 2✓60.247 0.513 -12.354 0.6662 Medium ( d=256, L=4) 5256 4✓60.079 0.179 -12.898 0.6569 Small ( d=256, L=2) 5256 2✓60.112 0.223 -12.634 0.6628
+> Positional encoding
+> No pos. enc. 5512 4×60.118 0.410 -13.146 0.6600
+> Input features
+> Pos.-only (3-D) 5512 4✓30.098 0.187 -11.684 0.7883
+
+The velocity signal conveys instantaneous heading and speed information that cannot be reliably recovered from a 20-step displacement history, particularly on trajectories where speed changes precede directional changes. The ECE degradation is the most severe observed in any single-factor ablation, which implies that velocity context is critical for both positional accuracy and for producing uncertainty estimates whose spread reflects actual kinematic variability. 
+
+E. Inference Latency 
+
+Table VI reports model size and per-sample inference la-tency measured at batch size 1 on a single NVIDIA GPU. AeroCast completes a forward pass in 0.100 ms, within the 10 ms budget for a 100 Hz prediction loop and comparable to BiGRU-MDN (0.125 ms). GRU-MDN and LSTM-MDN are faster (0.042 and 0.056 ms) due to smaller parameter counts. MLP-MDN is the fastest at 0.004 ms. All five methods fall well within a single control cycle at 100 Hz; the computational bottleneck in an onboard deployment would reside in the upstream perception pipeline rather than in the prediction step. 
+
+TABLE VI COMPARISON OF MODEL COMPLEXITY AND INFERENCE LATENCY (WITH BATCH SIZE 1 OVER 50 RUNS AFTER WARM -UP )Method Parameters Size (MB) Latency (ms) AeroCast (ours) 13.15M 54.0 0.100 GRU-MDN 4.75M 19.0 0.042 LSTM-MDN 6.07M 24.3 0.056 BiGRU-MDN 13.17M 52.7 0.125 MLP-MDN 7.63M 30.5 0.004 
+
+F. Discussion 
+
+Across all seven evaluation metrics and all nine trajectory categories, AeroCast either matches or improves upon every baseline. The trajectory-error and distributional advantages are consistent regardless of whether the motion is periodic, 3-D-coupled, or aperiodic. On periodic trajectories, where a recurrent model could in principle memorize the repeating displacement pattern, AeroCast still attains lower ADE. It is due to the fact that self-attention over the full 20-step window allows the en-coder to identify the instantaneous phase of the motion more directly than a recurrent encoder that must propagate phase information through intermediate hidden states. On aperiodic types, the same global connectivity may help the model detect early kinematic signatures of heading changes that sequential processing would attenuate. Both of these analyses are our own hypotheses that would require attention-weight analysis to confirm. The ablation results rank velocity input and model capacity as the two largest contributors to prediction quality. Positional encoding plays a significant role and its removal has a limited effect on ADE but quadruples FDE, that means temporal ordering is essential specifically for long-horizon trajectory coherence. The finding that velocity removal degrades ECE from 0.647 to 0.7883, more severely than any other single-factor ablation, points to a concrete mechanism: without in-stantaneous speed information, the model cannot differentiate slow-moving obstacles (whose future positions occupy a com-pact region) from fast-moving ones (whose future positions are more dispersed), resulting in miscalibrated predictive spreads. Several limitations qualify the conclusions drawn above. All experiments use a single dataset comprising indoor quadro-tor flights and parametrically generated synthetic trajectories; 11 1.6 0.8 0.0 
+
+0.8 
+
+0.0 
+
+> Star
+> ADE=0.057m
+
+AeroCast (Ours) 
+
+1.6 0.8 0.0 
+
+0.8 
+
+0.0 
+
+> ADE=0.191m
+
+BiGRU-MDN 
+
+1.6 0.8 0.0 
+
+0.8 
+
+0.0 
+
+> ADE=0.533m
+
+GRU-MDN 
+
+1.6 0.8 0.0 
+
+0.8 
+
+0.0 
+
+> ADE=0.542m
+
+LSTM-MDN 
+
+1.6 0.8 0.0 
+
+0.8 
+
+0.0 
+
+> ADE=0.172m
+
+MLP-MDN 
+
+0 2
+
+2
+
+0
+
+> Random
+> ADE=0.055m
+
+0 2
+
+2
+
+0
+
+> ADE=1.652m
+
+0 2
+
+2
+
+0
+
+> ADE=1.636m
+
+0 2
+
+2
+
+0
+
+> ADE=2.601m
+
+0 2
+
+2
+
+0
+
+> ADE=1.805m
+
+1.5 0.0 1.5 
+
+0.0 
+
+1.5 
+
+> Oval
+> ADE=0.058m
+
+1.5 0.0 1.5 
+
+0.0 
+
+1.5 
+
+> ADE=0.270m
+
+1.5 0.0 1.5 
+
+0.0 
+
+1.5 
+
+> ADE=0.249m
+
+1.5 0.0 1.5 
+
+0.0 
+
+1.5 
+
+> ADE=0.215m
+
+1.5 0.0 1.5 
+
+0.0 
+
+1.5 
+
+> ADE=0.298m
+
+0.0 0.5 1.0 
+
+x (m) 
+
+0.0 
+
+0.5 
+
+> Trefoil
+> ADE=0.095m
+
+0.0 0.5 1.0 
+
+x (m) 
+
+0.0 
+
+0.5 
+
+> ADE=0.143m
+
+0.0 0.5 1.0 
+
+x (m) 
+
+0.0 
+
+0.5 
+
+> ADE=0.377m
+
+0.0 0.5 1.0 
+
+x (m) 
+
+0.0 
+
+0.5 
+
+> ADE=0.242m
+
+0.0 0.5 1.0 
+
+x (m) 
+
+0.0 
+
+0.5 
+
+> ADE=0.165m
+
+History Ground truth AeroCast (Ours) BiGRU-MDN GRU-MDN LSTM-MDN MLP-MDN 
+
+Fig. 5. Qualitative comparison of AeroCast with the baseline models on various trajectory categories. X (m) 1.00                
+
+> 0.75
+> 0.50
+> 0.25
+> 0.00
+> 0.25
+> 0.50
+> 0.75
+> 1.00
+> Y (m)
+> 1.00
+> 0.75
+> 0.50
+> 0.25
+> 0.00
+> 0.25
+> 0.50
+> 0.75
+> Z (m)
+> 0.8
+> 0.9
+> 1.0
+> 1.1
+> 1.2
+> 1.3
+> 3D Trajectory Comparison (Trefoil-knot)
+> History
+> Ground Truth
+> Current
+> AeroCast (Ours)
+> BiGRU-MDN
+> GRU-MDN
+> LSTM-MDN
+> MLP-MDN
+> 3210123
+> X (m)
+> 1
+> 0
+> 1
+> Y (m)
+> Top-Down (XY)
+> 1.0 0.5 0.0 0.5 1.0
+> X (m)
+> 0.5
+> 1.0
+> 1.5
+> Z (m)
+> Side View (XZ)
+> 0510 15 20
+> Prediction Horizon (s)
+> 0.0
+> 0.1
+> 0.2
+> 0.3
+> Error (m)
+> Per-Step Displacement Error
+
+Fig. 6. Qualitative comparison of AeroCast with the baseline models on a Trefoil trajectory. 
+
+generalization to outdoor environments, larger vehicles, or biological aerial agents remains untested. The evaluation con-siders single-obstacle scenarios; multi-obstacle settings, where inter-agent interactions introduce additional behavioral modes, would require architectural extensions. VIII. CONCLUSION This paper presented AeroCast, a probabilistic trajectory prediction framework for non-cooperative aerial obstacles that pairs a Pre-LN Transformer encoder with a Mixture Density Network output head. Three design choices underpin the approach: a consecutive displacement encoding that enforces translation invariance and bounded input statistics, a combined NLL and mode-anchoring training objective with a physi-cally motivated sigma floor, and curriculum sequence-length scheduling for early training stability. AeroCast is evaluated against four baselines on a hybrid real-and-synthetic quadrotor dataset spanning nine motion categories. AeroCast reduces ADE and FDE by approximately 50% relative to the strongest baseline (BiGRU-MDN) and 12 
+
+achieves the lowest NLL and CRPS among all compared methods. These improvements hold across all nine trajec-tory types, with the largest absolute gains on aperiodic and structurally complex categories. Ablation analysis identifies velocity input as the single most important feature for both trajectory accuracy and calibration quality, and positional encoding as essential for maintaining prediction coherence over the full 5-second horizon. AeroCast inference latency (0.100 ms per sample) remains within the real-time budget for onboard deployment at 100 Hz. Future work includes extension to multi-obstacle settings with inter-agent interaction modeling, online adaptation to specific obstacle agents observed over time, and integration with a receding-horizon planner that consumes the predicted GMM distributions as probabilistic obstacle constraints. ACKNOWLEDGMENT Research was sponsored by the Army Research Office and was accomplished under Grant Number W911NF-23-1-0186. The views and conclusions contained in this document are those of the authors and should not be interpreted as repre-senting the official policies, either expressed or implied, of the Army Research Office or the U.S. Government. The U.S. Gov-ernment is authorized to reproduce and distribute reprints for Government purposes notwithstanding any copyright notation herein. It was also supported by by the Geospatial Computer Science Program at Texas A&M University-Corpus Christi. REFERENCES [1] X. Zhou, J. Zhu, H. Zhou, C. Xu, and F. Gao, “Ego-swarm: A fully autonomous and decentralized quadrotor swarm system in cluttered environments,” in IEEE International Conference on Robotics and Automation (ICRA) , 2021. [2] N. K. Chandran, M. T. H. Sultan, A. Łukaszewicz, F. S. Shahar, A. Holovatyy, and W. Giernacki, “Review on type of sensors and detection method of anti-collision system of unmanned aerial vehicle,” 
+
+Sensors , vol. 23, no. 15, 2023. [3] S. Izzat Ullah, J. Baca, P. Rangel, T. Chu, and C. Rubio-Medrano, “Pof+mader: Trajectory planner in dynamic environments with improved collision avoidance,” IEEE Access , vol. 13, pp. 215 533–215 549, 2025. [4] J. Baca, S. I. Ullah, and P. Rangel, “Coaxial modular aerial system and the reconfiguration applications,” in IEEE International Conference on Robotics and Automation (ICRA) , 2023. [5] O. Nacar, M. Abdelkader, L. Ghouti, K. Gabr, A. Al-Batati, and A. Koubaa, “Vector: Velocity-enhanced gru neural network for real-time 3d uav trajectory prediction,” Drones , vol. 9, no. 1, 2025. [6] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. u. Kaiser, and I. Polosukhin, “Attention is all you need,” in Advances in Neural Information Processing Systems , I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett, Eds., vol. 30. Curran Associates, Inc., 2017. [7] S. I. Ullah and A. Muhammad, “Autonomous navigation and mapping of water channels in a simulated environment using micro-aerial vehi-cles,” in 2023 International Conference on Robotics and Automation in Industry (ICRAI) , 2023. [8] S. N. Khan, T. Mahmood, S. I. Ullah, K. Ali, and A. Ullah, “Motion planning for a snake robot using double deep q-learning,” in 2021 International Conference on Artificial Intelligence (ICAI) , 2021, pp. 264–270. [9] R. Xiong, Y. Yang, D. He, K. Zheng, S. Zheng, C. Xing, H. Zhang, Y. Lan, L. Wang, and T.-Y. Liu, “On layer normalization in the transformer architecture,” in Proceedings of the 37th International Conference on Machine Learning , ser. ICML’20. JMLR.org, 2020. [10] Y. Yuan, X. Weng, Y. Ou, and K. Kitani, “Agentformer: Agent-aware transformers for socio-temporal multi-agent forecasting,” in 2021 IEEE/CVF International Conference on Computer Vision (ICCV) , 2021, pp. 9793–9803. [11] Z. Zhou, L. Ye, J. Wang, K. Wu, and K. Lu, “Hivt: Hierarchical vector transformer for multi-agent motion prediction,” in 2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2022, pp. 8813–8823. [12] A. Gupta, J. Johnson, L. Fei-Fei, S. Savarese, and A. Alahi, “Social gan: Socially acceptable trajectories with generative adversarial networks,” 03 2018. [13] T. Salzmann, B. Ivanovic, P. Chakravarty, and M. Pavone, “Trajectron++: Dynamically-feasible trajectory forecasting with heterogeneous data,” in 
+
+Computer Vision – ECCV 2020: 16th European Conference, Glasgow, UK, August 23–28, 2020, Proceedings, Part XVIII . Berlin, Heidelberg: Springer-Verlag, 2020, p. 683–700. [14] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, “On calibration of modern neural networks,” in Proceedings of the 34th International Con-ference on Machine Learning - Volume 70 , ser. ICML’17. JMLR.org, 2017, p. 1321–1330. [15] B. Lakshminarayanan, A. Pritzel, and C. Blundell, “Simple and scalable predictive uncertainty estimation using deep ensembles,” ser. NIPS’17. Red Hook, NY, USA: Curran Associates Inc., 2017, p. 6405–6416. [16] A. Kendall and Y. Gal, “What uncertainties do we need in bayesian deep learning for computer vision?” in Proceedings of the 31st International Conference on Neural Information Processing Systems , ser. NIPS’17. Red Hook, NY, USA: Curran Associates Inc., 2017, p. 5580–5590. [17] T. Gneiting and A. E. Raftery, “Strictly proper scoring rules, prediction, and estimation,” Journal of the American statistical Association , vol. 102, no. 477, pp. 359–378, 2007. [18] B. Ivanovic, Y. Lin, S. Shrivastava, P. Chakravarty, and M. Pavone, “Propagating state uncertainty through trajectory forecasting,” in 2022 IEEE International Conference on Robotics and Automation (ICRA) ,2022, pp. 2351–2358. [19] S. Pellegrini, A. Ess, K. Schindler, and L. van Gool, “You’ll never walk alone: Modeling social behavior for multi-target tracking,” in 2009 IEEE 12th International Conference on Computer Vision , 2009, pp. 261–268. [20] H. Caesar, V. Bankiti, A. H. Lang, S. Vora, V. E. Liong, Q. Xu, A. Krishnan, Y. Pan, G. Baldan, and O. Beijbom, “ nuScenes: A Multimodal Dataset for Autonomous Driving ,” in 2020 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) . Los Alamitos, CA, USA: IEEE Computer Society, Jun. 2020, pp. 11 618– 11 628. [21] S. Ettinger, S. Cheng, B. Caine, C. Liu, H. Zhao, S. Pradhan, Y. Chai, B. Sapp, C. Qi, Y. Zhou, Z. Yang, A. Chouard, P. Sun, J. Ngiam, V. Vasudevan, A. McCauley, J. Shlens, and D. Anguelov, “Large scale interactive motion forecasting for autonomous driving : The waymo open motion dataset,” in 2021 IEEE/CVF International Conference on Computer Vision (ICCV) , 2021, pp. 9690–9699. [22] S. I. Ullah and J. Baca, “Syntrag: A synthetic trajectory generator for non-cooperative dynamic obstacles in uav navigation,” in Advances in Automation and Robotics Research . Springer Nature Switzerland, 2026, pp. 320–332. [23] S. I.Ullah and J. Baca, “Nanobench: A multi-task benchmark dataset for nano-quadrotor system identification, control, and state estimation,” 
+
+arXiv preprint arXiv:2603.09908 , 2026. [24] S. I. Ullah, T. Mahmood, and Anayatullah, “Autonomous navigation and mapping of snake robot for urban search and rescue,” in 2023 Inter-national Conference on Robotics and Automation in Industry (ICRAI) ,2023, pp. 1–8. [25] M. Ibrar, M. Mehrubeoglu, and L. McLauchlan, “Two-stage deep learning framework for surface anomaly classification and defect lo-calization in pv panels,” in 2026 IEEE Green Technologies Conference (GreenTech) , 2026, pp. 1–6. [26] M. Ibrar, M. Mehrubeoglu, L. McLauchlan, and P. Rangel, “Detecting, localizing, and classifying photovoltaic solar panel surface defects using AI and edge IoT devices,” in Real-Time Image Processing and Deep Learning 2026 , N. Kehtarnavaz and M. V. Shirvaikar, Eds., vol. 14028, International Society for Optics and Photonics. SPIE, 2026, p. 140280C. [27] D. Schwab, S. M. O’Rourke, and B. L. Minnehan, “Combining lstm and mdn networks for traffic forecasting using the argoverse dataset,” in 2021 IEEE 24th International Conference on Information Fusion (FUSION) ,2021, pp. 1–6. [28] Y. Zhi, Z. Bao, S. Zhang, and R. He, “Bigru based online multi-modal driving maneuvers and trajectory prediction,” Proceedings of the institution of mechanical engineers, part d: journal of automobile engineering , vol. 235, no. 14, pp. 3431–3441, 2021. [29] W. Guo, Y. Du, X. Shen, V. Lepetit, X. Alameda-Pineda, and F. Moreno-Noguer, “Back to mlp: A simple baseline for human motion prediction,” in Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV) , January 2023, pp. 4809–4819. 13 
+
+[30] I. Loshchilov and F. Hutter, “Decoupled weight decay regularization,” in International Conference on Learning Representations , 2019. [31] I. Loshchilov and F.Hutter, “Sgdr: tochastic gradient descent with warm restarts,” International Conference on Learning Representations , 2017. [32] X. Glorot and Y. Bengio, “Understanding the difficulty of training deep feedforward neural networks,” in Proceedings of the Thirteenth International Conference on Artificial Intelligence and Statistics , ser. Proceedings of Machine Learning Research, Y. W. Teh and M. Titter-ington, Eds., vol. 9. Chia Laguna Resort, Sardinia, Italy: PMLR, 13–15 May 2010, pp. 249–256. [33] C. M. Bishop, “Mixture density networks,” 1994. 
+
+Syed Izzat Ullah is a Ph.D. candidate in Computer Science at Texas A&M University-Corpus Christi, Texas, USA. His research focuses on risk-aware multi-robot motion planning, integrating reinforce-ment learning, transfer learning, and optimization to improve autonomous navigation in dynamic and uncertain environments. Before starting his Ph.D. studies, he earned a B.S. in Telecommunication Engineering from Balochistan University of IT, En-gineering & Management Sciences, Pakistan, in 
+
+2016 , followed by an M.S. in Electrical Engineering (Robotics & Control Systems) from Lahore University of Management Sciences (LUMS), Pakistan, in 2019 . His research has been presented at leading robotics conferences and has held research positions at the National Center of Robotics & Automation, Pakistan, as well as a visiting researcher role at the Robotics Research Lab, TU Kaiserslautern, Germany. 
+
+Jos´ e Baca is an Associate Professor in the De-partment of Engineering at Texas A&M University-Corpus Christi, USA. He earned his B.S. in Elec-trical Engineering from Instituto Tecnologico de Matamoros, Mexico, his M.Sc. in Mechatronics from University of Applied Sciences in Aachen, Germany, his Ph.D. in Automation and Robotics, from Univer-sidad Politecnica de Madrid, Spain, and worked as a Postdoctoral Researcher in the Computer Science Department at University of Nebraska at Omaha, USA. His research interests include the development of coordination and control strategies for Unmanned Autonomous Systems and the integration of Modular Systems across different domains such as in robotics, search and rescue, coastal resilience, space, industry, agriculture, healthcare, and education. He has organized and co-chaired international conferences and workshops, and has been involved in projects funded by agencies such as DoD, NSF, USDA, and NASA.

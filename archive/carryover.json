@@ -1,6 +1,12 @@
 {
-  "generated_at": "2026-07-16T06:59:52.448380+00:00",
-  "updated_date": "20260707-20260716",
+  "generated_at": "2026-07-16T07:24:10.939479+00:00",
+  "updated_date": "20260617-20260716",
   "carryover_days": 9,
-  "tag_states": {}
+  "tag_states": {
+    "UAC": {
+      "updated_date": "20260617-20260716",
+      "carryover_days": 9,
+      "items": []
+    }
+  }
 }

@@ -1,0 +1,54 @@
+{
+  "label": "2026-06-17 ~ 2026-07-16",
+  "date": "2026-06-17 ~ 2026-07-16",
+  "generated_at": "2026-07-16T07:26:42",
+  "count": 3,
+  "papers": [
+    {
+      "paper_id": "20260617-20260716/2607.02472v1-learning-agile-intruder-interception-using-differentiable-quadrotor-dynamics",
+      "section": "quick",
+      "title_en": "Learning Agile Intruder Interception using Differentiable Quadrotor Dynamics",
+      "authors": "Michael Anoruo, Xiaoyu Tian, Abhishek Rathod, Timothy Naudet, Thomas Canchola, Eric Sturzinger, Kshitij Goel, Wennie Tabib",
+      "date": "2026-07-02",
+      "pdf": "https://arxiv.org/pdf/2607.02472v1",
+      "score": "9.0",
+      "evidence": "仅用三维方向向量学习敏捷拦截策略，性能超越深度强化学习基线",
+      "tldr": "针对四旋翼拦截中精确相对位置难以从被动单目相机获取的难题，提出一种基于可微分四旋翼动力学的解析策略梯度控制方法，仅利用入侵者的三维方向单位向量和自身状态作为输入，学习速度达十米每秒的敏捷拦截策略。该方法相较于使用简化点质量模型的基线，平均性能提升百分之三十，为现实世界中仅依赖视觉方向的自主拦截提供了可行技术路径。",
+      "tags": "query:uac",
+      "abstract_en": "This paper presents a methodology for learning a control policy to intercept an intruder using the 3D direction unit vector to the intruder and the interceptor state. Prior deep reinforcement learning approaches assume either relative position or distance to the intruder is available, but this information is not readily accessible in real-world applications that employ passive, monocular camera sensors. Instead, we propose a solution that leverages an analytical policy gradient method using differentiable quadrotor dynamics to learn agile interception at speeds up to 10 m/s. The proposed approach outperforms baseline methods that utilize simplified point mass dynamics by an average of 30%.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "20260617-20260716/2607.05939v1-intercepting-an-agile-target-with-net-carrying-drones-using-competitive-multi-agent-reinforcement-learning",
+      "section": "quick",
+      "title_en": "Intercepting an Agile Target with Net-Carrying Drones using Competitive Multi-Agent Reinforcement Learning",
+      "authors": "Timothée Gavin, Murat Bronz",
+      "date": "2026-07-07",
+      "pdf": "https://arxiv.org/pdf/2607.05939v1",
+      "score": "9.0",
+      "evidence": "无人机通过竞争性多智能体强化学习学会拦截敏捷目标，直接类比空战机动",
+      "tldr": "针对多无人机携带捕捉网拦截敏捷目标的任务，将其建模为竞争多智能体强化学习问题，采用MAPPO与优先级虚拟自我对弈（PFSP）训练追逃双方，并使用集体推力和机体角速率（CTBR）低层控制实现高敏捷飞行。仿真实验表明，该方法在捕获率、捕获时间和坠毁率上均优于启发式基线；消融实验证实PFSP提升了策略对不同对手策略的鲁棒性，CTBR控制对学习有效策略至关重要。该工作不仅提供了高效拦截方案，还揭示了追捕者间合作战术的涌现，为复杂追逃问题提供了新思路。",
+      "tags": "query:uac",
+      "abstract_en": "This article presents a solution to intercept an agile drone by a team of agile drone carrying catching nets. We formulate the problem as a competitive Multi-Agent Reinforcement Learning (MARL) task. To address the problem of nonstationarity and catastrophic forgetting of agents overfitting to the current opponent strategy, we train the pursuers and the evader using Multi-Agent Proximal Policy Optimization (MAPPO) with Prioritized Fictitious Self Play (PFSP). We train the agents in a high-fidelity simulator using low-level control commands, collective thrust and body rates (CTBR), to achieve agile flights for both the pursuers and the evader. We compare the performance of the trained policies in terms of catch rate, time to catch and crash rates, against heuristic baselines and show that our solution outperforms them. Ablation studies show that PFSP lead to more robust policies that can adapt to different opponent strategies, and that a low-level control commands are crucial for learning performing strategies in the pursuit-evasion task. Finally, a qualitative analysis of the learned behaviours highlights the emergence of cooperative tactics among the pursuers.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "20260617-20260716/2606.25122v1-aerocast-probabilistic-3d-trajectory-prediction-for-non-cooperative-aerial-obstacles-via-transformer-mdn-architecture",
+      "section": "quick",
+      "title_en": "AeroCast: Probabilistic 3D Trajectory Prediction for Non-Cooperative Aerial Obstacles via Transformer-MDN Architecture",
+      "authors": "Syed Izzat Ullah, Jose Baca",
+      "date": "2026-06-23",
+      "pdf": "https://arxiv.org/pdf/2606.25122v1",
+      "score": "8.0",
+      "evidence": "预测非合作空中障碍物轨迹以规划规避机动",
+      "tldr": "针对非合作空中障碍物多模态运动预测难题，提出AeroCast概率轨迹预测框架，结合Transformer编码器与混合密度网络，输出未来三维位移的高斯混合分布。在涵盖九类运动模式的混合真实与合成四旋翼数据集上，AeroCast将平均位移误差和终点位移误差较基线降低约50%，并取得最低负对数似然与连续分级概率评分。推理延迟仅0.1毫秒每样本，满足100Hz实时部署需求，为自主飞行器在复杂空域中安全避障提供了高效、可靠的预测手段。",
+      "tags": "query:uac",
+      "abstract_en": "Autonomous aerial vehicles operating in shared airspace must predict the future positions of non-cooperative obstacles to plan evasive maneuvers before a collision becomes unavoidable. Unlike cooperative systems that share intent, non-cooperative obstacles such as birds, uncontrolled drones, or debris exhibit multi-modal motion that deterministic predictors cannot adequately represent. Existing methods either rely on recurrent encoders that propagate temporal information sequentially, limiting their ability to capture long-range kinematic precursors of maneuver initiation, or produce point forecasts that provide no distributional information to downstream planners. This paper presents AeroCast, a probabilistic trajectory prediction framework that combines a Transformer encoder with a Mixture Density Network output head to predict per-timestep Gaussian mixture distributions over future three-dimensional displacements. A translation-invariant consecutive displacement encoding and a calibration-oriented training objective address the input design and mode-degeneracy challenges specific to mixture-based aerial trajectory prediction. On a hybrid real-and-synthetic quadrotor corpus spanning nine motion categories, AeroCast reduces Average Displacement Error and Final Displacement Error by approximately 50% relative to the baselines over a five-second horizon, and achieves the lowest negative log-likelihood and Continuous Ranked Probability Score among all compared methods. Ablation analysis identifies velocity input and model capacity as the primary contributors to prediction quality, and positional encoding as essential for long-horizon trajectory coherence. AeroCast inference completes in 0.1ms per sample, compatible with real-time onboard deployment at 100Hz.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}
