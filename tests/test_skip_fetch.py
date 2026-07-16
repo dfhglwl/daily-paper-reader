@@ -21,6 +21,13 @@ from main import should_skip_fetch  # noqa: E402
 class ShouldSkipFetchTest(unittest.TestCase):
     """Unit tests for should_skip_fetch()."""
 
+    def setUp(self):
+        self._env_patch = patch.dict(os.environ, {}, clear=True)
+        self._env_patch.start()
+
+    def tearDown(self):
+        self._env_patch.stop()
+
     FULL_SUPABASE_CONFIG = {
         "arxiv_paper_setting": {
             "prefer_supabase_read": True,
@@ -37,6 +44,21 @@ class ShouldSkipFetchTest(unittest.TestCase):
     def test_skip_when_fully_configured(self):
         """All Supabase retrieval features on → skip fetch."""
         self.assertTrue(should_skip_fetch(self.FULL_SUPABASE_CONFIG))
+
+    def test_skip_when_source_backends_arxiv_fully_configured(self):
+        cfg = {
+            "arxiv_paper_setting": {"prefer_supabase_read": True},
+            "source_backends": {
+                "arxiv": {
+                    "enabled": True,
+                    "url": "https://example.supabase.co",
+                    "anon_key": "test-key",
+                    "use_bm25_rpc": True,
+                    "use_vector_rpc": True,
+                }
+            },
+        }
+        self.assertTrue(should_skip_fetch(cfg))
 
     def test_no_skip_when_supabase_disabled(self):
         cfg = {
