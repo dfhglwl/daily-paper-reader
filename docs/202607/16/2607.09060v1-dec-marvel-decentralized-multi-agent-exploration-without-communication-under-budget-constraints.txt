@@ -1,0 +1,777 @@
+Title: Dec-MARVEL: Decentralized Multi-Agent Exploration without Communication under Budget Constraints
+
+URL Source: https://arxiv.org/pdf/2607.09060v1
+
+Published Time: Mon, 13 Jul 2026 00:29:01 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Dec-MARVEL: Decentralized Multi-Agent Exploration without Communication under Budget Constraints 
+
+Janghyun Cho 1,∗, Jimmy Chiun 2,∗, Guillaume Sartoretti 2, and Changjoo Nam 3,†
+
+Abstract — Multi-UAV exploration is often constrained by unreliable communication, limited field-of-view sensing (e.g., lightweight onboard camera), and finite travel budgets that require each robot to reserve enough budget to return to its base. We present Dec-MARVEL, a decentralized budget-aware exploration framework for communication-free teams with directional sensing. Rather than exchanging maps, goals, or messages, each robot coordinates through its incidental observations: any teammate trajectory within its field of view serves as a coordination signal. A graph-attention actor fuses local frontier geometry, teammate motion, and budget features to select return-feasible waypoint-heading actions. The actor is trained with phase-conditioned critics, a training-only task-oriented privileged critic, and a mixture-based budget curricu-lum. Across 900 held-out trials spanning three team sizes (2, 4, 8 robots) and three travel budgets (720, 800, 1024 meters) against four baselines, Dec-MARVEL achieves the highest or tied-highest exploration rate and lowest sensing overlap across all nine team-size × budget configurations. Under our tightest 720m budget, it reaches 53%, 94%, and 100% success for 2, 4, and 8 robots, versus 37%, 83%, and 99% for the strongest baseline. Physical-robot experiments demonstrate successful sim-to-real transfer and real-world deployment of Dec-MARVEL. 
+
+I. I NTRODUCTION 
+
+Autonomous exploration of unknown environments is a fundamental problem in field robotics, with applications in search and rescue, infrastructure inspection, and hazardous-environment surveys. Using multiple robots can improve exploration efficiency by covering different regions in par-allel [1]. However, this benefit depends strongly on co-ordination: if multiple robots explore independently, the team would have high overlap and gain limited performance improvements over parallel individual exploration. Many existing multi-robot exploration methods address this issue by relying on explicit communication, such as sharing maps, exchanging goals, or assigning frontiers among robots [2], [3]. In practical field settings, especially on uncrewed aerial vehicles (UAVs), this assumption can be difficult to satisfy because wireless communication can be degraded or unavail-able due to occlusions, signal attenuation, limited bandwidth, or infrastructure damage [4], [5]. In this work, we consider a different form of coordination. Even when robots do not exchange messages, they may still occasionally observe one another through their onboard 
+
+> †
+
+Equal contribution. 
+
+> ∗
+
+Corresponding author: cjnam@sogang.ac.kr 
+
+> 1
+
+Dept. of Artificial Intelligence, Sogang University. 
+
+> 2
+
+Dept. of Mechanical Engineering, College of Design and Engineering, National University of Singapore. 
+
+> 3
+
+Dept. of Electronic Engineering, Sogang University. Blue’s observation   
+
+> Green’s observation
+> Blue is approaching from this direction.
+> I should explore the right side instead.
+> Agent Sensing Area( FoV )Observed Trajectory
+> Green is approaching from this direction.
+> I should explore the left side instead.
+
+Fig. 1: Overview of Dec-MARVEL for distributed budget-aware multi-agent exploration without explicit inter-robot communication. Dec-MARVEL en-ables decentralized communication-free multi-robot exploration through op-portunistic trajectory observation. By observing teammate trajectory within their FoV, agents infer recently explored directions and coordinate waypoint-heading decisions without explicit communication. 
+
+sensors. Prior work on vision-based and limited Field-of-View (FoV) coordination suggests that such visibility con-straints can be used as part of the coordination process [6]– [8]. These opportunistic observations (Fig. 1) are limited and intermittent, but we show that they can still provide useful information about where a teammate has recently moved, and thus implicitly about which regions may have already been explored. This motivates the main question of this paper: Can visually observed teammate trajectories be used as a coordination signal for multi-robot exploration without requiring map sharing, goal exchange, or explicit task allocation? 
+
+This question is further complicated by two deployment constraints that are common in multi-UAV systems. First, many UAVs use directional sensors, such as forward-facing cameras or limited-angle LiDAR, meaning that robots must decide not only where to move but also where to orient their sensor (where to look) [7], [9]. Second, each robot has a finite travel budget (often, tied to battery life), and must preserve enough remaining budget to return to base and upload the gathered information during the mission. Policies trained only for fixed-horizon coverage may either move too aggressively toward distant frontiers or become overly conservative when return feasibility is considered. Together, these constraints make communication-free exploration a problem of joint reasoning over motion, sensing direction, observed teammate behavior, and remaining travel budget. Aimed at those challenges, we propose Dec-MARVEL, a communication-free, decentralized budget-aware exploration framework that uses opportunistically observed teammate trajectories as the only deployment-time coordination cue. Each robot independently builds a local representation of the partially explored environment and selects the next waypoint using information from local frontiers, remaining travel bud-get, and visually observed teammate trajectories. A budget-arXiv:2607.09060v1 [cs.RO] 10 Jul 2026 aware mechanism ensures that robots can safely return before exhausting their travel budget. During training, a centralized learning strategy and a budget curriculum improve coor-dination and robustness from privileged team information, while the deployed policy remains fully decentralized and communication-free. We show in simulation and on physical robots that this coordination signal greatly reduces redundant sensing and improves budget-aware exploration. The contri-butions of this work are summarized as follows:  
+
+> •
+
+Deployment-oriented problem formulation: We for-mulate decentralized multi-UAV exploration under lim-ited FoV, finite travel budget, and no communica-tion, where each robot selects waypoint-heading actions while preserving enough budget to return.  
+
+> •
+
+Implicit coordination through observed teammate trajectories: We enable each robot to coordinate using only locally available observations, producing return-feasible exploration behavior without relying on explicit inter-robot communication.  
+
+> •
+
+Stable and generalizable policy learning: We de-velop a centralized training framework combining a task-oriented privileged (TOP) critic, phase-conditioned critics, and a mixture-based budget curriculum that stabilizes learning under sparse team-level rewards and generalizes across a wide range of travel budgets.  
+
+> •
+
+Validation across simulation and physical robots: 
+
+Across 900 simulation trials, Dec-MARVEL achieves the highest average exploration rate and lowest sensing overlap across all nine budget–team settings, while physical-robot experiments validate execution of the learned communication-free coordination behavior. II. R ELATED WORK 
+
+A. Multi-Robot Exploration 
+
+Frontier-based methods [1], [10] select free-unknown boundaries as targets, with efficient variants reducing frontier-search cost [11]. Sampling-based planners opti-mize information gain over viewpoints [12], and graph-based extensions reuse prior planning structure [13]. Recent learning-based methods improve adaptivity through learned policies, decentralized graph-attention policies under FoV constraints [9], macro-action policies under communication disruptions [14], and communication-free exploration in dis-crete domains [15]. However, most formulations treat explo-ration as fixed-horizon coverage and do not jointly model waypoint-heading selection with return-budget feasibility. Dec-MARVEL instead targets continuous budget-constrained exploration, where each robot must decide where to move, where to sense, and how to preserve a feasible return path. 
+
+B. Communication-Constrained Coordination 
+
+Coordination is essential in multi-robot exploration be-cause independent local decisions can lead to redundant cov-erage and poor scaling with team size. Many systems reduce communication load rather than remove communication en-tirely: SMMR-Explore [2] exchanges submaps, RACER [3] uses decentralized task allocation, and RAMEN [16] and UDON [17] address robust neural implicit mapping under degraded links. These methods make multi-robot exploration more practical under bandwidth or reliability limits, but they still assume some mechanism for sharing information, allocating tasks, or synchronizing beliefs. Other methods handle intermittent communication through rendezvous or reconnection strategies [4], [5], while communication-denied settings have considered frontier allocation from previ-ously shared observations [18], minimal signaling in UAV swarms [19], or LiDAR-based communication-free collective navigation [20]. In contrast, Dec-MARVEL assumes no inter-robot communication during deployment; coordination is induced only through teammate trajectories opportunistically observed within each robot’s vision. 
+
+C. Implicit Coordination and Directional Sensing 
+
+Several methods augment local beliefs using predicted or inferred information, including diffusion-based map predic-tion [21], uncertainty-aware viewpoint selection [22], and epistemic planning for restricted communication [23]. These approaches show that planning can benefit from informa-tion that is not directly observed, either through prediction, uncertainty estimation, or belief reasoning. Vision-based coordination has also been studied for UAV swarms [6], and limited-FoV control has been addressed using particle filters and control barrier functions [7]. However, these works do not jointly address opportunistic teammate trajectory observation, coupled waypoint-heading selection, and hard return-budget constraints within a single communication-free policy. In this setting, the directional sensor determines both which frontiers can be explored and which teammates can be observed. Dec-MARVEL uses visible teammate trajectories as the deployment-time coordination signal and learns to convert this weak cue into complementary sensing decisions. 
+
+D. Privileged Training and Budget Curriculum 
+
+Dec-MARVEL also relates to trajectory representation and privileged training. Transformer-based motion models en-code temporal agent histories using attention and positional encodings [24]–[26], while gated attention can suppress low-information heads [27]. These sequence models provide useful tools for representing multi-agent motion histories, although their original objective is typically prediction rather than exploration control. Dec-MARVEL adapts these ideas to encode short, intermittent teammate trajectories for ex-ploration. During training, Dec-MARVEL uses privileged merged-belief information only in the critic, while the de-ployed actor remains restricted to local observations. This follows the spirit of centralized training with decentralized execution while preserving the communication-free deploy-ment assumption. The mixture-based budget curriculum fur-ther adapts the target travel budget from recent mission success while preserving exposure to the full budget range. III. P ROBLEM FORMULATION 
+
+A. Budget-Constrained, Communication-Free Dec-POMDP 
+
+We formulate exploration as a decentralized partially ob-servable Markov decision process (Dec-POMDP) with hard travel-budget constraints. The team consists of N robots operating in an unknown environment. At time t, robot i has pose pi,t = ( xi,t , ψ i,t ), local observation oi,t , local belief map Mi,t , and remaining travel budget Bi,t . The deployed policy is decentralized: 
+
+ai,t ∼ πθ (ai,t | oi,t , B i,t ), (1) and no robot receives teammate maps, goals, actions, or messages during execution. The only deployment-time inter-robot cue is a set of teammate trajectory observations that are available only when another robot is visible within the robot’s sensing range, FoV, and line of sight. Motion consumes budget according to traveled distance, and the budget is updated as Bi,t +1 = Bi,t −∥ xi,t +1 −xi,t ∥2.Here, xi,t ∈ R2 is the planar position and ψi,t is the sensing heading. We model budget as traveled path length; yaw motion and sensing energy are not charged separately. Let Di(x, x 0 
+
+> i
+
+; Gi,t ) denote the shortest-path distance from position x to the base x0 
+
+> i
+
+on robot i’s current graph Gi,t . A candidate move from xi,t to x′ is return-feasible only if 
+
+∥x′ − xi,t ∥2 + Di(x′, x 0 
+
+> i
+
+; Gi,t ) + ϵ ≤ Bi,t , (2) where ϵ is a safety margin. If no feasible exploration action exists, or if 
+
+Di(xi,t , x 0 
+
+> i
+
+; Gi,t ) + ϵ ≥ Bi,t , (3) robot i switches to return mode and follows the shortest graph path back to its base. This constraint is enforced during execution by action filtering and return-mode switching, rather than only through reward penalties. 
+
+B. Map Beliefs and Coverage Objective 
+
+Let M ∗ denote the ground-truth occupancy map, c denote a grid cell and Mi,t the local belief map of robot i. The merged team belief, used only for training supervision and evaluation, is 
+
+M team t (c) = 
+
+
+
+occupied , ∃i : Mi,t (c) = occupied ,
+
+free , ∃i : Mi,t (c) = free ,
+
+unknown , otherwise .
+
+(4) Team exploration coverage Ct is the fraction of ground-truth free cells marked free in the merged team belief, Ct = |{ c :
+
+M team  
+
+> t
+
+(c) = free }| /|{ c : M ∗(c) = free }| . An episode is successful when Ct ≥ Csucc , where we use Csucc = 0 .99 .
+
+C. Observation and Action Spaces 
+
+Each robot observes only deployment-time local informa-tion: graph structure, directional frontier, visitation history, budget state, and visible teammate trajectories. From reach-able free space, it builds graph Gi,t = ( Vi,t , E i,t ) using a 
+
+0.4 m occupancy grid and 4 m graph nodes. Each node v has 
+
+xv = [∆ xv , ∆yv , u v , g v , o v , ¯θv , m v , d 0 
+
+> v
+
+, ν v ], (5) encoding relative position, frontier utility, guide-post/occupancy state, best sensing heading, teammate-visit evidence, distance-to-base, and self-visitation. To support budget generalization, we use log-normalized budget features: 
+
+bi,t =
+
+
+
+η(B0 
+
+> i
+
+), η (Bi,t ), Bi,t 
+
+B0
+
+> i
+
+, min 
+
+ Di(xi,t , x 0 
+
+> i
+
+; Gi,t )max( Bi,t , 1) , 2
+
+ 
+
+,
+
+(6) where B0 
+
+> i
+
+is the initial budget and η(B) = log(1 + 
+
+B)/ log(1 + Bmax ) compresses the budget scale while pre-serving relative budget differences. The action is defined as a waypoint–heading pair, ai,t =(v+
+
+> i,t
+
+, k i,t ). v+ 
+
+> i,t
+
+is selected from N (vi,t ), a 5 × 5 local neighborhood centered at the current node with at most 
+
+K = 25 waypoint candidates, a size matched to the sensing range ds. ki,t selects one of H = 3 candidate headings drawn from a 36 -bin discretization of 360 ◦ at 10 ◦ per bin; we set H = 3 empirically, as it provides directional flexibility without unnecessarily enlarging the action space, which contains at most KH valid candidates after masking padding and self-slots, while zero-utility and previously visited nodes remain selectable for repositioning or return. 
+
+D. Reward and Objective Function 
+
+The reward encourages informative sensing, complemen-tary coverage, and stable exploration, while return feasibility is enforced by the deterministic budget guard. For an active robot, the per-agent reward is 
+
+ri,t = rFoV  
+
+> i,t
+
++ rmerged  
+
+> i,t
+
++ ralign  
+
+> i,t
+
+− 0.15 mi,t 
+
+− 0.05 max( qi,t − 1, 0) + rteam  
+
+> t
+
++ rindiv  
+
+> i,t
+
+, (7) where rFoV  
+
+> i,t
+
+rewards visible-frontier coverage, rmerged  
+
+> i,t
+
+re-wards training-time merged-belief utility, and ralign  
+
+> i,t
+
+rewards heading-motion alignment. The penalty terms discourage following recently observed teammate trails, encoded by 
+
+mi,t = mv+
+
+> i,t
+
+and repeated low-utility moves through qi,t , the number of consecutive waypoints with 0.5rFoV  
+
+> i,t
+
++ rmerged  
+
+> i,t
+
+<
+
+0.05 , with the count reset to zero on the first waypoint with 0.5rFoV  
+
+> i,t
+
++ rmerged  
+
+> i,t
+
+≥ 0.05 . The team and individual completion bonuses are 5.0 and 2.5, respectively. Return feasibility is not rewarded but enforced by the deterministic budget guard. The policy optimizes expected discounted team reward under the return-feasibility constraint: 
+
+max  
+
+> θ
+
+Eτ ∼πθ
+
+" TX
+
+> t=0
+
+γtNX
+
+> i=1
+
+ri,t 
+
+#
+
+s.t. ∥x′ 
+
+> i,t
+
+− xi,t ∥2 + Di(x′
+
+> i,t
+
+, x 0 
+
+> i
+
+; Gi,t ) + ϵ ≤ Bi,t , ∀i, t. 
+
+(8) IV. M ETHOD 
+
+A. System Overview 
+
+Dec-MARVEL approximately solves the constrained team objective in (8) with a decentralized policy trained under centralized supervision. Fig. 2 summarizes Dec-MARVEL. At deployment, each robot maintains only its own belief map, local graph, remaining budget, and intermittently observed teammate trajectories. The actor converts these local inputs into a waypoint-heading action, so the robot jointly decides Observation Decentralized Actor Privileged Critic         
+
+> (Training Only)
+> Local Occupancy
+> Belief Map &
+> Observed Teammate
+> Trajectories (FoV only)
+> Merged Team Belief
+> (agent -agnostic)
+> Agent Current Agent’s Nodes Observed Trajectories
+> Temporal Self -Attention
+> Sinusoidal PE
+> Gated Attention
+> Temporal Encoding
+> Ground Truth Nodes
+> Budget State
+> Agent 1 Agent 2
+> Budget
+> State }10
+> Policy Fusion
+> Budget
+> Encoder
+> Multi -Head Twin Critics
+
+𝑄 !"# 
+
+> Exploration
+> Phase
+
+𝑄 !$%&        
+
+> Post -Completion
+> Phase
+> ···
+> ···
+> ···
+> Local Environment Graph &
+> Frontier Histogram
+> Agent 1 Agent 2
+> Graph Construction
+> ···
+> Merged Critic Graph &
+> Ground Truth Nodes
+> Other agent’s Nodes
+> Budget Curriculum
+> Gated Attention
+> Graph Attention Encoder } 6
+> ···
+> Observed Teammate
+> Trajectories
+> ···
+> Observation Graph
+> ···
+> Cross Attention
+> Fusion
+> Action
+> Selection
+> Output
+> Action
+> (v!,k)Budget -Conditioned
+> Pointer Policy
+> Robot Motion
+> Execution
+> Budget Guard
+> Collision check,
+> Yaw -Rate limit
+> Belief Update Agent 1 Agent 2
+> Start Position
+
+Fig. 2: Overall pipeline of Dec-MARVEL. Each robot constructs a local graph from its observation and encodes visible teammate trajectories. The decentralized actor performs temporal encoding, policy fusion, and action selection to output a waypoint-heading pair. The TOP critic (training only) augments value estimation using (15) decomposition. 
+
+where to move and orient its directional sensor. Candidate actions are filtered by return-budget feasibility and collision resolution before execution, and the final heading is con-strained by yaw-rate limits to prevent unrealistically instan-taneous sensor reorientation. During training, a task-oriented privileged critic uses merged team-belief information to improve value estimation, but this information is removed entirely at deployment. Thus, Dec-MARVEL uses centralized information only as training supervision while preserving fully decentralized, communication-free execution. 
+
+B. Graph and Frontier Abstraction 
+
+Each robot extracts frontiers from its local occupancy belief and maintains a quadtree-backed node graph. A node’s utility is represented both as a scalar and as an angular frontier histogram over 36-bin. Observable frontiers within the 9 m utility range and line of sight are binned by angle, and a sliding FoV window identifies the H candidate headings covering the largest frontier mass. If a node has no local frontier utility, candidate headings are generated from the 
+
+A∗ guidepost path or neighboring graph directions, allowing the action space to remain well-defined during transit. 
+
+C. Opportunistic Trajectory Observation as Coordination 
+
+We assume that no persistent inter-robot communication is available during deployment. A robot updates its teammate-trajectory buffer only when another robot is simultaneously within sensing range, inside its FoV, and visible through line of sight. If a teammate is not visible, the corresponding token is zeroed and masked rather than filled using privileged state. For each visible teammate j, the encoder receives the last 
+
+L = 10 observed states: 
+
+ξj,ℓ = [∆ xj,ℓ , ∆yj,ℓ , sin ψj,ℓ , cos ψj,ℓ , α j,ℓ ], (9) where ∆xj,ℓ and ∆yj,ℓ are relative coordinates in the ob-serving robot’s frame, ψj,ℓ is the observed heading, and 
+
+αj,ℓ encodes age since observation. These trajectory tokens provide the only deployment-time coordination cue, allowing the policy to infer recently visited regions without map sharing, goal exchange, or access to teammate intentions. 
+
+D. Runtime Feasibility 
+
+The policy proposes actions, but execution is constrained by deterministic, training-free mechanisms. 
+
+1) Budget guard: For each proposed waypoint x′, the guard evaluates the feasibility condition in (2) and (3). If the action violates the return constraint, the robot switches to return mode and follows the A∗ path back to base. 
+
+2) Collision resolution: Because each robot plans from its own belief, two or more robots may select the same target node in a step. We resolve such conflicts deterministically at execution time. Among the robots that selected a common node, the closest robot keeps the node, while each other robot is reassigned to its highest-probability conflict-free candidate, or holds its current position if none remains. This rule is applied iteratively until all targets are distinct, guaranteeing collision-free node assignments. V. D ECENTRALIZED ACTOR ARCHITECTURE 
+
+Like MARVEL [9], Dec-MARVEL uses a graph-attention actor to select waypoint-heading actions under FoV con-straints, but differs structurally in two ways: action selection is budget-conditioned, and observed teammate trajectories are preserved as per-timestep tokens rather than pooled into a single vector. The actor maps each robot’s local observa-tion to a distribution over waypoint-heading actions through three stages: a graph-attention encoder over the node graph (Sec. V-A), a temporal encoder over observed teammate trajectories that retains agent-time tokens for action-level cross-attention (Sec. V-B), and a budget-conditioned pointer decoder that fuses the two and selects an action (Sec. V-C). 
+
+A. Budget-Aware Waypoint-Heading Actor 
+
+The actor maps the local graph, directional frontier cues, budget state, and trajectory tokens in (9) to a masked distribution over waypoint-heading actions. Node features defined in (5) are projected to d = 128 and encoded by six masked graph-attention layers with four attention heads. 
+
+Am = softmax 
+
+ QmK⊤
+
+> m
+
+√dk
+
++ M
+
+
+
+Vm,
+
+˜zv,m = σ(q⊤ 
+
+> v
+
+wgm)[ Am]v .
+
+(10) Here, M masks invalid or non-adjacent nodes, and 
+
+σ(q⊤ 
+
+> v
+
+wgm) gates head m using the query node, giving the per-head output ˜zv,m in (10). The gated heads are concatenated over m, projected, and passed through residual feed-forward blocks with layer normalization to form the per-node graph embedding zgv . Directional frontier histograms are encoded as efv = Conv1D( fv ) and fused with it as zv = Wf [zgv ; efv ].
+
+B. Temporal Trajectory Encoder 
+
+The trajectory tokens ξj,ℓ defined in (9) are encoded using two masked temporal-attention layers with four heads and 
+
+64 -dimensional embeddings. Each observation is augmented with sinusoidal temporal positional encoding eℓ = Wξ ξj,ℓ +
+
+pℓ where pℓ encodes the timestep index, following Motion Transformer model [25]. Rather than collapsing the trajectory into one pooled embedding, Dec-MARVEL preserves valid agent-time tokens τj,ℓ for action-level reasoning. When node correspondence is available, each token is fused with the nearest observed graph node: 
+
+ˆτj,ℓ = Wτ [Wpτj,ℓ ; Wnznode( j,ℓ )]. (11) Candidate actions cross-attend to the fused tokens ˆτj,ℓ in (11), so each waypoint-heading candidate is evaluated in the context of recently observed teammate motion. 
+
+C. Budget-Conditioned Action Decoding 
+
+The policy context ζi,t combines the current-node embed-ding zvi , and the remaining-budget features bi,t in (6): 
+
+ζi,t = Wζ [zvi ; Wbbi,t ].
+
+For each neighbor-heading candidate a = ( v′, k ), the action embedding is 
+
+ρa = Wa[zv′ ; Whhv′ ; Wθ θ(v′, k )] ,
+
+where hv′ embeds the heading(s) from which node v′ has already been sensed, and θ(v′, k ) is the binary heading-window vector for the candidate heading k. After cross-attending to the fused trajectory tokens ˆτj,ℓ of (11), a pointer head produces masked log-probabilities: 
+
+log πθ (a|o, b ) = log softmax a′
+
+ζ⊤W ⊤ 
+
+> q
+
+Wkρa′
+
+√d
+
+!
+
+. (12) Actions are sampled during training and selected greedily at evaluation. Invalid graph actions are masked, and return feasibility is enforced by the runtime budget guard. VI. C ENTRALIZED TRAINING 
+
+A. Soft Actor Critic 
+
+Dec-MARVEL is trained with discrete Soft Actor-Critic (SAC) [28]. For a transition (s, a, r, s ′, d ), rewards in (7) are normalized online. The soft target value is the policy expectation over all next actions, 
+
+V ¯ϕ(s′) = X
+
+> a′
+
+πθ (a′|s′)
+
+
+
+min  
+
+> j∈{ 1,2}
+
+Q ¯ϕj (s′, a ′) − α log πθ (a′|s′)
+
+
+
+.
+
+giving the Bellman target y = ˆ r + γ(1 − d)V ¯ϕ(s′) and the twin critics minimize the squared Bellman error 
+
+LQj (ϕj ) = E(s,a,r,s ′)∼D 
+
+h Qϕj (s, a ) − y2i
+
+, j ∈ { 1, 2}.
+
+(13) The pointer policy in (12) and the temperature α are updated with the standard discrete-SAC objectives [28]. We use target entropy H = 0 .5 log |A| with log α clamped to 
+
+[−4, 2] to prevent entropy collapse, and update target critics by Polyak averaging ( τ = 0 .003 ). 
+
+B. Phase-Conditioned Critics 
+
+Exploration before and after mission completion forms two qualitatively different behavioral regimes. Near the completion boundary, target values change abruptly as the team reward structure switches, producing unstable Bellman targets under a single critic representation. Dec-MARVEL therefore equips each twin critic in (13) with two phase-conditioned Q-heads, Qpre  
+
+> ϕj
+
+and Qpost  
+
+> ϕj
+
+. Given a phase indica-tor Ipost  
+
+> t
+
+= I[Ct ≥ Csucc ], the active critic output becomes 
+
+Qϕj (s, a, Ipost  
+
+> t
+
+) = (1 − Ipost  
+
+> t
+
+) Qpre  
+
+> ϕj
+
+(s, a ) + Ipost  
+
+> t
+
+Qpost  
+
+> ϕj
+
+(s, a ).
+
+(14) This preserves shared representation learning while al-lowing phase-specific value geometry. The post-phase head is initialized from the pre-phase head for smoother opti-mization, and replay sampling becomes phase-stratified once sufficient post-completion samples are available. 
+
+C. Task-Oriented Privileged (TOP) Critic 
+
+The TOP critic closes the information gap between the decentralized actor and the team-level exploration objective during training. Rather than the agent-agnostic merge in (4), TOP gives only the critic a task-specific privileged decomposition of map coverage: what the current robot has uncovered, what teammates have uncovered but remains unknown locally, and what ground-truth free space is unex-plored by the team: 
+
+Ei,t (c) = 
+
+
+
+self , Mi,t (c)̸ = u, 
+
+team , Mi,t (c) = u, ∃j̸ = i : Mj (c)̸ = u, 
+
+unexp , M ∗(c) = f, ∀j : Mj (c) = u, 
+
+(15) where u and f denote unknown and free cells, respectively. Aggregating these labels onto the privileged graph exposes team progress and remaining free space to the critic, aligning value targets with the exploration objective. This supervision is training-only. VII. C URRICULUM LEARNING FRAMEWORK 
+
+A. Mixture-Based Budget Curriculum 
+
+Budget difficulty directly changes the exploration-return tradeoff: large budgets permit broad exploration, while small budgets require earlier return-aware decisions. Dec-MARVEL therefore adapts the target travel budget using recent strict mission success, while mixture sampling main-tains exposure to the full budget range. Let ¯sk denote the strict mission-success rate over the most recent window of 8 episodes, and let sk be its exponential moving average, updated as sk+1 = (1 − β)sk + β¯sk with β = 0 .002 . Success tracking begins only after a warm-up of 1500 completed episodes; during warm-up we hold sk = 0 , so the curriculum starts at the largest budget Bstart and tightens as success accumulates. The target budget is 
+
+Btarget  
+
+> k
+
+= Bend + ( Bstart − Bend )(1 − sk), (16) Agent 1 Agent 2    
+
+> Agent 3 Agent 4
+> Agent 6 Agent 5
+> Agent 7 Agent 8
+> Agent 9 Agent 10
+
+Fig. 3: 3D simulation with 10 robots in the CMU Autonomous Exploration Development Environment [29]. Left: accumulated sensing map, where color intensity marks sensing overlap. Right: per-agent sensing footprints, showing complementary coverage from opportunistic coordination. 
+
+where Bstart = 1024 m and Bend = 640 m. As the policy succeeds more frequently at the current difficulty, Btarget 
+
+> k
+
+decreases toward Bend , gradually increasing task difficulty. 
+
+B. Mixture Sampling for Generalization 
+
+Pure self-paced curricula can overfit to the current diffi-culty band, causing forgetting at easy or hard budgets. Dec-MARVEL therefore samples initial budgets from a mixture: 
+
+B0 
+
+> i
+
+∼
+
+(
+
+U (Bend , B start ) withprob .p u,
+
+clip( Btarget  
+
+> k
+
++ δ, B end , B start ) otherwise ,
+
+(17) with pu = 0 .6 and ϵi ∼ U (−128 , 128) m. The uniform component ensures continued exposure to the full budget range, while target-centered sampling concentrates learning on the frontier of competence. This mixture supports gener-alization to unseen budget values at test time. VIII. EXPERIMENTS 
+
+A. Experimental Setup 
+
+We evaluate Dec-MARVEL in procedurally generated 2D indoor maps with directional sensing ( 120 ◦ FoV, ds = 10 m). We test three travel budgets, B in {720 , 800 , 1024 } m, and three team sizes, N ∈ { 2, 4, 8}, yielding nine budget-team configurations. Each configuration is evaluated over 100 
+
+held-out trials, for a total of 900 trials. We report merged exploration rate, success rate at 99% merged coverage, maximum per-robot distance to reach 99% merged coverage, and FoV overlap ratio. We define the FoV overlap ratio as the time-averaged fraction of the team’s instantaneous sensing footprint that is sensed by more than one robot simultane-ously. Percentage improvements are computed against the strongest baseline for each metric and configuration. 
+
+B. Baselines 
+
+We compare Dec-MARVEL against four communication-free baselines spanning frontier-based, potential-field, sampling-based, and learning-based exploration:  
+
+> •
+
+Nearest Frontier [1]: greedily selects the closest fron-tier in each robot’s local belief map.  
+
+> •
+
+SMMR-Explore [2]: balances attraction to unexplored regions with inter-agent repulsion.  
+
+> •
+
+NBVP [12]: replans receding-horizon next-best views using single-step volumetric information gain. 0180 360 540 720     
+
+> 0
+> 20
+> 40
+> 60
+> 80
+> 100
+> Merged Explored Rate(%)  Initial Budget = 720m
+> 0200 400 600 800
+> Merged Explored Rate(%)  Initial Budget = 800m
+> 0256 512 768 1024
+> Merged Explored Rate(%)  Initial Budget = 1024m
+> Dec-MARVEL(Ours) MARVEL SMMR-Explorer NBVP Nearest
+
+Fig. 4: Merged exploration rate for N = 4 agents under budgets B ∈{720 , 800 , 1024 } m. Dec-MARVEL achieves higher early- and mid-episode coverage across all budgets, indicating that trajectory-conditioned coordina-tion improves coverage efficiency before mission completion.  
+
+> •
+
+MARVEL [9]: uses graph attention for decentral-ized FoV-limited exploration, without budget modeling, phase-conditioned critics, or curriculum training. All baselines operate without inter-robot communication at deployment, matching the Dec-MARVEL operational con-straint. 
+
+C. Quantitative Comparison 
+
+Table I summarizes performance across all nine budget-team configurations. Dec-MARVEL achieves the highest average exploration rate and the lowest FoV overlap ratio in every setting. Compared with the strongest baseline in each configuration, Dec-MARVEL improves average exploration rate by 2.7% on average, reduces distance to 99% merged coverage by 17 .7% on average, and reduces FoV overlap by 
+
+26 .4% on average. Dec-MARVEL also achieves the highest or tied-highest success rate in all settings. 
+
+1) Effect of budget tightness: The gains are most pro-nounced under tighter budgets, where inefficient early de-cisions leave less margin for return. At B = 720 m, Dec-MARVEL improves success by 16% , 11% , and 1% over the strongest baseline for N = 2 , 4, and 8, respectively, with the largest exploration-rate gain at N = 2 (0.962 vs. 
+
+0.888 , an 8.3% relative improvement). Even when success saturates at larger teams or budgets, Dec-MARVEL reaches 
+
+99% coverage with greatly less travel, reducing the distance to 99% coverage by 27 .3% at B = 1024 m and N = 8 .
+
+2) Qualitative exploration behavior: Fig. 3 visualizes the accumulated and per-agent sensing footprints in the 3D simulation [29]. The predominantly low-overlap accumulated map and spatially separated individual footprints indicate that Dec-MARVEL agents implicitly partition the environment, consistent with the lowest FoV overlap observed in Table I. Fig. 4 shows the same behavior over time: for N = 4 ,Dec-MARVEL achieves higher merged coverage during the early and middle stages across all budgets, indicating that trajectory-conditioned coordination improves exploration ef-ficiency before the return constraint becomes binding. 
+
+3) Scaling with agent count: Exploration and success rates increase with team size for all methods. Dec-MARVEL scales effectively: at B = 720 m, exploration rate increases from 0.962 (N = 2 ) to 0.999 (N = 8 ), compared to 0.850 to 
+
+0.991 for SMMR-Explore. This steeper improvement reflects trajectory-conditioned coordination that promotes comple-mentary, non-overlapping coverage, whereas baselines ex-hibit diminishing returns from redundant exploration. TABLE I: Quantitative comparison across budget indices. We report the average exploration rate, success rate (fraction of trials reaching 99% merged coverage), metre to merged 99% coverage (avg. ±std.), and overlap ratio (avg. ±std.) for all methods, agent counts, and budgets. All tests are conducted with 120 ◦ FoV and sensor range ds = 10 m. The downward and upward arrows indicate that lower and higher values are better respectively. 
+
+Budget (m) N Metrics Nearest [1] SMMR-Explore [2] NBVP [12] MARVEL [9] Dec-MARVEL 720 
+
+N = 2 
+
+Avg. Exp. Rate ↑ 0.762 0.850 0.841 0.888 0.962 
+
+Success Rate (%) ↑ 4.0 37.0 10.0 19.0 53.0 
+
+Metre to 99% ↓ 508.670( ±42.378) 549.289( ±46.374) 499.460( ±57.170) 552.831( ±81.876) 495.790 (±76.612) 
+
+Overlap Ratio ↓ 0.415( ±0.093) 0.051( ±0.144) 0.651( ±0.197) 0.251( ±0.383) 0.031 (±0.107) 
+
+N = 4 
+
+Avg. Exp. Rate ↑ 0.862 0.951 0.936 0.925 0.995 
+
+Success Rate (%) ↑ 16.0 83.0 51.0 38.0 94.0 
+
+Metre to 99% ↓ 532.922( ±69.072) 493.304( ±75.757) 465.290( ±87.308) 514.456( ±91.353) 398.24 (±97.829) 
+
+Overlap Ratio ↓ 0.683( ±0.036) 0.124( ±0.166) 0.861( ±0.098) 0.333( ±0.245) 0.083 (±0.128) 
+
+N = 8 
+
+Avg. Exp. Rate ↑ 0.949 0.991 0.982 0.950 0.999 
+
+Success Rate (%) ↑ 42.0 99.0 83.0 50.0 100.0 
+
+Metre to 99% ↓ 476.565( ±93.136) 418.689( ±92.879) 383.448( ±91.514) 475.971( ±95.825) 318.467 (±85.796) 
+
+Overlap Ratio ↓ 0.924( ±0.087) 0.208( ±0.186) 0.968( ±0.054) 0.479( ±0.215) 0.159 (±0.148) 800 
+
+N = 2 
+
+Avg. Exp. Rate ↑ 0.826 0.897 0.896 0.924 0.970 
+
+Success Rate (%) ↑ 10.0 49.0 25.0 35.0 61.0 
+
+Metre to 99% ↓ 590.823( ±86.898) 625.416( ±79.123) 588.118( ±72.168) 556.220( ±108.057) 537.438 (±128.500) 
+
+Overlap Ratio ↓ 0.420( ±0.086) 0.044( ±0.130) 0.691( ±0.168) 0.153( ±0.302) 0.030 (±0.107) 
+
+N = 4 
+
+Avg. Exp. Rate ↑ 0.896 0.971 0.970 0.947 0.997 
+
+Success Rate (%) ↑ 26.0 87.0 70.0 51.0 97.0 
+
+Metre to 99% ↓ 574.254( ±73.990) 518.866( ±99.703) 481.504( ±122.903) 541.740( ±123.179) 382.952 (±104.294) 
+
+Overlap Ratio ↓ 0.693( ±0.038) 0.105( ±0.154) 0.898( ±0.081) 0.300( ±0.236) 0.070 (±0.125) 
+
+N = 8 
+
+Avg. Exp. Rate ↑ 0.962 0.993 0.992 0.964 0.999 
+
+Success Rate (%) ↑ 58.0 97.0 92.0 62.0 100.0 
+
+Metre to 99% ↓ 544.304( ±109.916) 428.817( ±109.553) 417.180( ±107.447) 533.027( ±120.500) 308.344 (±74.892) 
+
+Overlap Ratio ↓ 0.918( ±0.093) 0.193( ±0.179) 0.978( ±0.048) 0.436( ±0.199) 0.148 (±0.143) 1024 
+
+N = 2 
+
+Avg. Exp. Rate ↑ 0.902 0.964 0.961 0.958 0.989 
+
+Success Rate (%) ↑ 41.0 83.0 55.0 84.0 86.0 
+
+Metre to 99% ↓ 826.397( ±97.464) 750.443( ±125.413) 722.261( ±151.919) 739.903( ±107.768) 602.558 (±164.689) 
+
+Overlap Ratio ↓ 0.417( ±0.087) 0.037( ±0.121) 0.790( ±0.131) 0.196( ±0.330) 0.029 (±0.106) 
+
+N = 4 
+
+Avg. Exp. Rate ↑ 0.972 0.994 0.993 0.968 0.999 
+
+Success Rate (%) ↑ 70.0 98.0 88.0 88.0 100.0 
+
+Metre to 99% ↓ 737.969( ±143.737) 623.211( ±159.591) 602.593( ±165.627) 690.428( ±137.934) 400.154 (±119.260) 
+
+Overlap Ratio ↓ 0.693( ±0.039) 0.088( ±0.142) 0.965( ±0.050) 0.349( ±0.253) 0.072 (±0.119) 
+
+N = 8 
+
+Avg. Exp. Rate ↑ 0.991 0.999 0.999 0.977 0.999 
+
+Success Rate (%) ↑ 84.0 100.0 98.0 91.0 100.0 
+
+Metre to 99% ↓ 641.267( ±158.237) 460.256( ±133.121) 423.844( ±134.527) 666.125( ±169.893) 308.248 (±82.272) 
+
+Overlap Ratio ↓ 0.911( ±0.089) 0.168( ±0.168) 0.997( ±0.020) 0.496( ±0.215) 0.145 (±0.140) 
+
+TABLE II: Ablation study of Dec-MARVEL at B = 800 m with N = 4 
+
+agents. Each entry reports the average value with standard deviation. Method Dist to 99% Merged ↓
+
+Dist to 99% Individual ↓ Overlap ↓
+
+Dec-MARVEL w/o TOP Critic 500.53 (±116.77) Not reached 99% 0.087 (±0.136) Dec-MARVEL w/o Mixture-based Curriculum 421.84 (±104.14) 682.07 ( ±50.14) 0.085 (±0.131) Dec-MARVEL w/o Dual-Head Critic 408.48 (±103.31) 665.45 ( ±53.12) 0.079 (±0.128) Dec-MARVEL 382.95 
+
+(±104.29) 650.22 (±47.88) 0.070 
+
+(±0.125) TABLE III: Robustness evaluation under different team sizes breakdowns across various exploration budgets. Budget (m) Broken agents Avg Exp. Rate ↑                                         
+
+> Success (%) ↑Merged 99% ↓Individual 99% ↓
+> 720 20.954 69.0 403.63( ±106.60) 625.55( ±46.33) 10.986 86.0 424.08( ±117.56) 624.73( ±32.73) 00.995 94.0 398.240 (±97.82) 607.62 (±38.53) 800 20.966 77.0 417.18( ±127.03) 697.09( ±58.73) 10.988 91.0 434.82( ±126.26) 686.28( ±63.02) 00.997 97.0 382.95 (±104.29) 650.22 (±47.88) 1024 20.969 82.0 488.13( ±197.52) 743.36( ±80.83) 10.996 97.0 430.04( ±155.55) 763.03( ±85.50) 00.999 100.0 400.15 (±119.26) 676.11 (±66.38)
+
+D. Ablation and Robustness Studies 
+
+Table II evaluates the main training components at B =800 m with N = 4 robots. Removing the TOP critic (15) causes the largest degradation, increasing the distance to 
+
+99% merged coverage from 382 .95 m to 500 .53 m ( +23 .5% ). Removing the mixture-based budget curriculum (16)–(17) and phase-conditioned critic (14) increases completion dis-tance by 9.2% and 6.3% , respectively, indicating that TOP critic supervision contributes most, while the curriculum and phase-conditioned critic further improve budget-aware completion and reduce sensing overlap. Table III evaluates robustness to robot failures without retraining by randomly disabling one or two robots from a four-robot team between decision steps 30 and 128 ,after which failed robots cease motion and sensing. Dec-MARVEL degrades gracefully: with two robots disabled, the remaining team maintains average exploration rates of 0.954 ,
+
+0.966 , and 0.969 for budgets 720 , 800 , and 1024 m, respec-tively, while success remains between 69% and 82% . The performance loss is proportional to the reduction in sensing capacity rather than a breakdown in coordination, as robots naturally redistribute exploration from local observations and passively observed teammate trajectories, without replanning or role reassignment. These results demonstrate robustness to partial team failures, supporting long-duration decentralized missions with uncertain robot availability. 
+
+E. Real-World Experiments 
+
+We further evaluate Dec-MARVEL on four physical mo-bile robots with motion-capture localization in three indoor environments of 3.6 m×3.6 m (Fig. 5). Without explicit com-munication, the robots coordinate through local observations to achieve complementary exploration while satisfying the travel-budget requirement. Computing waypoint setpoints in an average of 0.3 s, Dec-MARVEL enables real-time, collision-free navigation and consistently achieves higher exploration rates than the baseline planners across all three environments. These results demonstrate reliable sim-to-real transfer despite sensing and actuation uncertainties. Case 1 Case 2 Case 3 Fig. 5: Real-world experiment. Robots track Dec-MARVEL setpoints from motion capture, achieving complementary coverage without communication. 
+
+IX. C ONCLUSION 
+
+We presented Dec-MARVEL, a fully decentralized frame-work for budget-aware multi-robot exploration that coordi-nates solely through passively observed teammate trajecto-ries, eliminating the need for explicit inter-robot commu-nication, offering a practical solution for communication-limited missions. By jointly reasoning over frontier geometry, directional sensing, remaining travel budget, and teammate motion, Dec-MARVEL enables robots to make complemen-tary, return-feasible exploration decisions using only local observations. Across diverse team sizes and travel budgets, Dec-MARVEL consistently achieves the highest exploration rates, lowest sensing overlap, and the highest or tied-highest success rates, with the largest improvements under the most challenging resource-constrained settings. Ablation, robot-failure, and physical-robot experiments further demonstrate that the proposed training strategy and decentralized policy are effective, robust, and transferable to real-world deploy-ment. Future work will relax the assumption of reliable team-mate perception, extend Dec-MARVEL to heterogeneous teams, and scale the framework to 3D environments with onboard perception. REFERENCES [1] M. Tellaroli, M. Luperto, M. Antonazzi, and N. Basilico, “Frontier-Based Exploration for Multi-Robot Rendezvous in Communication-Restricted Unknown Environments,” in Proceedings of IEEE/RSJ Int. Conf. on Intell. Robot. Syst. , 2024, pp. 5807–5812. [2] J. Yu, J. Tong, Y. Xu, Z. Xu, H. Dong, T. Yang, and Y. Wang, “SMMR-Explore: SubMap-based Multi-Robot Exploration System with Multi-robot Multi-target Potential Field Exploration Method,” in Proceedings of IEEE Int. Conf. on Robot. and Autom. , 2021, pp. 8779–8785. [3] B. Zhou, H. Xu, and S. Shen, “RACER: Rapid Collaborative Explo-ration With a Decentralized Multi-UAV System,” IEEE Trans. Robot. ,vol. 39, no. 3, pp. 1816–1835, 2023. [4] A. R. Da Silva, L. Chaimowicz, T. C. Silva, and M. A. Hsieh, “Communication-Constrained Multi-Robot Exploration with Intermit-tent Rendezvous,” in Proceedings of IEEE/RSJ Int. Conf. on Intell. Robot. Syst. , 2024, pp. 3490–3497. [5] D. M. Siang Tan, Y. Ma, J. Liang, Y. C. Chng, Y. Cao, and G. Sar-toretti, “IR²: Implicit Rendezvous for Robotic Exploration Teams under Sparse Intermittent Connectivity,” in Proceedings of IEEE/RSJ Int. Conf. on Intell. Robot. Syst. , 2024, pp. 13 245–13 252. [6] F. Schilling, J. Lecoeur, F. Schiano, and D. Floreano, “Learning Vision-Based Flight in Drone Swarms by Imitation,” IEEE Robot. Autom. Lett. , vol. 4, no. 4, pp. 4523–4530, 2019. [7] M. Catellani and L. Sabattini, “Distributed Control of a Limited An-gular Field-of-View Multi-Robot System in Communication-Denied Scenarios: A Probabilistic Approach,” IEEE Robot. Autom. Lett. ,vol. 9, no. 1, pp. 739–746, 2024. [8] S. K. Ghanta and R. Parasuraman, “SPACE: 3D Spatial Co-Operation and Exploration Framework for Robust Mapping and Coverage With Multi-Robot Systems,” IEEE Robot. Autom. Lett. , vol. 10, no. 12, pp. 13 074–13 081, 2025. [9] J. Chiun, S. Zhang, Y. Wang, Y. Cao, and G. Sartoretti, “MARVEL: Multi-Agent Reinforcement Learning for Constrained Field-of-View Multi-Robot Exploration in Large-Scale Environments,” in Proceed-ings of IEEE Int. Conf. on Robot. and Autom. , 2025, pp. 11 392– 11 398. [10] B. Yamauchi, “A Frontier-Based Approach for Autonomous Explo-ration,” in Proceedings of IEEE Int. Symp. Comput. Intell. Robot. Autom. , 1997, pp. 146–151. [11] M. Keidar and G. A. Kaminka, “Efficient frontier detection for robot exploration,” Int. J. Robot. Res. , vol. 33, no. 2, pp. 215–236, 2014. [12] A. Bircher, M. Kamel, K. Alexis, H. Oleynikova, and R. Siegwart, “Receding Horizon “Next-Best-View” Planner for 3D Exploration,” in Proceedings of IEEE Int. Conf. on Robot. and Autom. , 2016, pp. 1462–1468. [13] D. Duberg and P. Jensfelt, “UFOExplorer: Fast and Scalable Sampling-Based Exploration With a Graph-Based Planning Structure,” IEEE Robot. Autom. Lett. , vol. 7, no. 2, pp. 2487–2494, 2022. [14] A. H. Tan, F. P. Bejarano, Y. Zhu, R. Ren, and G. Nejat, “Deep Reinforcement Learning for Decentralized Multi-Robot Exploration With Macro Actions,” IEEE Robot. Autom. Lett. , vol. 8, no. 1, pp. 272–279, 2023. [15] A. Kontogiannis, K. Papathanasiou, Y. Shen, G. Stamou, M. M. Zavlanos, and G. Vouros, “Enhancing Cooperative Multi-Agent Re-inforcement Learning with State Modelling and Adversarial Explo-ration,” in Proceedings of Int. Conf. Mach. Learn. , 2025, pp. 31 437– 31 466. [16] H. Zhao, B. Ivanovic, and N. Mehr, “RAMEN: Real-time Asyn-chronous Multi-agent Neural Implicit Mapping,” in Robot.: Sci. Syst. ,2025. [17] H. Zhao, X. Zhou, B. Ivanovic, and N. Mehr, “UDON: Uncertainty-Weighted Distributed Optimization for ulti-Robot Neural Implicit Mapping under Extreme Communication Constraints,” arXiv preprint arXiv:2509.12702 , 2025. [18] A. Bautin, O. Simonin, and F. Charpillet, “Towards a communication free coordination for multi-robot exploration,” in Proceedings of 6th National conf. on cont. archi. of robots , 2011, pp. 8–p. [19] K. N. McGuire, C. De Wagter, K. Tuyls, H. J. Kappen, and G. C. de Croon, “Minimal navigation solution for a swarm of tiny flying robots to explore an unknown environment,” Science Robotics , vol. 4, no. 35, p. eaaw9710, 2019. [20] M.-Y. Choi, H. Ko, H. Cho, C. Kim, S. Kim, J. Seo, and H. Oh, “Communication-free collective navigation for a swarm of UAVs via LiDAR-based deep reinforcement learning,” arXiv preprint arXiv:2601.13657 , 2026. [21] A. H. Tan, S. Narasimhan, and G. Nejat, “4CNet: A Diffusion Ap-proach to Map Prediction for Decentralized Multirobot Exploration,” 
+
+IEEE Trans. Robot. , vol. 42, pp. 1371–1388, 2026. [22] C. Ho, S. Kim, B. Moon, A. Parandekar, N. Harutyunyan, C. Wang, K. Sycara, G. Best, and S. Scherer, “MapEx: Indoor Structure Exploration with Probabilistic Information Gain from Global Map Predictions,” in Proceedings of IEEE Int. Conf. on Robot. and Autom. ,2025, pp. 13 074–13 080. [23] L. Bramblett, S. Gao, and N. Bezzo, “Epistemic Prediction and Planning with Implicit Coordination for Multi-Robot Teams in Com-munication Restricted Environments,” in Proceedings of IEEE Int. Conf. on Robot. and Autom. , 2023, pp. 5744–5750. [24] Y. Yuan, X. Weng, Y. Ou, and K. Kitani, “AgentFormer: Agent-Aware Transformers for Socio-Temporal Multi-Agent Forecasting,” in 
+
+Proceedings of IEEE/CVF Int. Conf. Comput. Vis. , 2021, pp. 9793– 9803. [25] S. Shi, L. Jiang, D. Dai, and B. Schiele, “Motion Transformer with Global Intention Localization and Local Movement Refinement,” Adv. Neural Inf. Process. Syst. , vol. 35, pp. 6531–6543, 2022. [26] Z. Zhang, A. Liniger, D. Dai, F. Yu, and L. Van Gool, “TrafficBots: Towards World Models for Autonomous Driving Simulation and Motion Prediction,” in Proceedings of IEEE Int. Conf. on Robot. and Autom. , 2023, pp. 1522–1529. [27] Z. Qiu, Z. Wang, B. Zheng, Z. Huang, K. Wen, S. Yang, R. Men, L. Yu, F. Huang, S. Huang et al. , “Gated attention for large language models: Non-linearity, sparsity, and attention-sink-free,” Adv. Neural Inf. Process. Syst. , vol. 38, pp. 100 092–100 118, 2026. [28] T. Haarnoja, A. Zhou, P. Abbeel, and S. Levine, “Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor,” in Int. conf. on mach. learn. Pmlr, 2018, pp. 1861–1870. [29] C. Cao, H. Zhu, F. Yang, Y. Xia, H. Choset, J. Oh, and J. Zhang, “Autonomous Exploration Development Environment and the Planning Algorithms,” in Proceedings of IEEE Int. Conf. on Robot. and Autom. ,2022, pp. 8921–8928.

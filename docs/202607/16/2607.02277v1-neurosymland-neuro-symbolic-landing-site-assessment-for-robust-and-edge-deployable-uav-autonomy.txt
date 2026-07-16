@@ -1,0 +1,297 @@
+Title: NEUROSYMLAND: Neuro-Symbolic Landing-Site Assessment for Robust and Edge-Deployable UAV Autonomy
+
+URL Source: https://arxiv.org/pdf/2607.02277v1
+
+Published Time: Fri, 03 Jul 2026 01:29:44 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# NEURO SYM LAND : Neuro-Symbolic Landing-Site Assessment for Robust and Edge-Deployable UAV Autonomy 
+
+Weixian Qian 1,∗, Tianyi Yang 2,∗, and Sebastian Schroder 1,∗
+
+Yao Deng 1,3, Jiaohong Yao 1, Xiao Cheng 1, Richard Han 1, and Xi Zheng 1,†
+
+Abstract — Safe landing-site assessment in unstructured envi-ronments remains a key challenge for autonomous UAV deploy-ment, as vision-only learning approaches often degrade under terrain variability and provide limited transparency in safety decisions. We present NEURO SYM LAND , a neuro-symbolic landing-site assessment system that integrates lightweight per-ception with explicit safety reasoning. The framework con-structs a probabilistic semantic scene graph from onboard visual input and evaluates candidate landing regions using sym-bolic constraints capturing terrain flatness, obstacle clearance, and spatial consistency, enabling structured reasoning under perceptual uncertainty while maintaining edge-feasible execu-tion. Across 72 simulated landing scenarios spanning diverse terrains, N EURO SYM LAND achieves 61 successful assessments, outperforming four competitive baselines (37-57 successes). To evaluate deployability, we further conduct 100 hardware-in-the-loop trials with randomized initial poses, profiling end-to-end latency, stage-wise execution time, and system-level metrics including CPU/GPU utilization, memory footprint, and power consumption. Results demonstrate improved robustness and interpretability with bounded edge-resource usage. Profiling shows that symbolic reasoning contributes only a small fraction of end-to-end latency, while the main computational cost arises from perception and PSSG construction. These results demon-strate the feasibility of deploying the landing-site assessment stack on edge-constrained UAV hardware, and all source code, datasets, prompts, and symbolic rule refinement examples are released in an open-source repository 1.
+
+I. INTRODUCTION Unmanned aerial vehicles (UAVs) are increasingly de-ployed near people and infrastructure for delivery, inspection, and emergency response, where safe landing remains apersistent bottleneck for reliable field operation. Marker-free landing-site assessment (LSA) must select safe touch-down regions under perceptual uncertainty, partial observ-ability, and mission-dependent constraints, where safety de-pends not only on geometric cues such as flatness and obstacle clearance but also on contextual factors including nearby people, sensitive facilities, environmental affordances, and task-specific policies. Most existing marker-free LSA pipelines [10, 23, 24, 26] rely on end-to-end learning models        
+
+> ∗Equal contribution.
+> †Corresponding author.
+> 1School of Computing, Macquarie University, Sydney, NSW, Australia.
+
+{weixian.qian, sebastian.schroder1, jiaohong.yao, xiao.cheng, richard.han, james.zheng }@mq.edu.au  
+
+> 3Yao Deng was with Macquarie University, when this work was con-ducted, and is now with Anitron.
+
+yao.deng@anitron.com  
+
+> 2Department of Computer Science, University of California, Santa Bar-bara, CA, USA.
+
+tianyi yang@ucsb.edu 
+
+> 1give the repo link
+
+that regress landing feasibility directly from geometric and semantic features, tightly coupling perception and deci-sion logic. While effective at identifying obvious hazards, such approaches limit interpretability, systematic debugging, and mission reconfiguration, as updating operational con-straints often requires retraining or heuristic redesign. Recent LLM/VLM-based methods [3, 4, 13] move toward higher-level reasoning but typically depend on implicit prompting or black-box inference at runtime, complicating deterministic analysis and certification for edge-deployed robotic systems. To address these limitations, we propose N EURO SYM -LAND , a neuro-symbolic LSA framework that explicitly sep-arates perceptual world modeling from mission-level safety reasoning. As illustrated in Figure 1, a monocular image is processed by a lightweight segmentation model with geometric post-processing to extract semantic regions and terrain structure, which are assembled into a probabilistic semantic scene graph ( P SSG ) serving as an explicit and inspectable world model encoding objects, spatial relations, region attributes, and uncertainty. This structured repre-sentation can be directly visualized and audited, enabling systematic debugging of perceptual outputs prior to decision-making. Crucially, the reasoning stage is entirely symbolic: mission constraints are authored offline as explicit logical rules assisted by large language models during drafting and refined through human-in-the-loop validation and compiled into a deterministic S CALLOP -based reasoning engine. At runtime, no neural inference governs decision control; the rule set executes directly over the scene graph to produce traceable safety scores and human-readable reasoning paths for candidate landing regions. By decoupling perception from fully symbolic decision control, N EURO SYM LAND supports structured reasoning under uncertainty while maintaining transparency, debuggability, robustness, and edge deploy-ability, making it well-suited for real-world UAV landing autonomy. Concretely, this paper makes the following contributions:  
+
+> •
+
+Modular neuro-symbolic LSA architecture. We intro-duce a landing-site assessment framework that explicitly separates probabilistic world modeling from fully sym-bolic mission-level reasoning, enabling structured and in-spectable decision control under perceptual uncertainty.  
+
+> •
+
+Fully symbolic, deterministic runtime reasoning. We construct an explicit PSSG from lightweight perception and execute mission constraints as compiled S CALLOP 
+
+rules, producing traceable, debuggable, and reconfig-urable landing decisions without neural inference in the 
+
+> arXiv:2607.02277v1 [cs.RO] 2 Jul 2026
+
+Fig. 1: Functional correspondence between brain systems and a perception-world modeling-reasoning architecture with offline cognitive control. decision layer.  
+
+> •
+
+LLM-assisted offline rule engineering, no runtime LLM. We use an LLM only as an offline rule-authoring assistant to translate expert natural-language constraints and failure-case feedback into candidate S CALLOP rules. The final rule set is inspected, validated, and then executed at runtime without LLM inference.  
+
+> •
+
+System-level evaluation under edge constraints. 
+
+Across 72 simulated landing scenarios and 100 hardware-in-the-loop profiling trials, we demonstrate im-proved landing assessment robustness over competitive baselines while maintaining low latency, bounded mem-ory footprint, and stable embedded execution. II. R ELATED WORK 
+
+A. Learning based landing perception and assessment 
+
+Early landing systems relied on artificial fiducials such as AprilTag [20, 27] and ArUco [9], but these approaches are restrictive outside controlled environments due to deploy-ment overhead and sensitivity to occlusion and illumination. Consequently, markerless LSA, which infers landing feasibil-ity directly from onboard sensing, has become the dominant paradigm in field robotics. Recent markerless pipelines are largely learning-driven, estimating suitability from terrain geometry (e.g., flatness, slope, roughness, clearance) com-bined with semantic vetoes (e.g., people, vehicles, water, vegetation) [10, 23, 24, 26]. Other systems integrate elevation mapping, semantic segmentation, stereo, or depth sensing to recover terrain structure and reject unsafe regions [7]. While these approaches improve robustness to appearance variation, they typically output a landing score or mask without con-structing an explicit representation of scene context beyond the model prediction. 
+
+B. Risk-Averse Planning and Landing 
+
+A distinct way of solving this problem is making it an op-timisation problem. Optimizing trade-offs among terrain risk, travel cost, and operational constraints. [29] For emergency or time-critical scenarios, systems often integrate mapping with online replanning. [30, 17] These approaches however, typically rely on handcrafted cost maps or task-specific risk models and lack a unified mechanism for expressing higher-level contextual constraints grounded in scene semantics and spatial relations. 
+
+C. Hybrid modular approaches: semantic mapping plus ex-plicit decision logic 
+
+Hybrid pipelines maintain structured environmental rep-resentations and apply explicit decision logic on top. Se-mantic SLAM and mapping-based landing systems con-struct 3D maps augmented with semantic layers (e.g., oc-cupancy, grid, topology) to support landing decisions in unknown environments [28], while point cloud-based ap-proaches adopt coarse-to-fine strategies that combine geo-metric assessment with semantic understanding to identify candidate regions [15]. Although these modular designs improve system-level interpretability, their decision modules are often implemented as thresholds, heuristic rankings, or tightly coupled learned scoring. Our approach follows this hybrid paradigm but makes two explicit commitments: we represent the environment as a PSSG rather than only cost maps or masks, and we encode mission logic as explicit symbolic programs executed over the world model. This design aligns with recent neuro-symbolic frameworks such as N EURO STRATA and S CALLOP , which tightly integrate neural perception with symbolic reasoning and support prob-abilistic logic with inspectable execution traces and efficient inference over structured facts [31, 12, 16]. III. M ETHODOLOGY 
+
+Overview: NEURO SYM LAND is a neuro-symbolic LSA framework that separates learned perception, explicit world modeling, and symbolic mission logic. As shown in Fig. 2, the online pipeline uses an INT8-quantized SegFormer-B0 backbone with lightweight geometric processing to extract region candidates and attributes. These outputs are lifted into a PSSG serving as the explicit world model for down-stream reasoning. A validated S CALLOP rule set is then executed over the PSSG to infer hazard and safety scores with provenance traces. Candidate regions that pass symbolic filtering are further checked through multi-frame validation and finally ranked using mission-conditioned utility weights to select the landing proposal. The symbolic rule set is constructed offline, as illustrated in Fig. 3. An LLM serves only as a rule-authoring assistant, proposing draft S CALLOP rules from the fixed PSSG schema, rule libraries, and labeled validation cases. These rules are evaluated in simulation, and experts inspect misclassifica-tions and rule traces to iteratively refine the symbolic rules through prompt updates. This process modifies only the sym-bolic reasoning layer, while the perception backbone, PSSG schema, and world-model construction remain unchanged. Figure 3 summarizes the overall workflow; the accompany-ing online repository 2 provides the complete source code, experimental data, prompts, and a step-by-step example of the human-in-the-loop rule refinement process. We use human-in-the-loop (HITL) to refer to this offline expert review and rule-refinement process. At runtime, no LLM is queried: the system executes a fixed, expert-validated rule set over the current PSSG. The mission score introduced 
+
+> 2<repository-link>
+
+Fig. 2: Online inference in NEURO SYM LAND . segments visual inputs and postprocesses them to build a PSSG, evaluates symbolic safety rules to filter unsafe regions, then applies multi-frame validation and mission-specific ranking to produce interpretable landing decisions. 
+
+Fig. 3: Flow chart for iterative offline rule engine construction with human-in-the-loop refinement. Each round updates the symbolic rule library based on accumulated world model evidence and targeted failure case analysis. TABLE I: PSSG predicate vocabulary for landing-site as-sessment. Object predicates are adapted from the Semantic Drone Dataset [1]; attribute and relation predicates are task-specific.  
+
+> Semantic Objects
+> unlabeled, paved area, dirt, grass, gravel, water, rocks, pool, roof, wall, window, door, fence, person, dog, car, bicycle, tree, obstacle
+> Attributes
+> is large area, is regular shape, is flat surface, is stable surface, is moving, is smooth surface, is accessible
+> Relations above, bottom, left, right, adjacent to, contain, on, near to, far from, surrounded by
+
+in Sec. III-C is likewise used only as an inference-time ranking utility after symbolic safety filtering, rather than as a training loss or reward signal. This work focuses on landing-site assessment and edge deployment feasibility, which are necessary prerequisites for full onboard robotic autonomy. 
+
+A. Online Generation of Explicit World Models 
+
+The online pipeline transforms raw visual input into an explicit, uncertainty-aware world model that serves as the sole interface to the symbolic reasoning engine. Importantly, safety is not inferred by the neural network; instead, per-ception evidence is deterministically lifted into structured symbolic facts. 
+
+a) Fixed world-model taxonomy: We define a shared world-model schema consisting of object classes, attributes, and spatial relations derived from the Semantic Drone Dataset [1] and landing-relevant scene elements (Table I). This schema is fixed and used consistently in both on-line inference and offline rule construction, ensuring that all perceptual outputs are mapped into auditable symbolic predicates. 
+
+b) Deterministic region and relation construction: 
+
+Segmentation posteriors are converted into region instances using connected-component and contour extraction rou-tines [6], with small-region suppression and optional splitting of oversized components. Each region forms a node in the world model and stores semantic confidence together with compact geometric attributes (area, centroid, shape de-scriptors, and lightweight flatness/slope proxies), optionally temporally smoothed over a short window. Pairwise spatial relations (e.g., contain , adjacent to , near to ) are computed deterministically from region geometry and en-coded as probabilistic edges. 
+
+c) Probabilistic Semantic Scene Graph: The envi-ronment is represented as a PSSG G = (V, E ), where nodes correspond to segmented regions and edges repre-sent spatial relations. Node attributes store semantic pos-teriors and geometric features from the fixed taxonomy, while edges encode relation confidences derived from de-terministic geometric rules. These values are grounded into probabilistic unary and binary predicates (e.g., grass(x) ,
+
+is flat surface(x) , near to(x,y) ), forming the exclusive interface to the symbolic reasoning engine. Be-cause complexity scales with the number of regions and relations rather than image resolution, the abstraction enables efficient execution on embedded hardware. 
+
+B. Rule-Based Reasoning Engine over the World Model 
+
+The decision layer is implemented in SCALLOP [12] as a probabilistic logic program over PSSG facts. Given unary and binary predicates grounded from perception and geometry, such as grass(x) , is flat surface(x) ,and near to(x,y) , the rule program infers hazard(x) 
+
+and safe(x) for candidate landing regions. The runtime program is fixed before evaluation. Thus, “deterministic” refers to deterministic execution of a fixed symbolic rule set over the current PSSG, although the input facts and proof weights may carry probabilities. At runtime, no LLM is queried. The deployed system executes only the validated SCALLOP rule set over the current PSSG. During offline symbolic rule refinement, the LLM drafts candidate rules from expert-specified constraints and validation failures, and translates triggered rules into human-readable explanations for expert inspection. These draft programs are executed on validated PSSGs, iteratively refined through expert review, and included in the runtime rule set only after validation. 
+
+1) Offline Human-in-the-Loop Rule Construction: Rule sets are synthesized offline using PSSGs generated from cu-rated representative landing scenes [1]. Before rule synthesis, experts validate the PSSGs visually and programmatically by inspecting segmentation overlays, node attributes, and spatial relations. This separates perception and grounding errors from downstream reasoning errors. In our implementation, rule drafting uses OpenAI o3 [21] through the ChatGPT interface. The prompt includes the fixed PSSG schema, current rule library, and labeled exam-ples of correct and incorrect landing decisions. The model outputs candidate S CALLOP rules, which are executed over validated PSSGs in simulation. For each candidate region, the reasoning engine produces hazard and safety scores with provenance traces showing the contributing rules and predicates. Experts then inspect predicted safe/unsafe regions, rule-trigger explanations, and mismatches between expected and inferred outcomes. When deficiencies are found, such as missing constraints, overly strict proximity thresholds, or un-intended rule interactions, experts provide natural-language feedback. This feedback is converted into structured prompt refinements specifying missing predicates, threshold adjust-ments, or additional relational constraints. The process iter-ates until the generated rule set satisfies expert validation on the curated validation set. This LLM-assisted process reduces the syntactic burden of writing S CALLOP programs while preserving expert control over the final decision logic. The accepted rule set remains explicit, editable, and inspectable. Only the symbolic logic is refined; the segmentation backbone and world-model con-struction remain fixed throughout. 
+
+2) Rule notation: We use Datalog-style notation for read-ability. In a rule h(x) :- b1(x), b2(x,y) , the sym-bol :- means that the head predicate h(x) is inferred when the body predicates hold. Commas denote conjunction, and ∨ denotes disjunction; in the implemented S CALLOP 
+
+program, disjunctive definitions are expanded into sepa-rate rules. Variables such as x and y range over PSSG nodes. Unary predicates such as paved area(x) are grounded from node semantics, while binary predicates such as near to(x,y) are grounded from deterministic spatial-relation construction. A candidate landing region is any node satisfying landable area(x) ; hazard rules infer 
+
+hazard(x) , which is then used to derive safety scores and 
+
+safe(x) .
+
+3) Runtime Execution over the World Model: At runtime, the validated rule set executes directly over the online PSSG without any neural inference in the decision layer. S CALLOP 
+
+evaluates the rule program as probabilistic first-order logic and answers queries such as hazard( ri) and safe( ri) for each candidate region ri. The engine enumerates the top-k
+
+weighted proofs and aggregates them into safety scores. Because each proof is grounded in explicit predicates and rule clauses, provenance traces precisely record which world-model facts and logical rules contributed to each inference. This enables deterministic auditing, systematic debugging, and mission-level reconfiguration by directly modifying rule definitions rather than retraining neural components. A re-gion is classified as safe if its safety score exceeds a mission-specific threshold. 
+
+C. Multi-Frame Validation and Mission-Specific Ranking a) Multi-frame validation: To mitigate transient seg-mentation noise, brief occlusions, and short-lived perception errors, candidate regions are validated over a short temporal window of T consecutive frames. Let 
+
+WT = {t0 − T + 1 , . . . , t 0}
+
+denote the window ending at time t0, and let v(t) denote the tracked instance of region v at time t. A region passes multi-frame validation if: (i) it is never inferred as hazardous across the window, and (ii) its geometric properties remain stable. Formally, 
+
+Pass T (v) ≡ ^
+
+> t∈WT
+
+¬ hazard 
+
+
+
+v(t)!
+
+∧ ¬ Jitter( v, W T ).
+
+(1) Here, hazard( v(t)) is inferred by the symbolic reasoning engine at time t, and Jitter( ·) is a binary predicate that detects significant geometric instability (e.g., abrupt centroid or area variation). No additional threshold is introduced for jitter; a region either satisfies geometric consistency or it does not. We define the indicator 
+
+IT (v) = 1{Pass T (v)},
+
+which serves as a hard safety gate. 
+
+b) Mission-specific ranking: Regions that satisfy 
+
+IT (v) = 1 are admissible for landing. Final selection is performed via a mission-conditioned utility function. For each mission mode m, we compute normalized features 
+
+˜bm,k (v) ∈ [0 , 1] (e.g., landing area, distance to target, estimated maneuver cost) together with nonnegative weights 
+
+ωm,k reflecting task priorities. The mission score is defined as 
+
+Cm(v) = IT (v) X
+
+> k
+
+ωm,k ˜bm,k (v), v⋆ = arg max  
+
+> v
+
+Cm(v).
+
+(2) Candidates failing multi-frame validation have IT (v) = 0 ,receive zero score, and are excluded from final selection. Importantly, Cm(v) is used solely as an inference-time ranking utility after symbolic safety filtering and is not used to train any model. The perception backbone is trained inde-pendently for semantic segmentation, while the S CALLOP 
+
+rule set is constructed offline through rule synthesis and expert validation. For each mission mode, the weights ωm,k 
+
+are predefined before evaluation and remain fixed across all test scenes. IV. E XPERIMENTS 
+
+A. Evaluation overview 
+
+We evaluate N EURO SYM LAND along three axes: (i) ef-fectiveness in software-in-the-loop (SIL) landing assessment, including an ablation that replaces the synthesized S CALLOP 
+
+rules with deterministic FOL (N EURO SYM LAND -DetFOL); (ii) efficiency on edge hardware via HIL latency and resource profiling; and (iii) interpretability via qualitative case studies across mission modes (safe, emergency, rescue). 
+
+B. Effectiveness in SIL 
+
+We report Succ (successful assessments) and MOD (min-imum obstacle distance) on successful trials. Succ measures decision reliability under our protocol. MOD is the minimum Euclidean distance from the predicted touchdown point to any annotated obstacle boundary; higher is safer: MOD = min o∈O ∥ˆp − o∥2. We summarize MOD by median and P20 (20th percentile) over scenarios (5 runs each). 
+
+a) Experiment Setup: Experiments run in AirSim [25] on 72 scenarios under default conditions. Each baseline is executed 5 times per scenario. We report Succ and MOD (median/P20). 
+
+b) Baselines: All methods use monocular RGB and the same candidate representation where applicable. We compare against SegOpticalFlow [11, 8], SafeUAV [18], PEACE [5], and a local VLM selector (LLMExplain, Phi-3.5-Vision) [2, 19]. We also include NEURO SYM LAND -DetFOL, which replaces synthesized probabilistic rules with deterministic FOL over the same PSSG [14, 22]. 
+
+c) Mask-to-point conversion for evaluation: For meth-ods producing binary safe-region masks (SafeUAV and PEACE), the touchdown point is defined as the centroid of the largest predicted safe connected component. If no safe region is predicted (i.e., the output mask is empty), the prediction is treated as a failure. 
+
+d) Result Analysis: Table II shows that N EURO SYM -LAND achieves the highest Succ score (61/72), outperform-ing PEACE (57/72) and SafeUAV (47/72). N EURO SYM -LAND -DetFOL achieves 58/71, suggesting that explicit world modeling provides a strong foundation for landing-site assessment, while synthesized probabilistic rules further im-prove decision quality (+3 Succ). SegOpticalFlow reports the largest MOD, but it produces valid landing candidates in only 63 of 72 scenarios. Since MOD is undefined when no explicit touchdown point is produced, the reported clearance is com-puted only over the subset of scenarios with valid predictions. Therefore, its MOD should be interpreted together with the candidate-generation rate (63/72) and overall successful assessments (53/72), rather than in isolation. Inspection of the remaining failures suggests that most errors arise from perception failures that propagate incorrect predicates into the PSSG, consistent with the perception-limited example in Fig. 4. TABLE II: Landing-site safety assessment on the AirSim test set (72 Scenarios). Succ. is reported as Safe/Land. ,where Land. denotes the number of scenarios in which the baseline produces at least one landing-site safety assessment decision (i.e., identifies one or more candidate sites), and 
+
+Safe denotes the number of scenarios in which the predicted explicit touchdown point lies within the human-annotated safe landing zone. MOD is reported in pixels as median / 20th percentile (P20) , where larger values indicate larger safety margins to surrounding obstacles.                
+
+> Baseline Succ. ↑
+> Safe / Land.
+> MOD (px) ↑
+> median / P20
+> NEURO SYM LAND 61/72 119.64 / 28.0 SegOpticalFlow 53/63 159.40 / 51.19
+> PEACE 57/72 84.38 / 42.43 SafeUAV 47/72 74.48 / 18.36 LLMExplain 37/72 52.00 / 13.0 NEURO SYM LAND -DetFOL (Ablation) 58/71 104.61 / 41.4
+> (a) Success (RGB). (b) Segmentation.
+> (c) Perception-limited (RGB). (d) Segmentation.
+
+Fig. 4: Qualitative landing-site assessment examples. Top: success under fragmented semantics with spurious labels. Bottom: perception-limited failure under systematic semantic swap. Right: semantic segmentation used for PSSG con-struction (green: tree, purple: paved area, red: water, yellow: obstacle, rose: gravel). 
+
+e) Qualitative examples: Fig. 4 highlights how spurious semantic labels affect landing decisions and how explicit rules improve robustness. 
+
+Case A (top): robustness under spurious labels and fragmented semantics. In this scene, the segmentation con-tains localized spurious regions (e.g., small patches marked by white dash line predicted as water near the boundary of otherwise landable surfaces), which fragments candidate masks and can perturb the touchdown point selected by purely mask- or score-driven pipelines. Multiple methods still succeed here; however, N EURO SYM LAND remains sta-ble because it reasons over region-level evidence in the PSSG and explicitly trades off geometric feasibility (flatness/area proxies), stand-off constraints (distance to obstacles/trees), and semantic vetoes. In particular, the rule set penalizes candidates that are close to hazards even when a large flat surface exists, while allowing recovery from small isolated false positives via probabilistic grounding and relation-based reasoning (e.g., near to /adjacent to ) rather than hard pixel exclusion. 
+
+Case B (bottom): perception-limited failure due to sys-tematic semantic swap. Here, a systematic misclassification swaps the semantics of the visually dominant surface and the pipes (e.g., the intended paved region becomes gravel while the pipes are labeled as paved area ), corrupting predicate grounding in the world model. Since all downstream logic operates on the explicit PSSG, the error propagates to candidate filtering and ranking, and no method can reliably recover without improved perception. 
+
+C. Efficiency on edge hardware via HIL a) HIL evaluation protocol and baselines: For ef-ficiency evaluation, we conduct 100 hardware-in-the-loop (HIL) trials on Jetson Orin Nano (8 GB) using recorded Air-Sim inputs. Initial poses and headings are randomized from a representative simulation map, capturing runtime variability while keeping environmental and task conditions controlled. For each trial, we measure end-to-end inference latency from image acquisition to landing-site safety output together with stage-wise execution time (semantic segmentation and post-processing, PSSG construction, symbolic reasoning, and mission-specific ranking). We additionally record system-level metrics including CPU/GPU utilization, memory foot-print, power consumption, and operating temperature. To contextualize latency and deployability, we com-pare NEURO SYM LAND against two lightweight base-lines: SegOpticalFlow and SafeUAV, representing practical, industry-style markerless landing pipelines that can be de-ployed on the same embedded platform and execution stack. SegOpticalFlow reflects a perception-driven, motion-based embedded design, while SafeUAV represents a compact monocular learning-based approach. Heavier hybrid systems (e.g., PEACE, LLMExplain) are excluded from the HIL efficiency comparison because their foundation-model back-bones exceed the memory and compute budget of the Jetson Nano and consistently trigger out-of-memory (OOM) failures under our configuration. 
+
+b) Results analysis: All results are reported as median 
+
+± standard deviation over 100 HIL trials. 
+
+c) Stage-wise latency breakdown: As shown in Ta-ble III, N EURO SYM LAND achieves an end-to-end latency of 
+
+1,043 .3 ms per frame ( ∼ 0.96 FPS). The runtime is domi-nated by PSSG construction and perception/post-processing, which together account for over 94% of the total latency. By contrast, symbolic reasoning takes only 20 .0 ± 5.6 ms (1.9% ), showing that explicit rule-based inference introduces negligible overhead compared with perception and structured world-model construction. TABLE III: Stage-wise latency breakdown per frame.                     
+
+> Stage Latency (ms) Share Perception and post-processing 424 .4±30 .740 .7%
+> PSSG construction 557 .1±72 .053 .4%
+> Symbolic reasoning 20 .0±5.61.9%
+> Mission-specific ranking 41 .8±3.64.0%
+> End-to-end 1,043 .3100%
+
+Fig. 5: Qualitative comparison on an AirSim scene. Top row: RGB and learning-based baselines. Middle: NEURO SYM LAND and alternative explainable baselines. Bottom: mission-conditioned outputs Safe-Landing/Emergency/Rescue). NEURO SYM LAND integrates symbolic reasoning with mission context for task-adaptive decisions. 
+
+d) System-level stability: NEURO SYM LAND operates stably within embedded constraints, consuming 76 .9% CPU, 
+
+52% GPU, 5.6 GB memory, 12 .3 W power, and maintaining 
+
+47 .9◦C temperature. Compared with lightweight baselines, resource usage increases modestly due to explicit world-model construction but remains within the thermal and power envelope of the target platform. 
+
+e) Efficiency-robustness trade-off: SafeUAV achieves 
+
+8.00 FPS and SegOpticalFlow reaches 1.16 FPS, whereas NEURO SYM LAND runs at 0.96 FPS. While our approach incurs higher latency due to explicit graph construction and mission scoring, the refresh rate remains sufficient for pre-landing safety assessment, where update intervals of on the order of one second are operationally acceptable. Importantly, Table II reveals that SafeUAV succeeds in only 
+
+47/72 scenarios and exhibits reduced MOD values, indicating smaller safety margins and weaker robustness in cluttered scenes. Taken together, the results indicate that N EURO SYM LAND 
+
+achieves a favorable trade-off frontier: deployable on embed-ded hardware, negligible symbolic overhead, and substan-tially stronger robustness than perception-only baselines. 
+
+D. Interpretability and reasoning quality 
+
+We compare explanations and mission adaptation on a representative test scene (skateboard park). Fig. 5 visualizes baseline outputs and N EURO SYM LAND under three mis-sion weightings (safe, emergency, rescue) with the same perception and PSSG held fixed. We also report S CALLOP 
+
+provenance statistics to attribute decisions to rule triggers grounded in scene-graph facts. 
+
+a) Results: Fig. 5 compares baseline outputs and N EU -
+
+> RO
+
+SYM LAND on a representative scene under different mis-sion contexts. SafeUAV and PEACE primarily produce dense safe-region masks, which identify large visually homoge-neous paved areas but do not explicitly rank candidates by relational constraints such as stand-off distance to pedes-trians, obstacles, or walls. LLMExplain outputs a single landing recommendation with a natural-language rationale, while SegOpticalFlow outputs a single landing point. Both provide limited access to intermediate safety evidence: LLM-Explain is not grounded in executable spatial predicates, and SegOpticalFlow does not expose alternative candidates or mission-dependent trade-offs. As a result, these baselines are difficult to inspect or adapt when mission priorities change. In contrast, N EURO SYM LAND evaluates candidate regions through explicit PSSG facts and SCALLOP rules. Under the default Safe-Landing context, candidates near people or obstacles are rejected through symbolic hazard rules such as near person and near obstacle . Under the 
+
+Emergency context, ranking shifts toward proximity to the mission center while preserving the symbolic safety gate. Under the Rescue context, ranking prioritizes proximity to a designated target without allowing overlap with the target footprint. Across all three contexts, the perception pipeline, PSSG construction, and symbolic rule set remain unchanged; only the mission-conditioned ranking weights differ. 
+
+b) Rule-level analysis and interpretability: NEU -
+
+> RO
+
+SYM LAND provides provenance traces that attribute each decision to specific rules grounded in PSSG facts. In this case study, the hazard assessment is dominated by three proximity constraints: r hazard near person 
+
+(mean proof weight p=0 .89 , triggered in 9 frames), 
+
+r hazard near obstacle (p=0 .91 , 4 frames), and 
+
+r hazard near wall (p=0 .97 , 4 frames). A vegeta-tion containment rule, r hazard cont veg , triggers once (p=0 .99 ), while other hazard rules remain inactive. These traces show that the selected landing decision is driven pri-marily by explicit stand-off constraints, making the rationale inspectable and adjustable by modifying symbolic predicates or relation thresholds without retraining perception. 
+
+E. Discussion 
+
+Our scope is landing-site assessment rather than closed-loop landing execution. Accordingly, we evaluate the correct-ness of landing suitability assessment and the edge feasibility of the perception-to-reasoning pipeline through simulation and HIL experiments. The HIL results demonstrate that the assessment stack executes on the target embedded platform within bounded latency and resource constraints, rather than a complete onboard landing system. Integration with state estimation, trajectory planning, flight control, and real-world flight validation remains future work. The curated rule-construction set, together with synthetic edge cases, is used only to construct and refine the symbolic rule set in the human-in-the-loop process; it is not used to train the perception backbone. Evaluation is conducted on a disjoint test set with different scene composition, so the reasoning engine is assessed out-of-sample with respect to rule construction. Human input is intentionally lightweight. Experts review annotated landing outputs and short rule-trigger summaries, provide high-level corrections when constraints are missing or overly strict, and revise the rule set through a small number of offline iterations. This keeps rule adaptation localized to the symbolic layer and preserves the separation between perception and decision logic. Current limitations mainly stem from perception qual-ity and taxonomy coverage. Systematic segmentation errors can introduce incorrect facts into the PSSG, bounding the best achievable reasoning quality. In addition, our scenarios contain limited dynamics, such as moving obstacles, which restricts the benefit of richer temporal rules. Future work will extend evaluation to more dynamic scenes and broader taxonomies, incorporate complementary sensing modalities, and optimize PSSG construction through incremental graph updates for faster edge execution. V. C ONCLUSION AND FUTURE WORK 
+
+We presented NEURO SYM LAND , a neuro-symbolic landing-site assessment framework that cleanly separates probabilistic world modeling from fully symbolic mission-level reasoning. An INT8-quantized segmentation backbone with lightweight geometric processing constructs an explicit PSSG, over which a S CALLOP -based rule engine performs interpretable safety reasoning with provenance traces. Mis-sion behavior is configured by modifying rule sets rather than retraining perception modules, enabling transparent and reconfigurable landing policies. Across 72 simulated scenar-ios and 100 hardware-in-the-loop trials, N EURO SYM LAND 
+
+demonstrates improved landing-site assessment robustness compared with lightweight learning-based baselines while remaining deployable on embedded hardware. The primary limitation lies in perception-induced world-model errors: when segmentation fails, symbolic reasoning propagates incorrect predicates deterministically. This high-lights that reasoning fidelity is fundamentally bounded by world-model quality. Future work will focus on improv-ing world-model reliability through uncertainty calibration, consistency checks, and region-level validation; extending reasoning to short-horizon temporal rules for dynamic envi-ronments; incorporating complementary sensing modalities; optimizing PSSG construction through incremental graph updates; and integrating the assessment module with onboard state estimation and flight-control stacks for closed-loop UAV landing trials. REFERENCES 
+
+[1] Graz University of Technology (IGMS). Semantic Drone Dataset . https : / / www . tugraz . at / index.php?id=22387 .[2] Marah Abdin et al. Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone .2024. arXiv: 2404.14219 [cs.CL] .[3] Fateme Aghaee et al. “RB-LLM Control: an Intelligent Control Framework with Rule-Based Large Language Model Decision-Making”. In: Aerospace Science and Technology (2025). [4] Diego Ortiz Barbosa et al. “Robust and Efficient AI-Based Attack Recovery in Autonomous Drone”. In: 
+
+GENZERO workshop . Springer. 2024. [5] Haechan Mark Bong et al. “PEACE: Prompt Engineer-ing Automation for CLIPSeg Enhancement for Safe-Landing Zone Segmentation”. In: IROS . 2025. [6] G. Bradski. “The OpenCV Library”. In: Dr. Dobb’s Journal of Software Tools (2000). [7] Evangelos Chatzikalymnios et al. “Landing Site De-tection for Autonomous Rotor Wing UAVs Using Visual and Structural Information”. In: JINT 104.27 (2022). DOI : 10.1007/s10846-021-01544-6 .[8] Kirk Y.W. cheper et al. “Evolution of Robust High-Speed Optical-Flow-Based Landing for Autonomous Micro Air Vehicles”. In: Robotics and Autonomous Systems (2020). [9] S. Garrido-Jurado et al. “Automatic generation and detection of highly reliable fiducial markers under occlusion”. In: Pattern Recognition (2014). [10] Timo Hinzmann et al. “Free LSD: Prior-Free Visual Landing Site Detection for Autonomous Planes”. In: 
+
+IEEE Robotics and Automation Letters (2018). [11] H. W. Ho et al. “Adaptive Gain Control Strategy for Constant Optical Flow Divergence Landing”. In: IEEE Transactions on Robotics (2018). [12] Jiani Huang et al. “Scallop: From Probabilistic Deduc-tive Databases to Scalable Differentiable Reasoning”. In: NeurIPS . 2021. [13] Shumaila Javaid et al. “Large Language Models for UAVs: Current State and Pathways to the Future”. In: 
+
+OJVT (2024). [14] Andrew Johnson et al. “Vision-Guided Landing of an Autonomous Helicopter in Hazardous Terrain”. In: 
+
+ICRA . 2005. [15] Yang L et al. “Autonomous UAVs landing site selec-tion from point cloud in unknown environments”. In: 
+
+ISA Transactions (2022). [16] Ziyang Li et al. “Scallop: A Language for Neurosym-bolic Programming”. In: PACMPL (June 2023). [17] Yossi Magrisso et al. Local Trajectory Planning For UAV Autonomous Landing . 2021. DOI : 10.48550/ arXiv.2111.00495 .[18] Alina Marcu et al. “SafeUAV: Learning to estimate depth and safe landing areas for UAVs from synthetic data”. In: ECCV Workshops . 2018. [19] Microsoft et al. Phi-3.5-Vision-Instruct Model Card .
+
+https : / / huggingface . co / microsoft / Phi-3.5-vision-instruct . Microsoft, 2024. [20] Edwin Olson. “AprilTag: A robust and flexible visual fiducial system”. In: ICRA . 2011. [21] OpenAI. Introducing OpenAI o3 and o4-mini . https : / / openai . com / index / introducing-o3-and-o4-mini/ . 2025. [22] Srikanth Saripalli et al. “Visually-Guided Landing of an Unmanned Aerial Vehicle”. In: IEEE Transactions on Robotics and Automation (2003). [23] Pascal Schoppmann et al. “Multi-resolution elevation mapping and safe landing site detection with applica-tions to planetary rotorcraft”. In: IROS . IEEE. 2021. [24] Mattia Secchiero et al. “Visual Environment Assess-ment for Safe Autonomous Quadrotor Landing”. In: 
+
+ICUAS . 2024. [25] Shital Shah et al. “Airsim: High-fidelity visual and physical simulation for autonomous vehicles”. In: 
+
+Field and Service Robotics: Results of the 11th In-ternational Conference . Springer. 2018. [26] Zhuoyue Tan et al. “VisLanding: Monocular 3D Per-ception for UAV Safe Landing via Depth-Normal Synergy”. In: IROS . 2025. [27] John Wang et al. “AprilTag 2: Efficient and robust fiducial detection”. In: IROS . 2016. [28] Linjie Yang et al. “A semantic SLAM-based method for navigation and landing of UAVs in indoor envi-ronments”. In: Knowledge-Based Systems (2024). [29] Linjie Yang et al. “An optimization-based selection approach of landing sites for swarm unmanned aerial vehicles in unknown environments”. In: Expert Sys-tems with Applications 204 (2022). [30] Wenlong Zheng et al. “A Study for UAV Autonomous Safe Landing-Site Selection on Rough Terrain”. In: 
+
+CONF-CDS 2021: The 2nd International Conference on Computing and Data Science . ACM, 2021. DOI :
+
+10.1145/3448734.3450884 .[31] Xi Zheng et al. “NeuroStrata: Harnessing Neuro-Symbolic Paradigms for Improved Testability and Verifiability of Autonomous CPS”. In: FSE . 2025.

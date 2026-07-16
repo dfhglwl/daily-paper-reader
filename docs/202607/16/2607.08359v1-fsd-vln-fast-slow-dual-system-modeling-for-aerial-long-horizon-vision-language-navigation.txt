@@ -1,0 +1,302 @@
+Title: FSD-VLN: Fast-Slow Dual-System Modeling for Aerial Long-Horizon Vision-Language Navigation
+
+URL Source: https://arxiv.org/pdf/2607.08359v1
+
+Published Time: Fri, 10 Jul 2026 00:47:01 GMT
+
+Number of Pages: 18
+
+Markdown Content:
+# FSD-VLN: Fast-Slow Dual-System Modeling for Aerial Long-Horizon Vision-Language Navigation 
+
+## Xueke Zhu ∗1, Qingyan Meng ∗1, Liutao Yu 1,Wei Zhang 1, Zhengyu Ma 1, Huihui Zhou 1,2, Yonghong Tian 1,3
+
+∗ These authors contributed equally to this work. 
+
+1 Pengcheng Laboratory 
+
+2 Shenzhen Institutes of Advanced Technology 
+
+3 Peking University 
+
+Abstract 
+
+Vision-Language Navigation (VLN) enables unmanned aerial vehicles (UAVs) to navigate autonomously in unfamiliar environments by grounding natural language instructions in real-time vision observations. Compared to traditional GPS-based or pre-programmed navigation methods, VLN offers more intuitive human-machine interaction and greater adaptability. Effective UAV-VLN systems typically require the integration of high-level semantic reasoning and low-latency flight control. How-ever, existing approaches often suffer from a structural inconsistency between global multimodal understanding and temporally coherent action generation, leading to unstable trajectories and significant decision latency during long-horizon naviga-tion. To address this challenge, we propose FSD-VLN, an efficient fast-slow dual-system framework that explicitly decouples high-level semantic reasoning from low-latency action generation. The framework consists of two asynchronous pathways: a slow system that extracts stable semantic priors from a pretrained vision–language model, and a fast system built upon a Diffusion Transformer (DiT) that models action distributions for flight command generation. This decoupled design enables stable multi-step prediction and improves trajectory consistency by explicitly cap-turing cross-temporal action dependencies. Furthermore, a time-aware adaptive optimization strategy is designed to enhance long-horizon training stability and mitigate gradient oscillations during optimization. Extensive experiments in large-scale simulated low-altitude environments demonstrate that FSD-VLN achieves up to 2× higher success rate for navigation in unseen environments compared to prior arts, while reducing both single-action inference latency and overall task execution time by over 50% . These results highlight the importance of explicitly modeling the cooperation between semantic reasoning and temporally coherent control, providing a principled solution for long-horizon aerial VLN. 
+
+Keywords: Vision-Language Navigation, Long-Horizon Modeling, Fast-Slow Dual-System, Low-Latency Decision Making 1arXiv:2607.08359v1 [cs.RO] 9 Jul 2026 FSD -VLN       
+
+> turn left turn right go up
+> go down forward
+> "Move upwards to a large white building ,
+> which is a tall and rectangular structure
+> with balconies . Then , advance forward
+> to it . As you slightly turn right and keep
+> proceeding straight , you will reach it .
+> Slightly turn left and head straight to it .
+> Finally , slightly stop and drop off at it .
+> Instruction
+> {“ pos ”: [-561.0525, -
+> 1307.0552, 24.7848],
+> “yaw”:[ -12.3215]
+> UAV State
+> Image
+> BVLF: Buffer of vision -language features
+
+Slow System 
+
+Fast  system 
+
+> FSD -VLN
+
+BVLF Figure 1: The navigation pipeline of the proposed FSD-VLN framework. During nav-igation, the slow system utilizes a pre-trained vision-language model to encode visual observations and language instructions into latent embeddings. The fast system adopts a variant of Diffusion Transformer (DiT), consisting of alternating cross-attention and self-attention modules, to process the UAV state embedding sequence and the visual-language embeddings produced by the slow system, respectively. The fast-slow dual system oper-ates asynchronously to generate low-latency UAV actions. 
+
+# 1 Introduction 
+
+Unmanned Aerial Vehicles (UAVs) are being extensively utilized in a broad spectrum of missions, from environmental monitoring to emergency response, requiring robust decision-making in different scenarios. Traditional UAV navigation often relies heav-ily on maps or manually designed control strategies[33, 40, 6, 32, 18, 44, 22], making it difficult to adapt to complex, dynamic, and semantically rich task requirements in open environments. Recently, the remarkable breakthroughs in large-scale foundation models have catalyzed a paradigm shift in robot intelligence, enabling agents to perform sophis-ticated multi-modal reasoning. In particular, vision-language navigation (VLN) enables embodied agents to execute natural language instructions through visual perception and sequential decision-making[17, 11]. This paradigm not only enhances the flexibility of UAVs in interactive tasks but also provides a more intuitive and scalable solution for achieving truly intelligent aerial autonomy. Despite the proficiency of large multimodal models in semantic alignment and zero-shot instruction following [9, 51, 30, 21], long-horizon aerial VLN still faces fundamen-tal challenges. In such navigation tasks, UAVs are required to continuously reconcile high-level semantic reasoning with high-frequency motion control[15, 29, 50, 52]. This requirement introduces a structural conflict: whereas global reasoning benefits from computationally intensive multi-modal perception with large-scale models, maintaining flight stability necessitates low-latency non-blocking decision making. Existing meth-2ods struggle to adequately balance the two competing objectives. Most current VLN methods either adopt reactive action prediction based on instantaneous vision-language features[34, 28, 25], or use large-scale autoregressive inference models that directly output control commands [55, 24, 5, 23]. Reactive models are vulnerable to short-term percep-tual biases, leading to unstable trajectories in long-horizon navigation. In contrast, large-scale inference models improve semantic consistency but introduce significant inference latency, making them difficult to apply for real-time aerial deployment[15, 10, 27, 53, 54]. Furthermore, traditional action predictors typically process each timestep independently, ignoring the temporal action dependencies that are critical for maintaining flight stability and mitigating long-horizon error accumulation[15, 43]. In this work, to circumvent the reasoning-latency trade-off, we propose FSD-VLN (fig. 1), an efficient fast-slow dual-system framework that explicitly decouples global se-mantic understanding from low-level action generation. The slow system focuses on extracting stable semantic priors from visual-language inputs, while the fast system asyn-chronously generates flight actions that maintain inherent cross-temporal dependencies. This design enables UAVs to maintain global navigation consistency while producing low-latency and smooth control signals. Specifically, we introduce a Diffusion Transformer (DiT)-based action generator that models temporally structured action distributions con-ditioned on both semantic priors and historical actions. By explicitly incorporating cross-temporal action priors, the model mitigates distribution drift and enhances trajectory continuity during long-distance navigation. Furthermore, we propose a time-weighted optimization strategy to stabilize long-horizon action learning, alleviating gradient os-cillation and improving convergence robustness. Extensive experiments conducted in large-scale simulated low-altitude environments demonstrate that FSD-VLN significantly improves navigation accuracy and trajectory quality in both seen and unseen scenarios. More importantly, our framework substantially reduces single-step decision latency and overall task execution time compared to prior works, achieving a favorable balance be-tween semantic reasoning capability and real-time control efficiency. Our contributions include: 1. We propose an asynchronous dual-system architecture for UAV navigation. By decoupling high-level semantic reasoning from reactive execution, our framework concurrently achieves deep environmental perception and low-latency responsive-ness. 2. We design a time-weighted optimization strategy that balances the learning objec-tives across different temporal horizons. By assigning adaptive weights to sequential actions, this strategy effectively mitigates gradient oscillations and enhances con-vergence robustness. 3. Through intensive benchmarking in diverse low-altitude environments, we show that FSD-VLN outperforms prior arts with a 200% improvement in navigation success rate. At the same time, it cuts task duration by half, providing a principled and efficient solution for deploying VLN models on agile aerial platforms. 32 Related Work 
+
+## 2.1 Vision-Language Navigation for Aerial Platforms 
+
+VLN aims to enable embodied agents to execute natural language instructions through visual perception and sequential decision-making. With the rapid advancement of Large Language Models (LLMs)[36, 37, 7, 1, 3, 12, 39, 48] and Vision-Language-Action (VLA) frameworks [10, 55, 24, 20, 2, 14, 38], multimodal semantic alignment capabilities have improved substantially, further stimulating research on UAV-based VLN. Early aerial VLN work, such as AerialVLN[30], established the task paradigm of language-guided flight, providing foundational benchmarks for UAV navigation. Subse-quent approaches incorporated LLMs to enhance reasoning ability. For instance, NavGPT[53] and its extension[54] introduced explicit reasoning chains and structured prompting mech-anisms to bridge high-level linguistic reasoning with low-level embodied control. Com-pared with implicit neural policies, these methods demonstrate stronger interpretability and improved long-horizon planning capability. More recently, works including OpenFly[15] and VLA-AN[42] have improved real-world applicability through key-frame perception modules, staged training strategies, and large-scale simulation environments. Meanwhile, datasets and simulation platforms such as AVDN[13], CityNav[27], OpenFly[15], and OpenUAV[41] have significantly enriched multimodal aerial navigation resources, enabling more complex city-scale evaluations. Despite these advances, most existing UAV-VLN methods rely on step-wise reactive action prediction or direct autoregressive decoding of control commands. Such designs often lack explicit modeling of cross-temporal ac-tion dependencies, which can lead to trajectory instability and error accumulation in long-distance aerial navigation scenarios. 
+
+## 2.2 Dual-System Architectures in Autonomous Systems 
+
+Inspired by the dual-process theory, the “System 1, System 2” dual-system architec-tures have been increasingly explored in autonomous driving. In such framework, system 2 typically leverages large language models to perform high-level reasoning and scene evaluation, while system 1 handles real-time perception and control. Methods such as LeapAD[31], ETA[16], FASIONAD[35], and AdaDrive[49] improve adaptability and com-putational efficiency through asynchronous coordination between high-level planning and low-level execution. In embodied robotics, generative control systems including GR00T N1[4] and AgiBot[8] adopt hierarchical or mixture-of-experts structures that explicitly decouple latent plan-ning from continuous control decoding. More recent work explores temporal frequency decoupling and hierarchical Transformer designs. For example, HiRT[46] and Video Pre-diction Policy[19] propose a “hierarchical dual-system with high-low frequency collabo-ration” framework, reducing inference latency while preserving reasoning capability. In the field of Vision-Language Navigation (VLN), APEX[45] enables decoupled execution of VLM reasoning and high-frequency planning via an asynchronous parallel framework, nevertheless, APEX suffers from low absolute success rates, rendering it far from practical applicability. Despite these advances, existing dual-system models often exhibit a relatively loose coupling between high-level semantic planning and low-level action execution, which can result in temporal misalignment and suboptimal coordination efficiency. In aerial VLN, 4flight dynamics are particularly sensitive to motion continuity, and improper synchro-nization between reasoning and control modules may induce trajectory instability (e.g. oscillation). In contrast, the proposed FSD-VLN introduces an explicitly coordinated fast-slow dual-system framework combined with temporally conditioned generative ac-tion modeling, aiming to balance semantic reasoning with stable and efficient low-level flight control. 
+
+# 3 Methods 
+
+## 3.1 Problem Formulation 
+
+We formulate long-horizon aerial VLN as a sequential decision process conditioned on visual observations and language instructions. Given a natural language instruction L
+
+and a sequence of visual observations {It}Tt=1 , the UAV aims to generate a sequence of flight actions {at}Tt=1 , that navigates the agent to the target location. The objective can be expressed as modeling the conditional distribution: 
+
+p(a1: T | I1: T , L ) = p(a1 | I1, L )
+
+> T∏
+> t=2
+
+p(at | a1: t−1, I 1: t, L ). (1) In long-distance aerial navigation, action generation must satisfy two requirements: se-mantic consistency with global instruction guidance and temporal coherence under con-tinuous flight dynamics. We argue that directly modeling this distribution using a single monolithic architecture introduces structural tension between reasoning depth and con-trol frequency. To address this issue, we propose a fast-slow dual-system decomposition. 
+
+## 3.2 Fast-Slow Dual-System Architecture 
+
+Our FSD-VLN framework decomposes the decision process into two coordinated systems, where the Slow System captures high-level semantic priors and the Fast System generates actions through temporally conditioned modeling. As shown in fig. 2, the slow system extracts high-level multimodal semantic repre-sentations from visual observations and language instructions. Each image frame It is encoded by a vision encoder into visual tokens. These tokens are fused with textual embeddings and processed by a pretrained vision-language model, producing multimodal features: 
+
+zt = fVLM (It, L ). (2) The semantic feature zt acts as a global contextual prior that guides subsequent action generation. A global cache maintains the latest semantic representation to ensure coor-dination between perception and control. As show in algorithm 1, the function of the Slow System Workflow illustrates the computation process. Firstly, the slow system encodes the language instruction T and the RGB observation I to obtain the language representation L and visual tokens V ,respectively. Then, VLM is employed to perform cross-modal fusion between linguistic semantics and visual features, producing a joint vision-language semantic representation 
+
+V L sf . This representation is continuously written into a Vision-Language Semantic Fea-ture buffer (VLSF). Whenever new visual observations arrive, the buffer is accordingly 5Vision  
+
+> Language
+> Model
+> "Proceed directly towards
+> the tall dark blue…
+> Then , slightly turn left ….."
+> Vision
+> Encoder
+> Text Tokenization
+> Module
+> Visual Tokens
+> Language
+> Tokens
+> Visual -
+> Language
+> Semantic
+> Features
+> (VLSF)
+> UAV State
+> (Pos 、yaw…)
+> Action
+> (𝐴 𝑇 )
+> State
+> Encoder
+> Action
+> Encoder
+> Cross -Attention
+> Self -Attention
+> Cross -Attention
+> Self -Attention
+> Cross -Attention
+> Self -Attention
+> (VLSF)
+> Action
+> Decoder
+> Action
+> Update the current perspective's visual information
+> # move left
+> # move right
+> …
+> # move forward 6m
+> Update the current status of the drone
+
+Fast -System 
+
+Slow -System Figure 2: FSD-VLN architecture:The Slow-System processes visual and language tokens through VIM and fuses them in VLSF, producing semantic representations. The Fast-System’s DiT encodes UAV state and action priors, integrates them with VLSF features, and outputs actions via the Action Decoder, while updated visual observations feed back to the Slow-System, forming a continuous perception-action loop. updated, thereby maintaining a stable and temporally consistent semantic representa-tion of the environment. This high-level semantic prior serves as guidance for subsequent action generation. The fast system consists of a diffusion model and three distinct multilayer percep-trons(MLPs)(State and Action Encoder, Action Decoder), building upon the diffusion transformer (DiT) architecture proposed by Peebles et al.[ ?], we adopt a variant of the DiT module tailored to our task[4].Specifically, the variant of DiT architecture alternates between self-attention and cross-attention layers. The self-attention layers are responsible for modeling dependencies within the agent’s state representations, enabling effective rea-soning over temporal and structural correlations. In contrast, the cross-attention layers incorporate visual-language features extracted by the slow system, allowing the diffusion model to condition action generation on high-level semantic cues. The overall model is composed of multiple such attention blocks, progressively fusing the unmanned aerial vehicle (UAV) state information with visual-language representations. At each timestep, the fast system generates an action sequence of horizon H:
+
+at:t+H ∼ p0 (at:t+H | zt, s t, a t−1) , (3) where st denotes the UAV state (position and yaw), at−1 denotes the previous action, zt is the visual-semantic prior from the slow system. We employ a Diffusion Transformer(DiT) to model this conditional distribution. During training, Gaussian noise is progressively added to ground-truth actions: 
+
+akt = √ak · at + √1 − ak · ϵ, ϵ ∼ N (0 , I ). (4) 6Algorithm 1 FSD-VLN Dual-System Workflow 
+
+1: Input: 
+
+2: RGB Image I; Instruction L; State S; Action A
+
+3: Modules: 
+
+4: V ED : Vision Encoder T T M : Text Tokenization Mod-ule 5: V LM : Vision-Language Model 
+
+SED : State Encoder 6: AED : Action Encoder ADD : Action Decoder 7: V LSF : Vision-Language Semantic Feature Buffer 8: Function Slow System Workflow ( MSSM )
+
+9: Ltok ← TTM (L)
+
+10: while new RGB image I arrives do 
+
+11: Itok ← VED (I)
+
+12: V L sf ← VLM (Ltok , I tok )
+
+13: Write V L sf into VLSF 14: Update V L up sf if buffer refreshed 15: end while 
+
+16: Function Fast System Workflow ( MF S )
+
+17: Randomly initialize noisy actions A
+
+18: while A updating do 
+
+19: Sseq ← SED (S(pos, yaw )) 
+
+20: Aseq ← AED (A)
+
+21: if VLSF updated then 
+
+22: df ← DiT (Sseq , A seq , V L up sf )
+
+23: else 
+
+24: df ← DiT (Sseq , A seq , V L sf )
+
+25: end if 
+
+26: Aup ← ADD (df )
+
+27: end while 
+
+28: Function Dual-System Parallel Execution 
+
+29: MSSM (I, T ) and MF S (S, A, V L sf ) run in parallel 30: UAV reaches waypoint ⇒ update RGB image I
+
+Where k denotes the denoising dimension of the DiT model.The DiT learns to denoise the corrupted action sequence, conditioned on zt state embeddings and previous action embeddings. As described in algorithm 1 (Function Fast System Workflow), the fast system per-forms temporally conditioned action generation. The state encoder( SED ) encodes posi-tional information ( pos, yaw ) into a state sequence representation Sseq , while the action encoder( AED ) embeds the historical action sequence into Aseq . At each update step, if the semantic buffer has been refreshed, the most recent semantic feature V L up sf is used; otherwise, the current cached feature V L sf is adopted. These features, together with Sseq 
+
+and Aseq are fed into a diffusion-based temporal modeling module ( DiT ) for joint gen-eration, producing a latent representation df , the action decoder( ADD ) then generates the updated action Aup . This iterative refinement process continues until convergence. At the system level, the slow and fast systems operate in parallel. The slow system continuously incorporates new visual observations and updates the semantic buffer, while the fast system iteratively optimizes actions under semantic conditioning. When the UAV reaches a target waypoint, a new RGB observation is acquired, triggering another round of 70       
+
+> 1000
+> 2000
+> 3000
+> 50 100 150
+> Number of trajectory
+> Trajectory Length
+> 0
+> 5000
+> 10000
+> 15000
+> 20 50 140
+> Number of trajectory
+> Number of actions
+> (a) Trajectory Length distribution (b) Actions number distribution
+
+Figure 3: Statistical analysis of trajectories on the dataset. semantic update and action refinement. This design forms a closed-loop decision-making process, enabling stable and semantically consistent visual-language navigation. For discrete action representation, we follow existing UAV-VLN works[15, 27, 30] and define a discrete action set consisting of 8 flight primitives: Forward(3m, 6m, 9m), Turn Left(30 °), Turn Right(30 °), Ascend(3m), Descend(3m) and Stop. Although the diffusion model operates in a continuous embedding space, outputs are mapped to discrete action intervals via predefined thresholds. This hybrid design maintains generative flexibility while preserving interpretable control commands. 
+
+## 3.3 Training method 
+
+Global Adaptive Normalization To stabilize multimodal training across heteroge-neous state and action scales, we apply dataset-level statistical normalization. For each dimension d:
+
+˜xd = xd − μd
+
+σd
+
+, (5) where μd and σd denote the mean and the standard deviation respectively. Outliers are clipped using percentile-based thresholds to mitigate long-tail effects. During inference, predictions are rescaled to the physical control domain via inverse normalization. This normalization ensures numerical stability across long-horizon diffusion training. 
+
+Time-Weighted Optimization Long-horizon action prediction often suffers from gradient oscillation and error accumulation. To address this, we introduce a time-weighted MSE objective: 
+
+LTW-MSE = 1 
+
+> ∑
+> b,t
+
+mb,t B∑
+
+> b=0
+> T∑
+> t=0
+> H∑
+> h=0
+
+wt · mb,t · ∥ ˆab,t,h − ab,t,h ∥2, (6) where B is batch size, H is action horizon, mb,t is a timestep mask, and wt is the weight coefficient corresponding to the time step. By assigning larger weights to later timesteps, the model is encouraged to maintain long-range consistency while preserving short-term accuracy. 8Table 1: Comparison of navigation performance among different baseline models. We bold the best results and underline the second best results. Unseen SR ↑ OSR ↑ SPL ↑ NE ↓
+
+Random 0.1% 0.1% 0% 301 CMA[26] 0.7% 6.6% 0.7% 268 Seq2Seq[26] 0.1% 3.2% 0.6% 291 Navid[47] 2.6% 16.9% 2.0% 200 AeriaVLM[30] 2.3% 19.8% 2.2% 227 CityNavAgent[50] 11.7% 35.2% 5.0% 60 
+
+OpenFly[15] * 5.1% 27.3% 3.5% 198 
+
+FSD-VLN (ours) 13.6% 28.4% 10.7% 78 Seen SR ↑ OSR ↑ SPL ↑ NE ↓
+
+Random 0.7% 0.8% 0% 242 CMA[26] 5.7% 30.0% 5.1% 144 Seq2Seq[26] 4.0% 16.8% 3.1% 194 Navid[47] 9.9% 24.3% 3.9% 142 AeriaVLM[30] 6.6% 40.8% 7.0% 103 CityNavAgent[50] 13.9% 30.2% 10.2% 61 
+
+OpenFly[15] * 18.5% 50.9% 12.2% 115 
+
+FSD-VLN (ours) 26.7% 43.3% 22.8% 76  
+
+> ∗Self-reproduced results using the official code on our test set.
+
+# 4 Experiments 
+
+## 4.1 Evaluation Protocol 
+
+We evaluate navigation performance using four standard metrics[15], namely, navigation error (NE), success rate (SR), oracle success rate (OSR), and success weighted by path length (SPL). NE is the Euclidean distance between the final UAV position and the target location. SR measures the percentage of trajectories terminating within 20 meters of the target. OSR calculates the percentage of trajectories that reach within 20 meters of the target at any timestep. SPL is a metric that jointly measures success and path efficiency by weighting SR with the ratio of the ground-truth path length. These metrics collectively assess accuracy, robustness, and trajectory quality in long-horizon aerial navigation. 
+
+## 4.2 Datasets and Implementation Details 
+
+We evaluate our approach in large-scale simulated urban environments constructed from AirVLN-S and OpenFly. To ensure generality, we randomly sampled datasets from four virtual city scenarios and additionally incorporated the Guangzhou urban rendering scene from OpenFly[15], resulting in over 30,000 navigation trajectories spanning diverse urban settings, including downtown, industrial areas, parks, and villages. Trajectory statistics (fig. 3) show lengths concentrated in 50–150 meters (Figure fig. 3(a)) and action counts in the 20–50 range after merging consecutive “move forward 3 m” actions into single “move 9Instruction ：Go forward until reach two grey buildings with many black windows, then turn left, go forward until reach the grey building  wit h all fan -shaped        
+
+> windows, then turn slightly right, and go forward to find the grey pagoda -shaped building with louvered windows .
+> Take off, fly forward. Fly forward. Turn left by 90 degrees, fly forward.
+> (3 left turns of 30 degrees )
+> Turn right by 3 0 degrees. Fly forward. Stop at the grey pagoda -shaped building.
+
+Figure 4: Example aerial navigation:The agent ascends to the initial altitude, adjusts its pitch, and parses the instruction. It flies forward sequentially, reaching the location in the rightmost image of the first row to identify the landmark “two grey buildings with many black windows” and executes a 90 ◦ left turn. Continuing along the updated heading, it recognizes the gray building with fan-shaped windows in the leftmost image of the second row and applies a 30 ◦ right yaw adjustment. The agent then proceeds to the target landmark, “the grey pagoda-shaped building with louvered windows,” where it stops, successfully completing the navigation task. forward 9 m” actions (fig. 3(b)), highlighting realistic navigation distances and sequence complexity. All data were collected using a high-fidelity Unreal Engine simulator. Models are initialized with the GR00T N1 pre-trained backbone. During fine-tuning, only the DiT decision module, state encoder, and action decoder are updated, while the visual-language encoder is frozen to preserve general multimodal representations.The slow system employs 16 DiT blocks, with Output-dim and Input-embedding-dim set to 1024 and 1536, respectively, and Hidden-size set to 1024. We optimize with AdamW (weight decay 10 −5) and LoRA (alpha 16) for 200K steps on 4 RTX 4090 GPUs, requiring approximately 320 GPU hours. 
+
+## 4.3 Main Results 
+
+The comparison with representative baselines including Random, Seq2Seq[26], Naid[47], AerialVLN[30], and OpenFly[15] are presented in table 1. In the “Random” method, the agent randomly samples and executes actions from the action set, terminating upon selecting the stop action or reaching the maximum step limit. FSD-VLN consistently out-performs prior methods in both seen and unseen environments. Notably, in unseen sce-narios, FSD-VLN significantly outperforms OpenFly, improving SR from 5.1% to 13.6% and SPL from 3.5% to 10.7%, while reducing NE from 198 to 78, indicating more sta-10 Table 2: Test results of action generation time consumption by the model. OpenFly Ours Single Action Generation(ms) 402 176 Data Preparation and Action Generation(ms) 576 387 ble and globally consistent trajectory planning. The substantial reduction in navigation error indicates improved global trajectory alignment rather than marginal success im-provements. In seen environments, FSD-VLN maintains superior SR (26.7%) and SPL (22.8%), demonstrating that the proposed framework does not sacrifice efficiency for robustness. Unlike reactive baselines that generate actions solely based on instantaneous vision-language observations, FSD-VLN formulates action prediction as a temporally condi-tioned generative process. Through structured diffusion modeling, current decisions are explicitly grounded in historical action trajectories. This mechanism alleviates the my-opic perception bias caused by frame-wise reasoning and suppresses oscillatory behaviors induced by over-reactivity to transient visual signals. More importantly, by maintain-ing temporal coherence in the latent action space, the model effectively mitigates the compounding error that commonly arises in long-horizon navigation. The consistent re-duction in NE across both seen and unseen environments demonstrates that the fast-slow decomposition improves global direction consistency and trajectory stability, rather than merely increasing the terminal success rate. To evaluate real-time capability, we compare FSD-VLN with OpenFly under compa-rable model scales. As shown in table 2, FSD-VLN reduces per-action inference latency from 402 ms to 176 ms, demonstrating substantially improved decision efficiency. Beyond single-step latency, we further analyze end-to-end navigation time on 214 randomly sam-pled trajectories. As presented in table 3, the total execution time decreases from 307.6 s to 144.7 s, corresponding to a 53% reduction, while the average number of executed actions is reduced by approximately 10%. To control for potential performance bias, we additionally evaluate 10 trajectories that are successfully accomplished by both methods. Even under identical success conditions, FSD-VLN achieves a 56% reduction in execution time. These results indicate that the efficiency improvement arises not only from reduced per-step inference overhead but also from enhanced trajectory-level consistency, which mitigates redundant corrective maneuvers and stabilizes long-horizon decision dynamics. fig. 4 presents qualitative examples of successful navigation flights achieved by the proposed Fast-Slow Dual-System Modeling(FSD-VLM) framework using landmark-based visual map information. The examples show how the aerial agent leverages intermedi-ate visual landmarks—such as “two grey buildings with many black windows” and the gray building with fan-shaped windows—to sequentially adjust its heading, progressively localizing the target.The examples validate the effectiveness of FSD-VLM in integrating visual semantic information with low-level flight control. In this task, the aerial agent first ascends to the initial altitude and adjusts its flight pitch. It then parses the given instruction and, conditioned on the current visual observa-tion, sequentially executes multiple forward flight actions. Upon reaching the geographic location shown in the rightmost image of the first row, the agent identifies the landmark described as “two grey buildings with many black windows” and subsequently performs a 90 ◦ left turn. 11 Table 3: Quantitative Evaluation of Action Generation Efficiency Between OpenFly and our proposed FSD-VLN method. OpenFly Ours Total steps Time(s) Total steps Time(s) Test set (214) 4992 307.62 4468 144.72 Successfully completed identical routes(10) – 52.71 – 22.78 The agent continues flying straight along the updated heading. When arriving at the position shown in the leftmost image of the second row, it successfully recognizes the gray building with fan-shaped windows described in the instruction and executes a 30 ◦ right yaw adjustment. After orientation correction, the agent proceeds forward until reaching the target landmark described as “the grey pagoda-shaped building with louvered windows,” where it stops. The navigation task is thus successfully completed. 
+
+## 4.4 Ablation Study 
+
+Effect of Time-Weighted Optimization To stabilize long-horizon action prediction, we introduce a Time-Weighted MSE (TW-MSE) loss during fine-tuning, which assigns temporally adaptive weights to prediction errors across different time steps. Compared with standard MSE, TW-MSE explicitly models the varying importance of actions along the temporal dimension. The fig. 5 presents the training loss curves under MSE and TW-MSE. TW-MSE exhibits smoother convergence behavior, reduced oscillation amplitude, and a lower final loss. The improvement can be attributed to its temporal reweighting mechanism, which suppresses gradient interference from distant future predictions and alleviates error amplification in long sequences. From an optimization perspective, TW-MSE introduces an implicit temporal regularization that stabilizes gradient propagation across time steps, thereby mitigating common issues of gradient fluctuation and error accumulation in sequential decision modeling. Beyond optimization stability, TW-MSE also improves final navigation performance, indicating that temporally aware supervision enhances the model’s ability to balance short-term action precision and long-term trajec-tory planning. These results validate the effectiveness of time-aware weighting strategies for long-horizon UAV visual-language navigation. 
+
+Effect of Action Horizon The action-horizon H parameter controls the number of future actions generated per inference step, reflecting the temporal planning span of the model. Increasing action-horizon enables longer-horizon foresight and potentially reduces inference frequency, which may lower decision latency. However, in dynamic environments with rapidly changing visual observations and UAV states, long-span pre-diction introduces greater distribution shift and compounding error risks. To investigate this trade-off, we evaluate H ∈ { 1, 2, 4} in both seen and unseen environments over 154 trajectories of varying complexity. The results are summarized in table 4. Performance consistently degrades as action-horizon increases, with H = 1 achieving the best SR and SPL as well as the lowest NE. Although longer horizons theoretically provide stronger planning capability, they amplify prediction bias due to perceptual latency and environ-mental non-stationarity. As the generated action sequence extends further into the future, the discrepancy between predicted and actual state distributions accumulates, leading to 12 0 20000 40000 60000 80000 100000 120000 140000 160000 
+
+> Training Step
+> 0.0
+> 0.5
+> 1.0
+> 1.5
+> 2.0
+> 2.5
+> 3.0
+> 3.5
+> 4.0
+> Loss
+> Training Loss Curve
+> MSE
+> TW-MSE
+
+Figure 5: Training loss curves of the standard MSE (a) or TW-MSE (b) loss functions. Table 4: Impact of Action Horizon on Navigation Performance for FSD-VLN. 
+
+H SR OSR SPL NE 1 20.13% 44.16% 18.06% 88 2 16.88% 39.61% 14.87% 100 4 15.58% 44.80% 13.50% 90 reduced trajectory stability. This finding highlights a fundamental trade-off between long-horizon planning and real-time perceptual responsiveness in UAV visual-language navigation. While multi-step prediction can amortize inference cost, excessive temporal extrapolation undermines robustness in highly dynamic settings. Therefore, maintaining short-horizon reactivity while leveraging structured temporal modeling emerges as a more stable strategy for long-distance aerial navigation. 
+
+# 5 Conclusion 
+
+In this work, we address key challenges in long-distance low-altitude UAV visual-language navigation, including high decision latency, limited action continuity, and difficulties in long-horizon modeling. We propose FSD-VLN, an efficient fast-slow dual-system frame-work that explicitly coordinates high-level semantic reasoning with low-level action gen-eration. By integrating multimodal perception, temporally structured decision modeling, and real-time control, the proposed framework provides a unified solution for autonomous navigation in complex open environments. 13 In addition, we introduce a global adaptive preprocessing strategy to mitigate scale and distribution discrepancies across multimodal inputs, together with a time-aware weighted optimization objective that stabilizes long-sequence training. Extensive ex-periments in both seen and unseen simulated environments demonstrate that FSD-VLN consistently improves navigation accuracy, trajectory quality, and decision efficiency while substantially reducing inference latency and overall execution time. These results indi-cate that structured fast-slow decomposition offers an effective paradigm to balance global planning consistency and real-time responsiveness in UAV-VLN. Despite these improvements, several limitations remain. Performance may degrade under highly dynamic environmental changes, where perception delay and distribution shift pose challenges for long-horizon prediction. Future work will explore scaling the framework with larger multimodal foundation models and broader datasets to enhance cross-scene generalization. We also aim to extend FSD-VLN to multi-UAV coordination and real-world deployment, further bridging the gap between simulated benchmarks and practical aerial navigation systems. 
+
+# References 
+
+[1] Achiam, J., Adler, S., Agarwal, S., Ahmad, L., Akkaya, I., Aleman, F.L., Almeida, D., Altenschmidt, J., Altman, S., Anadkat, S., et al.: Gpt-4 technical report. arXiv preprint arXiv:2303.08774 (2023) [2] Anderson, P., Wu, Q., Teney, D., Bruce, J., Johnson, M., Sünderhauf, N., Reid, I., Gould, S., Van Den Hengel, A.: Vision-and-language navigation: Interpreting visually-grounded navigation instructions in real environments. In: Proceedings of the IEEE conference on computer vision and pattern recognition. pp. 3674–3683 (2018) [3] Bai, J., Bai, S., Chu, Y., Cui, Z., Dang, K., Deng, X., Fan, Y., Ge, W., Han, Y., Huang, F., et al.: Qwen technical report. arXiv preprint arXiv:2309.16609 (2023) [4] Bjorck, J., Castañeda, F., Cherniadev, N., Da, X., Ding, R., Fan, L., Fang, Y., Fox, D., Hu, F., Huang, S., et al.: Gr00t n1: An open foundation model for generalist humanoid robots. arXiv preprint arXiv:2503.14734 (2025) [5] Black, K., Brown, N., Driess, D., Esmail, A., Equi, M., Finn, C., Fusai, N., Groom, L., Hausman, K., Ichter, B., et al.: \pi _0: A vision-language-action flow model for general robot control. arXiv preprint arXiv:2410.24164 (2024) [6] Blochliger, F., Fehr, M., Dymczyk, M., Schneider, T., Siegwart, R.: Topomap: Topological mapping and navigation based on visual slam maps. In: 2018 IEEE International Conference on Robotics and Automation (ICRA). pp. 3818–3825. IEEE (2018) [7] Brown, T., Mann, B., Ryder, N., Subbiah, M., Kaplan, J.D., Dhariwal, P., Nee-lakantan, A., Shyam, P., Sastry, G., Askell, A., et al.: Language models are few-shot learners. Advances in neural information processing systems 33 , 1877–1901 (2020) [8] Bu, Q., Cai, J., Chen, L., Cui, X., Ding, Y., Feng, S., Gao, S., He, X., Hu, X., Huang, X., et al.: Agibot world colosseo: A large-scale manipulation platform for scalable and intelligent embodied systems. arXiv preprint arXiv:2503.06669 (2025) 14 [9] Chen, G., Yu, X., Ling, N., Zhong, L.: Chatfly: Low-latency drone planning with large language models. IEEE Transactions on Mobile Computing (2025) [10] Chen, H., Suhr, A., Misra, D., Snavely, N., Artzi, Y.: Touchdown: Natural language navigation and spatial reasoning in visual street environments. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. pp. 12538–12547 (2019) [11] Chen, S., Guhur, P.L., Schmid, C., Laptev, I.: History aware multimodal transformer for vision-and-language navigation. Advances in neural information processing sys-tems 34 , 5834–5847 (2021) [12] Chu, Y., Xu, J., Yang, Q., Wei, H., Wei, X., Guo, Z., Leng, Y., Lv, Y., He, J., Lin, J., et al.: Qwen2-audio technical report. arXiv preprint arXiv:2407.10759 (2024) [13] Fan, Y., Chen, W., Jiang, T., Zhou, C., Zhang, Y., Wang, X.: Aerial vision-and-dialog navigation. In: Findings of the Association for Computational Linguistics: ACL 2023. pp. 3043–3061 (2023) [14] Fried, D., Hu, R., Cirik, V., Rohrbach, A., Andreas, J., Morency, L.P., Berg-Kirkpatrick, T., Saenko, K., Klein, D., Darrell, T.: Speaker-follower models for vision-and-language navigation. Advances in neural information processing systems 
+
+31 (2018) [15] Gao, Y., Li, C., You, Z., Liu, J., Li, Z., Chen, P., Chen, Q., Tang, Z., Wang, L., Yang, P., et al.: Openfly: A versatile toolchain and large-scale benchmark for aerial vision-language navigation. arXiv e-prints pp. arXiv–2502 (2025) [16] Hamdan, S., Sima, C., Yang, Z., Li, H., Guney, F.: Eta: Efficiency through thinking ahead, a dual approach to self-driving with large models. In: Proceedings of the IEEE/CVF International Conference on Computer Vision. pp. 26529–26538 (2025) [17] Hong, Y., Wu, Q., Qi, Y., Rodriguez-Opazo, C., Gould, S.: Vln bert: A recurrent vision-and-language bert for navigation. In: Proceedings of the IEEE/CVF confer-ence on Computer Vision and Pattern Recognition. pp. 1643–1653 (2021) [18] Hornung, A., Wurm, K.M., Bennewitz, M., Stachniss, C., Burgard, W.: Octomap: An efficient probabilistic 3d mapping framework based on octrees. Autonomous robots 34 (3), 189–206 (2013) [19] Hu, Y., Guo, Y., Wang, P., Chen, X., Wang, Y.J., Zhang, J., Sreenath, K., Lu, C., Chen, J.: Video prediction policy: A generalist robot policy with predictive visual representations. arXiv preprint arXiv:2412.14803 (2024) [20] Huang, W., Wang, C., Zhang, R., Li, Y., Wu, J., Fei-Fei, L.: Voxposer: Compos-able 3d value maps for robotic manipulation with language models. arXiv preprint arXiv:2307.05973 (2023) [21] Irshad, M.Z., Ma, C.Y., Kira, Z.: Hierarchical cross-modal agent for robotics vision-and-language navigation. In: 2021 IEEE international conference on robotics and automation (ICRA). pp. 13238–13246. IEEE (2021) 15 [22] Janis, A., Bade, A.: Path planning algorithm in complex environment: a survey. Transactions on Science and Technology 3(1), 31–40 (2016) [23] Kawaharazuka, K., Oh, J., Yamada, J., Posner, I., Zhu, Y.: Vision-language-action models for robotics: A review towards real-world applications. IEEE Access (2025) [24] Kim, M.J., Pertsch, K., Karamcheti, S., Xiao, T., Balakrishna, A., Nair, S., Rafailov, R., Foster, E., Lam, G., Sanketi, P., et al.: Openvla: An open-source vision-language-action model. arXiv preprint arXiv:2406.09246 (2024) [25] Krantz, J., Banerjee, S., Zhu, W., Corso, J., Anderson, P., Lee, S., Thomason, J.: Iterative vision-and-language navigation. In: Proceedings of the IEEE/CVF confer-ence on computer vision and pattern recognition. pp. 14921–14930 (2023) [26] Krantz, J., Wijmans, E., Majumdar, A., Batra, D., Lee, S.: Beyond the nav-graph: Vision-and-language navigation in continuous environments. In: European Confer-ence on Computer Vision. pp. 104–120. Springer (2020) [27] Lee, J., Miyanishi, T., Kurita, S., Sakamoto, K., Azuma, D., Matsuo, Y., Inoue, N.: Citynav: Language-goal aerial navigation dataset using geographic information (2024) [28] Lin, B., Zhu, Y., Chen, Z., Liang, X., Liu, J., Liang, X.: Adapt: Vision-language navigation with modality-aligned action prompts. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. pp. 15396–15406 (2022) [29] Lin, P., Sun, G., Liu, C., Li, F., Ren, W., Cong, Y.: Openvln: Open-world aerial vision-language navigation. arXiv preprint arXiv:2511.06182 (2025) [30] Liu, S., Zhang, H., Qi, Y., Wang, P., Zhang, Y., Wu, Q.: Aerialvln: Vision-and-language navigation for uavs. In: Proceedings of the IEEE/CVF International Con-ference on Computer Vision. pp. 15384–15394 (2023) [31] Mei, J., Ma, Y., Yang, X., Wen, L., Cai, X., Li, X., Fu, D., Zhang, B., Cai, P., Dou, M., et al.: Continuously learning, adapting, and improving: A dual-process approach to autonomous driving. arXiv preprint arXiv:2405.15324 (2024) [32] Mur-Artal, R., Tardós, J.D.: Orb-slam2: An open-source slam system for monocular, stereo, and rgb-d cameras. IEEE transactions on robotics 33 (5), 1255–1262 (2017) [33] Oršulić, J., Milijas, R., Batinovic, A., Markovic, L., Ivanovic, A., Bogdan, S.: Flying with cartographer: Adapting the cartographer 3d graph slam stack for uav naviga-tion. In: 2021 Aerial robotic systems physically interacting with the environment (AIRPHARO). pp. 1–7. IEEE (2021) [34] Qi, Y., Pan, Z., Zhang, S., van den Hengel, A., Wu, Q.: Object-and-action aware model for visual language navigation. In: European conference on computer vision. pp. 303–317. Springer (2020) [35] Qian, K., Ma, Z., He, Y., Luo, Z., Shi, T., Zhu, T., Li, J., Wang, J., Chen, Z., He, X., et al.: Fasionad: Fast and slow fusion thinking systems for human-like autonomous driving with adaptive feedback. arXiv preprint arXiv:2411.18013 (2024) 16 [36] Radford, A., Narasimhan, K., Salimans, T., Sutskever, I., et al.: Improving language understanding by generative pre-training (2018) [37] Radford, A., Wu, J., Child, R., Luan, D., Amodei, D., Sutskever, I., et al.: Language models are unsupervised multitask learners. OpenAI blog 1(8), 9 (2019) [38] Tan, H., Yu, L., Bansal, M.: Learning to navigate unseen environments: Back translation with environmental dropout. In: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers). pp. 2610–2621 (2019) [39] Touvron, H., Lavril, T., Izacard, G., Martinet, X., Lachaux, M.A., Lacroix, T., Rozière, B., Goyal, N., Hambro, E., Azhar, F., et al.: Llama: Open and efficient foundation language models. arXiv preprint arXiv:2302.13971 (2023) [40] Ubaid, M.M., Sana, M.S., Salim, K., Khalid, S., Batool, I., Gilani, S.H., Gilani, S.S.: Uavs path planning using visual-slam technique based hybrid particle swarm optimization. Journal of Smart Internet of Things 2023 (2), 133–141 (2023) [41] Wang, X., Yang, D., Wang, Z., Kwan, H., Chen, J., Wu, W., Li, H., Liao, Y., Liu, S.: Towards realistic uav vision-language navigation: Platform, benchmark, and methodology. arXiv preprint arXiv:2410.07087 (2024) [42] Wu, Y., Zhu, M., Li, X., Du, Y., Fan, Y., Li, W., Han, Z., Zhou, X., Gao, F.: Vla-an: An efficient and onboard vision-language-action framework for aerial navigation in complex environments. arXiv preprint arXiv:2512.15258 (2025) [43] Xiao, J., Sun, Y., Shao, Y., Gan, B., Liu, R., Wu, Y., Guan, W., Deng, X.: Uav-on: A benchmark for open-world object goal navigation with aerial agents. In: Proceed-ings of the 33rd ACM International Conference on Multimedia. pp. 13023–13029 (2025) [44] Yin, G., Zhou, S., Wu, Q.: An improved rrt algorithm for uav path planning. Acta Electronica Sinica 45 (7), 1764–1769 (2017) [45] Zhang, D., Chen, P., Xia, X., Su, X., Zhen, R., Xiao, J., Yang, S.: Apex: A decou-pled memory-based explorer for asynchronous aerial object goal navigation. arXiv preprint arXiv:2602.00551 (2026) [46] Zhang, J., Guo, Y., Chen, X., Wang, Y.J., Hu, Y., Shi, C., Chen, J.: Hirt: Enhancing robotic control with hierarchical robot transformers. arXiv preprint arXiv:2410.05273 (2024) [47] Zhang, J., Wang, K., Xu, R., Zhou, G., Hong, Y., Fang, X., Wu, Q., Zhang, Z., Wang, H.: Navid: Video-based vlm plans the next step for vision-and-language navigation. arXiv preprint arXiv:2402.15852 (2024) [48] Zhang, R., Han, J., Liu, C., Gao, P., Zhou, A., Hu, X., Yan, S., Lu, P., Li, H., Qiao, Y.: Llama-adapter: Efficient fine-tuning of language models with zero-init attention. arXiv preprint arXiv:2303.16199 (2023) 17 [49] Zhang, R., Xie, J., Zhang, W., Chen, W., Tan, X., Wan, X., Li, G.: Adadrive: Self-adaptive slow-fast system for language-grounded autonomous driving. In: Proceed-ings of the IEEE/CVF International Conference on Computer Vision. pp. 5112–5121 (2025) [50] Zhang, W., Gao, C., Yu, S., Peng, R., Zhao, B., Zhang, Q., Cui, J., Chen, X., Li, Y.: Citynavagent: Aerial vision-and-language navigation with hierarchical semantic planning and global memory. In: Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers). pp. 31292– 31309 (2025) [51] Zhang, Y., Yu, H., Xiao, J., Feroskhan, M.: Grounded vision-language navigation for uavs with open-vocabulary goal understanding. arXiv preprint arXiv:2506.10756 (2025) [52] Zhao, G., Li, G., Pan, J., Yu, Y.: Aerial vision-and-language navigation with grid-based view selection and map construction. arXiv preprint arXiv:2503.11091 (2025) [53] Zhou, G., Hong, Y., Wang, Z., Wang, X.E., Wu, Q.: Navgpt-2: Unleashing naviga-tional reasoning capability for large vision-language models. In: European Confer-ence on Computer Vision. pp. 260–278. Springer (2024) [54] Zhou, G., Hong, Y., Wu, Q.: Navgpt: Explicit reasoning in vision-and-language navigation with large language models. In: Proceedings of the AAAI Conference on Artificial Intelligence. vol. 38, pp. 7641–7649 (2024) [55] Zitkovich, B., Yu, T., Xu, S., Xu, P., Xiao, T., Xia, F., Wu, J., Wohlhart, P., Welker, S., Wahid, A., et al.: Rt-2: Vision-language-action models transfer web knowledge to robotic control. In: Conference on Robot Learning. pp. 2165–2183. PMLR (2023) 18

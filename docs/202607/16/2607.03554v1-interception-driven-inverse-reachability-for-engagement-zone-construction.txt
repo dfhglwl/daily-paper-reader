@@ -1,0 +1,1156 @@
+Title: Interception-Driven Inverse Reachability for Engagement Zone Construction
+
+URL Source: https://arxiv.org/pdf/2607.03554v1
+
+Published Time: Tue, 07 Jul 2026 01:16:25 GMT
+
+Number of Pages: 32
+
+Markdown Content:
+# Interception-Driven Inverse Reachability for Engagement Zone Construction 
+
+Grant Stagg ∗ and Cameron K. Peterson †
+
+Brigham Young University, Provo, Utah, 84602, USA 
+
+Alexander Von Moll ‡ and Isaac Weintraub §
+
+Air Force Research Laboratory, WPAFB, Ohio, 45433, USA 
+
+In contested environments, autonomous vehicles may need to plan around adversarial pursuers whose launch locations are unknown. This paper presents an interception-driven inverse-reachability framework for inferring a feasible pursuer launch region directly from observed interception events for a single pursuer. Each interception induces a geometric constraint on the unknown launch location, and intersecting these constraints yields a bounded set guaranteed to contain the true origin under maximum-capability assumptions. Mapping this inferred set through the pursuer reachable region produces deterministic engagement zones with an explicit worst-case safety interpretation. A probabilistic extension models uncertainty in the pursuer launch location and yields graded engagement-risk fields for risk-aware planning. To accelerate localization, we introduce an information-driven planner for sacrificial agents that selects trajectories to maximize expected contraction of the feasible launch region. Monte Carlo simulations show that the proposed framework rapidly reduces launch-location uncertainty and enables substantially shorter safe trajectories after only a small number of sacrificial deployments. 
+
+# I. Introduction 
+
+Autonomous vehicles operating in contested environments must reason about adversarial threats whose launch locations are often unknown [ 1]. Traditional engagement analysis typically assumes that pursuer parameters—such as launch position, range, and maneuverability—are available a priori or described by a known probability distribution [ 2, 3]. In many operational settings, however, threat locations must instead be inferred from indirect, sparse, or event-driven observations, motivating active localization methods that infer hidden sources from sparse binary contacts or geometry-dependent measurements [ 4, 5]. This creates a coupled estimation–planning problem in which agents must gather 
+
+> ∗PhD Candidate, Electrical and Computer Engineering, Brigham Young University.
+> †Associate Professor, Electrical and Computer Engineering, Brigham Young University, and AIAA Senior Member.
+> ‡Aerospace Engineer, Control Science Center, Air Force Research Laboratory, AIAA Member.
+> §Electronics Engineer, Control Science Center, Air Force Research Laboratory, AIAA Associate Fellow. Distribution Statement A. Approved for public release: distribution is unlimited. AFRL-2026-1807. Cleared 13 Apr 2026.
+> arXiv:2607.03554v1 [eess.SY] 3 Jul 2026
+
+informative data about a threat while simultaneously generating trajectories that remain safe during information acquisition [6]. Interception events provide direct geometric information about the pursuer origin. If a pursuer successfully intercepts an agent, it must have launched from a location capable of reaching the interception location within its travel budget. Each interception therefore imposes a spatial constraint on the unknown launch location. Intersecting these constraints yields a feasible launch region that is guaranteed to contain the true origin under bounded-capability assumptions. As additional interceptions are observed, this region contracts, progressively reducing uncertainty about the threat location. Crucially, a bounded launch region induces a bounded reachable region (RR), the set of positions that a pursuer originating anywhere within the feasible launch region could attain. Expressed in the evader frame, this RR defines a corresponding engagement zone (EZ) that contains all evader positions from which interception could occur by a pursuer launched from any admissible location. Any trajectory whose position remains outside the EZ corresponding to the evader’s instantaneous heading is safe against all admissible pursuers. Thus, interception-driven localization enables safety-critical planning without requiring precise knowledge of the adversary’s launch location. Despite this connection, existing EZ formulations fundamentally rely on prior knowledge of pursuer launch locations or assume that a probabilistic uncertainty model is available beforehand [ 2, 3, 7, 8]. In many operational environments these assumptions are unrealistic, as threat parameters must instead be inferred from indirect and event-driven observations. Comparatively little attention has been given to constructing EZs directly from interception data. This paper eliminates the need to know the pursuer’s launch location in advance. It introduces a geometric framework that uses interception events to infer the feasible launch region and then propagates this region forward to construct both deterministic and probabilistic EZs. Each interception generates a set constraint on the unknown launch location; under assumptions that the pursuer has a bounded range, these constraints take the form of discs whose intersection defines a region guaranteed to contain the true origin. Using the inferred launch region, we compute all positions the pursuer could possibly reach. This produces a worst-case EZ that guarantees safety outside its boundary, while a probabilistic extension instead measures how likely interception is based on the amount of geometric overlap. Building on this inference structure, sacrificial agents are deployed as deliberate information-gathering assets. By inducing interceptions at strategically selected locations, these agents actively contract the feasible launch region, improving operational awareness and enabling progressively less conservative trajectory planning for high-value assets. The primary contributions of this work are as follows: 
+
+• A geometric inverse-reachability method for inferring a feasible pursuer launch region from interception events for a single pursuer. 
+
+• A reachable-region construction that maps bounded launch uncertainty into deterministic EZs, that can be used to plan safe trajectories. 2• A probabilistic extension that quantifies engagement likelihood via geometric overlap, enabling risk-aware planning. 
+
+• An information-driven trajectory objective that selects sacrificial paths to maximize expected contraction of the feasible pursuer launch-region. This paper proceeds as follows. Section I.A reviews related work, and Section I.B provides background on EZs. Section II.A examines EZs under bounded launch uncertainty, and Section II.B extends this formulation to the probabilistic setting. Section III presents methods for constructing EZs from interception events. Section IV.A and Section IV.B then use these regions for safe trajectory generation and informative sacrificial-agent path planning. Results are presented in Section V, followed by conclusions in Section VI. 
+
+A. Related Work 
+
+Engagement-zone (EZ) reasoning is rooted in pursuit–evasion theory and differential games [ 9, 10 ], where geometric interception conditions establish the relationship between relative kinematics, aspect angle, and range constraints. Modern work has focused on analytic EZ constructions that preserve geometric interpretability while remaining tractable for planning and safety analysis. For simple motion kinematics, Basic engagement zones (BEZs) are formalized in [ 2], with subsequent extensions incorporating turn-constrained pursuers in [ 7]. Optimal-control formulations enable planners to treat engagement zones as dynamic obstacles [ 11 ], while multi-threat settings motivate trajectory optimization methods capable of handling densely contested environments [ 12 , 13 ]. Sampling-based planners for large collections of engagement constraints are presented in [ 14 ], and range-limited pursuer navigation with explicit safety guarantees is developed in [1]. Related threat-aware weaponeering analyses building on BEZ structure are also emerging [15]. Probabilistic engagement zones (PEZs) extend these ideas by replacing binary safe/unsafe boundaries with a probability of interception under parameter uncertainty. Prior work developed PEZ models for turn-constrained pursuers and integrated probabilistic constraints into risk-aware planning [ 3 , 8]. Despite these advances, existing engagement-zone formulations fundamentally assume that pursuer launch locations are known or that uncertainty is characterized by a prescribed prior distribution. In many operational settings, however, threat locations must instead be inferred from sparse, event-driven observations. Constructing EZs directly from interception data remains largely unexplored. The inference component of this work is closely related to bounded-error localization and set-membership estimation. Classical trilateration relies on equality constraints that can yield point estimates given sufficiently rich geometry [ 16 ]. By contrast, capability-based observations naturally induce inequality constraints, producing feasible regions rather than isolated solutions. This perspective has been studied in sensor-network localization and geometric constraint-based estimation [ 17 –22 ], with extensions addressing measurement uncertainty in aerial systems [ 23 ] and related modalities such as acoustic detection [ 24 ]. In contrast to prior localization work that estimates a source position, the present paper infers a feasible launch set for a maneuver-constrained pursuer and maps this set forward through reachability to 3construct EZs that provide explicit safety guarantees. Finally, the use of sacrificial agents to deliberately collect informative data appears in multi-robot exploration under resource constraints [ 25 ] and heterogeneous uncertainty-aware team planning [ 26 ], as well as in prior radar-inference work [ 27 ]. However, the present setting is distinct: information is obtained only through interception outcomes, so trajectory design acts as active feasible-set contraction within a threat-learning pipeline. 
+
+B. Engagement Zones and Pursuit–Evasion Geometry 
+
+EZs describe regions in which a faster pursuer can intercept an evader given their relative kinematics and range constraints. In the classical two-player pursuit–evasion game, both vehicles move at constant speeds and headings, with dynamics 
+
+¤𝒙 𝑃 = 𝑣 𝑃 
+
+"cos 𝜓 𝑃 
+
+sin 𝜓 𝑃 
+
+#
+
+, ¤𝒙 𝐸 = 𝑣 𝐸 
+
+"cos 𝜓 𝐸 
+
+sin 𝜓 𝐸 
+
+#
+
+, (1) where 𝒙 𝑃 , 𝒙 𝐸 ∈ R2 denote the pursuer and evader positions, and 𝑣 𝑃 , 𝑣 𝐸 their respective speeds. The pursuer is assumed to have a finite range 𝑅 and to capture the evader once the distance between them becomes less than a capture radius 𝑟 .The speed ratio 𝜈 = 𝑣 𝐸 /𝑣 𝑃 < 1 specifies the evader’s relative speed. −2 −1 0 1 2
+
+# X
+
+−2 
+
+−1 
+
+0
+
+1
+
+2
+
+> Y
+
+ºR ^vE
+
+R + r
+
+xP ∂RBEZ ∂ZBEZ 
+
+Fig. 1 Pursuer position (red), RR (magenta), and BEZ (green) are shown for an evader heading of 45 ◦.
+
+Basic engagement zones (BEZs) are defined as the set of initial evader positions from which interception can occur 4before the pursuer exhausts its range. For a pursuer located at the origin, this region can be expressed as [2] 
+
+Z = {𝒙 𝐸 : ∥𝒙 𝐸 − 𝒙 𝑃 (0)∥ 2 ≤ 𝜌 (𝜉, 𝜈, 𝑅, 𝑟 )} , (2) where 𝜌 (𝜉, 𝜈, 𝑅, 𝑟 ) specifies the boundary distance as a function of the aspect angle 𝜉 between the evader’s heading and the line of sight to the pursuer. The boundary distance function is found geometrically [2]; 
+
+𝜌 (𝜉, 𝜈, 𝑅, 𝑟 ) = 𝜈𝑅 cos (𝜉 ) + √︂ cos 2 (𝜉 ) − 1 + (𝑅 + 𝑟 )2
+
+𝜈 2 𝑅 2
+
+!
+
+, (3) where 𝜉 is the aspect angle between the agent’s heading and the pursuer defined as 
+
+𝜉 (𝒙 𝐴 , 𝒙 𝑃 (0)) = 𝜓 𝐴 − atan2 (𝑦 𝑃 (0) − 𝑦 𝐴 , 𝑥 𝑃 (0) − 𝑥 𝐴 ) . (4) Although this form provides analytical insight, it depends explicitly on the instantaneous aspect angle and does not generalize easily when the pursuer’s location is uncertain or inferred. The BEZ can be interpreted as a translated version of the pursuer’s RR. The RR defines the set of all positions the pursuer can reach within its travel budget, including the capture radius, and therefore forms a disc of radius 𝑅 + 𝑟 
+
+centered at the pursuer’s position. The BEZ is obtained by translating this region by the distance the evader travels while the pursuer expends its full range, namely 𝜈𝑅 in the direction opposite the evader’s heading. Figure 1 illustrates this construction for an evader heading of 45 ◦. The boundary of the RR is shown in magenta, the BEZ boundary in green, and the evader trajectory is indicated. 
+
+# II. Geometric Engagement Zones Under Launch Uncertainty 
+
+This section develops a geometric formulation of EZs under bounded uncertainty in the pursuer launch location. When the initial pursuer position is unknown but constrained to lie within a set, the resulting RR is likewise bounded, producing a family of EZs that admit a natural worst-case safety interpretation. These geometric constructions form the basis for both deterministic EZs and the probabilistic engagement zones (PEZs) introduced later in this section. 
+
+A. Deterministic Engagement Zones 
+
+We first consider the deterministic worst-case construction, in which the pursuer may launch from any point in a feasible set. 51. Geometric Interpretation Using the Minkowski Sum 
+
+A geometrically transparent representation of EZs is obtained through set operations. Let P ⊂ R2 denote the feasible pursuer launch region. We define the RR as the set of all points that the pursuer can reach within its travel budget while accounting for the capture radius. This region is given by the Minkowski sum 
+
+R = P ⊕ D ( 0, 𝑅 + 𝑟 ), (5) where D ( 𝒙 𝑐 , 𝜌 ) = {𝒙 ∈ R2 : ∥𝒙 − 𝒙 𝑐 ∥2 ≤ 𝜌 } denotes a disc of radius 𝜌 centered at 𝒙 𝑐 , and 
+
+A ⊕ B = {𝒂 + 𝒃 : 𝒂 ∈ A , 𝒃 ∈ B} (6) denotes the Minkowski sum of two sets A, B ⊆ R2.Geometrically, this construction corresponds to a uniform offset of the launch region by distance (𝑅 + 𝑟 ), thereby characterizing all points that are reachable—and therefore capturable—by the pursuer from some feasible launch location. If the launch region P is convex, the RR R is likewise convex, since Minkowski addition preserves convexity. 
+
+2. Engagement Zone as a Shifted Reachable Region 
+
+Because the evader continues to move during an encounter, the set of points that can lead to interception is displaced in the direction opposite the evader’s motion. Let ˆ𝒗 𝐸 = [cos 𝜓 𝐸 , sin 𝜓 𝐸 ]⊤ denote the unit vector along the evader’s heading. The EZ can then be defined as a translation of the pursuer’s capture region: 
+
+Z = R − 𝜈𝑅 ˆ𝒗 𝐸 = 𝒙 𝐸 ∈ R2 : 𝒙 𝐸 + 𝜈𝑅 ˆ𝒗 𝐸 ∈ R . (7) In this form, a point 𝒙 𝐸 lies inside the EZ if, after translating it forward by the evader’s possible displacement during the engagement ( 𝜈𝑅 ), it falls within the pursuer’s capture region. This shifted RR interpretation generalizes the constant-heading BEZ geometry to arbitrary or inferred pursuer regions P.As an example, consider the case in which the feasible pursuer launch region is a rectangular region defined by lower and upper bounds on the pursuer’s Cartesian coordinates, denoted 𝒙 min  
+
+> 𝑃
+
+and 𝒙 max  
+
+> 𝑃
+
+. This set is written as 
+
+Prect (𝒙 min  
+
+> 𝑃
+
+, 𝒙 max  
+
+> 𝑃
+
+) = 𝒙 𝑃 ∈ R2 : 𝒙 min  
+
+> 𝑃
+
+≤ 𝒙 𝑃 ≤ 𝒙 max  
+
+> 𝑃
+
+, (8) where the inequalities are interpreted elementwise. The corresponding pursuer RR is obtained by taking the Minkowski sum of this rectangle with a disc of radius 6−4 −3 −2 −1 0 1 2 3 4
+
+# X
+
+−4 
+
+−3 
+
+−2 
+
+−1 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+> Y
+
+ºR ^vE
+
+R + r
+
+∂Prect ∂Rrect ∂Zrect Fig. 2 The boundary of Prect (red), Rrect (magenta), and Zrect (green) are shown for an evader heading of 45 ◦.
+
+(𝑅 + 𝑟 ),
+
+Rrect = Prect ⊕ D ( 0, 𝑅 + 𝑟 ), (9) which produces a rectangle inflated by (𝑅 + 𝑟 ) and rounded by quarter-circle arcs at its corners. Finally, the EZ is obtained by translating this region opposite the evader’s direction of motion by 𝜈𝑅 ,
+
+Zrect = Rrect − 𝜈𝑅 ˆ𝒗 𝐸 = {𝒙 𝐸 ∈ R2 : 𝒙 𝐸 + 𝜈𝑅 ˆ𝒗 𝐸 ∈ R rect }. (10) Geometrically, this results in an EZ that resembles a rounded rectangle shifted in the direction opposite the evader’s heading by a distance proportional to the speed ratio 𝜈 , as illustrated in Figure 2. In the figure, the boundary of the feasible pursuer launch region 𝜕 Prect is shown in red. Dilating this set by 𝑅 + 𝑟 produces the pursuer capture region 
+
+Rrect , whose boundary 𝜕 Rrect is shown in magenta. Translating this region opposite the evader’s heading ( 45 ◦ in this case) yields the EZ Zrect , whose boundary 𝜕 Zrect is shown in green. The figure also shows the evader trajectory 𝜈𝑅 ˆ𝒗 𝐸 ,representing the path the evader would follow if the pursuer were to expend its full range. 7B. Geometric Probabilistic Engagement Zones 
+
+The previous section presented the worst-case EZ, defined under the assumption that the pursuer may launch from any point in the region P and that the evader must remain safe against all such possibilities. If, instead, the evader can tolerate some level of risk, a probabilistic characterization is more appropriate. This section introduces the geometric probabilistic engagement zone (PEZ), which quantifies the probability that a pursuer drawn from a distribution of launch positions can reach the evader. In this formulation, the pursuer’s launch position is modeled as a random variable with probability density function (PDF) 
+
+𝒙 𝑃 ∼ 𝑓 𝒙 𝑃 (𝒙 ). (11) For any measurable region X ⊂ R2, the probability that the pursuer launches from within X is given by integrating the PDF over that region: 
+
+P(𝒙 𝑃 ∈ X) =
+
+∫
+
+> 𝒙 ∈ X
+
+𝑓 𝒙 𝑃 (𝒙 ) 𝑑 𝒙 . (12) 
+
+1. Probabilistic Reachability Under Launch Uncertainty 
+
+The probability that an arbitrary point 𝒙 is reachable by a pursuer whose launch location is uncertain is obtained by integrating over all possible launch positions. For the infinite–turn-rate geometric model, the pursuer can reach a point if its launch position lies within a disc of radius (𝑅 + 𝑟 ) centered at 𝒙 . Thus, the reachability probability is 
+
+𝑝 RR (𝒙 ) = P(pursuer can reach 𝒙 ) =
+
+∫ 
+
+> 𝝉 ∈R2
+
+1(∥ 𝝉 − 𝒙 ∥ ≤ 𝑅 + 𝑟 ) 𝑓 𝒙 𝑃 (𝝉 ) 𝑑 𝝉 , (13) where 1(·) is the indicator function 
+
+1(𝑧 ) =
+
+
+
+1, if 𝑧 is true ,
+
+0, otherwise .
+
+(14) This expression evaluates the probability mass of all pursuer launch positions lying inside the disc of radius (𝑅 + 𝑟 )
+
+centered at 𝒙 , and therefore quantifies the probability that a pursuer drawn from the distribution 𝑓 𝒙 𝑃 can reach location 𝒙 .
+
+2. Probabilistic Reachability in the Evader Frame 
+
+As in the deterministic case, the evader’s motion during an engagement requires that reachability be evaluated at a shifted location. An evader at position 𝒙 𝐸 is effectively equivalent to the translated point 
+
+𝒙 shift  
+
+> 𝐸
+
+= 𝒙 𝐸 + 𝜈𝑅 ˆ𝒗 𝐸 , (15) 8which accounts for the evader’s displacement during the encounter. Thus, the probability that the pursuer can reach the evader from a randomly distributed launch position is obtained by evaluating the reachability probability at this shifted point: 
+
+𝑝 EZ (𝒙 𝐸 ) = 𝑝 RR (𝒙 𝐸 + 𝜈𝑅 ˆ𝒗 𝐸 ). (16) This transformation directly maps the probability of pursuer reachability, defined in the pursuer-fixed frame, to the evader’s starting location, thereby yielding the probability that the evader lies inside the PEZ. 
+
+3. Uniform Rectangular Launch Distribution 
+
+A simple and illustrative special case arises when the pursuer’s launch location is assumed to be uniformly distributed over a rectangular region. Let the launch region be Prect (𝒙 min  
+
+> 𝑃
+
+, 𝒙 max  
+
+> 𝑃
+
+) as defined in Equation (8), with area 
+
+𝐴 𝑃 = (𝑥 max − 𝑥 min )( 𝑦 max − 𝑦 min ). (17) The pursuer’s launch-position pdf is then 
+
+𝑓 𝒙 𝑃 (𝒙 ) =
+
+
+
+1
+
+𝐴 𝑃 
+
+, if 𝒙 ∈ P rect ,
+
+0, otherwise .
+
+(18) Substituting this density into the reachability expression in (13) yields 
+
+𝑝 RR (𝒙 ) =
+
+∫ 
+
+> 𝝉 ∈R2
+
+1(∥ 𝝉 − 𝒙 ∥ ≤ 𝑅 + 𝑟 ) 𝑓 𝒙 𝑃 (𝝉 ) 𝑑 𝝉 (19) 
+
+= 1
+
+𝐴 𝑃 
+
+∫ 
+
+> 𝝉 ∈ P rect
+
+1(∥ 𝝉 − 𝒙 ∥ ≤ 𝑅 + 𝑟 ) 𝑑 𝝉 . (20) The indicator function restricts the integral to the portion of the rectangle Prect that lies inside the disc of radius (𝑅 + 𝑟 )
+
+centered at 𝒙 . Thus, 
+
+𝑝 RR (𝒙 ) = Area (P rect ∩ D ( 𝒙 , 𝑅 + 𝑟 )) 
+
+Area (P rect ) , (21) where Area (·) denotes planar area. In words, the reachability probability 𝑝 RR (𝒙 ) is equal to the fraction of the rectangular launch region that lies within the capture disc centered at 𝒙 . Applying the shift to evader coordinates from the previous subsection, the PEZ value at an evader starting location 𝒙 𝐸 becomes 
+
+𝑝 EZ (𝒙 𝐸 ) = 𝑝 RR (𝒙 𝐸 + 𝜈𝑅 ˆ𝒗 𝐸 ) = Area  Prect ∩ 𝐷  𝒙 𝐸 + 𝜈𝑅 ˆ𝒗 𝐸 , 𝑅 + 𝑟  
+
+Area (P rect ) . (22) 9This provides a simple geometric interpretation of the PEZ for a uniformly distributed pursuer launch position: at each evader location, the engagement probability is the normalized area of overlap between the launch rectangle and the shifted capture disc. These probabilities are shown as level sets in Figure 3. The left plot illustrates 𝑝 RR together with the deterministic geometric boundary of the RR Rrect . The right plot shows 𝑝 EZ for a pursuer with heading 45 ◦, along with the corresponding deterministic EZ boundary. As the probability threshold decreases, both 𝑝 RR and 𝑝 EZ approach their respective deterministic boundaries. Indeed, the deterministic geometric boundaries coincide with the zero-probability contours of 𝑝 RR and 𝑝 EZ .−4 −3 −2 −1 0 1 2 3 4
+
+# X
+
+−4 
+
+−3 
+
+−2 
+
+−1 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+> Y
+
+# pRR 
+
+0.01 
+
+0.05 
+
+> 0.10
+> 0.20
+> 0.30
+
+0.40 
+
+0.50 
+
+> 0.70
+
+0.90 
+
+−4 −3 −2 −1 0 1 2 3 4
+
+# X
+
+−4 
+
+−3 
+
+−2 
+
+−1 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+# pEZ 
+
+0.01 
+
+0.05 
+
+> 0.10
+> 0.20
+
+0.30 
+
+> 0.40
+
+0.50 
+
+> 0.70
+> 0.90
+
+∂Prect ∂Rrect ∂Zrect 
+
+Fig. 3 The 𝑝 RR (left), and 𝑝 EZ (right) are shown. The boundary of Prect (red), Rrect (magenta), and Zrect (green) are shown for an evader heading of 45 ◦.
+
+# III. Inferring Engagement Zones from Interception Events 
+
+In this section, we present a geometric method for constructing the potential EZs from observed interception locations of sacrificial evaders. This construction requires the pursuer’s maximum range and capture radius to be known, inferred from prior information, or conservatively assumed. We first develop an approach that assumes interception location is the only available measurement. We then extend the method to incorporate pursuer launch-time information when such data are available. 10 A. Inference from Interception Location 
+
+Let {𝒙 (𝑖 ) 
+
+> int
+
+}𝑁 int  
+
+> 𝑖 =1
+
+denote the set of locations at which sacrificial agents have been intercepted, where 𝑁 int is the total number of interceptions. For any single interception location 𝒙 (𝑖 ) 
+
+> int
+
+, the pursuer must have been capable of reaching that point within its travel budget. Consequently, the pursuer’s launch position must lie within a disc of radius 𝑅 + 𝑟 centered at the interception location. This defines the feasible launch region region as 
+
+Ppot 
+
+
+
+𝒙 (𝑖 )
+
+> int
+
+
+
+= D
+
+
+
+𝒙 (𝑖 ) 
+
+> int
+
+, 𝑅 + 𝑟 
+
+
+
+. (23) When multiple interception locations are available, each observation induces a reachability constraint on the pursuer’s launch position. The feasible launch region must therefore satisfy all such constraints simultaneously, yielding the intersection of discs centered at the respective interception locations with radius 𝑅 + 𝑟 :
+
+Ppot 
+
+
+
+{𝒙 (𝑖 ) 
+
+> int
+
+}
+
+
+
+=
+
+> 𝑁 int
+
+Ù
+
+> 𝑖 =1
+
+D
+
+
+
+𝒙 (𝑖 ) 
+
+> int
+
+, 𝑅 + 𝑟 
+
+
+
+. (24) This set contains all launch positions from which the pursuer could have reached every observed interception point within its allowable travel distance. Because each reachability constraint is convex, their intersection is likewise convex, and its boundary forms a closed curve composed entirely of circular arcs. With two interception events, the feasible region forms a lens bounded by symmetric arcs. With three or more events, the region becomes a convex circular-arc polygon whose boundary consists of alternating circle–circle intersection vertices and arc segments. Degenerate cases may also arise: the intersection reduces to a single disc when one disc is contained within all others, and becomes empty when the constraints are mutually inconsistent. This circular-arc representation provides an exact geometric characterization of the feasible pursuer launch region and serves as the foundation for subsequent engagement-zone construction. An algorithm for computing this boundary is presented in Section III.C. An example of Ppot is shown in Fig. 4(a). Interception locations are marked with red crosses, and the corresponding reachability discs are depicted with dotted red boundaries. The boundary of the resulting feasible pursuer region is shown in solid red. 
+
+B. Inference with Launch-Time Information 
+
+If evaders can additionally measure the pursuer’s launch time (e.g., via acoustic or visual sensing), tighter bounds on the pursuer’s launch position can be established. For the 𝑖 th interception, let 𝑡 (𝑖 ) 
+
+> launch
+
+denote the pursuer’s launch time and 
+
+𝑡 (𝑖 ) 
+
+> int
+
+the interception time. The available travel time is therefore 
+
+𝑡 (𝑖 ) 
+
+> trav
+
+= 𝑡 (𝑖 ) 
+
+> int
+
+− 𝑡 (𝑖 )
+
+> launch
+
+. (25) 11 Assuming the pursuer travels at a known constant speed 𝑣 𝑃 , the maximum distance it could have traversed is 
+
+𝑑 (𝑖 ) 
+
+> trav
+
+= 𝑣 𝑃 𝑡 (𝑖 )
+
+> trav
+
+. (26) Consequently, the launch position associated with the 𝑖 th engagement must lie within a distance 𝑑 (𝑖 ) 
+
+> trav
+
++𝑟 of the interception location. For an interception at 𝒙 (𝑖 ) 
+
+> int
+
+with measured travel distance 𝑑 (𝑖 )
+
+> trav
+
+, the corresponding feasible pursuer launch region is the disc 
+
+Ppot 
+
+ 𝒙 (𝑖 )
+
+> int
+
+ = D  𝒙 (𝑖 ) 
+
+> int
+
+, 𝑑 (𝑖 ) 
+
+> trav
+
++ 𝑟 . (27) When multiple interceptions are observed, each with an associated launch-time measurement, the feasible launch region must satisfy all refined reachability constraints simultaneously. The resulting region is therefore given by the intersection of discs with event-dependent radii: 
+
+Ppot 
+
+ {𝒙 (𝑖 ) 
+
+> int
+
+} =
+
+> 𝑁 int
+
+Ù
+
+> 𝑖 =1
+
+D  𝒙 (𝑖 ) 
+
+> int
+
+, 𝑑 (𝑖 ) 
+
+> trav
+
++ 𝑟 . (28) As in the case where launch time is not measured, the feasible launch region boundary is formed by arcs of circles. When launch time is measured, however, these arcs have varying radii. In general the boundary consists of circle–circle intersection vertices joined by arc segments of varying radii. An algorithm for computing this boundary is presented in Section III.C. Figure 4(b) illustrates an example of Ppot . Interception locations are marked with red crosses, and the associated reachability discs are shown with dotted red boundaries. The resulting feasible launch region is rendered in solid red. Notably, for the same set of interception locations, incorporating launch-time information produces a substantially smaller feasible region than the fixed-range construction. 
+
+C. Feasible Launch-Region Boundary Construction 
+
+Because the feasible launch region is convex and bounded by circular arcs, its boundary can be computed exactly using pairwise disc intersections. We compute the boundary 𝜕 Ppot as a collection of circular arcs induced by the intersection of reachability discs. Each interception event generates a disc 
+
+D (𝑖 ) = D  𝒙 (𝑖 ) 
+
+> int
+
+, 𝜌 (𝑖 ) , (29) where 𝜌 (𝑖 ) = 𝑅 + 𝑟 in the interception-only case and 𝜌 (𝑖 ) = 𝑑 (𝑖 ) 
+
+> trav
+
++ 𝑟 when launch-time information is available. For every unordered pair of discs (D (𝑖 ) , D ( 𝑗 ) ), we compute up to two circle–circle intersection points. A candidate 12 intersection point 𝒙 is retained only if it lies within all discs, i.e., 𝒙 ∈ D (𝑘 ) for 𝑘 = 1, . . . , 𝑁 int . The resulting set of feasible vertices is deduplicated using a geometric tolerance 𝜀 .For each disc D (𝑖 ) with center 𝒄 (𝑖 ) = 𝒙 (𝑖 ) 
+
+> int
+
+and radius 𝜌 (𝑖 ) , the retained vertices on its circumference define angular coordinates 
+
+𝜃 = atan2 (𝑥 𝑦 − 𝑐 𝑖,𝑦 , 𝑥 𝑥 − 𝑐 𝑖,𝑥 ). (30) Sorting these angles produces consecutive vertex pairs. For each pair (𝜃 (𝑖 ) 
+
+> 𝑎
+
+, 𝜃 (𝑖 ) 
+
+> 𝑏
+
+), the corresponding circular arc on D (𝑖 )
+
+is included if its midpoint lies within all discs, thereby ensuring that only true boundary segments of the intersection are retained. The resulting boundary representation is given by the set of arcs 
+
+A =
+
+n 𝑐 (𝑖 ) , 𝜌 (𝑖 ) , 𝜃 (𝑖 )
+
+> start
+
+, 𝜃 (𝑖 )
+
+> end
+
+o  
+
+> 𝑖 ∈ [ 1,..., 𝑁 𝑎 ]
+
+, (31) where 𝑁 𝑎 is the number of arcs which together define an ordered, piecewise-circular closed curve. Because the feasible launch region is convex, these arcs uniquely characterize its boundary. If one disc is strictly contained within all others, the procedure yields a single circle. If the discs have an empty intersection, no arcs are produced. The procedure is summarized in Algorithm 1. 
+
+Algorithm 1 Exact Boundary Extraction for the Intersection of Discs  
+
+> 1:
+
+Input: Disc centers {𝑐 (𝑖 ) }, radii {𝜌 (𝑖 ) }, tolerance 𝜀  
+
+> 2:
+
+Output: Boundary arc set A 
+
+> 3:
+
+Compute all pairwise circle–circle intersection points  
+
+> 4:
+
+Retain only points that lie within every disc (to tolerance 𝜀 ) 
+
+> 5:
+
+Sort and deduplicate the remaining points to obtain the vertex set V 
+
+> 6:
+
+for each disc D (𝑖 ) with center 𝑐 (𝑖 ) and radius 𝜌 (𝑖 ) do  
+
+> 7:
+
+Identify vertices in V that lie on 𝜕 D (𝑖 ) 
+
+> 8:
+
+Sort these vertices by polar angle about 𝑐 (𝑖 ) 
+
+> 9:
+
+for each consecutive angle pair (𝜃 𝑎 , 𝜃 𝑏 ) do  
+
+> 10:
+
+Compute midpoint angle 𝜃 𝑚 = (𝜃 𝑎 + 𝜃 𝑏 )/ 2 
+
+> 11:
+
+Compute midpoint 𝒙 𝑚 = 𝑐 (𝑖 ) + 𝜌 (𝑖 ) [cos 𝜃 𝑚 , sin 𝜃 𝑚 ] 
+
+> 12:
+
+if 𝒙 𝑚 lies within every disc then  
+
+> 13:
+
+Add arc (𝑐 (𝑖 ) , 𝜌 (𝑖 ) , 𝜃 𝑎 , 𝜃 𝑏 ) to A 
+
+> 14:
+
+end if  
+
+> 15:
+
+end for  
+
+> 16:
+
+end for  
+
+> 17:
+
+return A
+
+13 −2 0 2
+
+# X
+
+−3 
+
+−2 
+
+−1 
+
+0
+
+1
+
+2
+
+3
+
+> Y
+
+# (a) Without Launch Times 
+
+−2 0 2
+
+# X
+
+−3 
+
+−2 
+
+−1 
+
+0
+
+1
+
+2
+
+3
+
+# (b) With Launch Times 
+
+xi ∂D (i) ∂Ppot ∂Rpot ∂Zpot Fig. 4 Interception locations (red ×’s), discs (dotted red), pursuer region (red), RR (magenta), and EZ (green) for 45 ◦. (a) Without launch timing; (b) with launch timing. D. Engagement Zones Induced by the Feasible Launch Region 
+
+With the feasible pursuer launch region defined, the corresponding EZ can be constructed. We first dilate the feasible launch region by a disc of radius 𝑅 + 𝑟 to obtain the potential capture region 
+
+Rpot = Ppot ⊕ D  0, 𝑅 + 𝑟 . (32) This operation corresponds to the Minkowski sum of the feasible launch set with the pursuer’s reachability disc. The dilation is implemented via a signed distance function (SDF) derived from the circular-arc boundary of Ppot .Because the boundary consists exclusively of arc segments, the SDF reduces to the minimum Euclidean distance from a query point to the boundary, with the sign determined by set membership. Minkowski addition with a disc is equivalent to offsetting the SDF by (𝑅 + 𝑟 ); accordingly, the dilated region is obtained by subtracting (𝑅 + 𝑟 ) from the SDF of Ppot .The potential EZ is obtained by translating the capture region in the direction opposite the evader’s heading: 
+
+Zpot = Rpot − 𝜈𝑅 ˆ𝒗 𝐸 = {𝒙 𝐸 ∈ R2 : 𝒙 𝐸 + 𝜈𝑅 ˆ𝒗 𝐸 ∈ R pot }. (33) Geometrically, this translation accounts for the evader’s motion during the pursuer’s travel time, yielding the set of 14 evader positions that remain vulnerable to interception. Figure 4 depicts the RR (magenta) and EZs (green) induced by the feasible pursuer launch region for both the launch-time case (a) and the no-timing case (b). Because launch-time information contracts the feasible launch region, the resulting RRs and EZs are correspondingly smaller and more tightly bounded. −4 −3 −2 −1 0 1 2 3 4
+
+X
+
+> −4
+> −3
+> −2
+> −1
+> 0
+> 1
+> 2
+> 3
+> 4
+> Y
+
+## pRR         
+
+> 0.01
+> 0.10
+> 0.30
+> 0.50
+> 0.70
+> 0.90
+> −4 −3 −2 −1 01234
+
+X
+
+> −4
+> −3
+> −2
+> −1
+> 0
+> 1
+> 2
+> 3
+> 4
+
+## pEZ         
+
+> 0.01
+> 0.10
+> 0.30
+> 0.50
+> 0.70
+> 0.90
+> −4 −3 −2 −1 01234
+
+X
+
+> −4
+> −3
+> −2
+> −1
+> 0
+> 1
+> 2
+> 3
+> 4
+> Y
+
+## fxP (x) 
+
+> 0.0
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> 0.6
+> ∂Rpot
+> ∂Zpot
+> xi
+> ∂D(i)
+
+Fig. 5 The 𝑝 RR (left), and 𝑝 EZ (right) are shown. The boundary of Rpot (magenta) and Zpot (green) are shown for an evader heading of 45 ◦. The lower figure shows the uniform PDF of the pursuer’s launch location. E. Probabilistic Engagement Zones 
+
+The reachability probability and the corresponding probabilistic engagement zone (PEZ) were introduced in Section II.B. For the infinite-turn-rate geometric pursuer model, the reachable-region probability (RRP) at a point 𝒙 is the probability that the pursuer launch location lies within a disc of radius (𝑅 + 𝑟 ) centered at 𝒙 .15 As shown in Section III.A, each interception induces a disc constraint on the pursuer launch location, and the intersection of these constraints defines the feasible launch region Ppot . In the absence of additional prior information, we model the pursuer launch-location density as uniform over Ppot :
+
+𝑓 𝒙 𝑃 (𝝉 ) =
+
+
+
+1Area (P pot ) , 𝝉 ∈ P pot ,
+
+0, otherwise .
+
+(34) Under this maximum-entropy assumption, the RRP reduces to the geometric form 
+
+𝑝 RR (𝒙 ) = Area  Ppot ∩ D ( 𝒙 , 𝑅 + 𝑟 )
+
+Area (P pot ) . (35) Thus, the RRP is determined entirely by geometric overlap between the reachability disc and the feasible launch region. Figure 5 illustrates the RRP and the resulting PEZ. The upper-left panel displays level sets of the RRP together with the geometric RR shown in magenta. All probability level sets are fully contained within the RR, as expected from the underlying reachability constraint. The upper-right panel depicts the PEZ alongside the geometric EZ for an evader heading of 45 ◦. The bottom panel presents the launch-location density, observed interception locations, and the circular feasibility constraints that define the pursuer launch region. Notably, incorporating launch-region uncertainty smooths the sharp boundary of the geometric reachable set, producing a graded notion of engagement risk. 
+
+# IV. Planning Under Inferred Engagement Constraints 
+
+In this section, we present two path-planning methods that leverage geometric EZs and PEZs. The first method, presented in Section IV.A, generates safe trajectories for high-value, non-attritable agents by avoiding potential engagement with the pursuer. The second method, presented in Section IV.B, designs trajectories for sacrificial, attritable agents that act as information-gathering platforms to maximize information about the pursuer’s unknown launch location. 
+
+A. Trajectory Planning Under Engagement Constraints 
+
+We first consider trajectory generation for high-value agents that must avoid potential engagement. The planner enforces safety by imposing constraints derived from geometric EZs and PEZs. In general, such constraints may be constructed from any assumed pursuer launch region P and, in the probabilistic setting, an associated launch-location PDF 𝑓 𝒙 𝑃 (𝒙 ). The emphasis of this work, however, is on planning safe trajectories using EZs and PEZs derived directly from interception observations, as developed in Section III. This connection enables threat-aware motion planning without requiring prior knowledge of the pursuer’s state. The evader trajectory is parameterized by a B-spline curve and optimized to minimize travel time. Because the 16 evader operates at constant speed, minimizing final time is equivalent to minimizing path length. Kinematic feasibility is maintained through bounds on curvature and turn rate, ensuring that the resulting trajectory is physically realizable. Safety is enforced by constraining the path to remain outside the EZ induced by the feasible pursuer launch region or by enforcing the maximum PEZ probability to be less than a safety threshold 𝜀 .B-splines are selected for their smoothness properties, differentiability, and local support, which together promote a sparse derivative structure and improve the efficiency of gradient-based solvers. Let the control points be C =
+
+(𝒄 1, 𝒄 2, . . . , 𝒄 𝑁 𝑐 ), and define the knot vector 
+
+𝒕 𝑘 =  𝑡 0 − 𝑘 Δ𝑡 , . . . , 𝑡 0 − Δ𝑡 , 𝑡 0, 𝑡 0 + Δ𝑡 , . . . , 𝑡 𝑓 , 𝑡 𝑓 + Δ𝑡 , . . . , 𝑡 𝑓 + 𝑘 Δ𝑡 
+
+, (36) where 𝑘 denotes the spline order, 𝑡 0 and 𝑡 𝑓 are the initial and final times, 𝑁 𝑘 is the number of interior knots, and 
+
+Δ𝑡 = (𝑡 𝑓 − 𝑡 0)/ 𝑁 𝑘 is the uniform spacing. The trajectory is then 
+
+𝒑 (𝑡 ) =
+
+> 𝑁 𝑐
+
+∑︁ 
+
+> 𝑖 =1
+
+𝐵 𝑖,𝑘 (𝑡 )𝒄 𝑖 , (37) where the basis functions 𝐵 𝑖,𝑘 (𝑡 ) are constructed via the Cox–de Boor recursion [28]. The objective is to compute a feasible trajectory connecting the initial state 𝒙 0 to the goal 𝒙 𝑓 while minimizing the final time. Feasibility is defined with respect to both vehicle kinematics and engagement avoidance. Assuming a unicycle motion model with bounded curvature and turn rate, the resulting nonlinear program is 
+
+(C opt , 𝑡 𝑓 opt ) = arg min  
+
+> C,𝑡 𝑓
+
+𝑡 𝑓 , (38a) s.t. 𝒑 (0) = 𝒙 0, (38b) 
+
+𝒑 (𝑡 𝑓 ) = 𝒙 𝑓 , (38c) 
+
+𝒑 (𝑡 𝑠 ) ∉ Z, ∀𝑡 𝑠 ∈ T 𝑠 , (38d) 
+
+𝑣 𝐸 (𝑡 𝑠 ) = 𝑣 𝐸 , ∀𝑡 𝑠 ∈ T 𝑠 , (38e) 
+
+𝑢 lb ≤ 𝑢 𝐸 (𝑡 𝑠 ) ≤ 𝑢 ub , ∀𝑡 𝑠 ∈ T 𝑠 , (38f) 
+
+|𝜅 𝐸 (𝑡 𝑠 )| ≤ 𝜅 ub , ∀𝑡 𝑠 ∈ T 𝑠 , (38g) where Z is the EZ and T𝑠 = {0, Δ𝑡 , 2Δ𝑡 , . . . , 𝑡 𝑓 } is the set of discrete collocation times with Δ𝑡 = 𝑡 𝑓 /𝑁 𝑡 at which the constraints are enforced. The EZ constraint requires the evader to remain outside of the EZ generated from the feasible launch region. When using geometrically constructed EZs, this ensures that no point along the trajectory is reachable by a pursuer originating within the feasible launch region. To enable a tradeoff between safety and path optimality, a PEZ 17 constraint may be used instead. Replacing (38d), one may enforce 
+
+𝑝 EZ ( 𝒑 (𝑡 𝑠 )) ≤ 𝜀, ∀𝑡 𝑠 ∈ T 𝑠 , (39) where 𝑝 EZ (·) denotes the probability that a state lies inside the true EZ and 𝜀 ∈ [ 0, 1] is a user-specified risk threshold. The remaining constraints enforce kinematic consistency. Under the unicycle model, the kinematic feasibility constraints can be found as 
+
+𝑣 𝐸 (𝑡 ) = ∥ ¤ 𝒑 (𝑡 )∥ 2, 𝑢 𝐸 (𝑡 ) = ¤𝒑 (𝑡 ) × ¥ 𝒑 (𝑡 )∥ ¤ 𝒑 (𝑡 )∥ 22
+
+, 𝜅 𝐸 (𝑡 ) = 𝑢 (𝑡 )
+
+𝑣 (𝑡 ) , (40) where 𝑣 is the velocity, 𝑢 is the turn rate, and 𝜅 is the curvature of the trajectory. Since the evader speed is fixed at 𝑣 𝐸 ,the turn rate and curvature satisfy 
+
+𝜅 𝐸 (𝑡 ) = 𝑢 𝐸 (𝑡 )
+
+𝑣 𝐸 
+
+. (41) Therefore, the constraints on 𝑢 𝐸 (𝑡 ) and 𝜅 𝐸 (𝑡 ) are equivalent up to scaling by 𝑣 𝐸 . In practice, it is sufficient to impose only one of them, using the value corresponding to whichever physical limitation is more restrictive. The optimization problem is solved using the interior-point solver IPOPT [ 29 ]. Derivatives of both the objective and constraints are computed through automatic differentiation in JAX [ 30 ], allowing efficient construction of sparse Jacobians and Hessian approximations suitable for large-scale nonlinear programs. 
+
+B. Sacrificial Trajectories for Launch-Region Inference 
+
+Sacrificial trajectory design is formulated as an information-gathering optimal control problem in which interception events serve as measurements that contract the feasible pursuer launch region. Trajectories are selected to deliberately induce informative interceptions that accelerate geometric inference of the pursuer launch location. In essence, sacrificial agents are converted into active sensing assets, where the trajectory design directly governs the rate at which launch-location uncertainty is reduced. Because information is obtained only upon interception, trajectory selection is built upon a probabilistic event model coupled with the geometric consequences of an observed interception. 
+
+1. Interception Hazard Model 
+
+Let the sacrificial agent trajectory be parameterized by a B-spline 𝒑 (𝑡 ) and sampled at times {𝑡 𝑘 }𝐾 𝑘 =1, producing points { 𝒑 (𝑡 𝑘 )} 𝐾 𝑘 =1. At each position, we evaluate the probability that a pursuer drawn from the current posterior over launch locations and range could reach the evader. Interception is modeled as a terminal event that may occur at any point along the trajectory using a discrete hazard formulation. Let Δ𝑡 𝑘 denote the time increment associated with sample 𝑘 . We assume the interception hazard 18 is piecewise constant over each interval [𝑡 𝑘 , 𝑡 𝑘 + Δ𝑡 𝑘 ), so that risk accumulates with time spent in the threat field. Specifically, the hazard over step 𝑘 is defined as 
+
+𝜆 𝑘 = 𝛼 𝑝 RR 
+
+  𝒑 (𝑡 𝑘 ), (42) where 𝛼 > 0 is an event-intensity parameter and 𝑝 RR ( 𝒑 (𝑡 𝑘 )) is the probability that a pursuer can reach the evader position 𝒑 (𝑡 𝑘 ), as defined in Equation (13). Under this model, the probability of no interception during the interval Δ𝑡 𝑘 is exp (− 𝜆 𝑘 Δ𝑡 𝑘 ). Hence, the probability that interception occurs during step 𝑘 , conditioned on survival up to the start of that step, is 
+
+ℎ𝑘 = 1 − exp (− 𝜆 𝑘 Δ𝑡 𝑘 ) = 1 − exp  −𝛼 𝑝 RR 
+
+  𝒑 (𝑡 𝑘 ) Δ𝑡 𝑘 
+
+ . (43) This implies that longer exposure to regions with higher reachability probability yields a larger conditional interception probability, while preserving the bound 0 ≤ ℎ𝑘 ≤ 1.Let 𝑆 𝑘 −1 denote the probability that the evader survives through step 𝑘 − 1. Since ℎ 𝑗 is defined as the conditional probability of interception during step 𝑗 , given survival up to the start of that step, the corresponding conditional survival probability is 1 − ℎ 𝑗 . Therefore, by the chain rule of probability, 
+
+𝑆 𝑘 −1 =
+
+> 𝑘 −1
+
+Ö
+
+> 𝑗 =1
+
+(1 − ℎ 𝑗 ). (44) The probability that interception occurs for the first time during step 𝑘 is then 
+
+𝑤 𝑘 = 𝑆 𝑘 −1 ℎ𝑘 , (45) which defines the discrete first-interception distribution along the trajectory. The total probability of at least one interception event is 
+
+𝑃 event =
+
+> 𝐾
+
+∑︁ 
+
+> 𝑘 =1
+
+𝑤 𝑘 = 1 −
+
+> 𝐾
+
+Ö
+
+> 𝑘 =1
+
+(1 − ℎ𝑘 ). (46) This hazard-based construction defines a discrete first-interception distribution along the trajectory that can be evaluated efficiently within the trajectory optimization routine. The resulting weights induce a natural distribution over possible interception locations, which is used to compute the expected information gain along the trajectory and to define the sacrificial-trajectory objective. 19 2. Information-Driven Trajectory Objective 
+
+Trajectory selection is formulated as the maximization of expected geometric information obtained from a potential interception event. Because the value of a sacrificial trajectory changes once interception data are observed, the objective naturally separates into pre- and post-observation regimes, corresponding to planning under uncertainty and constraint refinement after measurement. 
+
+Pre-Observation Regime. In the absence of interception data, the feasible launch region cannot yet be contracted, rendering geometric information gain undefined. The primary objective in this regime is therefore to induce an interception with high probability so that informative measurements become available. Assume a rectangular region of interest Prect that contains the unknown pursuer launch location. Because interception is possible only when the sacrificial trajectory intersects the pursuer’s RR, maximizing interception probability is equivalent to maximizing the portion of the launch region from which the pursuer could successfully engage the trajectory. The launch-coverage fraction induced by a trajectory C is defined as 
+
+𝐽 0 (C) =
+
+Area 
+
+
+
+Prect ∩ Ð𝐾 𝑘 =1 D  𝒑 (𝑡 𝑘 ), 𝑅 + 𝑟 
+
+Area (P rect ) , (47) where C denotes the control points defining the trajectory 𝒑 (𝑡 ).
+
+Post-Observation Regime. Once interception data are observed, each event contracts the feasible pursuer launch region by imposing a disc constraint centered at the interception location. Let 𝐴 old denote the area of the current feasible region, and let 𝐴 new ( 𝒑 (𝑡 𝑘 )) denote the area obtained after intersecting this region with the disc associated with an interception at 𝒑 (𝑡 𝑘 ). The resulting area reduction is 
+
+Δ𝐴 ( 𝒑 (𝑡 𝑘 )) = 𝐴 old − 𝐴 new ( 𝒑 (𝑡 𝑘 )) . (48) Trajectory selection seeks to maximize the expected contraction of the feasible launch-region area under the first-hit distribution, 
+
+𝐽 1 (C) = E[Δ𝐴 ] =
+
+> 𝐾
+
+∑︁ 
+
+> 𝑘 =1
+
+𝑤 𝑘 Δ𝐴 ( 𝒑 (𝑡 𝑘 )) . (49) This objective prioritizes trajectories that are both likely to be intercepted and expected to induce large feasible-set contractions, accelerating geometric inference of the pursuer parameters. 20 Regime-Switching Objective. The trajectory design objective depends on whether interception data have been observed. Let 𝑁 int denote the number of interception events collected thus far. The sacrificial trajectory objective is defined as 
+
+𝐽 (C) =
+
+
+
+𝐽 0 (C) , 𝑁 int = 0,𝐽 1 (C) , 𝑁 int ≥ 1.
+
+(50) When no interceptions have been observed, geometric contraction of the feasible launch region is not yet possible. The objective therefore prioritizes maximizing launch-region coverage in order to induce an informative interception event. Once at least one interception has occurred, trajectory design seeks to maximize the expected contraction of the feasible launch region. 
+
+3. Trajectory Optimization 
+
+As in Section IV.A, sacrificial trajectories are parameterized using B-splines and optimized subject to kinematic feasibility constraints that ensure flyability. Because sacrificial agents are expendable, trajectory optimality is evaluated solely through the information generated by a potential interception rather than travel efficiency. Instead of minimizing flight time, each sacrificial agent is assigned a fixed range 𝑅 𝑠 . Under constant speed, this implies a fixed time of flight 
+
+𝑡 𝑓 ,𝑠 = 𝑅 𝑠 
+
+𝑣 𝑠 
+
+, (51) where 𝑣 𝑠 denotes the agent speed. The spline is defined over the interval [𝑡 0, 𝑡 𝑓 ,𝑠 ] using a uniform, unclamped knot vector 
+
+𝒕 𝑘 =  𝑡 0 − 𝑘 Δ𝑡 , . . . , 𝑡 0 − Δ𝑡 , 𝑡 0, 𝑡 0 + Δ𝑡 , . . . , 𝑡 𝑓 ,𝑠 , 𝑡 𝑓 ,𝑠 + Δ𝑡 , . . . , 𝑡 𝑓 ,𝑠 + 𝑘 Δ𝑡 
+
+, (52) yielding a 𝐶 𝑘 −1-continuous trajectory whose path length is fixed by the prescribed range 𝑅 𝑠 .The resulting trajectory-design problem is posed as the constrained optimization 
+
+Copt = arg max  
+
+> C
+
+𝐽 (C) , (53a) s.t. 𝒑 (0) = 𝒙 0, (53b) 
+
+𝑣 𝑠 (𝑡 𝑠 ) = 𝑣 𝑠 , ∀𝑡 𝑠 ∈ T 𝑠 , (53c) 
+
+𝑢 lb ≤ 𝑢 𝑠 (𝑡 𝑠 ) ≤ 𝑢 ub , ∀𝑡 𝑠 ∈ T 𝑠 , (53d) 
+
+|𝜅 𝑠 (𝑡 𝑠 )| ≤ 𝜅 ub , ∀𝑡 𝑠 ∈ T 𝑠 , (53e) where 𝐽 (C) is the sacrificial objective function (Equation (50) ). The kinematic feasibility constraints are defined in 21 Equation (40). Taken together, the hazard model, information-driven objective, and constrained optimization framework recast sacrificial trajectories as an active sensing strategy that systematically contracts launch-region uncertainty. 
+
+# V. Results 
+
+A. Simulation Procedure and Engagement-Doctrine Sensitivity 
+
+This section describes the simulation framework used to generate interception events for evaluating the proposed geometric inference and construction pipeline. The primary objective of these experiments is to validate the geometric methodology under the same maximum-capability assumptions used to derive the EZ and associated reachability constraints. To preserve consistency with this abstraction, the pursuer is modeled as capable of achieving its theoretical reachability limits rather than following a specific guidance law such as proportional navigation. Incorporating a particular guidance strategy would introduce additional parameters—including navigation gains, maneuver limits, update rates, autopilot dynamics, and sensing delays—that are extrinsic to the EZ formulation and would obscure interpretation of the geometric results. The simulation is therefore intended solely as a controlled mechanism for generating interception observations, enabling the geometric inference pipeline to be evaluated in isolation from guidance-law artifacts. 
+
+B. Event-Based Interception Procedure 
+
+The pursuer trajectory is not explicitly modeled. Instead, interception is determined through a geometric reachability condition consistent with a maximum-capability pursuer. The pursuer is parameterized by a launch location 𝒙 𝑃 , speed 
+
+𝑣 𝑃 , maximum travel distance 𝑅 , and capture radius 𝑟 , while the evader follows a prescribed trajectory 𝒑 𝐸 (𝑡 ). To represent the distance expended by the pursuer prior to interception, a latent commitment distance 𝐷 ∈ [ 𝑅 min , 𝑅 ] is introduced. This parameter encodes a family of pursuer strategies: rather than engaging any evader within its RR, the pursuer may defer interception until the evader approaches a region of higher strategic value, such as a defended asset. For each trial, 𝐷 is drawn from a scaled Beta distribution, 
+
+𝑈 ∼ Beta (𝛼, 𝛽 ), 𝐷 = 𝑅 min + ( 𝑅 − 𝑅 min )𝑈, (54) modeling a continuum of pursuer commitment behaviors. Larger values of 𝛼 concentrate probability near 𝑅 ,corresponding to late or near–maximum-range commitments, whereas larger values of 𝛽 favor shorter commitments. Given a sampled commitment distance, interception is declared at the first time the evader enters the capture region 22 induced by the pursuer’s RR, 
+
+𝑡 int := inf 
+
+
+
+𝑡 ≥ 𝐷 𝑣 𝑃 
+
+: ∥𝑥 𝐸 (𝑡 ) − 𝑥 𝑃 ∥ ≤ 𝐷 + 𝑟 
+
+
+
+. (55) If such a time exists, the interception location is recorded as 
+
+𝑥 int = 𝑥 𝐸 (𝑡 int ), (56) otherwise the trial is labeled a non-interception. Three commitment doctrines are considered, shown in Fig. 6: aggressive Beta (8, 2) (green), nominal Beta (2, 2)
+
+(orange), and passive Beta (2, 8) (blue). Together, these distributions span early-, mid-, and late-commitment behaviors, capturing a range of plausible pursuer strategies without explicitly modeling pursuer trajectories. 0.0 0.2 0.4 0.6 0.8 1.0 
+
+# Scaled commitment distance D=R 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+> PDF of  D=R
+> Rmin =R
+
+Passive (2,8) Nominal (2,2) Aggressive (8,2) 
+
+Fig. 6 Representative commitment-distance distributions used to model variability in pursuer engagement doctrine. 
+
+Because this formulation depends only on geometric reachability rather than a specific pursuer path, the resulting observations remain fully consistent with the capability-based inference framework developed in Section III. We next evaluate the geometric inference pipeline under this simulation procedure. 
+
+C. Sequential Launch Region Refinement and Safe Replanning 
+
+Figure 7 illustrates the sequential flow of the simulation. A pursuer is assumed to originate from a known rectangular region Prect . Using this feasible launch region, an initial safe trajectory is generated with the path planner described in Section IV.A. Because the launch region is large, the resulting trajectory is conservative and relatively long, as it must avoid all EZs induced by the feasible pursuer launch region. 23 Initial plan Plan after interception 1  
+
+> Plan after interception 2 Plan after interception 3
+> Sacrificial Path
+> Safe Path
+> ∂P
+> ∂R
+> True Pursuer Position
+> True Reachable Region
+> New Interception
+> Past Interceptions
+
+Fig. 7 Sample run showing three sacrificial trajectories (blue) and four safe trajectories (green) planned with progressively increasing interception information. The feasible launch region is shown in red, RRs in magenta, and the pursuer’s true origin is marked. 
+
+The corresponding RR is shown in magenta throughout the figure. The safe trajectory may enter the RR because the safety constraint is imposed on the EZ, which is a shifted version of the RR. This initial safe path is shown in green. To reduce path length and improve operational awareness, sacrificial agents are deployed sequentially to actively refine the feasible launch region. The first sacrificial trajectory is generated using the Case 0 coverage objective described in Equation (47) , producing a path that provides broad coverage of the feasible launch region. After deployment, the interception location is determined using the method described in Section V.B. Interception events are marked with red X’s. Each interception constrains the feasible launch region, shown in red in the subsequent panels. With a single interception, the constrained region becomes circular, inducing a corresponding RR shown in magenta. Using this 24 updated operational information, a new safe trajectory is planned. This trajectory is significantly shorter than the initial path due to the reduced uncertainty in the pursuer’s location. Additional sacrificial agents can be deployed to further refine the launch region. When prior interceptions exist, sacrificial trajectories are generated using the Case 1 area-reduction objective in Equation (49) . This objective produces inward spiraling trajectories designed to place interceptions in locations that maximally contract the feasible launch region. The progressive contraction resulting from up to three interception events is shown in the figure. The final panel presents the safe trajectory generated after all three interceptions. As the feasible launch region contracts, the safe path becomes increasingly direct, approaching the trajectory that would be obtained with perfect knowledge of the pursuer’s location. The following section provides Monte Carlo results that quantitatively demonstrate this behavior across randomized trials. 
+
+D. Statistical Evaluation via Monte Carlo Simulation 
+
+Results are evaluated using 1000 Monte Carlo (MC) simulations in which the pursuer launch position is drawn uniformly from the initial rectangular feasible launch region Prect . Three pursuer commitment doctrines are considered, as described in Section V.B: a passive strategy Beta (2, 8), a nominal strategy Beta (2, 2), and an aggressive strategy 
+
+Beta (8, 2).For each doctrine, four evader sensing and planning configurations are evaluated, distinguished in the figures by color and line style: 1) Sacrificial agents follow naive straight-line trajectories without measuring the pursuer launch time (solid blue). 2) Sacrificial agents follow straight-line trajectories while measuring launch time (dashed blue). 3) Sacrificial agents follow optimized spline trajectories without measuring launch time (solid green). 4) Sacrificial agents follow optimized spline trajectories while measuring launch time (dashed green). Naive straight-line trajectories are generated by directing each agent toward the centroid of the current feasible launch region. If a trajectory does not result in interception, the subsequent trajectory is directed toward the boundary of the feasible region to improve geometric informativeness. Optimized spline trajectories are generated using the objectives and methods described in Section IV.B. 25 0 1 2 3 4 5 
+
+> 0
+> 5
+> 10
+> 15
+
+## Passive pursuer           
+
+> 012345
+> 0.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> 012345
+> 0
+> 5
+> 10
+> 15
+> Mean Feasible Launch Region Area
+
+## Nominal pursuer           
+
+> 012345
+> 0.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> Probability of at Least One Interception
+> 012345
+
+Number of Sacrificial Agents  
+
+> 0
+> 5
+> 10
+> 15
+
+## Aggressive pursuer      
+
+> 012345
+
+Number of Sacrificial Agents 
+
+> 0.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> Straight — no launch time
+> Straight — launch time
+> Spline — no launch time
+> Spline — launch time
+
+Fig. 8 Mean launch region area and interception probability versus number of sacrificial agents for straight and optimized spline trajectories for passive Beta (2, 8) (top), nominal Beta (2, 2) (middle), and aggressive Beta (8, 2)
+
+(bottom) commitments. 
+
+Each Monte Carlo trial implements the same sequential sacrificial dispatch and safe replanning procedure illustrated in Section V.C. We first quantify how the feasible pursuer launch region contracts as sacrificial agents are sequentially deployed. Figure 8 reports the mean planar area of the feasible launch region across 𝑁 = 1000 Monte Carlo trials for each sensing and planning configuration and for each pursuer commitment doctrine. Across all doctrines, the optimized spline trajectories (green) reduce the feasible launch region substantially faster 26 than the naive straight-line trajectories (blue). This behavior is most pronounced for the aggressive pursuer, where early interceptions rapidly eliminate infeasible launch locations and produce near-complete region contraction within the first few dispatches. For the aggressive pursuer without launch-time measurement, the mean feasible launch-region area contracts from 16 .0 initially to 4.52 after one sacrificial deployment, 0.475 after two, and 0.120 after three, corresponding to a 99 .25% reduction by the third deployment. The right column reports the probability that at least one sacrificial agent has been intercepted by a given dispatch. For the spline-based planner, this probability approaches unity after the first deployment across all doctrines, explaining the accelerated contraction observed in the left column. In contrast, straight-line trajectories often require multiple dispatches before an interception occurs, delaying information acquisition. The dashed and dotted curves distinguish whether the pursuer’s launch time is measured in addition to the interception location. For the aggressive pursuer, measuring launch time provides minimal additional benefit. Because the pursuer travels close to its maximum range to intercept, both the fixed-radius disks ( 𝑅 + 𝑟 ) and the time-dependent RRs are similar in size, resulting in comparable feasible-region constraints. However, this effect diminishes for the nominal and passive doctrines. When launch time is not measured, each interception induces a disk of radius 𝑅 + 𝑟 whose centers are often closely spaced, yielding a large intersection region and slower contraction. Measuring launch time instead produces tighter, path-dependent constraints that more effectively localize the pursuer. This difference is most evident for the passive doctrine, where launch-time sensing leads to significantly faster area reduction. These results highlight an important operational implication: a pursuer that intercepts near its maximum range is inherently easier to localize, whereas intercept strategies that conserve range can help obscure the launch location when launch time is not observable. 0 1 2 3 4 5
+
+Number of Sacrificial Agents 
+
+> 1.00
+> 1.05
+> 1.10
+> 1.15
+> Mean Normalized
+> Safe Path Time
+
+Passive pursuer      
+
+> 012345
+
+Number of Sacrificial Agents 
+
+Nominal pursuer      
+
+> 012345
+
+Number of Sacrificial Agents 
+
+Aggressive pursuer 
+
+> Straight — no launch time
+> Straight — launch time
+> Spline — no launch time
+> Spline — launch time
+
+Fig. 9 Mean safe path time versus number of sacrificial agents for straight and optimized spline trajectories for passive Beta (2, 8) (left), nominal Beta (2, 2) (middle), and aggressive Beta (8, 2) (right) commitments. 
+
+We next evaluate how sequential launch-region refinement translates into operational efficiency by examining the 27 length of the resulting safe trajectories. To quantify this effect, we report the normalized path length , defined as the ratio between the safe-path length (equivalently, travel time under constant velocity) computed using the feasible launch region P after each sacrificial agent and the true optimal safe-path time obtained under perfect knowledge of the pursuer parameters (avoiding the BEZ generated from the pursuer’s actual position). A normalized value of 1 indicates that the sacrificial agents have localized the pursuer sufficiently for the planner to recover the optimal safe trajectory. Figure 9 shows the mean normalized safe-path length over the 𝑁 = 1000 Monte Carlo trials for each sensing and planning configuration and for each pursuer commitment doctrine. Across all doctrines, safe-path length decreases as additional sacrificial agents are deployed. This trend reflects the progressive contraction of the feasible launch region, which permits less conservative routing and enables trajectories that increasingly approach the true optimal safe path obtained under perfect information. The horizontal gray line in Fig. 9 marks a normalized value of 1, indicating recovery of the true optimal trajectory. Consistent with the area-reduction results, spline-generated sacrificial trajectories produce faster decreases in path length than naive straight-line strategies. Early interceptions rapidly eliminate infeasible launch locations, allowing the planner to relax avoidance constraints and generate shorter paths after only a small number of dispatches. For example, for the aggressive pursuer without launch-time measurement, the mean normalized safe-path time ratio decreases from 1.1495 initially to 1.0225 after one sacrificial deployment, 1.0061 after two, and 1.0029 after three, bringing performance to within 0.29% of the perfect-information optimum by the third deployment. The benefit of launch-time sensing again depends on the pursuer commitment doctrine. For the aggressive pursuer, measuring launch time yields only modest improvements because interceptions typically occur near the pursuer’s maximum range, making the induced constraints similar with or without timing information. In contrast, the passive doctrine shows a larger separation between sensing configurations, as tighter launch-region constraints enable substantially shorter safe trajectories. Notably, the marginal reduction in path length diminishes after several interceptions, indicating that the planned safe trajectories converge toward the true optimal path. This behavior suggests that only a small number of well-placed sacrificial deployments are required to recover most of the achievable operational benefit. 
+
+# VI. Conclusion 
+
+This paper demonstrates how a relatively small number of sacrificial agents can substantially increase operational awareness and improve safety in the presence of an unknown pursuer operating within a region of interest. We first established a geometric framework that maps bounded uncertainty in the pursuer launch location into bounded RRs and corresponding EZs. This set-based construction is particularly well matched to interception-driven inference: interception events naturally induce bounded constraints on the unknown launch location, and these constraints propagate forward through reachability to yield EZs with an explicit worst-case safety interpretation. 28 We then presented a method for constraining the feasible pursuer launch region directly from interception observations, including an extension that leverages launch-time measurements to tighten the induced constraints. The resulting feasible region defines a conservative RR and EZ that can be enforced as a hard constraint for safe trajectory generation. In addition, we derived a probabilistic engagement-zone construction that replaces binary avoidance with a risk threshold, enabling a principled tradeoff between conservatism and path length when some probability of engagement can be tolerated. To actively accelerate localization, we also introduced an information-driven planner for sacrificial trajectories. When no prior interceptions are available, the problem reduces to a coverage objective that maximizes the likelihood of obtaining an initial interception. Once interception data exist, sacrificial paths are selected to induce interceptions at locations that maximally contract the feasible launch region, thereby producing rapid reductions in uncertainty. Monte Carlo experiments validate the end-to-end pipeline. The proposed sacrificial planner, coupled with bounded geometric engagement constraints, achieves large improvements in launch-region contraction and safe-path optimality with only a few sacrificial deployments, across a range of pursuer commitment doctrines. Several extensions are natural directions for future work. First, parallel and cooperative dispatch of multiple sacrificial agents could replace the sequential strategy considered here, enabling faster information acquisition under time constraints. Second, more realistic engagement models could be incorporated, including three-dimensional geometry, additional sensing limitations, and alternative pursuer guidance laws. Third, the framework can be generalized to account for uncertain or unknown pursuer capabilities (e.g., speed, range, and capture radius) and to integrate these uncertainties into the inference and planning objectives. Finally, a key operational challenge is handling multiple unknown pursuers (or multiple candidate launch locations) within the region of interest; determining when all launch locations have been discovered and reasoning about overlap or ambiguity between multiple feasible sets remains a nontrivial and practically important extension. 
+
+# Acknowledgments 
+
+This work was supported by the NSF IUCRC Phase I: Center for Autonomous Air Mobility and Sensing (CAAMS) under Award No. 2139551. Portions of this manuscript were refined and edited using OpenAI’s ChatGPT model (GPT-5). The tool was employed for language polishing, LaTeX and Python code assistance, and to help organize and clarify research ideas. All technical content, algorithms, and conclusions were developed, verified, and approved by the authors. 
+
+# References   
+
+> [1] Chapman, T., Von Moll, A., and Weintraub, I. E., “Safe Navigation in the Presence of Range-Limited Pursuers,” IEEE Control Systems Letters , Vol. 9, 2025, pp. 2849–2854. https://doi.org/10.1109/LCSYS.2025.3645221.
+
+29 [2] Von Moll, A., and Weintraub, I., “Basic Engagement Zones,” Journal of Aerospace Information Systems , Vol. 21, No. 10, 2024, pp. 885–891. https://doi.org/10.2514/1.I011394. [3] Stagg, G., and Peterson, C. K., “Probabilistic Weapon Engagement Zones,” 2025 American Control Conference (ACC) , 2025, pp. 2888–2894. https://doi.org/10.23919/ACC63710.2025.11107966. [4] Abraham, I., Mavrommati, A., and Murphey, T. D., “Data-driven measurement models for active localization in sparse environments,” arXiv preprint arXiv:1806.00112 , 2018. [5] Hoffmann, F., Schily, H., Krestel, M., Charlish, A., Ritchie, M., and Griffiths, H., “Non-myopic sensor path planning for emitter localization with a UAV,” 2023 26th International Conference on Information Fusion (FUSION) , IEEE, 2023, pp. 1–8. [6] Lew, T., Sharma, A., Harrison, J., Bylard, A., and Pavone, M., “Safe active dynamics learning and control: A sequential exploration–exploitation framework,” IEEE Transactions on Robotics , Vol. 38, No. 5, 2022, pp. 2888–2907. [7] Chapman, T., Weintraub, I. E., Von Moll, A., and Garcia, E., “Engagement Zones for a Turn Constrained Pursuer,” 2025 International Conference on Unmanned Aircraft Systems (ICUAS) , 2025, pp. 763–768. https://doi.org/10.1109/ICUAS65942. 2025.11007894. [8] Stagg, G., Peterson, C. K., and Weintraub, I., “Probabilistic Weapon Engagement Zones for a Turn Constrained Pursuer,” AIAA SCITECH 2026 Forum , 2026, p. 2195. [9] Isaacs, R., Differential Games: A Mathematical Theory with Applications to Warfare and Pursuit, Control and Optimization ,Wiley, New York, 1965. [10] Weintraub, I. E., Pachter, M., and Garcia, E., “An Introduction to Pursuit-evasion Differential Games,” 2020 American Control Conference (ACC) , 2020, pp. 1049–1066. https://doi.org/10.23919/ACC45564.2020.9147205. [11] Weintraub, I. E., Von Moll, A., Carrizales, C. A., Hanlon, N., and Fuchs, Z. E., “An Optimal Engagement Zone Avoidance Scenario in 2-D,” AIAA SCITECH 2022 Forum , 2022, p. 1587. https://doi.org/10.2514/6.2022-1587. [12] Dillon, P. M., Zollars, M. D., Weintraub, I. E., and Von Moll, A., “Optimal Trajectories for Aircraft Avoidance of Multiple Weapon Engagement Zones,” Journal of Aerospace Information Systems , Vol. 20, No. 8, 2023, pp. 520–525. https://doi.org/10.2514/1.I011224. [13] Milutinović, D., Von Moll, A., Weintraub, I. E., and Casbeer, D., “Stochastic Optimal Avoidance of Multiple Engagement Zones,” Journal of Aerospace Information Systems , Vol. 22, No. 6, 2025, pp. 425–432. [14] Wolek, A., Weintraub, I. E., Von Moll, A., Casbeer, D., and Manyam, S. G., “Sampling-Based Risk-Aware Path Planning Around Dynamic Engagement Zones,” IFAC-PapersOnLine , Vol. 58, No. 28, 2024, pp. 594–599. https://doi.org/10.1016/j. ifacol.2025.01.030. 
+
+30 [15] Von Moll, A., Milutinović, D., Weintraub, I., and Casbeer, D. W., “One-vs-one Threat-Aware Weaponeering with Basic Engagement Zones,” 2025 International Conference on Unmanned Aircraft Systems (ICUAS) , 2025, pp. 1138–1145. https://doi.org/10.1109/ICUAS65942.2025.11007913. [16] Thomas, F., and Ros, L., “Revisiting trilateration for robot localization,” IEEE Transactions on Robotics , Vol. 21, No. 1, 2005, pp. 93–101. https://doi.org/10.1109/TRO.2004.833793. [17] Terwilliger, M., Coullard, C., and Gupta, A., “Localization in ad hoc and sensor wireless networks with bounded errors,” 
+
+International Conference on High-Performance Computing , Springer, 2008, pp. 295–308. [18] Mourad, F., Snoussi, H., Kieffer, M., and Richard, C., “Robust interval-based localization algorithms for mobile sensor networks,” International Journal of Distributed Sensor Networks , Vol. 8, No. 1, 2011, p. 303895. [19] Shi, X., Mao, G., Anderson, B. D. O., Yang, Z., and Chen, J., “Robust Localization Using Range Measurements With Unknown and Bounded Errors,” IEEE Transactions on Wireless Communications , Vol. 16, No. 6, 2017, pp. 4065–4078. https://doi.org/10.1109/TWC.2017.2691699. [20] Lee, S., Kim, E., Kim, C., and Kim, K., “Localization with a mobile beacon based on geometric constraints in wireless sensor networks,” IEEE Transactions on Wireless Communications , Vol. 8, No. 12, 2009, pp. 5801–5805. https://doi.org/10.1109/ TWC.2009.12.090319. [21] Huang, S., Wu, Z., and Misra, A., “A practical, robust and fast method for location localization in range-based systems,” Sensors ,Vol. 17, No. 12, 2017, p. 2869. https://doi.org/10.3390/s17122869. [22] Singh, M., Bhoi, S. K., and Khilar, P. M., “Geometric Constraint-Based Range-Free Localization Scheme for Wireless Sensor Networks,” IEEE Sensors Journal , Vol. 17, No. 16, 2017, pp. 5350–5366. https://doi.org/10.1109/JSEN.2017.2725343. [23] Sorbelli, F. B., Pinotti, C. M., Silvestri, S., and Das, S. K., “Measurement Errors in Range-Based Localization Algorithms for UAVs: Analysis and Experimentation,” IEEE Transactions on Mobile Computing , Vol. 21, No. 4, 2022, pp. 1291–1304. https://doi.org/10.1109/TMC.2020.3020584. [24] Jekateryńczuk, G., and Piotrowski, Z., “A survey of sound source localization and detection methods and their applications,” 
+
+Sensors , Vol. 24, No. 1, 2023, p. 68. [25] Cesare, K., Skeele, R., Yoo, S.-H., Zhang, Y., and Hollinger, G., “Multi-UAV exploration with limited communication and battery,” 2015 IEEE International Conference on Robotics and Automation (ICRA) , 2015, pp. 2230–2235. https: //doi.org/10.1109/ICRA.2015.7139494. [26] Duggan, C. A., Wolfe, K. C., Woosley, B., Kobilarov, M., and Moore, J., “Uncertainty-Aware Planning for Heterogeneous Robot Teams using Dynamic Topological Graphs and Mixed-Integer Programming,” 2025 IEEE 21st International Conference on Automation Science and Engineering (CASE) , 2025, pp. 1646–1653. https://doi.org/10.1109/CASE58245.2025.11164089. 
+
+31 [27] Stagg, G., and Peterson, C. K., “Cooperative Multi-Agent Path Planning for Heterogeneous UAVs in Contested Environments,” 
+
+arXiv preprint arXiv:2509.02483 , 2025. URL https://arxiv.org/abs/2509.02483. [28] Cox, M. G., “The numerical evaluation of B-splines,” IMA Journal of Applied mathematics , Vol. 10, No. 2, 1972, pp. 134–149. [29] Wächter, A., and Biegler, L. T., “On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear programming,” Mathematical programming , Vol. 106, No. 1, 2006, pp. 25–57. [30] Bradbury, J., Frostig, R., Hawkins, P., Johnson, M. J., Leary, C., Maclaurin, D., Necula, G., Paszke, A., VanderPlas, J., Wanderman-Milne, S., and Zhang, Q., “JAX: composable transformations of Python+NumPy programs,” , 2018. URL http://github.com/google/jax. 
+
+32
