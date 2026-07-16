@@ -1,0 +1,297 @@
+Title: Last-Meter Precision Navigation for UAVs: A Diffusion-Refined Aerial Visual Servoing Approach
+
+URL Source: https://arxiv.org/pdf/2607.04352v1
+
+Published Time: Tue, 07 Jul 2026 02:15:18 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+# LAST -M ETER PRECISION NAVIGATION FOR UAV S: A DIFFUSION -R EFINED 
+
+# AERIAL VISUAL SERVOING APPROACH 
+
+Yaxuan Li *
+
+FST and ICI, University of Macau Macau SAR, China 
+
+yaxuanli.cn@gmail.com 
+
+Jiarui Zeng *
+
+FST and ICI, University of Macau Macau SAR, China 
+
+zeng.jiarui@connect.um.edu.mo 
+
+Shaofei Huang 
+
+FST and ICI, University of Macau Macau SAR, China 
+
+nowherespyfly@gmail.com 
+
+Zhedong Zheng ‡
+
+FST and ICI, University of Macau Macau SAR, China 
+
+zhedongzheng@um.edu.mo 
+
+# ABSTRACT 
+
+In this work, we study the last-meter precision navigation for UAVs, e.g., au-tonomously reaching a target within the final 10 meters using monocular vision. This task is challenging due to scale ambiguity, rotation discontinuities, and the need for fine-grained spatial reasoning. Existing methods often fail under large viewpoint changes or lack generalization to unseen environments. To this end, we propose DreamNav , a coarse-to-fine diffusion-refined aerial visual servoing framework. In the first coarse-estimation stage, a robust regression policy em-ploys a trigonometric parameterization to predict rotation by jointly modeling sine and cosine components, effectively mitigating optimization instabilities caused by angular periodicity. Given this coarse estimate, the second diffusion-refined stage utilizes a pre-trained world model to simulate future visual observations for can-didate actions, selecting the trajectory that minimizes visual discrepancy with the target through a process of visual imagination. To support rigorous evaluation, we contribute PairUAV , a large-scale benchmark comprising 4.8 million image pairs across 72 scenes, curated from the University-1652 dataset. Extensive ex-periments show DreamNav outperforms strong visual servoing and foundation model baselines in accuracy and generalization, with zero-shot transfer to unseen scenes. 1
+
+# 1 INTRODUCTION 
+
+The “last-meter” precision navigation scenario is critical for a wide range of real-world applica-tions, including disaster search and rescue patki et al. (2022); Rashid et al. (2020), swarm organi-zation Kramari´ c et al. (2025); Bu et al. (2024) and autonomous delivery Hwang & Choe (2019); Brunner et al. (2019). Despite the maturity of global navigation satellite systems (GNSS), their ac-curacy is typically limited to several meters and lacks the ability to resolve fine vertical distinctions or discriminate between closely spaced structures (e.g., windows or balconies) 2. As a result, the primary challenge in aerial navigation has shifted from coarse global localization to fine-grained local positioning and precise terminal pose alignment (see Figure 1). Despite recent advances in aerial navigation Zhu et al. (2017); Deitke et al. (2020), two critical challenges remain unresolved in achieving robust last-meter navigation for UAVs. (1) There is a 
+
+> *
+
+Equal contribution. 
+
+> ‡
+
+Corresponding author. 
+
+> 1
+
+Code is available at: https://github.com/YaxuanLi-cn/PairUAV.git .Dataset is available at: https://huggingface.co/datasets/YaxuanLi/pairUAV/tree/main .
+
+> 2
+
+See official GPS performance standardsgps (2020). 
+
+1
+
+> arXiv:2607.04352v1 [cs.CV] 5 Jul 2026
+
+Figure 1: Last-Meter Precision Navigation. 
+
+(Left ) Many drone applications, such as package delivery, ne-cessitate high-precision localization during the final approach, a phase where GNSS signals are often unreliable or unavailable, particularly for resolving vertical position. (Right ) To overcome this challenge, we frame the task as a visual servoing problem, where the drone esti-mates the relative pose between its current view and a target image to guide its trajectory to the final destination based on visual refinement. lack of large-scale datasets tailored to close-range aerial navigation, particularly those capturing fine-grained spatial variations at different distances and viewpoints. Existing benchmarks often focus on long-range localization or indoor flight, failing to model the visual dynamics encountered during terminal descent and alignment. (2) Accurately estimating subtle differences in relative pose remains highly challenging, especially under scale ambiguity (e.g., meter-level displacements) and rotational discontinuities (e.g., small angular deviations). This challenge is further exacerbated by varying lighting and viewpoint conditions, which demand robust, fine-grained spatial reasoning. This, in turn, requires models to extract discriminative visual features and perform precise metric regression. Current approaches Deuser et al. (2023) struggle under large viewpoint changes and exhibit poor generalization to unseen environments (see Section 3), primarily due to their reliance on direct regression without explicit modeling of visual dynamics. (1) For the first challenge, we introduce PairUAV, the first large-scale open-world benchmark for image-driven UAV navigation. PairUAV spans 72 geographic locations and 1,652 building-centric targets, comprising over 4.8 million navigation instances that capture the semantic diversity and visual complexity of real environments. In each trial, the UAV is initialized several hundred meters away from the target, obtains egocentric RGB observations from a downward-facing sensor, and the dataset provides ground-truth rotation and displacement labels to reach the goal. (2) For the second challenge, we argue that visual servoing offers a promising solution by enabling dynamic, feedback-driven refinement of positional accuracy. While visual servoing has been ex-tensively studied in controlled environments, such as industrial automation and factory assembly systems Zhu et al. (2017), and in robotic manipulation Bar et al. (2025); Ren et al. (2025), its application to unmanned aerial vehicles (UAVs) in complex outdoor environments remains signifi-cantly underexplored. In particular, we propose DreamNav, a coarse-to-fine, diffusion-refined visual servoing framework. In Stage I, instead of regressing the rotation angle directly, we introduce a trigonometric loss that jointly constrains cosine and sine components to accurately regress the rota-tion angle, thereby avoiding angle-wrapping issues. Building on this loss, a ViT-based backbone is fine-tuned to predict a rotation angle and the corresponding forward distance. In Stage II, we lever-age a large-scale world model to imagine the visual outcome of each candidate action and select the one whose predicted view best matches the target image. Unlike direct prediction, which easily overfits to narrow, brittle cues (e.g., the edge of a square building) that may vanish or be misdetected in new scenes, imagination enforces image-wide consistency, requiring the policy to account for scene geometry, semantics, and viewpoint changes across the entire frame. This holistic constraint 2penalizes single-cue reliance, provides a built-in test-time self-verification signal, and thus improves robustness under distribution shift, yielding stronger generalization to unseen scenes. To enable systematic evaluation, we establish a standardized protocol on our proposed PairUAV benchmark. We assess all methods on unseen testsets, featuring novel environments to evaluate out-of-distribution generalization. Performance is quantified using three aggregate metrics averaged over all episodes: mean angular error, mean distance error, and success rate. We benchmark our method, DreamNav, against strong baselines from two distinct families: vision servoing models (AI2THOR), vision foundation models (Dinov3-ViT7B, Sample4Geo). In brief, our primary contributions are summarized as follows: • A Large-Scale Benchmark for Last-Meter Navigation. We identify the lack of standardized evaluation for fine-grained, close-range UAV navigation, particularly in the critical final 10 me-ters. To fill this gap, we introduce PairUAV , a comprehensive benchmark featuring 4,817,232 image pairs across 72 diverse scenes, curated from real-world environments. It enables rigor-ous evaluation of visual servoing methods under scale ambiguity, viewpoint variation, and fine spatial reasoning. • A Coarse-to-Fine Diffusion-Refined Framework. We propose DreamNav , a novel visual servoing framework that combines robust coarse estimation with diffusion-based refinement. In the first stage, a trigonometrically parameterized policy ensures stable rotation prediction. In the second stage, DreamNav leverages a pre-trained world model and a diffusion-inspired imagination process to simulate future observations and select optimal actions, effectively re-fining pose estimates through visual prediction. • Superior Accuracy and Generalization in Realistic Settings. Extensive experiments show that DreamNav achieves state-of-the-art performance on the PairUAV benchmark, with mean absolute error of 38.78 in heading prediction and 29.16 in range prediction. It significantly outperforms both classical visual servoing baselines and powerful foundation models, showing strong zero-shot generalization to real scenes and robustness to large viewpoint changes. 
+
+# 2 RELATED WORK 
+
+Drone Navigation. Drone navigation has received increasing attention in recent years, propelled by the proliferation of Unmanned Aerial Vehicles (UAVs) as a powerful tool for gathering rich and diverse multimedia content. Their unique vantage point enables applications in aerial photogra-phy Zhao & Zhu (2023); Shao et al. (2022), cinematography Pitas & Mademlis (2022); Dang et al. (2022), and geo-localization Liu & Li (2019); Shi et al. (2019; 2020b;a); Shi & Li (2022); Shi et al. (2022a;b; 2023); Song et al. (2023), among others. Early navigation methods often assume reli-able GNSS and strong localization, which is extremely challenging in signal-denied settings. To address this, recent work guides UAVs to their targets by leveraging richer onboard inputs, a di-rection further empowered by advancements in computer vision and machine learning Wang et al. (2024a;b); Zheng & Yang (2022). For example, some approaches cast movement commands into semantic, instruction-following formulations Xiao et al. (2025); Chu et al. (2024), while others spec-ify the destination via detailed goal descriptors Liu et al. (2023a). In this work, we guide a UAV for last-meter precision navigation using a single target-view image in lieu of GNSS. Unlike richer mul-timodal or map-based inputs, this single-image cue is lightweight and easy to acquire yet provides less explicit information, making the problem more challenging and practically relevant. 
+
+Vision Servoing Models. Visual servoing uses visual feedback in a closed loop to command robot motion. Two canonical formulations are Position-Based Visual Servoing (PBVS) and Image-Based Visual Servoing (IBVS). Recently, deep neural networks have shown strong performance in this area, benefiting from their capability in automated image and video analysis Liu et al. (2023b); Li et al. (2021); Jin et al. (2022); Zheng & Yang (2019); Wang et al. (2023); Ju et al. (2024). For instance, Zhu et al. Zhu et al. (2017) first apply deep neural networks to IBVS, and subsequent work Ren et al. (2025); Bar et al. (2025) expands the data and substantially improved performance. Our approach follows this line by injecting target image cues into a neural network to close the loop, but with two key differences. First, prior studies focus on ground navigation, whereas we address aerial navigation, a domain of growing importance for capturing data from previously inaccessible or hard-to-reach locations Zhang et al. (2019); Cai et al. (2020); Liu et al. (2023b). To the best of our knowledge, this is the first visual-servoing system studied for aerial scenarios. Second, earlier 3Table 1: Comparison with the existing ObjectNav and Aerial Navigation benchmarks.                             
+
+> Benchmark Agent External Inputs #DoF #Instances AI2-THOR Zhu et al. (2017) Robot Target Image -2,176 RoboTHOR Deitke et al. (2020) Robot Object Category 6 actions 731 UAV-ON Xiao et al. (2025) Drone Target Description 411,000 AerialVLN Liu et al. (2023a) Drone Movement Instr. 425k GeoText Chu et al. (2024) Drone Target Description -276k PairUAV (ours) Drone Target Image 24,817,232
+
+approaches treat decisions as classification on a finite action set, while we instead learn a regressor that outputs continuous, parameterized control. 
+
+# 3 PAIR UAV D ATASET 
+
+As discussed in Sec. 1, the last-meter precision navigation task is of substantial practical relevance yet remains underexplored. Given that, we begin by formalizing the problem, specifying the problem setup, input–output spaces, and evaluation metrics. We then present our PairUAV, a large-scale dataset curated for this task, describe its collection and annotation pipeline, and compare it against existing datasets in terms of scene coverage, labeling granularity, and difficulty distribution. 3.1 TASK DEFINITION 
+
+We formulate the problem of image-based terminal aerial navigation in open-world environments. At the start of each episode, a UAV is initialized at a starting viewpoint and tasked with navigating to a target viewpoint defined by visual observations. The UAV is equipped with an onboard monocular RGB camera capturing images at a resolution of 512 × 512 . An episode is considered successful if the UAV reaches the vicinity of the target location within a distance threshold of dsucc = 10 meters, following standard protocols (Xiao et al., 2025). To enhance flight stability and mitigate the perceptual ambiguity associated with monocular depth, we adopt a simplified 2-DoF navigation interface. Formally, we fix the camera pitch at ψ = 45 ◦ and maintain a constant horizontal field of view, eliminating the need for the agent to reason about pitch dynamics or zoom variations. Under these constraints, the relative displacement between viewpoints is fully characterized by (i) a change in heading (yaw), and (ii) a displacement along the camera’s viewing direction. Consequently, we parameterize the navigation action space as two continuous scalars: 
+
+a = [∆ θ, ∆r], (1) where ∆θ denotes the heading adjustment and ∆r represents the change in range to the target. This formulation effectively captures the essential terminal behavior of “turn-to-align and move-to-approach” while abstracting away altitude, pitch, and other complex motion components. 3.2 DATASET CONSTRUCTION 
+
+We build upon the University-1652 dataset Zheng et al. (2020), adopting its established protocol and 3D environments, which span 1,652 buildings across 72 universities. The original protocol samples 54 proximal coordinates for each building, enforcing a minimum vertical offset and a maximum inter-sample radius to simulate UAV operation in GNSS-denied settings (i.e., short lateral baselines with substantial altitude variance). Monocular UAV views are rendered from Google Earth models at each coordinate. Our primary contribution deviates from the original dataset’s cross-view retrieval task. We repurpose these assets for precision navigation. Specifically, for each building, we generate all ordered pairs from the 54 sampled coordinates. For each pair, we compute and store the precise 2-DoF relative pose (range translation and rotation) transforming the first view to the second. This methodology yields a new, large-scale dataset of 4,817,232 ordered navigation instances, providing explicit supervision for relative camera pose estimation. 4Figure 2: Overall architecture of our DreamNav . It consists of two successive stages, i.e., the first Coarse-Estimation Stage and the second Diffusion-Refined Stage. (Top) In the Coarse-Estimation stage, given a source and a target image, we regress a coarse relative pose consisting of the heading angle and range from the source to the target. (Bottom) In the Diffusion-Refined stage, we condition a ControlNet-style latent diffusion model on the source image through the ControlNet hint pathway and on the candidate pose through cross-attention tokens: during training, the ground-truth heading and range together with the source image are used to synthesize the target image via a diffusion loss; during inference, we feed the source image and a set of candidate poses, generate their corresponding views, and select the candidate pose whose synthesized view best matches the target image. 3.3 COMPARISON WITH OTHER DATASETS 
+
+In Table 1, we compare P AIR UAV with established ObjectNav and aerial navigation benchmarks. Compared to AI2-THOR and RoboTHOR, which evaluate ground robots conditioned on category la-bels or category sequences, P AIR UAV targets image-goal aerial navigation. In contrast to category-or text-specified targets (e.g., category labels, movement instructions, or descriptions), P AIR UAV specifies the goal by an RGB image. This design aligns the supervision with the control objective of reaching the target viewpoint. On the action side, P AIR UAV adopts continuous, parameterized controls for translation and yaw. Whereas prior work often adopts discrete action sets or retrieval-only evaluation, our benchmark emphasizes end-to-end control with an explicit stop action. In terms of scale, P AIR UAV spans 72 scenes and 4.8M instances, approximately 22 × GeoText dataset, the largest prior aerial dataset in Table 1. Finally, by centering on a drone agent and UAV-specific sensing geometry, P AIR UAV complements robot-centric ObjectNav datasets and enables evaluation under realistic aerial dynamics. 
+
+# 4 METHOD 
+
+4.1 OVERVIEW 
+
+In this section, we study solutions to the last-meter navigation problem for unmanned aerial vehi-cles. The task demands continuously parameterized control under strict accuracy constraints, mak-ing direct pose regression difficult under large motions and perspective changes and prone to poor generalization in novel scenes. To solve this problem, we introduce DreamNav, a feedback-driven 5image-based controller that targets metric-accurate relative-pose alignment under substantial illu-mination and viewpoint shifts. The overall architecture of DreamNav is shown in Figure 2. Our approach consists of two stages: a coarse-estimation stage and a diffusion-refined stage. In Stage I, we represent yaw with coupled sin–cos outputs to sidestep periodic wrap-around, and fine-tune a Vision-Transformer encoder to propose a coarse heading and range. In Stage II, we generate a set of local candidates centered around the initial coarse prediction. A diffusion-based next-observation generator synthesizes the observation for each candidate, and the candidate pose whose synthesized view best aligns with the target image is selected as the final prediction. 4.2 COARSE -E STIMATION STAGE 
+
+Given a source image S and a target image G captured from the starting and target positions re-spectively, the coarse estimation stage predicts the relative pose from S to G. We represent this navigation command as p = ( ˆd, ∆ˆθ), where ˆd denotes the forward range and ∆ˆθ denotes the yaw rotation angle in the agent-centric frame. The estimation involves three main steps: 
+
+Displacement-Based Geometric Cue Extraction. For image-targeted navigation, prior works commonly concatenate the source image S with the target image G directly and fuse them with convolutional layers. However, due to approximate translation equivariance Liu et al. (2018) of standard convolutions, such concatenation tends to discard absolute position information and thus fails to capture reliable cross-view spatial relations. Therefore, we replace the original target image with the pixel-wise coordinate displacement from G to S.Specifically, we first establish sparse correspondences between S and G using a pretrained keypoint matcher (SuperGlue) (Sarlin et al., 2020), yielding a set of N matches  M = {(uSi , uGi , w i)}Ni=1 ,
+
+where uSi , uGi ∈ R2 denote the pixel locations in S and G, and wi ∈ [0 , 1] is the associated confidence. To reduce the impact of noisy or incorrect matches, we retain matches with confidence above a threshold τ and diffuse their displacements ∆ui = uGi − uSi into local neighborhoods using a Gaussian kernel κσ (r) = exp( − r2 
+
+> 2σ2
+
+) with bandwidth σ, resulting in a dense displacement field through: 
+
+D(p) = 1
+
+α(p)
+
+> N
+
+X
+
+> i=1
+
+wi κσ
+
+ ∥p − uSi ∥2
+
+ ∆ui,α(p) = 
+
+> N
+
+X
+
+> i=1
+
+wi κσ
+
+ ∥p − uSi ∥2
+
+ + ε. 
+
+(2) where α(p) is a local normalization term, ε ensures numerical stability, and p ∈ Ω indexes image pixels. In this way, D(p) shrinks towards zero in poorly matched regions so that appearance cues prevail, whereas the displacement cue dominates in well-matched regions. 
+
+Dual-Cue Representation Fusion. The dense displacement field D is then combined with the source image S to form a dual-cue input, where the source image contributes appearance cues, while the displacement field contributes geometric cues. We first normalize the displacement by image size H × W with an optional scalar λ:
+
+bD = λ
+
+Dx/W Dy /H 
+
+
+
+. (3) Meanwhile, the source image S is normalized to [−1, 1] . Finally, the normalized source image and the normalized displacement map bD are concatenated along the channel dimension to form the final dual-cue representation X ∈ RH×W ×5, which serves as the input to the Vision Transformer. 
+
+Pose Regression Head. We attach a linear prediction head after the Vision Transformer to predict the initial relative pose p = ( ˆd, ∆ˆθ), consisting of a forward range ˆd and a yaw rotation angle ∆ˆθ. To stabilize translation learning, we regress the range in a logarithmic parameterization that compresses its dynamic range while preserving fine resolution at short range. The range loss is thus formulated as: 
+
+Ldist =
+
+ ˆd − sign( d), log  1 + |d|/γ 2
+
+, (4) 6where d is the ground-truth range and γ is a scale factor. Unlike range, however, rotation regression is complicated by the periodicity of angles, where geometrically identical rotations appear far apart under standard numerical regression losses. To resolve this, we instead regress the sine and cosine of the rotation angle, yielding a smooth representation that avoids wrap-around discontinuities and stabilizes optimization. The rotation loss is thus formulated as: 
+
+Lrot = (ˆ s − sin ∆ θ)2 + (ˆ c − cos ∆ θ)2, (5) where ∆θ is the ground-truth angle, while ˆs and ˆc denote the predicted sine and cosine components. At inference, the rotation angle ∆ˆθ is reconstructed from these components. The total loss for the coarse estimation stage is a weighted sum of the range and rotation objectives: 
+
+Ltotal = Ldist + λLrot , (6) where λ is a balancing hyperparameter. 4.3 DIFFUSION -R EFINED STAGE 
+
+While the coarse estimation stage provides a strong initialization, direct regression may still suffer from multi-modal visual ambiguity and local misalignment. To address this issue, we introduce a diffusion-based look-ahead verification stage. Instead of directly trusting the coarse pose predic-tion, we locally perturb the predicted heading-range pair, synthesize the visual consequence of each candidate pose, and select the candidate whose generated view best matches the target observation. 
+
+Heuristic Candidate Generation. Given the coarse prediction pcoarse = ( ˆd, ∆ˆθ) from the first stage, we construct a local search space around it. Specifically, we generate a 3 × 3 grid of candidate poses by applying fixed perturbations to heading and range. The offset sets are defined as 
+
+Ωθ = {− 10 ◦, 0◦, +10 ◦}, Ωd = {− 1.5, 0, +1 .5}.
+
+The candidate pose set is: 
+
+P =
+
+n  ˆd + δd, ∆ˆθ + δθ
+
+ δd ∈ Ωd, δ θ ∈ Ωθ
+
+o
+
+. (7) This local grid allows the second stage to correct small errors in the initial pose estimate while keeping the search space computationally tractable. 
+
+Pose Information Encoding. To condition the diffusion model on each candidate pose, we encode the heading and range into compact pose tokens using a trainable pose encoder. The encoder is designed to preserve the periodic nature of heading angles and to provide a richer representation than raw scalar inputs. For heading, we use sinusoidal features to avoid discontinuities at the angular wrap-around bound-ary: 
+
+ϕθ (ˆθ) =   cos( ωk ˆθ), sin( ωk ˆθ)Kθ
+
+> k=1
+
+. (8) For range, we first normalize the scalar value and then apply sinusoidal expansion: 
+
+ϕd( ˆd) = [ ˆd] ◦
+
+
+
+cos( νk ˆd), sin( νk ˆd)
+
+Kd
+
+> k=1
+
+. (9) The final pose representation is obtained by concatenation: 
+
+PoseRep( p) = [ ϕθ (ˆθ); ϕd( ˆd)] . (10) A trainable MLP maps this representation into pose tokens, which serve as cross-attention conditions for the diffusion model. 
+
+Next Observation Generation. We instantiate the next-observation generator as a ControlNet-style latent diffusion model. The source image S is injected through the ControlNet hint pathway, which implements the spatial control condition. Specifically, S is first processed by the input hint block Hϕ(·) to obtain a spatial hint feature: 
+
+h = Hϕ(S). (11) 7Given the noisy latent zt, timestep t, pose token cp, and hint feature h, the ControlNet branch produces multi-scale control residuals: 
+
+rl = Zl
+
+ Cl(zt, t, cp, h), (12) where Cl(·) denotes the l-th ControlNet block and Zl(·) is a zero-convolution layer, implemented as a zero-initialized 1 × 1 convolution. The residual control feature rl is added to the corresponding UNet feature at resolution level l, while an additional middle-block residual is produced at the bottleneck of ControlNet and added to the UNet middle block during denoising. In parallel, each candidate pose pk is encoded by the trainable pose encoder Ep(·) into cross-attention tokens: 
+
+cp = Ep(pk). (13) The model denoises in the VAE latent space and decodes the resulting latent to obtain the candidate observation bI(pk).To preserve the pretrained generative prior while adapting the model to pose-conditioned UAV view synthesis, we freeze the VAE and most modules of the pretrained diffusion backbone. We fine-tune only a small set of task-specific parameters, including the trainable pose encoder, LoRA adapters in the ControlNet and UNet decoder/output blocks, and the source-image hint pathway of ControlNet. This design allows the source image to guide generation through multi-scale spatial control residuals, while the pose condition guides viewpoint-conditioned synthesis through cross-attention, without requiring full fine-tuning of the diffusion backbone. 
+
+Training. The diffusion model is trained with the standard denoising objective. Given a target image latent z0, a timestep t, and Gaussian noise ϵ, the model receives the noisy latent zt together with the source-image hint feature h and pose token cp. It learns to predict the added noise: 
+
+Ldiff = Ez0,t,ϵ 
+
+h
+
+∥ϵ − ϵθ (zt, t, h, cp)∥22
+
+i
+
+. (14) In addition, we introduce a frozen RGB pose predictor as an auxiliary supervision signal. Let  Frgb 
+
+denote this frozen predictor. Given the generated denoised image  bI, it predicts a heading-range pair: 
+
+(ˆθrgb , ˆdrgb ) = Frgb (bI). (15) We then encourage the predicted pose from  Frgb  to be consistent with the conditioning pose  p =(θ, d ). The RGB pose-consistency loss is defined as: 
+
+Lrgb = λθ Lθ + λdLd + λnLn, (16) where  Lθ penalizes the heading discrepancy,  Ld penalizes the range discrepancy, and  Ln is a small normalization regularizer. The final training objective is: 
+
+L = Ldiff + λrgb Lrgb , (17) where  λrgb  controls the overall weight of the RGB pose-consistency loss. 
+
+Inference. At inference time, we first obtain the coarse pose prediction from the first-stage pose predictor. We then construct the local candidate set P using the fixed heading and range offsets defined in Sec. 4.3. For each candidate pose, the diffusion model synthesizes a corresponding can-didate observation. We compute the pixel-wise MSE between each synthesized view and the target image, and choose the candidate with the lowest MSE as the refined pose: 
+
+p∗ = argmin  
+
+> pk∈P
+
+bI(pk) − G 22
+
+. (18) The selected pose p∗ is used as the final refined prediction. 
+
+# 5 EXPERIMENT 
+
+In this section, we first introduce the dataset and evaluation metrics, and then present the experi-mental results and ablation studies. The implementation details of the DreamNav can be found in Appendix I. 8Table 2: Comparison with ObjectNav and Aerial Navigation methods. DreamNav achieves the best heading accuracy and the highest success rate (SR), demonstrating stronger navigation performance. Although our method does not obtain the lowest range error, heading estimation plays a more crit-ical role in determining navigation success; therefore, the advantage in the more important MAE H
+
+metric translates into a substantially higher final SR. MAE R and MAE H denote the Mean Absolute Error for Range and Heading, respectively. AVG is the average of the two.                               
+
+> Methods MAE R(m) ↓MAE H(deg) ↓AVG ↓SR (%) ↑
+> AI2THOR (Zhu et al., 2017) 44.96 89.99 67.48 14.32 DINOv3-ViT7b (Sim´ eoni et al., 2025) 15.77 89.86 52.81 10.33 Sample4Geo (Deuser et al., 2023) 23.98 90.07 57.03 6.89 Ours (Stage I) 29.52 40.29 34.91 19.81 Ours (Stage II) 29.16 38.78 33.97 23.51
+
+5.1 EXPERIMENTAL SETUP 
+
+Dataset. We evaluate our approach on the proposed PairUAV dataset. Following the partition protocol of University-1652 to ensure benchmarking consistency, we split the dataset into training and testing sets based on scenes. The training set encompasses 33 scenes with 701 buildings. To maximize the utilization of visual information, we perform exhaustive pairing for each building, using all 54 × 54 possible image combinations, which yields a substantial training corpus. The testing set consists of the remaining 39 unseen scenes containing 951 buildings. Similarly, we utilize all 54 images per building to generate navigation pairs, resulting in a large-scale evaluation benchmark of 2.0 million instances to rigorously assess the model’s out-of-domain generalization. 
+
+Metrics. Following previous navigation works (Anderson et al., 2018), we report three standard metrics: success rate (SR), mean absolute angle error ( MAE H ), and mean absolute range error (MAE R). SR measures the fraction of evaluation episodes in which the vehicle, after executing its control sequence, comes to rest within 10 m of the designated goal, which approximately corre-sponds to the accuracy limit of GPS. MAE is the average terminal position error across episodes, reflecting the typical deviation. The terminal position error is defined as the three-dimensional Eu-clidean distance between the UAV’s final position and the target waypoint; higher SR and lower 
+
+MAE H /MAE R indicate better last-meter performance. 5.2 MAIN RESULTS 
+
+Baseline Methods. Given the absence of prior methods specifically tailored for image-goal aerial visual navigation with continuous parameter control, we benchmark against the representative ap-proaches from three adjacent domains to establish a comprehensive evaluation: • Vision-based servoing methods with neural controllers and inputs comparable to ours, including AI2THOR Zhu et al. (2017). • Aerial visual localization methods in similar UAV settings, including Sam-ple4Geo Deuser et al. (2023), which is also built on the University-1652 benchmark Zheng et al. (2020). • Vision foundation models , where we use DINOv3 Sim´ eoni et al. (2025) as a strong off-the-shelf visual representation baseline within the same controller. All methods are benchmarked on the testing set of the PairUAV dataset. For the vision servoing models, we adapt their task setting to single-step action prediction and subsequently fine-tune their pre-trained backbones. For feature representation-based models, we first extract features using their officially released weights, and then add a classification head for training and evaluation. 
+
+Quantitative Results. The comparison results on the PairUAV dataset are reported in Table 2. Overall, DreamNav achieves the best average error and success rate among all compared methods, demonstrating its effectiveness for image-goal aerial navigation. Although representation-based baselines such as DINOv3 and Sample4Geo obtain relatively low range errors, their heading errors remain close to 90 ◦, leading to poor navigation success. In contrast, our Stage-I model substantially 9Figure 3: Qualitative visualization of DreamNav. (a) Illustration of the two-stage inference pro-cess. In Stage I, we generate candidate next views by perturbing the predicted action in range and heading, where the 3×3 grid shows synthesized views under different conditioned offsets. The selected candidate is then refined in Stage II to produce a more accurate matched view, which is compared with the ground truth. ( b) Visual comparison with representative baselines. Given the source and target drone views, we project different methods’ predictions onto the overhead satel-lite view. The red cross denotes the ground-truth target location, and colored arrows indicate the predicted navigation directions. DreamNav produces a trajectory closer to the ground truth, demon-strating more accurate last-meter localization. reduces the heading error to 40 .29 ◦ and improves the success rate to 19 .81% . With the Stage-II refinement, DreamNav further improves the heading error to 38 .78 ◦, reduces the average error to 
+
+33 .97 , and achieves the highest success rate of 23 .51% . Compared with the strongest baseline in terms of average error, DINOv3-ViT7b, DreamNav reduces AVG from 52 .81 to 33 .97 , correspond-ing to a relative reduction of approximately 35 .7% . These results indicate that accurate heading estimation is crucial for reliable last-meter UAV navigation, and that our two-stage design provides more balanced and effective metric control than existing baselines. 
+
+Qualitative Results. Beyond quantitative results, we provide qualitative visualizations on overhead satellite imagery to better analyze model behaviors. For the Stage-II diffusion-based imagination module, we further conduct a qualitative analysis on the PairUAV dataset, as shown in Figure 3,(a). We randomly sample examples from PairUAV and used the coarse prediction from Stage-I as the central anchor to form a 3 × 3 grid of conditioning inputs by applying systematic offsets to the heading and range. It is shown that the synthesized next-views respond smoothly and consistently to these perturbations, where changing heading gradually rotates the rooftop orientation and facade layout, while moving forward/backward produces the expected scale change and parallax of nearby structures. What’s more, occlusion boundaries and relative depth ordering remain coherent across the grid, suggesting that the diffusion-refined stage captures geometry-aware viewpoint transforma-tions rather than simply memorizing local textures. This behavior verifies that Stage-II provides a controllable and physically plausible world model, which is crucial for reliable metric regression and navigation. As illustrated in Figure 3 (b), our method predicts a direction that is well aligned with the true goal, allowing the UAV to reach a location close to the target. In contrast, existing baselines exhibit noticeable heading biases, leading to trajectories that drift toward incorrect orientations and accu-mulate large lateral errors. This qualitative evidence further demonstrates that our trigonometric 10 Table 3: Ablation studies on the test set of PairUAV. The baseline (first row) employs a finetuned ResNet. Trig. Reg., Dual-Cue, and Refine Stage. denote Trigonometric Regression, Dual-Cue Representation Fusion, and the Diffusion-Refined Stage, respectively. Trig. Reg. Dual-Cue Refine Stage MAE R (m) ↓ MAE H (deg) ↓ MAE AV G ↓ SR (%) ↑
+
+31.34 84.36 57.85 6.00 
+
+✓ 31.96 68.30 50.13 7.13 
+
+✓ ✓ 29.52 40.29 34.91 19.81 
+
+✓ ✓ ✓ 29.16 38.78 33.97 23.51 
+
+loss improves angular consistency, resulting in more accurate heading estimation and more reliable range regression. 5.3 ABLATION STUDIES 
+
+As shown in Table 3, we observe that starting from a finetuned ResNet regression model as base-line (first row), introducing trigonometric regression yields the largest improvement, substantially reducing both range and heading errors (e.g., MAE H drops from 84.36 to 68.30). We attribute this enhancement to our constructed smooth representation, which effectively mitigates angle-wrapping issues. Adding dual-cue fusion further improves performance, with a pronounced gain in heading ac-curacy (68.30 →40.29 MAE H ) and nearly doubling the success rate, suggesting that complementary geometric cues extracted from SuperGlue help disambiguate orientation under viewpoint changes. Even though incorporating the diffusion-refined stage brings marginal additional gains by itself, feeding first-stage outputs as conditions to the second-stage diffusion model (Action Enc.) further unlocks the benefit of second stage. The full model (last row) achieves the best MAE AV G /MAE H
+
+and the highest SR among all variants. 
+
+# 6 CONCLUSION 
+
+In this paper, we introduce DreamNav , a coarse-to-fine framework for last-meter precision navi-gation of UAVs. We first propose a robust regression policy with trigonometric parameterization to mitigate optimization instabilities in rotation estimation. Additionally, we introduce a diffusion-refined stage that leverages a world model to hallucinate future observations, selecting the optimal trajectory through visual consistency. To facilitate rigorous evaluation, we present PairUAV , a large-scale benchmark covering diverse aerial scenes. Extensive experiments affirm the superior accuracy and zero-shot generalization of our method against strong baselines. We hope our work contributes to robust aerial visual servoing and inspires future research in autonomous drone agents. 
+
+# REFERENCES 
+
+Global positioning system (gps) standard positioning service (sps) performance standard. Technical report, U.S. Department of Defense, Washington, DC, April 2020. URL https://archive. gps.gov/technical/ps/2020-SPS-performance-standard.pdf . Executive Summary. Peter Anderson, Qi Wu, Damien Teney, Jake Bruce, Mark Johnson, Niko S¨ underhauf, Ian Reid, Stephen Gould, and Anton Van Den Hengel. Vision-and-language navigation: Interpreting visually-grounded navigation instructions in real environments. In Proceedings of the IEEE con-ference on computer vision and pattern recognition , pp. 3674–3683, 2018. Amir Bar, Gaoyue Zhou, Danny Tran, Trevor Darrell, and Yann LeCun. Navigation world models. In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 15791–15801, 2025. Gino Brunner, Bence Szebedy, Simon Tanner, and Roger Wattenhofer. The urban last mile problem: Autonomous drone delivery to your balcony. In 2019 international conference on unmanned aircraft systems (icuas) , pp. 1005–1012. IEEE, 2019. 11 Yajun Bu, Ye Yan, and Yueneng Yang. Advancement challenges in uav swarm formation control: A comprehensive review. Drones , 8(7):320, 2024. YuanQiang Cai, Dawei Du, Libo Zhang, Longyin Wen, Weiqiang Wang, Yanjun Wu, and Siwei Lyu. Guided attention network for object detection and counting on drones. In ACM Multimedia , 2020. Meng Chu, Zhedong Zheng, Wei Ji, Tingyu Wang, and Tat-Seng Chua. Towards natural language-guided drones: Geotext-1652 benchmark with spatial relation matching. In ECCV (11) , 2024. Yuanjie Dang, Chong Huang, Peng Chen, Ronghua Liang, Xin Yang, and Kwang-Ting Cheng. Path-analysis-based reinforcement learning algorithm for imitation filming. TMM , 2022. Matt Deitke, Winson Han, Alvaro Herrasti, Aniruddha Kembhavi, Eric Kolve, Roozbeh Mottaghi, Jordi Salvador, Dustin Schwenk, Eli VanderBilt, Matthew Wallingford, et al. Robothor: An open simulation-to-real embodied ai platform. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 3164–3174, 2020. Fabian Deuser, Konrad Habel, and Norbert Oswald. Sample4geo: Hard negative sampling for cross-view geo-localisation. In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 16847–16856, 2023. Jinsoo Hwang and Ja Young (Jacey) Choe. Exploring perceived risk in building successful drone food delivery services. International Journal of Contemporary Hospitality Management , 31(8): 3249–3269, 07 2019. ISSN 0959-6119. doi: 10.1108/IJCHM-07-2018-0558. URL https: //doi.org/10.1108/IJCHM-07-2018-0558 .Pu Jin, Lichao Mou, Gui-Song Xia, and Xiao Xiang Zhu. Anomaly detection in aerial videos with transformers. TGRS , 2022. Hao Ju, Shaofei Huang, Si Liu, and Zhedong Zheng. Video2bev: Transforming drone videos to bevs for video-based geo-localization. In ICCV , 2024. Luka Kramari´ c, Niko Jeluˇ si´ c, Tomislav Radiˇ si´ c, and Mario Muˇ stra. A comprehensive survey on short-distance localization of uavs. Drones , 9(3):188, 2025. Tianjiao Li, Jun Liu, Wei Zhang, Yun Ni, Wenqian Wang, and Zhiheng Li. Uav-human: A large benchmark for human behavior understanding with unmanned aerial vehicles. In CVPR , 2021. Liu Liu and Hongdong Li. Lending orientation to neural networks for cross-view geo-localization. In CVPR , 2019. Rosanne Liu, Joel Lehman, Piero Molino, Felipe Petroski Such, Eric Frank, Alex Sergeev, and Jason Yosinski. An intriguing failing of convolutional neural networks and the coordconv solution. 
+
+Advances in neural information processing systems , 31, 2018. Shubo Liu, Hongsheng Zhang, Yuankai Qi, Peng Wang, Yanning Zhang, and Qi Wu. Aerialvln: Vision-and-language navigation for uavs. In Proceedings of the IEEE/CVF International Confer-ence on Computer Vision , pp. 15384–15394, 2023a. Zhihao Liu, Yuanyuan Shang, Timing Li, Guanlin Chen, Yu Wang, Qinghua Hu, and Pengfei Zhu. Robust multi-drone multi-target tracking to resolve target occlusion: A benchmark. TMM , 2023b. Vinayak patki, Abolfazl Mehbodniya, Julian L. Webber, Arulmani kuppusamy, Mohd anul haq, Anil kumar, and Sathishkumar Karupusamy. Improving the geo-drone-based route for effective communication and connection stability improvement in the emergency area ad-hoc network. 
+
+Sustainable Energy Technologies and Assessments , 53:102558, 2022. ISSN 2213-1388. doi: https://doi.org/10.1016/j.seta.2022.102558. URL https://www.sciencedirect.com/ science/article/pii/S2213138822006087 .Ioannis Pitas and Ioannis Mademlis. Autonomous uav cinematography. In ACM Multimedia , 2022. Md Tahmid Rashid, Daniel Yue Zhang, and Dong Wang. Socialdrone: An integrated social media and drone sensing system for reliable disaster response. In IEEE INFOCOM 2020 - IEEE Confer-ence on Computer Communications , pp. 218–227, 2020. doi: 10.1109/INFOCOM41043.2020. 9155522. 12 Hao Ren, Yiming Zeng, Zetong Bi, Zhaoliang Wan, Junlong Huang, and Hui Cheng. Prior does matter: Visual navigation via denoising diffusion bridge models. In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 12100–12110, 2025. Paul-Edouard Sarlin, Daniel DeTone, Tomasz Malisiewicz, and Andrew Rabinovich. Superglue: Learning feature matching with graph neural networks. In Proceedings of the IEEE/CVF confer-ence on computer vision and pattern recognition , pp. 4938–4947, 2020. Mingwen Shao, Chao Wang, Wangmeng Zuo, and Deyu Meng. Efficient pyramidal gan for versatile missing data reconstruction in remote sensing images. TGRS , 60:1–14, 2022. Yujiao Shi and Hongdong Li. Beyond cross-view image retrieval: Highly accurate vehicle localiza-tion using satellite image. In CVPR , 2022. Yujiao Shi, Liu Liu, Xin Yu, and Hongdong Li. Spatial-aware feature aggregation for image based cross-view geo-localization. In NeurIPS , 2019. Yujiao Shi, Xin Yu, Dylan Campbell, and Hongdong Li. Where am i looking at? joint location and orientation estimation by cross-view matching. In CVPR , 2020a. Yujiao Shi, Xin Yu, Liu Liu, Tong Zhang, and Hongdong Li. Optimal feature transport for cross-view image geo-localization. In AAAI , 2020b. Yujiao Shi, Xin Yu, Liu Liu, Dylan Campbell, Piotr Koniusz, and Hongdong Li. Accurate 3-dof camera geo-localization via ground-to-satellite image matching. TPAMI , 2022a. Yujiao Shi, Xin Yu, Shan Wang, and Hongdong Li. Cvlnet: Cross-view feature correspondence learning for video-based camera localization. In ACCV , 2022b. Yujiao Shi, Fei Wu, Akhil Perincherry, Ankit Vora, and Hongdong Li. Boosting 3-dof ground-to-satellite camera localization accuracy via geometry-guided cross-view transformer. In ICCV ,2023. Oriane Sim´ eoni, Huy V. Vo, Maximilian Seitzer, Federico Baldassarre, Maxime Oquab, Cijo Jose, Vasil Khalidov, Marc Szafraniec, Seungeun Yi, Micha¨ el Ramamonjisoa, Francisco Massa, Daniel Haziza, Luca Wehrstedt, Jianyuan Wang, Timoth´ ee Darcet, Th´ eo Moutakanni, Leonel Sentana, Claire Roberts, Andrea Vedaldi, Jamie Tolan, John Brandt, Camille Couprie, Julien Mairal, Herv´ eJ´ egou, Patrick Labatut, and Piotr Bojanowski. DINOv3, 2025. URL https://arxiv.org/ abs/2508.10104 .Zhenbo Song, Xianghui Ze, Jianfeng Lu, and Yujiao Shi. Learning dense flow field for highly-accurate cross-view camera localization. In NIPS , 2023. Chao Wang, Zhedong Zheng, Ruijie Quan, Yifan Sun, and Yi Yang. Context-aware pretraining for efficient blind image decomposition. In CVPR , 2023. Tingyu Wang, Zhedong Zheng, Yaoqi Sun, Tat-Seng Chua, Yi Yang, and Chenggang Yan. Multiple-environment self-adaptive network for aerial-view geo-localization. Pattern Recognition , 2024a. Tingyu Wang, Zhedong Zheng, Zunjie Zhu, Yaoqi Sun, Yi Yang, and Chenggang Yan. Learn-ing cross-view geo-localization embeddings via dynamic weighted decorrelation regularization. 
+
+TGRS , 2024b. Jianqiang Xiao, Yuexuan Sun, Yixin Shao, Boxi Gan, Rongqiang Liu, Yanjing Wu, Weili Gua, and Xiang Deng. Uav-on: A benchmark for open-world object goal navigation with aerial agents. 
+
+arXiv preprint arXiv:2508.00288 , 2025. Haotian Zhang, Gaoang Wang, Zhichao Lei, and Jenq-Neng Hwang. Eye in the sky: Drone-based object tracking and 3d localization. In ACM Multimedia , 2019. LiangLiang Zhao and MinLing Zhu. Ms-yolov7: Yolov7 based on multi-scale for object detection on uav aerial photography. Drones , 2023. Zhedong Zheng and Yi Yang. Unsupervised scene adaptation with memory regularization in vivo. 
+
+IJCAI , 2019. 13 Zhedong Zheng and Yi Yang. Adaptive boosting for domain adaptation: Toward robust predictions in scene segmentation. IEEE Transactions on Image Processing , 31:5371–5382, 2022. Zhedong Zheng, Yunchao Wei, and Yi Yang. University-1652: A multi-view multi-source bench-mark for drone-based geo-localization. In ACM Multimedia , 2020. Yuke Zhu, Roozbeh Mottaghi, Eric Kolve, Joseph J. Lim, Abhinav Gupta, Li Fei-Fei, and Ali Farhadi. Target-driven visual navigation in indoor scenes using deep reinforcement learning. In 
+
+2017 IEEE International Conference on Robotics and Automation (ICRA) , pp. 3357–3364, 2017. doi: 10.1109/ICRA.2017.7989381. 14

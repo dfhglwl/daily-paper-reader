@@ -1,0 +1,2671 @@
+Title: Queue-Aware Graph Reinforcement Learning for UAV-ISAC-Assisted Maritime Data Collection
+
+URL Source: https://arxiv.org/pdf/2607.00324v1
+
+Published Time: Thu, 02 Jul 2026 00:21:53 GMT
+
+Number of Pages: 17
+
+Markdown Content:
+1
+
+# Queue-Aware Graph Reinforcement Learning for UAV-ISAC-Assisted Maritime Data Collection 
+
+Bohan Li, Member, IEEE , Min Ye, Haochen Liu, Yongkang Gong, Member, IEEE , Ning Gao, Member, IEEE , Jie Nie, Member, IEEE , Pei Xiao, Senior Member, IEEE , Xiuzhen Cheng, Fellow, IEEE 
+
+Abstract —This paper studies high-altitude platform (HAP)-assisted sparse cooperative integrated sensing and communication (ISAC) for UAV-enabled ocean monitoring. A fleet of rotary-wing UAVs senses drifting buoys, collects their monitoring data, and reports local posterior estimates to a HAP that performs fusion and sparse cooperation control. The model explicitly accounts for a spatially correlated sea-patch field, patch-aware buoy dynamics, RCS- and clutter-aware echo sensing, fused posterior Cramér-Rao bounds (PCRBs), and propulsion-energy-limited UAV mobility. The long-horizon objective is cast as a queue-weighted buffered-collection Markov decision process rather than instantaneous throughput, where each buoy maintains a backlog of buffered observations. The resulting long-horizon design is formulated as a mixed discrete-continuous problem with sensing, communication, mobility, safety, buffered-collection, and onboard-energy constraints. To address the combinatorial association component without replacing learning by a deterministic optimizer, we propose a structured feasible-association graph-MARL framework. A heterogeneous graph encoder produces candidate-edge logits, and a masked sequential b-matching policy samples legal UAV-buoy associations while exactly satisfying UAV-load and buoy-cluster constraints. A MAPPO-style training procedure, an independent queue-state value critic, and a consistency-verification protocol are then specified to support reproducible training. Simulation results on congested maritime scenarios show that the proposed policy improves the cumulative queue-weighted collection utility by about 106% over the rate-driven deterministic decoder, maintains a large margin across sea-state sweeps and medium-to-heavy traffic loads, and transfers to larger networks without fine-tuning. 
+
+Index Terms —Integrated sensing and communication, maritime monitoring, UAV networks, graph neural networks, multi-agent reinforcement learning. 
+
+✦
+
+1 INTRODUCTION 
+
+Ocean monitoring networks underpin environmental sensing, maritime safety, and the blue economy, relying on dense fleets of low-cost surface buoys and sensors to report oceanographic observations over wide, infrastructure-sparse sea areas [1]. The lack of reliable offshore backhaul and the low transmit power of such terminals make timely data delivery difficult, which motivates aerial relays that can approach the terminals on demand [2, 3]. Unmanned aerial vehicles (UAVs) are especially attractive here because their controllable mobility lets them establish strong line-of-sight uplinks to dispersed buoys and collect their buffered ob-servations efficiently. In parallel, integrated sensing and commu-nication (ISAC), which reuses a common waveform and aperture for both functions, has emerged as a key sixth-generation (6G) capability [4, 5]. Endowing maritime UAVs with ISAC lets a single platform localize drifting buoys and collect their data within one resource budget, a synergy well matched to the dual sensing-and-collection nature of ocean monitoring [6]. 
+
+B. Li, M. Ye and J. Nie are with the Faculty of Information Science and Engineering, the Engineering Research Center of Advanced Marine Physical Instruments and Equipment (Ministry of Education), and Qingdao Key Lab-oratory of Optics and Optoelectronics, Ocean University of China, Qingdao 266100, China (emails: {bohan.li, yemin, niejie}@ouc.edu.cn). H. Liu is with the School of Electronics and Information, Northwestern Poly-technical University, Xi’an 710019, China (email: haochenliu@nwpu.edu.cn). Y. Gong and X. Cheng are with the School of Computer Science and Technology, Shandong University, Qingdao 266100, China (email: {gokawa, xzcheng}@sdu.edu.cn). N. Gao is with the School of Cyber Science and Engineering, Southeast University, Nanjing 210096, China (email: ninggao@seu.edu.cn). P. Xiao is with 5GIC & 6GIC, University of Surrey, Guildford GU2 7XH, U.K. (email: p.xiao@surrey.ac.uk). 
+
+Realizing maritime UAV-ISAC, however, makes UAV tra-jectory optimization and resource allocation substantially harder than in terrestrial deployments. Sensing accuracy, uplink rate, propulsion energy, and the sparse cooperation pattern among UAVs and buoys are all tightly coupled through the UAV positions, so motion, sensing-power allocation, and UAV-buoy association cannot be designed independently [7, 8]. The open-sea setting compounds this difficulty in ways that terrestrial models do not capture. Buoys drift continuously under waves and currents, the sea surface returns strong sea-state-dependent clutter that degrades echo sensing, and beam alignment must rely on pre-dicted rather than measured geometry [9, 10]. The long mission duration and the limited onboard energy of rotary-wing UAVs further make the task a long-horizon one, so myopic per-slot maximization of throughput or sensing quality can leave urgent buoy data uncollected [11]. These maritime-specific couplings call for a unified long-horizon ISAC-and-control design rather than a communication-only scheduling formulation, and they form the central challenge that this paper targets. 
+
+1.1 Related Works 
+
+1.1.1 UAV-Enabled ISAC 
+
+UAV-enabled ISAC has been widely investigated as a way to exploit the controllable mobility and line-of-sight channels of aerial platforms for joint sensing and communication [12]. Representative designs jointly optimize the UAV maneuver and the transmit beamforming [7], maximize communication throughput under periodic sensing constraints [10], and plan cooperative multi-UAV trajectories with resource allocation to bound the 
+
+> arXiv:2607.00324v1 [eess.SY] 1 Jul 2026 2
+
+target-localization error [8]. Sensing has also been exploited to assist communication through predictive beam tracking of moving targets [13]. These works establish the value of jointly controlling motion and physical-layer resources. Other studies jointly design the UAV maneuver and the hybrid or digital beamforming to balance the sensing beampattern against the achievable rate, and cooperative multi-UAV designs further schedule trajectories and resources across platforms to enlarge sensing coverage and uplink capacity [14]. Across these efforts, aerial platforms are usually treated as energy-unconstrained over the planning window, and the data actually buffered at the served terminals is abstracted away, so the onboard-energy budget and the timeliness of long-horizon data clearance are not modeled. These works nonetheless consider quasi-static ground users or targets over land and optimize instan-taneous sensing or rate objectives, which leaves open the maritime regime and its long-horizon data-clearance demands. 
+
+1.1.2 Maritime UAV-ISAC and Data Collection 
+
+Motivated by this gap, a growing number of works bring UAVs into the maritime domain [2]. Energy-efficient trajectory and resource designs have been proposed for UAV-aided ocean monitoring and maritime data collection [3, 9, 15], and ISAC has recently been introduced into maritime emergency and monitoring networks [6, 16]. Related studies optimize shipboard maritime ISAC deployment [17], enhance maritime joint sensing and com-munication with reconfigurable surfaces [18, 19], and schedule cooperative UAV data collection to reduce the age of informa-tion [20]. These designs confirm the value of UAV-ISAC at sea. Other works extend maritime connectivity through high-altitude-platform and integrated satellite-air-ground architectures over the open sea [5], which motivates using a HAP as a coordinating fusion center rather than a mere relay. Most maritime studies, however, still decouple sensing from data collection and track a per-link rate or an aggregate volume rather than the per-buoy backlog. Most of them nevertheless retain instantaneous rate or sensing objectives and do not model the buffered, urgency-weighted clearance of buoy data under sparse multi-UAV coop-eration, which is exactly the regime an ocean-monitoring mission must operate in. 
+
+1.1.3 Learning-Based Trajectory and Resource Optimiza-tion 
+
+The non-convex and only partially observable nature of trajec-tory and resource optimization in these dynamic maritime scenar-ios limits conventional convex and alternating-optimization meth-ods, so machine-learning approaches have become an attractive alternative. Deep reinforcement learning (DRL) has been applied to UAV-ISAC trajectory and resource control [14, 21, 22] and to multi-domain resource management across space-air-ground networks [23, 24]. Graph neural networks (GNNs) effectively exploit the relational structure of wireless networks [25], and their combination with multi-agent reinforcement learning (MARL) yields scalable permutation-aware policies for distributed wireless control [26, 27]. Graph-based learning has also been applied to multi-UAV cooperation, for instance cooperative multi-UAV trajectory design over a heterogeneous UAV-terminal graph [28] and heterogeneous-graph beamforming for cell-free maritime sys-tems [29]. Closest to our setting, a hierarchical graph-MARL framework has recently been proposed for multi-UAV ISAC, where a coordinating agent allocates bandwidth and user asso-ciation over a heterogeneous graph while distributed UAV agents optimize subcarriers, power, and trajectories [30]. Such learning-based ISAC designs typically target an instantaneous weighted sensing-rate objective and form the discrete association either by adding a soft penalty for infeasible choices or by repairing an infeasible association after it is sampled, which leaves room for a long-horizon formulation in which the sampled association is fea-sible by construction. More broadly, structured and permutation-equivariant graph policies have been shown to transfer across network sizes in wireless resource allocation. Our design inherits this graph-based scalability but departs from prior learning-based ISAC in two respects, namely, the objective is a long-horizon queue-weighted collection utility rather than an instantaneous sensing-rate sum, and the discrete association is sampled by a feasibility-preserving decoder so that the optimized and executed actions coincide. 
+
+1.2 Contributions 
+
+Motivated by these gaps, this paper develops a HAP-assisted maritime sparse cooperative ISAC framework whose long-horizon objective is the timely clearance of buffered buoy data and whose sparse UAV-buoy association is optimized by a feasibility-preserving graph policy. The main contributions are summarized as follows.  
+
+> •
+
+We design a HAP-coordinated UAV-ISAC model specifically for the maritime UAV data collection scenario, integrating a sea-patch environmental field, patch-aware Singer buoy dynamics, RCS- and clutter-aware echo sensing with fused PCRB and rotary-wing propulsion energy within a three-phase superframe. Unlike existing UAV-ISAC designs that maximize instantaneous throughput or sensing quality, we cast the long-horizon task as a queue-weighted buffered-collection MDP in which the uplink rate matters only through a rate-coupled service that clears urgency-weighted buoy backlogs. To the best of our knowledge, this is the first study to target the timely clearance of buffered buoy data with the aid of ISAC, and the resulting mixed discrete-continuous problem is recast as a coordinator-assisted decentralized partially observable Markov decision process (Dec-POMDP) over a physics-grounded het-erogeneous graph built at the HAP from only causal observable quantities.  
+
+> •
+
+We design a structured graph reinforcement learning policy for this sparse HAP-coordinated cooperation, in which a hetero-geneous graph encoder produces candidate-edge logits and a masked sequential b-matching decoder samples a legal UAV-buoy association that satisfies the UAV-load and buoy-cluster limits by construction. Its log-probability therefore equals that of the executed action, in contrast to prior graph reinforcement learning and MARL resource-allocation designs that form the association through soft penalties or after-the-fact repair and thus optimize an action that may differ from the one executed. The whole hierarchy is trained on-policy under a MAPPO-style CTDE procedure without imitation labels.  
+
+> •
+
+We conduct extensive simulations against deterministic and learning baselines, including tests on unseen scenario instances and on a larger network without any retraining, to validate the effectiveness and performance of the design. On the congested maritime scenario the learned policy raises the cumulative queue-weighted utility by 106 .2% over the rate-optimal deterministic decoder and surpasses both the one-step queue optimizer and the backlog-urgency greedy heuristic, 3HAP    
+
+> Fusion and Coordination CPU
+> Sensing and
+> Data collection
+> Information fusion
+> and Control
+> Sea wave and current Buoy drift ISAC links Backhaul and control links
+> Fig. 1: System scenario of UAV-ISAC-assisted maritime data collection.
+
+while keeping a large margin across the sea-state sweep and under medium-to-heavy traffic. It further transfers without fine-tuning to a larger network and retains the lowest variance among all learning designs, confirming both the effectiveness and the scalability of the proposed framework. 
+
+2 SYSTEM MODEL 
+
+We consider a HAP-assisted maritime network consisting of 
+
+K drifting buoys, M rotary-wing fixed-height UAVs, and one HAP, as illustrated in Fig. 1. Each UAV is equipped with a UPA containing R2 = R × R antennas. The HAP is not treated as a data-plane centralized decoder. Instead, it acts as a fusion-and-coordination CPU. In particular, it receives local sensing and communication summaries from the UAVs, fuses buoy-state in-formation, determines sparse cooperation patterns, and broadcasts high-level directives to the UAVs 1.Let Tm be the mission duration, divided into T superframes of duration ∆T = Tm/T . The system experiences three phases over superframe t, i.e., 
+
+St → Ut → Ft, (1) where St, Ut, and Ft denote the sensing, data collection, and fusion/control phases of superframe t, respectively. The UAV and buoy positions are assumed to be constant within one superframe 2.At the beginning of St, each UAV steers its sensing beam by using the shared one-step predicted buoy state from the previous superframe. The echo measurements collected during St are pro-cessed locally to form superframe-t posterior estimates. During 
+
+Ut, the UAVs receive uplink data from the assigned buoys. The uplink combiner used is constructed from the one-step predicted geometry. At the end of the uplink phase, UAV m forms the packet 
+
+ζm[t] = 
+
+n
+
+ˆsssm,k [t|t], P PP m,k [t|t], y U
+
+> m,k
+
+[t]
+
+o
+
+> k∈C m[t]
+
+∪
+
+n
+
+cccm[t]
+
+o
+
+,
+
+(2) where Cm[t] is the buoy set assigned to UAV m, ˆsssm,k [t|t] and 
+
+PPP m,k [t|t] are the local posterior state estimate and covariance of buoy k after the extended Kalman filter (EKF) update, yU
+
+> m,k
+
+[t]
+
+is the local uplink observation defined later in Section 2.5, and 
+
+cccm[t] = [ cxm[t], c ym[t], c zm]T is the UAV position with the fixed altitude.  
+
+> 1. The HAP-UAV backhaul and control links are assumed to be sufficiently reliable and rate-unconstrained for the considered information packets and directives. 2. This quasi-static assumption applies to the short sensing and uplink sub-phases within a superframe, whereas buoy drift and UAV repositioning across superframes are modeled explicitly through the buoy dynamics in
+
+(11) and the UAV mobility update in (59) .
+
+During Ft, the HAP collects {ζm[t]}Mm=1 , fuses the uploaded posterior information, predicts the shared priors for the next superframe, and prepares for UAV m the directive 
+
+Dm[t + 1] = 
+
+n
+
+qqqm[t + 1] , Cm[t + 1] , ν ννdir  
+
+> m
+
+[t + 1] 
+
+o
+
+. (3) Here, qqqm[t + 1] is a HAP-generated reference waypoint. The set 
+
+Cm[t + 1] is the next-superframe sparse UAV-buoy cluster, and 
+
+νννdir  
+
+> m
+
+[t + 1] is a short directive-context vector used by the local UAV actor, which is defined explicitly in Section 4.3. 
+
+2.1 Sea-Patch Correlated Maritime Field 
+
+Practical sea conditions are complicated and time-varying, hence, to capture the spatially varying ocean environment, the rectangular monitored sea region of side lengths Lx × Ly is partitioned into S local sea patches indexed by S ≜ {1, . . . , S }.Let rrrs ∈ R3 denote the center of patch s. The environmental state of patch s is defined as 
+
+zzzs[t] = Hs[t], ω s[t], v cur 
+
+> s,x
+
+[t], v cur  
+
+> s,y
+
+[t], δ s[t]T (4) where Hs[t] is the significant wave height, ωs[t] is the dominant wave angular frequency, vvvcur  
+
+> s
+
+[t] ≜ [vcur 
+
+> s,x
+
+[t], v cur  
+
+> s,y
+
+[t]] T is the local current velocity, and δs[t] is the local clutter-perturbation level. The variables Hs[t] and ωs[t] represent the local sea conditions and wave time scales in ocean-wave modeling [31, 32], which directly affect buoy motion, RCS fluctuation, and clutter severity. The inter-patch dependence is described by a directed graph 
+
+Gsea [t] = ( S, Esea , W WW [t]) , (5) where Esea ⊆ S × S is the directed edge set, and WWW [t] =[ws,s ′ [t]] ∈ RS×S is the time-varying weighted adjacency matrix. The ordered pair (s, s ′) ∈ E sea means that patch s′ can transport environmental influence to patch s over one superframe, and hence 
+
+ws,s ′ [t] is defined as the directed influence weight from source patch s′ to destination patch s. For adjacent patches s′ and s, we define the normalized current-aligned influence weight as [33] 
+
+ws,s ′ [t] = es,s ′ exp 
+
+
+
+− ∥rrrs−rrrs′ ∥2
+
+> σ2
+> d
+
+
+
+ψs,s ′ [t]
+
+P  
+
+> ℓ∈N out
+> s′
+
+eℓ,s ′ exp 
+
+
+
+− ∥rrrℓ−rrrs′ ∥2
+
+> σ2
+> d
+
+
+
+ψℓ,s ′ [t] + ϵ , (6) where es,s ′ ∈ {0, 1} equals one if (s, s ′) ∈ Esea and zero otherwise, N out  
+
+> s′
+
+≜ {ℓ : ( s′, ℓ ) ∈ E sea } is the set of neighbor-ing destination patches that can receive transport influence from source patch s′, σ2 
+
+> d
+
+> 0 is a spatial coupling-width parameter controlling the distance decay of inter-patch influence, and 
+
+ψs,s ′ [t] = 
+
+ (rrrs − rrrs′ )Tvvvcur  
+
+> s′
+
+[t]
+
+∥rrrs − rrrs′ ∥ ∥ vvvcur  
+
+> s′
+
+[t]∥ + ϵ
+
+
+
+> +
+
+(7) is the directional transport factor, where [x]+ ≜ max {x, 0}. The factor ψs,s ′ [t] quantifies how strongly the local current at source patch s′ supports directional transport from patch s′ to patch 
+
+s. In particular, a larger ψs,s ′ [t] indicates stronger downstream transport from s′ to s, whereas ψs,s ′ [t] = 0 means that the local current does not contribute to transport toward patch s. The small constant ϵ > 0 in (6) and (7) is used only for numerical regularization when the denominator or the current norm becomes very small. Hence, nearby patches are more strongly coupled, while the coupling is reinforced along the local current direction. 4
+
+Then, the patch field evolves according to 3
+
+zzzs[t + 1] = AAA0zzzs[t] + X 
+
+> s′∈N in
+> s
+
+ws,s ′ [t]AAA1zzzs′ [t] + nnns[t], (8) where N in  
+
+> s
+
+≜ {s′ : (s′, s ) ∈ Esea } is the set of source patches that can transport environmental influence to destination patch s, nnns[t] ∼ N (0 00, Q QQs) with QQQs =diag 
+
+
+
+σ2
+
+> H,s
+
+, σ 2
+
+> ω,s
+
+, σ 2
+
+> vx,s
+
+, σ 2 
+
+> vy,s
+
+, σ 2
+
+> δ,s
+
+
+
+is the environmental pro-cess noise. We further define AAA0 = diag (αH , α ω , α v , α v , α δ )
+
+and AAA1 = diag (βH , β ω , β v , β v , β δ ), where AAA0 captures the self-memory of each patch, whereas AAA1 captures the neighbor-induced perturbation. The coefficients satisfy 0 ≤ αq < 1,
+
+0 ≤ βq < 1, and αq + βq ≤ 1 for each environmental component 
+
+q ∈ { H, ω, v, δ }.Let ρk,s [t] ∈ [0 , 1] be the interpolation coefficient from patch 
+
+s to buoy k, with PSs=1 ρk,s [t] = 1 . The local sea condition experienced by buoy k is then modeled as 
+
+zzzk[t] = 
+
+> S
+
+X
+
+> s=1
+
+ρk,s [t]zzzs[t] = Hk[t], ω k[t], v cur 
+
+> k,x
+
+[t], v cur  
+
+> k,y
+
+[t], δ k[t]T,
+
+(9) where Hk[t] ≜ PSs=1 ρk,s [t]Hs[t] denotes the local significant wave height experienced by buoy k. It is noteworthy that the sea-patch state is not an auxiliary semantic descriptor. Its components enter the buoy dynamics, the RCS fluctuation model, the clutter level, and the sensing geometry. The role of the patch layer is therefore to provide a compact physical-field representation rather than side information for the learning module. 
+
+2.2 Patch-Aware Buoy Dynamics 
+
+In this paper, only the horizontal drift of each buoy is explicitly modeled, while its vertical position is not tracked. Accordingly, the 3D position of buoy k is written as ccck[t] = [ cxk [t], c yk[t], c zk]T,where czk denotes a nominal sea-surface reference coordinate and can be set to 0 when the mean sea level is used as the vertical reference 4. Let the horizontal motion state of buoy k at superframe 
+
+t be 
+
+sssk[t] = [ cxk [t], ¯vxk [t], a xk [t], c yk[t], ¯vyk [t], a yk[t]] T , (10) where cxk [t] and cyk[t] are the buoy coordinates, ¯vxk [t] and ¯vyk [t]
+
+are the wave-induced velocity components excluding the current drift, and axk [t] and ayk[t] are the corresponding wave-induced acceleration components. The short-term horizontal motion of a surface buoy is decom-posed into a slowly varying current-induced drift and a wave-induced random fluctuation. The former is described by the interpolated local current velocity in (9), whereas the latter is modeled by a Singer correlated-acceleration process [34]. The resulting discrete-time state evolution is written as 
+
+sssk[t + 1] = GGGk[t]sssk[t] + ∆ Tvvvcur  
+
+> k
+
+[t] + ξk[t], (11)  
+
+> 3. It is worth noting that
+
+(8) is a reduced-order stochastic closure for the local sea-condition descriptors in (4) . It is not intended to resolve the full wave-action balance or primitive-equation ocean dynamics. Instead, it preserves the physically relevant short-horizon features needed by the UAV decision process, i.e., self persistence, current-aligned downstream coupling, spatial locality, and unresolved process uncertainty. 4. The quantity Hk [t] in (9) characterizes the local significant wave height experienced by buoy k, rather than its geometric vertical coordinate. 
+
+where vvvcur  
+
+> k
+
+[t] =
+
+h
+
+vcur 
+
+> k,x
+
+[t], 0, 0, v cur  
+
+> k,y
+
+[t], 0, 0
+
+iT
+
+and GGGk[t] =[ ¯GGGk[t], 000; 0 00, ¯GGGk[t]] is the 2D state-transition matrix, with ¯GGGk[t]
+
+denoting the one-axis Singer transition block. In particular, let 
+
+ςk[t] denote the reciprocal of the acceleration correlation time in the Singer model. Since the dominant short-term excitation of a surface buoy is wave-induced and its time scale is governed by the dominant local wave component, we can set ςk[t] = ωk[t], where 
+
+ωk[t] = PSs=1 ρk,s [t]ωs[t] is the local dominant wave angular frequency induced from the sea-patch interpolation in (9). Then, following [34], the standard Singer discretization yields ¯GGGk[t] as 
+
+¯GGGk[t] = 
+
+
+
+1 ∆T ϕ1,k [t]0 1 ϕ2,k [t]0 0 λk[t]
+
+ , (12) where λk[t] = e−ςk [t]∆ T is the one-step memory factor of the discretized wave-induced acceleration process, and 
+
+ϕ1,k [t] = ςk[t]∆ T − 1 + λk[t]
+
+ς2 
+
+> k
+
+[t] , ϕ 2,k [t] = 1 − λk[t]
+
+ςk[t] . (13) The process noise ξk[t] ∼ N (0 00, Q QQk[t]) captures the residual wave-driven uncertainty after discretization. To tie its intensity to the local wave condition, we parameterize the acceleration standard deviation as σa,k [t] = ca ω2
+
+> k
+
+[t]Hk[t], where ca > 0
+
+is a dimensionless calibration coefficient. The induced discrete-time process-noise covariance is block-diagonal, which is given by 
+
+QQQk[t] = blkdiag( ¯QQQk[t], ¯QQQk[t]) , where ¯QQQk[t] is assembled from 
+
+σa,k [t] and the Singer parameters (ςk[t], λ k[t]) and its closed-form entries are derived in Appendix A. 
+
+2.3 RCS-Aware Multi-UAV Sensing under Sea Clutter 
+
+For UAV m and buoy k, we define the transmit/receive array response vectors as αααtx/rx 
+
+> m,k
+
+[t] = 1 
+
+> R
+
+αααxm,k [t] ⊗ αααym,k [t], with 
+
+αααxm,k [t] = 
+
+h
+
+1, e −jμ xm,k [t], · · · , e −j(R−1) μxm,k [t]
+
+iT
+
+, (14) 
+
+αααym,k [t] = 
+
+h
+
+1, e −jμ ym,k [t], · · · , e −j(R−1) μym,k [t]
+
+iT
+
+, (15) where 
+
+μxm,k [t] = 2πd a
+
+λcxm[t] − cxk [t]
+
+dm,k [t] , μ ym,k [t] = 2πd a
+
+λcym[t] − cyk[t]
+
+dm,k [t] .
+
+(16) with dm,k [t] = ∥cccm[t] − ccck[t]∥, da and λ being antenna spacing and carrier wavelength, respectively. During St, UAV m allocates power pS
+
+> m,k
+
+[t] to sensing buoy k
+
+in its assigned buoy set k ∈ C m[t], subject to the fixed onboard budget X
+
+> k∈C m[t]
+
+pS
+
+> m,k
+
+[t] ≤ P max  
+
+> m
+
+, ∀m, t. (17) Then, the sensing signal transmitted by UAV m during St is 
+
+xxxS
+
+> m
+
+[t] = 
+
+> K
+
+X
+
+> k=1
+
+γm,k [t]
+
+q
+
+pS
+
+> m,k
+
+[t] fff m,k [t] xm,k [t], (18) where the binary cluster indicator γm,k [t] ∈ { 0, 1} denotes the association between the UAV m and buoy k, fff m,k [t] ∈ CR2×1 is the transmit beamformer and xm,k [t] is the unit-power baseband sensing signal with E[|xm,k [t]|2] = 1 . Since the UAV-buoy links are LoS-dominated and the sensing beam is steered according to 5
+
+the one-step prediction, we set fff m,k [t] = ˆ aaatx 
+
+> m,k
+
+[t|t − 1] . The local sensing echo is then modeled as 
+
+rrrS
+
+> m,k
+
+[t] = 
+
+q
+
+pS
+
+> m,k
+
+[t]
+
+
+
+βm,k [t]αααrx 
+
+> m,k
+
+[t]( αααtx 
+
+> m,k
+
+[t]) H + ϱclu 
+
+> m,k
+
+[t]×
+
+βclu 
+
+> m,k
+
+[t]ˆ aaarx 
+
+> m,k
+
+[t|t − 1](ˆ aaatx 
+
+> m,k
+
+[t|t − 1]) H
+
+fff m,k [t] + nnnm,k [t], (19) where αααtx 
+
+> m,k
+
+[t] and αααrx 
+
+> m,k
+
+[t] denote the transmit and receive steering vectors associated with the same LoS geometry. Their predicted versions ˆaaatx 
+
+> m,k
+
+[t|t − 1] and ˆaaarx 
+
+> m,k
+
+[t|t − 1] are evaluated at the one-step predicted buoy position ˆccck[t|t − 1] . Moreover, 
+
+βm,k [t] is the target reflection coefficient, βclu 
+
+> m,k
+
+[t] is the residual sea-clutter reflection coefficient, ϱclu 
+
+> m,k
+
+[t] ∈ (0 , 1) models the residual clutter leakage after front-end clutter suppression, and 
+
+nnnm,k [t] ∼ CN (0 00, N 0IIIR2 ) is the receiver noise. 
+
+Remark 1. Although the true position of buoy k at superframe 
+
+t is ccck[t], the sensing beam is steered according to the one-step prediction ˆccck[t|t − 1] . Hence, the dominant residual clutter in (19) is associated with the illuminated sea-surface patch around the predicted look direction. 
+
+2.3.1 Buoy’s Reflection Coefficient 
+
+In the following, we specify the target reflection coefficient 
+
+βm,k [t] through an RCS-aware buoy model. In general, the radar cross section (RCS) of a sensing target depends on the carrier frequency, the polarization, the viewing geometry, and the target characteristics such as shape, material, motion, and orientation [35]. ETSI further separates the target RCS into slow-varying and fast-varying components, and 3GPP supports a single-scattering-point factorization of the form RCS = A · B1 · B2, where A is a reference RCS term, B1 is a deterministic angle-dependent factor, and B2 is a unit-mean log-normal fluctuation factor in the linear domain [36, 37]. Following this rationale, buoy k is modeled as a quasi-upright symmetric target with a single effective scattering center, and its RCS is written as 
+
+σm,k [t] = ¯ σk(fc, ϱ ) B1,m,k [t] B2,m,k [t], (20) where ¯σk(fc, ϱ ) denotes the reference RCS of buoy k under carrier frequency fc and polarization configuration ϱ, B1,m,k [t]
+
+is a deterministic viewing-angle-dependent factor, and B2,m,k [t]
+
+is the random fluctuation factor. Under fixed (fc, ϱ ), ¯σk(fc, ϱ ) is treated as a time-invariant buoy-specific constant. Since the buoy pitch/roll states are not explicitly tracked in this model, the monostatic viewing angle is approximated by 
+
+ϑm,k [t] = arccos 
+
+ czm − czk
+
+dm,k [t]
+
+
+
+, ϑ m,k [t] ∈ [0 , π/ 2] . (21) Accordingly, the reference RCS is defined as 
+
+¯σk(fc, ϱ ) ≜ E[σm,k [t] | ϑm,k [t] = ϑ⋆k, f c, ϱ ] , (22) where ϑ⋆k is the preferred viewing angle of buoy k. Hence, 
+
+¯σk(fc, ϱ ) should be interpreted as a buoy-type-dependent refer-ence RCS rather than an all-angle average. The deterministic factor B1,m,k [t] is parameterized as 
+
+B1,m,k [t] = 10 − 110 min   
+
+> 
+> 12
+> ϑm,k [t]−ϑ⋆kϑk, 3dB
+> 2
+> , A att
+> k
+> 
+
+, (23) where ϑk, 3dB is the 3-dB viewing-angle width and Aatt  
+
+> k
+
+is the maximum off-angle attenuation in dB. This clipped quadratic surrogate follows the angle-dependent function adopted in [37]. The residual fluctuation is modeled as a log-normal ran-dom variable with unit mean in the linear domain [36, 37], i.e., 10 log 10 B2,m,k [t] ∼ N(μk[t],  σB 
+
+> k
+
+[t]2), with μk[t] =
+
+− ln 10 20 
+
+ σB 
+
+> k
+
+[t]2, so that E[B2,m,k [t]] = 1 . In order to couple the fluctuation level with the local maritime condition, σB 
+
+> k
+
+[t] is modeled as 
+
+σB 
+
+> k
+
+[t] = σB0,k + κH
+
+Hk[t]
+
+Href 
+
++ κω
+
+ωk[t]
+
+ωref 
+
+, (24) where σB0,k is the baseline RCS fluctuation level of buoy k, and 
+
+κH , κ ω ≥ 0 are scaling coefficients. The constants Href > 0 and 
+
+ωref > 0 are normalization parameters, and σB 
+
+> k
+
+[t] is measured in dB. Consequently, the target reflection coefficient can be de-rived as βm,k [t] = βB   
+
+> m,k [t]2dm,k [t]
+
+, where the complex buoy scattering coefficient βB
+
+> m,k
+
+[t] is given by 
+
+βB
+
+> m,k
+
+[t] = 
+
+q
+
+σm,k [t] ejψ m,k [t], ψ m,k [t] ∼ U [−π, π ). (25) 
+
+2.3.2 Residual Sea-Clutter Reflection Coefficient 
+
+We next specify the residual sea-clutter reflection coefficient. The dominant residual clutter associated with buoy k is repre-sented by the narrow-beam illuminated sea-surface patch around the predicted look direction ˆccck[t|t − 1] . The corresponding clutter reflection coefficient is written as [38] 
+
+βclu 
+
+> m,k
+
+[t] = ¯χclu 
+
+> m,k
+
+[t]Aclu 
+
+> m,k
+
+[t]2dm,k [t] = Ξ 1,k [t] czm − czk
+
+¯dm,k [t] +Ξ2,k [t] dm,k [t]¯dm,k [t] exp −Γclu  
+
+> k
+
+[t]
+
+ ¯dm,k [t]
+
+czm − czk
+
+2!
+
+(26) where ¯χclu 
+
+> m,k
+
+[t] is the local sea-clutter backscattering coefficient per unit illuminated area, Aclu 
+
+> m,k
+
+[t] is the effective clutter footprint area, and ¯dm,k [t] ≜
+
+q
+
+(cxm[t] − cxk [t]) 2 + ( cym[t] − cyk[t]) 2. The closed-form coefficients satisfy 
+
+Ξ1,k [t] = 1.772 c 10 0.6( κk [t]+1) −7
+
+B · R · λ , Ξ2,k [t] = 0.443 c Γclu  
+
+> k
+
+[t]
+
+B · R ,
+
+(27) where c is the speed of light, B is the sensing bandwidth and λ
+
+is the carrier wavelength. Here κk[t] ∈ { 0, . . . , 9} denotes the local sea-state index of buoy k at superframe t, and Γclu  
+
+> k
+
+[t] = cot 2 2.44( κk[t] + 1) 1.08 /57 .29 .
+
+2.4 HAP-Fused PCRB Metric 
+
+Given the above-mentioned models, we construct the coop-erative sensing metric from the common predicted prior and the local echo measurements collected in superframe t. After using a matched filter on the raw sensing echo rrrS
+
+> m,k
+
+[t] in (19), the measurement model is presented as 
+
+mmmm,k [t] = ¯ rrrm,k 
+
+ sssk[t] + ˜ nnn1,m,k [t], (28) where the noiseless echo mean is 
+
+¯rrrm,k 
+
+ sssk[t] (29) 
+
+≜ βm,k [t]ϖtx 
+
+> m,k
+
+[t]αααrx 
+
+> m,k
+
+[t] + ϱclu 
+
+> m,k
+
+[t]βclu 
+
+> m,k
+
+[t]ˆ aaarx 
+
+> m,k
+
+[t|t − 1] ,
+
+and ϖtx 
+
+> m,k
+
+[t] =  αααtx 
+
+> m,k
+
+[t]Hˆaaatx 
+
+> m,k
+
+[t|t − 1] . The effective echo-noise block satisfies ˜nnn1,m,k [t] ∼ CN  000, σ 21,m,k [t]IIIR2
+
+, with 
+
+σ21,m,k [t] = c21N0  
+
+> pS
+> m,k [t]M2
+> f
+
+. Here Mf denotes the deterministic 6
+
+matched-filter amplitude gain and c1 is a constant related to the signal design and system configuration. Linearizing (28) at the common prior mean ˆsssk[t|t − 1] yields 
+
+mmmm,k [t] ≈ ¯rrrm,k 
+
+ ˆsssk[t|t − 1]  + HHHm,k [t] sssk[t] − ˆsssk[t|t − 1] 
+
++ ˜ nnn1,m,k [t], (30) with HHHm,k [t] = ∂¯rrrm,k (sss) 
+
+> ∂s ssT
+> sss=ˆ sssk[t|t−1]
+
+. Under this linearized com-plex Gaussian model, the local Fisher information matrix (FIM) contributed by UAV m can be derived as 
+
+JJJloc 
+
+> m,k
+
+[t] = 2
+
+σ21,m,k [t] ℜ
+
+n
+
+HHHH
+
+> m,k
+
+[t]HHHm,k [t]
+
+o
+
+. (31) After collecting all active local packets, the HAP forms the fused Bayesian FIM as 
+
+JJJk[t] = PPP −1 
+
+> k
+
+[t|t − 1] + 
+
+> M
+
+X
+
+> m=1
+
+γm,k [t]JJJloc 
+
+> m,k
+
+[t]. (32) where PPP k[t|t − 1] is the common one-step prior covariance shared by all sensing UAVs before processing the superframe-t echoes, which is generated by the echo-only EKF prediction from the previous fused posterior pair (ˆ sssk[t − 1|t − 1] , P PP k[t − 1|t − 1]) .The complete local-update, HAP-fusion and next-step-prediction recursion used to obtain PPP k[t|t−1] , PPP k[t|t], and ˆsssk[t|t] is given in Appendix B. Then, the fused horizontal-position PCRB is adopted as the sensing metric of buoy k, namely, 
+
+Θk[t] = tr 
+
+
+
+EEET 
+
+> p
+
+JJJ−1 
+
+> k
+
+[t]EEEp
+
+
+
+, (33) where EEEp = [1 , 0, 0, 0, 0, 0; 0 , 0, 0, 1, 0, 0] T. It should be men-tioned that the sensing metric of the multi-UAV case is cluster-coupled. Once multiple UAVs observe the same buoy, the fused sensing quality is jointly determined by the collective geometry, the heterogeneous local RCS/clutter conditions, and the set of participating sensing UAVs through (32)–(33). 
+
+2.5 HAP-Coordinated Sparse Uplink Communication 
+
+At Ut, the uplink access channel between buoy k and UAV 
+
+m is modeled as hhhU
+
+> m,k
+
+[t] = 
+
+q
+
+βU
+
+> m,k
+
+[t] αααrx 
+
+> m,k
+
+[t], where βU
+
+> m,k
+
+[t] = 
+
+β0d−αU 
+
+> m,k
+
+[t] is the large-scale uplink channel gain, with β0 being the reference gain and αU the access-link path-loss exponent. Let xk[t] denote the uplink data symbol transmitted by buoy 
+
+k with power P U 
+
+> k
+
+. The local received signal at UAV m is then derived as 
+
+yU
+
+> m,k
+
+[t] = wwwH
+
+> m,k
+
+[t]
+
+q 
+
+P U 
+
+> k
+
+hhhU
+
+> m,k
+
+[t]xk[t] + nnnU
+
+> m
+
+[t]
+
+
+
+, (34) where nnnU
+
+> m
+
+[t] ∼ CN (0 00, N 0IIIR2 ) is the uplink noise, and the receive combiner is set as wwwm,k [t] = ˆ aaarx 
+
+> m,k
+
+[t|t − 1] . The cor-responding local post-combining SNR with respect to k at UAV 
+
+m is 
+
+Γm,k [t] = P U 
+
+> k
+
+wwwH
+
+> m,k
+
+[t]hhhU
+
+> m,k
+
+[t] 2
+
+N0∥wwwm,k [t]∥2 . (35) Because the UAV employs a large receive array, its narrow uplink beam together with the wide angular separation of the sparsely deployed sea buoys suppresses inter-buoy interference, so the post-combining statistic in (35) retains essentially only noise. Hence, the HAP-side aggregate uplink throughput is modeled as the sum of the individual link rates contributed by the serving UAVs, i.e., 
+
+Rk[t] = 
+
+> M
+
+X
+
+> m=1
+
+γm,k [t] log 2(1 + Γ m,k [t]) . (36) 
+
+2.6 Queue-Weighted Buffered Collection State 
+
+The long-horizon value of the network is not the instantaneous uplink throughput but the timely clearance of buffered maritime observations. We therefore model each buoy as maintaining a data backlog and cast the collection process as a queue-weighted buffered-collection Markov decision process (MDP). Specifically, at superframe t, buoy k carries a causal traffic state consisting of a backlog bk[t] ≥ 0 of buffered observations, an exogenous arrival 
+
+ak[t] ≥ 0, and an urgency weight uk ≥ 0. The per-edge uplink rate is converted into a rate-coupled service capacity as 
+
+sm,k [t] = α0 + αR RU
+
+> m,k
+
+[t], (37) where RU
+
+> m,k
+
+[t] = log 2(1 + Γ m,k [t]) is the realized per-edge uplink rate, and α0, α R > 0 are service-calibration coefficients that map link quality to served data units. The available and the collected data at buoy k are given by Ak[t] = bk[t] + ak[t], and 
+
+Ck[t] = min 
+
+
+
+Ak[t],
+
+> M
+
+X
+
+> m=1
+
+γm,k [t] sm,k [t]
+
+
+
+, (38) respectively, so that collection is jointly capped by the available backlog and by the cluster service capacity. The backlog then recurses as 
+
+bk[t + 1] =  bk[t] + ak[t] − Ck[t] 
+
+> +
+
+, (39) with [x]+ ≜ max {x, 0}. Through (37)–(39), the uplink rate affects the long-horizon objective through service, that is, a higher rate raises the service capacity, which increases collection and reduces backlog. Hence, a high-rate UAV-buoy link is valuable only when it is selected and the served buoy carries useful backlog, so the resulting design is rate-aware rather than pure-rate maximizing. 
+
+2.7 Rotary-Wing UAV Energy Consumption Model 
+
+As the finite onboard energy of each rotary-wing UAV con-strains its feasible motion and sensing actions, we adopt the widely used steady level-flight rotary-wing propulsion model in [11]. Let 
+
+vm[t] = ∥cccm[t] − cccm[t − 1] ∥/∆T, ∀m, t, denote the average UAV translation speed of UAV m over superframe t, where cccm[0] 
+
+is the given initial UAV position. Then, the propulsion power is modeled as 
+
+P fly  
+
+> m
+
+[t] = P0 1 + 3v2
+
+> m
+
+[t]
+
+U 2
+
+> tip
+
+!
+
++ Pi
+
+s
+
+1 + v4
+
+> m
+
+[t]4v40
+
+− v2
+
+> m
+
+[t]2v20
+
+!1/2
+
++ 12 d0 · ρa · sr · A · v3
+
+> m
+
+[t], (40) which consists of the blade-profile, induced, and parasite-power terms, respectively. Here, P0 and Pi are the blade-profile power and the induced power in the hovering state, Utip is the tip speed of the rotor blade, v0 is the mean induced velocity in hover, d0 is the fuselage drag ratio, ρa is the air density, sr is the rotor solidity, and A is the rotor disc area [39]. 7
+
+Then, the total onboard energy consumption of UAV m dur-ing superframe t is given by Em[t] = ∆ TP fly  
+
+> m
+
+[t]5. Hence, let 
+
+Erem  
+
+> m
+
+[t] denote the remaining onboard energy of UAV m, and its superframe-wise evolution can be derived as 
+
+Erem  
+
+> m
+
+[t + 1] = Erem  
+
+> m
+
+[t] − Em[t], E rem  
+
+> m
+
+[1] = Einit  
+
+> m
+
+, (41) where Einit  
+
+> m
+
+is the initial onboard energy. 
+
+3 PROBLEM FORMULATION 
+
+The whole mission is formulated as a finite-horizon control problem whose objective is the timely clearance of buffered buoy observations. Moreover, the reward construction follows two standard queue-control principles. In particular, given the classic MaxWeight policy [41], queue-length-weighted scheduling gives larger priority to buoys with larger backlog. Then, the Lyapunov-drift method uses a quadratic backlog potential to encourage long-term queue stability [42]. In order to properly apply these principles to the proposed finite-horizon maritime collection task, dimensionless and bounded normalization is essential so that rewards remain comparable across different traffic realizations. To this end, before defining the reward components, we introduce the superframe-wise normalizers as 
+
+SA[t] ≜ max {PKk=1 Ak[t], 1}, S U [t] ≜ max {2 PKk=1 ukAk[t], 1},
+
+Bmax [t] ≜ max {max k bk[t], 1}, and Φ( bbb[t]) ≜ PKk=1 b2
+
+> k
+
+[t], where 
+
+bbb[t] = [ b1[t], . . . , b K [t]] T denotes the backlog vector, SA[t] is the available-data scale, SU [t] is the urgency-weighted service scale, and Bmax [t] measures the instantaneous queue-pressure scale. The three reward components are then defined as 
+
+rdata [t] = 
+
+> K
+
+X
+
+> k=1
+
+Ck[t]/S A[t], (42) 
+
+rqueue [t] = 
+
+> K
+
+X
+
+> k=1
+
+ukCk[t]
+
+
+
+1 + bk[t]
+
+Bmax [t]
+
+
+
+/S U [t], (43) 
+
+rpot [t] = 
+
+ Φ( bbb[t]) − ηϕΦ( bbb[t + 1]) max {Φ( bbb[t]) , 1}
+
+
+
+> +
+
+, (44) where ηϕ ∈ (0 , 1] is the backlog-potential discount factor 6.Finally, the per-superframe queue-weighted utility is given by 
+
+rQ[t] = wdata rdata [t] + wqueue rqueue [t] + wpot rpot [t], where 
+
+rdata [t] rewards the fraction of available data collected in the current superframe, rqueue [t] is the finite-horizon counterpart of queue-weighted service, rpot [t] rewards a positive one-step decrease of the quadratic backlog potential, which is the Lyapunov drift component. Therefore, rQ[t] is not a network throughput score. Instead, it combines immediate collection, priority-aware queue service, and backlog-stability pressure. Consequently, the optimization objective is to maximize the discounted cumulative queue-weighted buffered-collection utility, that is, the timely and urgency-weighted clearance of buffered buoy observations, subject to sensing, mobility, sparse-       
+
+> 5. Compared with the propulsion energy, the circuit processing and sensing transmit power are much smaller, which are therefore ignored in the UAV energy consumption [40]. 6. When ηϕ= 1 ,rpot [t]reduces to a normalized one-step Lyapunov po-tential decrease. When ηϕ<1, the next-step backlog potential is discounted, which is consistent with the finite-horizon discounted MDP objective.
+
+cooperation, and onboard-energy constraints. To this end, the resulting long-horizon problem is formulated as 
+
+(P1) : max   
+
+> {cccm[t],γ m,k [t],p S
+> m,k [t]}
+> T
+
+X
+
+> t=1
+
+η t−1 rQ[t] (45a) 
+
+s.t. X
+
+> k∈C m[t]
+
+pS
+
+> m,k
+
+[t] ≤ P max  
+
+> m
+
+, ∀m, t, (45b) 
+
+Erem  
+
+> m
+
+[t] − Em[t] ≥ Emin  
+
+> m
+
+, ∀m, t, (45c) 
+
+> M
+
+X
+
+> m=1
+
+γm,k [t] ≤ Lmax , ∀k, t, (45d) 
+
+> K
+
+X
+
+> k=1
+
+γm,k [t] ≤ Dmax , ∀m, t, (45e) 
+
+γm,k [t] ∈ { 0, 1}, ∀m, k, t, (45f) 
+
+∥cccm[t] − cccm[t − 1] ∥ ≤ Vmax ∆T, ∀m, t, (45g) 
+
+0 ≤ vm[t] ≤ Vmax , ∀m, t, (45h) 
+
+∥cccm[t] − cccm′ [t]∥ ≥ dmin , ∀m̸ = m′, t, (45i) 
+
+Θk[t] ≤ Θmax  
+
+> k
+
+, ∀k, t, (45j) 
+
+Rk[t] ≥ Rmin ¯γk[t], ∀k, t, (45k) where Lmax and Dmax are the maximum buoy-cluster size and UAV serving load, respectively, Vmax is the maximum UAV speed, dmin is the inter-UAV safety distance, Θmax  
+
+> k
+
+is the allowed horizontal-position PCRB threshold, and Rmin is the required uplink-rate threshold, while ¯γk[t] ∈ {0, 1} indicates whether buoy k is served by at least one UAV in superframe t. Constraint (45b) imposes the sensing-power budget, (45c) enforces energy causality and reserve preservation, (45d)–(45f) define sparse fea-sible cooperation, (45g)–(45h) impose mobility consistency, (45i) ensures inter-UAV separation, and (45j)–(45k) impose sensing and communication quality requirements. Note that the minimum-rate requirement in (45k) is imposed only on actively served buoys, that is, when a buoy is not selected in a superframe, the missing service is accounted for by the backlog recursion rather than by an infeasible per-slot rate guarantee. 
+
+Remark 2. At the decision epoch, the HAP and the UAVs act only on one-step predictions of the buoy states and link qualities. After the association and the local motion actions are executed, the service sm,k [t], the collection Ck[t], the backlog bk[t+1] , and the utility rQ[t] are evaluated with the realized per-edge rate RU
+
+> m,k
+
+[t].In other words, predictions guide decisions, whereas realizations drive the physical service and the queue evolution. 
+
+4 STRUCTURED FEASIBLE -A SSOCIATION GRAPH -MARL 
+
+From (P1), the main algorithmic difficulty is the sparse co-operative association itself, beyond the continuous UAV control. The binary matrix γ[t] must respect the candidate mask, the per-UAV load limit, as well as the per-buoy cluster limit, and every selected edge simultaneously changes the sensing quality, the rate-coupled service, the backlog evolution, and the future graph state. In this regard, we construct a structured stochastic policy that samples only feasible associations, so that feasibility holds by construction and the probability of the executed action is available exactly for training. Around this policy, the section casts the control problem as a coordinator-assisted Dec-POMDP, builds a physics-grounded coordination graph and its feasibility-preserving b-matching decoder, realizes the sparse directives as 8HAP: fusion & coordination CPU (centralized)     
+
+> Edge-conditioned message passing
+> Masked sequential b-matching decoding Local UAV actor
+> UAV–buoy graph
+> ···
+> ···
+> Encoder
+> →Edge-logit head
+> Masked b-matching decoder
+> association γ[t]
+> Critic MAPPO trainer
+
+⋮ Environment reward r[t]   
+
+> observation loop + MAPPO (CTDE)
+> Candidate & load mask
+> ⊕
+> mean
+> +
+> residual
+> logits
+> softmax sample
+> update loads
+> directive 𝒟 m+ local state
+> MLP
+> UAV 1:
+
+...   
+
+> MUAVs: distributed execution (shared θloc )
+> UAV M:
+> motion
+> power
+> Joint action
+
+Fig. 2: Overall architecture and CTDE training flow of the proposed structured feasible-association graph-MARL framework. 
+
+local UAV motion and sensing-power control, and trains the whole hierarchy on-policy without imitation labels. Fig. 2 overviews the resulting architecture and its centralized-training, decentralized-execution information flow, which the remainder of this section details. 
+
+4.1 Coordinator-Assisted Dec-POMDP and Physics-Grounded Coordination Graph 
+
+The physical system is modeled as a coordinator-assisted cooperative Dec-POMDP. That is, the UAVs share one long-horizon reward but act on local partial observations of the hidden physical state, while the HAP coordinator supplies the global typed graph G[t] and the sparse directives. We assume an ideal low-rate HAP-UAV control link over which each UAV uploads only its local posterior and queue summaries and receives its directive Dm[t], so that the per-superframe coordination signaling scales as O(|E cand [t]|) rather than O(M K ). The full action at superframe t is written as 
+
+a[t] =  γ[t], a aaloc 1 [t], . . . , a aaloc  
+
+> M
+
+[t]. (46) The HAP-side policy determines the globally coupled binary variable γ[t]. Given Cm[t] = {k : γm,k [t] = 1 }, the parameter-shared UAV actor chooses aaaloc  
+
+> m
+
+[t], which is explicitly defined in (58). Thus, CTDE is used in a restricted sense, implying that the HAP graph and centralized critic are available during training and coordination, whereas each UAV executes only the directive and its local observation. In this way, the HAP is a fusion-and-coordination CPU, rather than an additional mobile sensing agent. Before superframe t, the HAP constructs the typed graph as 
+
+G[t] =  VU ∪ V B, E[t]7. In particular, the UAV node feature is given by 
+
+ξξξU
+
+> m
+
+[t] = cccT
+
+> m
+
+[t − 1] /L x, E rem  
+
+> m
+
+[t]/E init  
+
+> m
+
+, q qqT
+
+> m
+
+[t − 1] /L x,ncand  
+
+> m
+
+[t]/K, D max /K T, (47) and the buoy node feature is designed as 
+
+ξξξB 
+
+> k
+
+[t] = ˆcxk [t|t − 1] /L x, ˆcyk[t|t − 1] /L x, b k[t]/B max [t],ak[t]/A max [t], u k, bΘ(0)  
+
+> k
+
+[t], rank k[t]/(K − 1) T,
+
+(48) where Amax [t] = max {max j aj [t], 1}, qqqm[t − 1] is the directive waypoint of the previous superframe, and the division by the area 
+
+7. The HAP is the coordinator and hosts the encoder, decoder, and critic rather than a graph node. 
+
+side Lx renders all position-type entries dimensionless. Further-more, ncand  
+
+> m
+
+[t] ≜ PKk=1 χm,k [t] is the UAV candidate load, with 
+
+χm,k [t] ∈ { 0, 1} being the candidate-edge indicator. ˆcxk [t|t − 1] 
+
+and ˆcyk[t|t − 1] are the predicted buoy horizontal coordinates. In addition, bΘ(0)  
+
+> k
+
+[t] is the prior horizontal PCRB, and rank k[t] is the descending backlog rank of buoy k. The buoy queue summaries 
+
+(bk, a k, u k) are deliberately exposed on both the buoy node and the candidate edge so that backlog and urgency inform both the node embeddings and the per-edge logits. The UAV-buoy edge feature consists of geometric, sensing, communication, queue, and load quantities, which is given by 
+
+eeeUB 
+
+> m,k
+
+[t] = χm,k [t], ˆdm,k [t], \SCNR m,k [t], bRU
+
+> m,k
+
+[t], d∆Θ m,k [t],
+
+¯bk[t], u k, ¯ak[t], γ m,k [t − 1] , n cand  
+
+> m
+
+[t]/K, Dmax /K, l cand  
+
+> k
+
+[t]/M T, (49) where ¯bk[t] ≜ bk [t] 
+
+> Bmax [t]
+
+, ¯ak[t] ≜ ak [t]max {max j aj [t],1} , and lcand  
+
+> k
+
+[t] ≜
+
+PMi=1 χi,k [t]. The queue-related entries (¯bk[t], ¯ak[t], u k) make the sampled association backlog- and urgency-aware, while the load summaries expose local sparse-feasibility pressure. Evaluating the echo mean and Jacobian at ˆsssk[t|t − 1] gives 
+
+\SCNR m,k [t] = ∥¯rrrm,k 
+
+ ˆsssk[t|t − 1] ∥2
+
+R2 ˆσ21,m,k [t] , (50) 
+
+bJJJnom  
+
+> m,k
+
+[t] = 2ˆσ21,m,k [t] ℜ
+
+bHHHH
+
+> m,k
+
+[t] bHHHm,k [t]
+
+
+
+, (51) where bHHHm,k [t] is evaluated at the same predicted state and nominal geometry. The nominal marginal PCRB improvement is d∆Θ m,k [t] =  bΘ(0)  
+
+> k
+
+[t] − bΘ(1) 
+
+> m,k
+
+[t]
+
+> +
+
+, where bΘ(0)  
+
+> k
+
+[t] =
+
+tr  EEETp PPP k[t|t − 1] EEEp
+
+ and bΘ(1) 
+
+> m,k
+
+[t] = tr  EEETp
+
+ PPP −1 
+
+> k
+
+[t|t − 1] + 
+
+bJJJnom  
+
+> m,k
+
+[t]−1EEEp
+
+. Similarly, the causal per-edge rate proxy is 
+
+bRU
+
+> m,k
+
+[t] = log 2
+
+ 1 + bΓm,k [t], (52) where bΓm,k [t] is the predicted counterpart of (35), formed with the predicted channel bhhhU
+
+> m,k
+
+[t|t − 1] . Note that bRU
+
+> m,k
+
+[t] is a decision-time prediction available before Ut, hence usable as a causal feature, whereas the realized RU
+
+> m,k
+
+[t] is known only after the channel is observed. Hence, these surrogates are used only as graph features and waypoint weights, and the actual Θk[t], Rk[t],service, and reward are evaluated only after the environment executes the selected association and local continuous actions. 9
+
+The graph encoder is designed as  {ϖϖϖU
+
+> m
+
+[t]}, {ϖϖϖB 
+
+> k
+
+[t]} =
+
+Fψ (G[t]) , where Fψ (·) is a type-aware message-passing network that exchanges messages between the UAV and buoy nodes along the candidate edges. For every retained UAV-buoy pair, the edge-logit head outputs ℓm,k [t] = fℓ
+
+
+
+ϖϖϖU
+
+> m
+
+[t], ϖ ϖϖB 
+
+> k
+
+[t], e eeUB 
+
+> m,k
+
+[t]; φℓ
+
+
+
+.
+
+The scalar ℓm,k [t] parameterizes the association policy. Non-candidate pairs receive a mask value of −∞ before decoding and never enter the sampled action. 
+
+4.2 Feasibility-Preserving Stochastic b-Matching Pol-icy 
+
+A b-matching is a matching on a graph in which each vertex has an integer capacity b rather than the unit capacity used in ordinary matching. In the UAV-buoy bipartite graph, the UAV-side capacities are bm = Dmax and the buoy-side capacities are 
+
+bk = Lmax . The association is produced from a causal physical candidate graph. The candidate mask is 
+
+χm,k [t] = 1
+
+n ˆdm,k [t] ≤ dcand , \SCNR m,k [t] ≥ Γcand 
+
+o
+
+, (53) with fixed thresholds dcand and Γcand . The retained edge set is 
+
+Ecand [t] = {(m, k ) : χm,k [t] = 1 }. The feasible association family is the set of all binary capacity-constrained b-matchings on the candidate graph, given by 
+
+Fγ [t] = γ ∈ { 0, 1}M ×K : γm,k [t] ≤ χm,k [t], ∀m, k, 
+
+> K
+
+X
+
+> k=1
+
+γm,k [t] ≤ Dmax , ∀m, 
+
+> M
+
+X
+
+> m=1
+
+γm,k [t] ≤ Lmax , ∀k .
+
+(54) During rollout, the HAP first samples a sequence of feasi-ble UAV-buoy edges and then converts that sequence into a binary association matrix. To avoid ambiguity, let Tγ [t] ≜ e(1) [t], . . . , e (Q[t]) [t] and e(q)[t] = ( mq , k q ) ∈ E cand [t], where 
+
+e(q)[t] is the q-th selected UAV-buoy edge and Q[t] is the number of edges selected before the decoder terminates. Thus, Tγ [t] de-notes the ordered association trace used for probability accounting. With this notation, the rollout sampler is given by 
+
+ Tγ [t], γ [t], log πseq Λ [t]
+
+= SeqBMatch Λ(Ecand [t], {ℓm,k [t]}, D max , L max ) , (55) where SeqBMatch Λ denotes a sequential stochastic b-matching sampler . At step q, it forms the current admissible edge set, samples one edge from a masked categorical distribution whose logits are ℓm,k [t], updates the UAV load and buoy load, and re-moves every edge that would violate χm,k [t], Dmax , or Lmax . As observed from (55), it returns three objects. The first is the ordered trace Tγ [t] used to compute PPO log-probabilities. The second is the unordered binary association γ[t], where γm,k [t] = 1 iff edge (m, k ) appears in the trace. The third is log πseq Λ [t], the sum of the selected masked-categorical log-probabilities along the trace. PPO records the ordered trace probability, not the unordered matrix probability, because multiple edge orders can induce the same γ[t]. Since load- and cluster-violating edges are removed inside SeqBMatch, every sampled association satisfies (45d)–(45f) exactly. 
+
+Remark 3. The sampler has two useful structural properties. First, because each selected edge is drawn only from the current admis-sible set and all capacity-violating edges are removed after every update, the resulting binary association always belongs to Fγ [t].Second, since the trace is generated sequentially, its probability factorizes into the product of the masked-categorical probabilities along the selected edge sequence. Therefore, the association log-probability used by PPO is exactly the accumulated trace log-probability in (55). 
+
+4.3 Association-to-Motion Directive Realization 
+
+After the HAP samples the sparse association, the binary matrix γ[t] must be converted into executable local commands. This step is necessary because γ[t] is a global bipartite decision, whereas each UAV only needs the subset of buoys assigned to it, a reference waypoint, and a compact directive context. Moreover, different UAVs may be assigned different numbers of buoys, while the local actor requires a fixed-dimensional observation. We therefore map each assigned buoy set into a fixed-length slot representation, with dummy slots used when fewer than Dmax 
+
+buoys are assigned. 
+
+4.3.1 Directive and Fixed-Length Slot Observation 
+
+After γ[t] is selected, UAV m receives Dm[t] =
+
+{qqqm[t], Cm[t], ν ννdir  
+
+> m
+
+[t]} and Cm[t] = {k : γm,k [t] = 1 }, where 
+
+νννdir  
+
+> m
+
+[t] = νdir 
+
+> m, 1
+
+[t], ν dir 
+
+> m, 2
+
+[t], ν dir 
+
+> m, 3
+
+[t]T is a compact directive-context vector, in which the three elements are derived as 
+
+νdir 
+
+> m, 1
+
+[t] = X
+
+> k∈C m[t]
+
+h Θk [t]Θmax 
+
+> k
+
+− 1
+
+i
+
+> +
+
+/|C m[t]|,νdir 
+
+> m, 2
+
+[t] = |C m[t]|/D max ,νdir 
+
+> m, 3
+
+[t] = 1
+
+|C m[t]|
+
+X
+
+> k∈C m[t]
+
+[ lcand  
+
+> k
+
+[t] − Lmax ]+
+
+M − Lmax 
+
+. (56) Note that these three elements measure, respectively, the mean PCRB over-threshold excess of the assigned buoys (sensing ur-gency), the assigned-load fraction of the UAV (load pressure), and the mean over-subscription of the assigned buoys by competing UAVs (candidate competition pressure). When Cm[t] = ∅, we set 
+
+νννdir  
+
+> m
+
+[t] = 0 00 so that the directive context is well defined for an idle UAV. Then the assigned set is embedded into a fixed-length slot list as Im[t] = ( km, 1[t], . . . , k m,D max [t]) and ιm,ℓ [t] = 
+
+1{km,ℓ [t]̸ = 0 }, where km,ℓ [t] ∈ { 0} ∪ C m[t] is the buoy index placed in slot ℓ, with km,ℓ [t] = 0 marking an unused dummy slot, so that ιm,ℓ [t] indicates an active slot. Hence, the local actor observation is 
+
+ooom[t] = 
+
+h
+
+cccm[t − 1] , E rem  
+
+> m
+
+[t], q qqm[t], ν ννdir  
+
+> m
+
+[t],
+
+ ˆssskm,ℓ [t|t − 1] , z zzkm,ℓ [t], ι m,ℓ [t]Dmax 
+
+> ℓ=1
+
+i
+
+. (57) 
+
+4.3.2 Local Motion and Sensing-Power Actions 
+
+The local continuous actor is given by 
+
+aaaloc  
+
+> m
+
+[t] ∼ πθloc (· | ooom[t]) , (58) where aaaloc  
+
+> m
+
+[t] = ∆qqqloc ,T 
+
+> m
+
+[t], ˜pm, 1[t], . . . , ˜pm,D max [t]T, with 
+
+∆qqqloc  
+
+> m
+
+[t] and ˜pm,ℓ [t] being the local waypoint refinement and pre-normalization sensing-power scores of the Dmax slots, respec-tively. The realized constant-altitude position is projected onto the mobility ball, which is given by 
+
+cccm[t] = Π B(cccm[t−1] ,V max ∆T)
+
+ qqqm[t] + ∆ qqqloc  
+
+> m
+
+[t], (59) 10 
+
+where the projection acts only on the horizontal components and then restores altitude czm. The sensing power for active slots is assigned by 
+
+pS 
+
+> m,k m,ℓ
+
+[t] = P max 
+
+> m
+
+ιm,ℓ [t] exp(˜ pm,ℓ [t]) 
+
+PDmax  
+
+> j=1
+
+ιm,j [t] exp(˜ pm,j [t]) + ϵs
+
+,ℓ = 1 , . . . , D max ,
+
+(60) where ϵs > 0 is a small numerical stabilizer that keeps the denom-inator positive. If Cm[t] = ∅, all sensing powers are set to zero and (60) is not evaluated. Thus, dummy slots receive no power, and the sensing-power budget and mobility constraint are preserved by construction. PCRB, rate, and residual-energy requirements are evaluated after execution and are handled through the constrained-reward penalties below. 
+
+4.3.3 Next-Superframe Directive Generation 
+
+After Ft, the HAP generates the next directive from γ[t + 1] 
+
+and the predicted buoy states. Define 
+
+ˆcccwp 
+
+> m,k
+
+[t + 1 |t] = [ˆ sssk[t + 1 |t]] 1, [ˆ sssk[t + 1 |t]] 4, c zm
+
+T (61) and 
+
+ϱwp 
+
+> m,k
+
+[t + 1] = λsc Θ d∆Θ m,k [t + 1] + λR bRU
+
+> m,k
+
+[t + 1] , (62) where λsc Θ , λ R ≥ 0 weight the predicted PCRB-improvement and predicted-rate surrogates. For nonempty Cm[t+1] , the unprojected waypoint is 
+
+˜qqqm[t + 1] = 
+
+P 
+
+> k
+
+γm,k [t + 1] ϱwp 
+
+> m,k
+
+[t + 1]ˆ cccwp 
+
+> m,k
+
+[t + 1 |t]
+
+P 
+
+> k
+
+γm,k [t + 1] ϱwp 
+
+> m,k
+
+[t + 1] + ϵq
+
+. (63) where ϵq > 0 is a small constant preventing a vanishing denomi-nator. If the selected set is nonempty but all weights are zero, (63) is replaced by the unweighted average over selected buoys. The projected directive waypoint is 
+
+qqqm[t + 1] = Π B(cccm[t],V max ∆T)(˜ qqqm[t + 1]) , (64) while qqqm[t + 1] = cccm[t] if Cm[t + 1] = ∅. Finally, the next directive is given by 
+
+Dm[t + 1] = {qqqm[t + 1] , Cm[t + 1] , ν ννdir  
+
+> m
+
+[t + 1] }. (65) 
+
+4.4 On-Policy Optimization without Imitation Labels 
+
+The trainable policy parameters are defined as Λ =
+
+{ψ, φ ℓ, θ loc }, where ψ is the heterogeneous graph encoder, φℓ
+
+is the candidate-edge logit head, and θloc is the local continuous UAV actor. Define 
+
+gΘ,k [t] = [Θ k[t]/Θmax  
+
+> k
+
+− 1] + , (66) 
+
+gR,k [t] = [ Rmin ¯γk[t] − Rk[t]] +/max {Rmin , ε R}, (67) 
+
+gE,m [t] = [ Emin  
+
+> m
+
+− Erem  
+
+> m
+
+[t + 1]] +/E init  
+
+> m
+
+, (68) 
+
+gD,m,m ′ [t] = [ dmin − ∥ cccm[t] − cccm′ [t]∥]+/d min . (69) Here εR > 0 is a small numerical floor that keeps (67) well defined as Rmin → 0. Then, the per-superframe reward is 
+
+r[t] = rQ[t] − λrw Θ
+
+X
+
+> k
+
+gΘ,k [t] − λrw 
+
+> R
+
+X
+
+> k
+
+gR,k [t]
+
+− λrw 
+
+> E
+
+X
+
+> m
+
+gE,m [t] − λrw 
+
+> D
+
+X
+
+> m<m ′
+
+gD,m,m ′ [t], (70) with nonnegative weights (λrw Θ , λ rw  
+
+> R
+
+, λ rw  
+
+> E
+
+, λ rw  
+
+> D
+
+).
+
+Remark 4. The reward in (70) includes only those constraints whose satisfaction cannot be guaranteed by the action parame-terization before the environment is executed. In contrast, several constraints in (P1) are enforced structurally. The candidate mask, binary association, UAV load, and buoy-cluster constraints are enforced by Fγ [t] and the masked sequential b-matching sampler. The sensing-power budget is enforced by the normalized power split in (60), and the UAV mobility bound is enforced by the projection in (59). Maximizing the discounted sum of (70) is therefore a penalized relaxation of (P1), in which the structurally enforced constraints hold exactly by the action parameterization while the PCRB, minimum-rate, energy-reserve, and inter-UAV-safety conditions in (45c), (45i), (45j), and (45k) are driven toward feasibility through the penalty channels above rather than imposed as hard per-superframe constraints, which also allows a transient PCRB excursion to be corrected over subsequent superframes instead of rendering an action infeasible. The centralized critic is an independent queue-state value function Vϕ(bbb[t], a aa[t], u uu) over the per-buoy backlog, arrival, and urgency, implemented as a separate value head rather than as a function of the graph encoder. Conditioning the value on the full per-buoy backlog, arrival, and urgency vectors captures the global queue state that dominates the long-horizon return of this buffered-collection MDP, since geometry, energy, and sensing influence the value only through their effect on the realized per-buoy service and hence on the queue evolution. PPO uses a frozen behavior copy Λ− during rollout, generalized advantage estimation, clipped actor updates, value regression, and entropy regularization. The problem-specific log-probability is 
+
+log πΛ[t] = log πseq Λ [t] + 
+
+> M
+
+X
+
+> m=1
+
+log πθloc (aaaloc  
+
+> m
+
+[t] | ooom[t]) , (71) where log πseq Λ [t] is defined in (55). 
+
+4.5 Training Workflow 
+
+The overall architecture and the centralized-training, decentralized-execution (CTDE) information flow of the proposed framework are summarized in Fig. 2. At each superframe, the HAP builds the heterogeneous UAV-buoy coordination graph G[t] from current and one-step-predicted quantities, the edge-conditioned encoder Fψ produces the UAV and buoy node embeddings {ϖU
+
+> m
+
+}
+
+and {ϖB 
+
+> k
+
+}, and the edge-logit head φℓ maps each candidate edge to a logit ℓm,k [t]. The masked sequential b-matching decoder turns these logits into a feasible sparse association γ[t] together with its exact log-probability, and the induced directive Dm is broadcast to the UAVs, which realize the local motion and sensing-power actions aloc  
+
+> m
+
+[t] through the shared actor πθloc . The environment then returns the realized reward r[t], and an independent queue-state critic Vϕ provides the value baseline to the MAPPO trainer, which updates the policy parameters Λ = {ψ, φ ℓ, θ loc }. The encoder, edge-logit head, and decoder reside at the HAP and run at both training and execution, since the HAP must produce the sparse association γ[t] every superframe, whereas the centralized queue-state critic Vϕ is used during training only and is discarded at execution. Under the CTDE paradigm, execution therefore needs only the HAP-side association modules and the shared local actor πθloc replicated across the UAVs, with no centralized critic in the loop. The associated coordination overhead is light, since per superframe each UAV uploads only the local posterior summaries in (2) for its at most Dmax served buoys and the HAP broadcasts 11 
+
+the compact directive in (3), so the exchanged signaling scales as O(M D max d2
+
+> s
+
+) with ds the buoy state dimension and stays independent of the buoy population beyond the served set. Algorithm 1 summarizes the on-policy training workflow. It is included to clarify the information flow of the proposed stochastic association policy. The HAP samples a feasible sparse associa-tion, UAVs execute local continuous actions under the received directive, the environment returns the realized sensing, rate, and queue outcomes, and PPO updates the ordered-trace policy using the recorded action log-probability. With |E cand | retained candidate edges and encoder hidden width dg , the graph encoder scales as O(Lg |E cand |d2 
+
+> g
+
+) over Lg
+
+message-passing layers and the edge-logit head is linear in |E cand |.The sequential decoder costs O(Qtar |E cand |) over at most Qtar 
+
+masked-categorical steps, and the optional MAP decoder is a polynomial-time bipartite b-matching on the same sparse set, so the online burden scales with the candidate graph rather than the full M K pair space. The problem itself is non-convex and partially observable, so global optimality is not claimed, but by making the behavior action the sampled association trace with an explicit PPO log-probability, the structured decoder removes the action-effectuality bottleneck of residual-score designs, and PPO clipping, centralized value estimation, and entropy regularization stabilize the updates. 
+
+5 SIMULATIONS AND RESULTS 
+
+We evaluate the proposed framework on the HAP-assisted maritime monitoring scenario of Section 2. In the default con-figuration, a 2.5 km × 2.5 km sea region is partitioned into 
+
+S = 24 sea patches and monitored by M = 6 rotary-wing UAVs at a fixed altitude of 50 m , which sense and collect buffered observations from K = 24 drifting buoys (one per patch) over 
+
+T = 40 superframes of duration ∆T = 1 s . The sea-patch-correlated field drives the buoy drift, the RCS fluctuation, and the residual sea clutter, so the sensing geometry and the link quality evolve throughout the mission. The UAVs start at evenly spaced launch points covering the area and each buoy is initialized in its patch with a small random perturbation. The full physical and algorithmic parameters are listed in Table 1, while the panels that probe traffic load, sensing stringency, or network size vary these settings as stated in their subsections. Regarding the learning network structures, the heterogeneous UAV-buoy candidate graph is processed by a physics- and queue-grounded edge-conditioned message-passing encoder with a hid-den width of 64 and two message-passing rounds. The resulting candidate-edge embeddings are mapped to logits and decoded into a sparse association by the masked sequential b-matching sampler, which keeps every sampled association feasible by construction and exposes the exact log-probability of the executed action. Conditioned on the received directives, a parameter-shared local UAV actor outputs the continuous motion and sensing-power actions, and an independent queue-state critic provides the value baseline. The association and the local actor are trained jointly on-policy under the MAPPO paradigm (clipped PPO with generalized advantage estimation). During implementation, training runs for 
+
+Nit = 120 iterations, each collecting Nep = 3 on-policy episodes and then reusing this batch for Nppo = 4 PPO epochs. The heterogeneous encoder is a lightweight bipartite message-passing network implemented directly in PyTorch 2.11, and the multi-agent environment is built on the PettingZoo. All experiments run 
+
+Algorithm 1: Structured Feasible-Association Graph-MARL 
+
+Input : System parameters, policy parameters Λ, critic parameters ϕ, training iterations Nit , episodes per iteration Nep , PPO epochs Nppo 
+
+Output : Learned graph-policy and local-actor parameters Λ 
+
+> 1
+
+Procedure 
+
+SeqBMatch( Ecand [τ ], {ℓm,k [τ ]}, D max , L max ): 
+
+> 2
+
+S ← ∅ , dm ← 0 ( ∀m), lk ← 0 ( ∀k), log πseq ← 0 ;
+
+Qtar ← min {M D max , KL max , |E cand [τ ]|} ; 
+
+> 3
+
+for q = 1 , 2, . . . , Q tar do  
+
+> 4
+
+A(q) ← { (m, k ) ∈ E cand [τ ] \ S : dm < D max , l k <Lmax }; 
+
+> 5
+
+if A(q) = ∅ then  
+
+> 6
+
+break  
+
+> 7
+
+end if  
+
+> 8
+
+Sample e(q) = e with probability 
+
+exp( ℓe[τ ]) / P 
+
+> e′∈A (q)
+
+exp( ℓe′ [τ ]) ; 
+
+> 9
+
+log πseq ← log πseq + log πΛ(e(q) | A (q)); 
+
+> 10
+
+Add e(q) = ( m, k ) to S; update dm ← dm + 1 and 
+
+lk ← lk + 1 ; 
+
+> 11
+
+end for  
+
+> 12
+
+Set Q[τ ] ← |S| , Tγ [τ ] ← (e(1) [τ ], . . . , e (Q[τ ]) [τ ]) , and 
+
+γm,k [τ ] ← 1{(m, k ) ∈ T γ [τ ]}; 
+
+> 13
+
+return Tγ [τ ], γ[τ ], log πseq ; 
+
+> 14
+
+Initialize the on-policy buffer Dbuf ; 
+
+> 15
+
+for u = 1 , 2, . . . , N it do  
+
+> 16
+
+Clear Dbuf ; freeze rollout parameters Λ− ← Λ and 
+
+ϕ− ← ϕ; 
+
+> 17
+
+for n = 1 , 2, . . . , N ep do  
+
+> 18
+
+Reset buoy beliefs, UAV states, residual-energy states, and optional traffic states;  
+
+> 19
+
+Build G[1] from the initial predicted priors; compute 
+
+χ[1] , Ecand [1] , and logits; apply SeqBMatch() ;generate {D m[1] }; 
+
+> 20
+
+for t = 1 , 2, . . . , T do  
+
+> 21
+
+Each UAV forms ooom[t], samples aaaloc  
+
+> m
+
+[t], realizes 
+
+cccm[t] and pS 
+
+> m,k
+
+[t], and executes St and Ut over 
+
+Cm[t]; 
+
+> 22
+
+The HAP fuses {ζm[t]}, evaluates Rk [t], Θk [t],energy and safety terms, and computes r[t]; 
+
+> 23
+
+The HAP predicts {ˆsssk [t + 1 |t], P PP k [t + 1 |t]},builds G[t + 1] , computes χ[t + 1] ,
+
+Ecand [t + 1] , and logits; applies 
+
+SeqBMatch() ; broadcasts {D m[t + 1] }; 
+
+> 24
+
+Store  G[t], Tγ [t], γ [t], {ooom[t], a aaloc  
+
+> m
+
+[t]}m, r [t], G[t +1] , V ϕ− (bbb[t], a aa[t], u uu), log πΛ− [t] in Dbuf with diagnostics;  
+
+> 25
+
+end for  
+
+> 26
+
+end for  
+
+> 27
+
+Compute standard GAE advantages and return targets over Dbuf ; 
+
+> 28
+
+for e = 1 , 2, . . . , N ppo do  
+
+> 29
+
+Update Λ with the standard clipped PPO objective using (71) ; update ϕ by value regression;  
+
+> 30
+
+end for  
+
+> 31
+
+end for 
+
+on a workstation with an AMD Ryzen 9 9950X3D CPU and an NVIDIA RTX 5090 GPU. Unless stated otherwise, the reported curves are averaged over multiple scenario seeds and independent training repetitions. 12 
+
+TABLE 1: Default simulation parameters used by the baseline environment and training configuration. 
+
+Category Parameter Value 
+
+Mobility & cooperation Vmax , dmin , Dmax , Lmax 40 m /s, 20 m , 4, 2
+
+UAV energy Einit  
+
+> m
+
+, Emin  
+
+> m
+
+300 kJ , 0.15 Einit 
+
+> m
+
+Propulsion power P0, Pi, Utip , v0, d0, ρa, sr, A 79 .86 W , 88 .63 W , 120 m /s, 4.03 m /s, 0.6,
+
+1.225 kg /m3, 0.05 , 0.503 m 2
+
+Sea-patch dynamics αq , βq , σd 0.85 , 0.10 , 1.5 km for all q ∈ { H, ω, v x, v y , δ }
+
+Initial patch state Hs[0] , ωs[0] , vvvcur  
+
+> s
+
+[0] , δs[0] U[0 .5, 1.5] m , U[0 .4, 0.8] rad /s,
+
+U[−1.5, 1.5] m /s, U[−0.1, 0.1] 
+
+Patch noise σH , σ ω , σ vx , σ vy , σ δ 0.05 m , 0.05 rad /s, 0.10 m /s, 0.10 m /s, 0.02 
+
+Buoy dynamics ςk [t], ca, σa,k [t] ωk [t], 0.12 , caω2 
+
+> k
+
+[t]Hk [t]
+
+Array & carrier R, R2, fc, λ, da, B 4, 16 , 5.8 GHz , 0.0517 m , λ/ 2, 10 MHz 
+
+Sensing & buoy RCS P max  
+
+> m
+
+, ¯σk , ϑ⋆k , ϑk, 3dB , Aatt  
+
+> k
+
+2 W , 1 m 2, 35 ◦, 20 ◦, 20 dB 
+
+RCS fluctuation ϱclu  
+
+> m,k
+
+[t], σB0,k , κH , κω , Href , ωref 0.2, 2 dB , 1.0, 0.5, 1 m , 1 rad /s
+
+Uplink & noise P U 
+
+> k
+
+, αU, β0, N0 20 dBm , 2.2, (λ/ 4π)2, 10 (−174 −30) /10 B
+
+Thresholds dcand , Γcand , Θmax  
+
+> k
+
+, Rmin 800 m , 0.5 ( −3.01 dB) , 10 m 2, 5 bit /s/Hz 
+
+Score fusion λsc Θ , λ R 0.25 , 0.20 
+
+Reward weights η, (λrw Θ , λ rw  
+
+> R
+
+, λ rw  
+
+> E
+
+, λ rw  
+
+> D
+
+) 0.95, (0 .1, 0.1, 0.1, 0.1) 
+
+Service & reward α0, αR, (wdata , w queue , w pot ), ηϕ 2.0, 2.5, (0 .50 , 0.25 , 0.25) , 0.95 0 20 40 60 80 100 120 
+
+> PPO update
+> 46810 12 14 16 18
+> cumulative queue-weighted utility
+> Proposed method
+
+Fig. 3: Convergence of the proposed learning method. 
+
+5.1 Convergence and Performance Behavior of the Pro-posed Policy 
+
+Fig. 3 reports the convergence of the proposed learning method. Over the 120 training iterations the cumulative queue-weighted utility rises from its untrained level of about 4.7 and settles near 14 .3 within roughly 80 updates, after which the mean is flat and the cross-run band narrows. The final policy is therefore stable. Fig. 4 examines how the converged policy treats individual buoys and whether it meets the sensing requirement, over one mission of T = 40 superframes. The per-buoy service fraction reported in Fig. 4(a) is the number of superframes in which buoy 
+
+k receives at least one association edge divided by the mission length, i.e., fk = 1
+
+> T
+
+PTt=1 1{P 
+
+> m
+
+γm,k [t] ≥ 1}. As Fig. 4(a) and Fig. 4(b) show, every buoy is served on at least 38% of the superframes, with the high-backlog buoys served on most superframes and the low-backlog buoys regularly but less often, and every served buoy attains an uplink rate above the nominal floor Rmin = 5 bit/s/Hz. Fig. 4(c) shows the fused position-PCRB falling steeply from its acquisition transient as the EKF fuses successive measurements, with the mean settling near 1.3 m 2
+
+and the worst-served decile near 3 m 2. Both stay well below the requirement Θmax  
+
+> k
+
+= 10 m 2 after a short transient in which the worst buoys briefly exceed it. To more clearly illustrate the dynamic UAV-buoy coordination, 0 5 10 15 20              
+
+> buoy index (a) Per-buoy service fraction
+> 00.5 1
+> served fraction
+> 0510 15 20
+> buoy index (b) Per-buoy uplink rate while served
+> 0510
+> rate (bit/s/Hz)
+> 0510 15 20 25 30 35 40
+> superframe t
+> (c) Fused sensing PCRB
+> 10 0
+> 10 2
+> 0.38 5 bit/s/Hz
+
+Fig. 4: Per-buoy service and sensing of the converged policy over one deterministic mission with T = 40 superframes. Orange bars are high-backlog buoys ( bk [0] = 50 ) and blue bars are low-backlog buoys ( bk [0] = 8 ). (a) Per-buoy service fraction. (b) Per-buoy mean realized uplink rate while served, against the floor Rmin = 5 bit/s/Hz. (c) Fused position-PCRB, the across-buoy mean Θk mean and the 90 -th percentile Θ(90)  
+
+> k
+
+against the requirement 
+
+Θmax  
+
+> k
+
+= 10 m 2.
+
+Fig. 5 presents the long-horizon trajectories over an extended mis-sion of T = 100 superframes. The UAVs leave their launch points and reposition toward the spatial clusters of heavily backlogged buoys, then refine their positions to hold a favorable sensing and collection geometry as the buoys drift, while the inset confirms the non-negligible buoy drift accumulated over the mission. The corresponding per-buoy service and queue-clearing behavior is already quantified in Fig. 4. 
+
+5.2 Comprehensive Comparison with Baselines 
+
+5.2.1 Baseline Suite 
+
+All methods are evaluated under identical scenarios, obser-vations, queue dynamics, and reward accounting. The learning baselines F-MLP, E-MLP, and GNN-BR share the proposed pol-icy’s PPO trainer, candidate-edge features, and training protocol, differing only in the association representation or decoder, while 13                                                                                                          
+
+> TABLE 2: Main comparison on the congested scenario, as mean ±standard deviation over scenario seeds. A dash marks a component the method does not use. Method Edge encoder Association decoder Utility Margin vs EP2 RAND —random feasible 4.66 ±0.83 −32 .6%
+> HOVER —exact-(P2) 6.78 ±0.11 −1.9%
+> EP2 —exact-(P2) 6.91 ±0.12 0%
+> BLG —backlog-greedy 11 .07 ±4.04 +59 .7%
+> BU-Greedy —backlog-urgency greedy 11 .56 ±3.89 +66 .8%
+> MQO —one-step b-matching 11 .04 ±2.23 +59 .5%
+> MW —max-weight b-matching 11 .18 ±3.84 +61 .3%
+> F-MLP global MLP Bernoulli +repair 6.35 ±0.23 −8.1%
+> E-MLP per-edge MLP masked b-matching 9.95 ±0.47 +44 .0%
+> DQN per-edge Q-net masked b-matching 4.61 ±0.73 −33 .4%
+> GNN-BR heterogeneous GNN Bernoulli +repair 13 .85 ±2.98 +100 .0%
+> DTDE local MLP Bernoulli +local repair 5.05 ±1.61 −27 .0%
+> Proposed heterogeneous GNN masked b-matching 14 .28 ±2.69 +106 .2%00.5 11.5 22.5
+> x (km)
+> 00.5 11.5 22.5
+> y (km)
+> -10 010 010 20 30
+> buoy drift (33 m)
+> UAV 4 UAV 1 UAV 6 UAV 3 UAV 2 UAV 5 high-backlog buoy low-backlog buoy
+> Fig. 5: Long-horizon UAV trajectories of the converged policy over T= 100
+> superframes, longer than the training horizon so the motion is visible. Each UAV runs from its launch point ( ◦) to its end position ( ⋆), the blue diamond buoy markers are sized by initial backlog, and the inset zooms into the most-drifting buoy.
+
+DQN keeps the structured decoder but learns off-policy. The baselines are as follows.  
+
+> •
+
+RAND : A uniformly random feasible association at each superframe, the no-intelligence lower reference. It quantifies how much of the achieved utility comes from learning rather than from the feasibility structure of the action space alone.  
+
+> •
+
+BU-Greedy : Greedily fills the feasible b-matching by the current backlog-urgency product. It is a backlog-aware myopic heuristic that directly clears the most urgent backlog at each superframe, so it serves as a strong reference for the learned policy.  
+
+> •
+
+EP2 : The deterministic association that maximizes the summed predicted per-edge uplink rate over the feasible fam-ily Fγ [t] in (54), solved as a max-weight b-matching. This backlog-blind rate-driven matching, denoted exact-(P2), is the rate-optimal deterministic design and the common margin reference.  
+
+> •
+
+HOVER : UAVs stay at their launch positions while the asso-ciation uses exact-(P2), isolating the value of mobility.  
+
+> •
+
+BLG : Ranks candidate edges purely by destination back-log, traffic-aware but link-quality-blind. Together with EP2 it brackets the two single-cue heuristics, neither of which jointly weighs backlog against link quality.  
+
+> •
+
+MQO : Scores each candidate edge by its predicted one-step queue-reward and solves the feasible b-matching exactly, a conventional optimization route without long-horizon fore-sight. It is the per-slot optimal greedy queue scheduler, so the margin of the proposed policy over MQO isolates the value of long-horizon credit assignment beyond the myopic one-step optimum.  
+
+> •
+
+MW [41]: The classical MaxWeight scheduler, which solves the feasible b-matching that maximizes the summed product of backlog, urgency, and predicted rate-derived service over 
+
+Fγ [t]. 
+
+> •
+
+F-MLP [43] : A single MLP over all UAV and buoy fea-tures outputs M K logits decoded by Bernoulli sampling with greedy repair, with dimensions bound to (M, K ) so it cannot transfer across sizes. It represents the flat-policy design common in MARL resource allocation and exposes the cost of an unstructured association head that must repair its sampled action to restore feasibility.  
+
+> •
+
+E-MLP [25] : A shared MLP scores each candidate edge with-out message passing while keeping the masked b-matching decoder, the graph-free ablation that isolates the relational encoder. The gap between E-MLP and the proposed policy measures how much the message-passing encoder contributes beyond per-edge features alone.  
+
+> •
+
+DQN [24] : A deep Q-network scores each candidate edge and selects with the same masked b-matching decoder, trained off-policy with ϵ-greedy exploration, replay, and a target network. It keeps the same feasible decoder but replaces on-policy actor-critic learning with value-based off-policy learning, isolating the effect of the training paradigm.  
+
+> •
+
+GNN-BR [30] : The proposed heterogeneous encoder with the association sampled as independent per-edge Bernoulli variables and repaired to feasibility, the PPO log-probability taken on the pre-repair sample, which isolates the structured decoder. Since it shares the proposed encoder and differs only by Bernoulli sampling followed by repair, the gap to the proposed policy measures the value of feasibility-preserving sequential decoding, and its repair rate directly quantifies the action-credit mismatch under distribution shift.  
+
+> •
+
+DTDE [44] : A fully decentralized counterpart to the centralized-training design. Each UAV scores only its own candidate edges with a shared local MLP on the same edge features, draws an independent Bernoulli per edge, and repairs to its own UAV load locally, with no message passing and 14 PPO update        
+
+> 020 40 60 80 100 120
+> cumulative queue-weighted utility
+> 2
+> 4
+> 6
+> 8
+> 10
+> 12
+> 14
+> 16
+> 18 Proposed
+> GNN-BR
+> E-MLP
+> F-MLP
+> DQN
+> DTDE
+> EP2
+> BU-Greedy
+> Fig. 6: Training curves of the learning designs.
+
+no centralized critic. The buoy-cluster limit couples different UAVs and cannot be enforced by local repair, so a post-hoc cleanup restores it. Training is independent PPO with a per-UAV local critic on a compact local queue summary. It isolates the value of centralized training and coordination relative to the CTDE design. 
+
+5.2.2 Training Behavior of the Learning Designs 
+
+To compare the training behavior of all learning designs, Fig. 6 reports their convergence curves. As the figure shows, the two designs built on the heterogeneous graph encoder, namely the proposed policy and GNN-BR, rise quickly above the determin-istic references, while the graph-free designs remain far below. GNN-BR climbs faster in early training, since its independent edge sampling starts close to the behavior of its repair stage. The proposed policy, which must learn the sequential selection from scratch, overtakes it after roughly 70 updates and finishes at the higher level with the narrower band. GNN-BR’s flat late-training mean conceals run-level collapses, which the repetition statistics of Table 3 make explicit. 
+
+5.2.3 Main Comparison 
+
+Table 2 reports cumulative utility and its margin over EP2 across the scenario seeds. Among the deterministic designs, the queue-aware decoders BLG, MQO, and the classical MaxWeight scheduler MW improve substantially over the rate-driven EP2, confirming that traffic awareness matters in the congested regime. The proposed policy outperforms even the one-step optimal MQO on every seed, because the queue-weighted return rewards direct-ing service capacity toward backlogs before they become critical, and it also exceeds the backlog-aware greedy heuristic BU-Greedy and the throughput-optimal MaxWeight scheduler MW, attaining the highest margin overall ( +106 .2% over EP2). Among the learning designs, the graph-free networks either fail or remain unstable, while GNN-BR and the proposed policy, both built on the heterogeneous encoder, rise far above the rest. The encoder and decoder columns isolate the two contributions. Holding the decoder fixed, a per-edge MLP (E-MLP) drops the margin from +106 .2% to +44 .0% , and dropping the relational representation entirely (F-MLP) falls below EP2, so the rela-tional message passing carries most of the gain. Holding the                                                                
+
+> TABLE 3: Stability comparison of the proposed policy and the strongest learn-ing baseline GNN-BR, as mean ±standard deviation over ten independent training repetitions per scenario seed, with the worst run (min) in parentheses. Scenario seed Proposed GNN-BR 111 .87 ±0.95 (min 10 .30 )11 .64 ±1.51 (min 7.82 )217 .52 ±0.76 (min 16 .06 )15 .62 ±2.68 (min 9.95 )313 .08 ±0.68 (min 12 .01 )12 .14 ±1.01 (min 10 .21 )TABLE 4: Traffic-load and sea-state sweeps on the default scenario. The Margin column is the proposed policy’s relative gain in cumulative queue-weighted utility over EP2. Sweep Value EP2 Proposed Margin arrival scale
+> 225 .33 24 .70 −2.5% 424 .92 24 .45 −1.9% 86.91 14 .28 +106 .2% 12 3.38 4.26 +26 .0%
+> sea state (Hscale)
+> 0.56.91 13 .30 +92 .6% 1.06.91 14 .28 +106 .2% 1.56.85 13 .99 +104 .1% 2.06.47 12 .24 +89 .1%
+
+encoder fixed, a Bernoulli-plus-repair decoder (GNN-BR) reaches a comparable +100 .0% but optimizes an action it does not execute, since 23 .2% of its sampled edges are removed by repair during training. The value-based DQN is unstable across training, collapsing in late training to end 33 .4% below EP2. Removing centralized coordination altogether, the fully decentralized DTDE design falls to −27 .0% , below even the rate-driven EP2. The reason is that its independent per-UAV sampling cannot enforce the cross-UAV buoy-cluster limit and the training is unstable across different seeds. As a supplement, Table 3 disaggregates the proposed-versus-GNN-BR comparison under three scenario seeds 8. The proposed policy achieves a higher mean than GNN-BR for every scenario seed, but its decisive advantage is reliability. Its run-to-run stan-dard deviation is 1.5 to 3.5 times smaller, and its worst run across all repetitions stays at 10 .30 , whereas GNN-BR collapses to 7.82 
+
+on seed 1 and to 9.95 on seed 2, the latter 46% below its own best run. 
+
+5.2.4 System Characteristics 
+
+To identify when learning pays off, Table 4 sweeps the traffic load and the sea state, where the arrival scale multiplies the per-buoy arrival rate and the sea-state scale multiplies the significant wave height, with the default scenario at arrival scale 8 and sea-state scale 1. Under light load (arrival scales 2 and 4) almost any feasible association clears the buffer, so the deterministic decoder is already near-optimal and learning offers no margin. Once arrivals exceed what the fleet can clear, service slots become scarce relative to urgent backlog and the proposed policy achieves a large margin ( +106 .2% at scale 8), exactly where the queue-weighted formulation predicts. Sweeping the sea state from calm to rough gradually lowers the EP2 utility as clutter and drift intensify, whereas the proposed policy stays robust and holds a margin between +89 .1% and +106 .2% across all sea states rather than tuning to a single one.                                              
+
+> 8. Within each scenario seed, we run ten independent training repetitions, and each repetition is a complete training run of 120 MAPPO updates, where every update collects three episodes of 40 superframes and performs four PPO epochs, so one repetition spans 360 episodes or about 14 ,400 environment superframes. 15
+> TABLE 5: Generalization and size transfer, with the margin over EP2 in parentheses. The last row reports the proposed policy’s average per-decision inference latency at each network size. Method Scenario I Scenario II EP2 6.67 7.55
+> BU-Greedy (ref.) 9.44 15 .65
+> F-MLP 4.63 ±0.40 (−30 .6% )not transferable E-MLP 8.22 ±0.80 (+23 .2% )7.94 ±0.73 (+5 .2% )GNN-BR 10 .75 ±1.76 (+61 .2% )14 .63 ±3.67 (+93 .8% )
+> Proposed 12 .38 ±0.23 (+85 .6% )17 .52 ±0.37 (+132 .1% )Latency (ms) 7.814 .9
+
+5.2.5 Generalization and Size Transfer 
+
+To test whether the learned policy is tied to its training instances, Table 5 applies two transfer scenarios. In Scenario I, the policy is trained on four scenario instances and evaluated on three unseen instances of the same size ( M =6 , K=24 ). In Scenario II, the policy trained at M =6 , K=24 is evaluated, without any fine-tuning, on a larger network with M =8 and K=32 . As the results show, the proposed policy passes both tests, since averaged over three independent training repetitions it retains a +85 .6% margin over EP2 in Scenario I and a +132 .1% margin in Scenario II, where it even exceeds BU-Greedy on that network. Moreover, F-MLP stays below EP2 on the unseen same-size instances, dropping to a −30 .6% margin, and it cannot be evaluated at a larger size since its dimensions are hard-wired to 
+
+M K . E-MLP transfers only marginally, ending barely above the deterministic decoder in Scenario II ( +5 .2% ). GNN-BR reaches a high mean utility but is unreliable, with a ±3.67 spread across runs (nearly ten times the proposed policy’s ±0.37 ) because one run collapses, which is the transfer-time symptom of the action-credit mismatch, as about 49% of its optimized actions are discarded by repair in Scenario II. By contrast, the proposed policy transfers while preserving exact feasibility, the lowest variance, and the highest mean margin ( 17 .52 versus GNN-BR’s 14 .63 ). This transferability is architectural rather than accidental, because all trainable parameters are shared per node type or per edge, the feasibility decoder is parameter-free and re-derives its masks from the new (M, K, D max , L max ), the features are dimensionless, and the only size-bound component, the centralized queue-state critic, is used during training only and discarded at execution under the CTDE paradigm. The bottom row of Table 5 shows that this scalability is computational as well, since the average per-decision inference latency grows only from 7.8 to 14 .9 ms as the network grows from Scenario I to Scenario II, well within the one-second superframe. 
+
+6 CONCLUSION 
+
+This paper studied HAP-assisted maritime sparse coopera-tive ISAC under a queue-weighted buffered-collection objective, where rotary-wing UAVs sense drifting buoys and collect buffered observations through sparse cooperative uplinks. We cast the per-superframe sparse association as a feasibility-preserving stochastic 
+
+b-matching over a heterogeneous coordination graph, and trained it jointly with the local motion and sensing-power actors by on-policy MAPPO without any imitation labels. On the congested maritime scenario the learned policy raised the cumulative queue-weighted utility by 106 .2% over the exact rate-driven decoder, surpassed both the one-step queue optimizer and the backlog-urgency greedy heuristic, and kept a large margin across the sea-state sweep and under medium-to-heavy traffic where queue coupling is binding, while in light traffic the deterministic decoder remains competitive. Without any fine-tuning, the policy also transferred to a larger network, retaining the highest mean margin and the lowest variance among all learning designs. Finally, while this work assumes an ideal, rate-unconstrained HAP-UAV control link to focus on the queue-aware ISAC data col-lection, real-world maritime deployments may experience control-link fading, latency, or packet loss under extreme weather con-ditions. Future extensions will investigate the joint design of the sparse cooperation policy and the reliable delivery of HAP direc-tives under constrained, fading, and rate-limited control channels to further enhance the robustness of the framework. 
+
+APPENDIX ACLOSED -F ORM PROCESS -N OISE COVARIANCE FOR THE PATCH -A WARE SINGER MODEL 
+
+This appendix states the closed-form process-noise covariance of the patch-aware Singer model used in the numerical evaluation. The one-axis covariance block is given by 
+
+¯QQQk[t] = 
+
+
+
+q11 ,k [t] q12 ,k [t] q13 ,k [t]
+
+q12 ,k [t] q22 ,k [t] q23 ,k [t]
+
+q13 ,k [t] q23 ,k [t] q33 ,k [t]
+
+ , (72) which corresponds to the one-axis Singer state 
+
+[cxk [t], ¯vxk [t], a xk [t]] T. With λk[t] = e−ςk [t]∆ T , ςk[t] = ωk[t] and 
+
+σa,k [t] = ca ω2
+
+> k
+
+[t]Hk[t], the standard Singer discretization gives the entries of (72) as 
+
+q11 ,k [t] = 2∆ 3Tσ2 
+
+> a,k
+
+[t]3ςk [t] − 2∆ 2Tσ2 
+
+> a,k
+
+[t]
+
+ς2 
+
+> k
+
+[t]+ 2∆ Tσ2 
+
+> a,k
+
+[t]
+
+ς3 
+
+> k
+
+[t]
+
+ 1 − 2λk [t] + σ2 
+
+> a,k
+
+[t]
+
+ς4 
+
+> k
+
+[t]
+
+ 1 − λ2 
+
+> k
+
+[t],q12 ,k [t] = σ2 
+
+> a,k
+
+[t]
+
+ς3 
+
+> k
+
+[t]
+
+ ∆2Tς2 
+
+> k
+
+[t] − 2∆ Tςk [t] + 1 
+
+−2 1 − ∆Tςk [t]λk [t] + λ2 
+
+> k
+
+[t] ,q22 ,k [t] = 2∆ Tσ2 
+
+> a,k
+
+[t]
+
+ςk [t] − σ2 
+
+> a,k
+
+[t]
+
+ς2 
+
+> k
+
+[t]
+
+ 3 − 4λk [t] + λ2 
+
+> k
+
+[t],q23 ,k [t] = σ2 
+
+> a,k
+
+[t]
+
+ςk [t]
+
+ 1 − λk [t]2,q13 ,k [t] = σ2 
+
+> a,k
+
+[t]
+
+ς2 
+
+> k
+
+[t]
+
+
+
+1 − λ2 
+
+> k
+
+[t] − 2∆ Tςk [t]λk [t]
+
+
+
+,q33 ,k [t] = σ2 
+
+> a,k
+
+[t] 1 − λ2 
+
+> k
+
+[t]. (73) 
+
+APPENDIX BECHO -O NLY EKF R ECURSION FOR LOCAL UPDATE AND HAP F USION 
+
+This appendix details the echo-only EKF recursion behind the proposed estimation procedure. It makes explicit how the common prior (ˆ sssk[t|t − 1] , P PP k[t|t − 1]) , the UAV-side local posterior pair (ˆ sssm,k [t|t], P PP m,k [t|t]) , and the HAP-side fused posterior pair 
+
+(ˆ sssk[t|t], P PP k[t|t]) are produced. The prior covariance PPP k[t|t − 1] 
+
+that enters (32) is this common one-step prior, obtained from the previous fused posterior by one-step prediction, so it is neither a fixed matrix nor the current posterior covariance. 16 
+
+B.1 Common prior at the beginning of superframe t
+
+After fusion in superframe t − 1, the HAP holds the posterior pair (ˆ sssk[t − 1|t − 1] , P PP k[t − 1|t − 1]) for buoy k. Before St,it forms the shared prior distributed to all UAVs by applying the one-step prediction of the buoy dynamics in (11), which gives 
+
+ˆsssk[t|t − 1] = GGGk[t − 1]ˆ sssk[t − 1|t − 1] + ∆ Tvvvcur  
+
+> k
+
+[t − 1] ,PPP k[t|t − 1] = GGGk[t − 1] PPP k[t − 1|t − 1] GGGT 
+
+> k
+
+[t − 1] + QQQk[t − 1] .
+
+(74) All UAVs assigned to sense buoy k start from the same prior in (74). 
+
+B.2 Local echo-only EKF update at UAV m
+
+For the complex echo measurement mmmm,k [t] ∈ CR2×1 in (28), we stack the real and imaginary parts into the equivalent real-valued quantities 
+
+mmmm,k [t] = 
+
+ℜ{ mmmm,k [t]}ℑ{ mmmm,k [t]}
+
+
+
+, hhhm,k (sss) = 
+
+ℜ{ ¯rrrm,k (sss)}ℑ{ ¯rrrm,k (sss)}
+
+
+
+,HHHm,k [t] = 
+
+ℜ{ HHHm,k [t]}ℑ{ HHHm,k [t]}
+
+
+
+,
+
+(75) with the real-valued measurement-noise covariance 
+
+RRRm,k [t] = σ21,m,k [t]2 III2R2 . (76) Using the common prior (ˆ sssk[t|t − 1] , P PP k[t|t − 1]) , UAV m forms the innovation, covariance and the Kalman gain as 
+
+νννm,k [t] = mmmm,k [t] − hhhm,k (ˆ sssk [t|t − 1]) , (77) 
+
+SSSm,k [t] = HHHm,k [t]PPP k [t|t − 1] HHHT 
+
+> m,k
+
+[t] + RRRm,k [t], (78) 
+
+KKKm,k [t] = PPP k [t|t − 1] HHHT 
+
+> m,k
+
+[t]SSS−1 
+
+> m,k
+
+[t]. (79) Hence, the local posterior generated by UAV m can be derived as 
+
+ˆsssm,k [t|t] = ˆ sssk [t|t − 1] + γm,k [t]KKKm,k [t]νννm,k [t], (80) 
+
+PPP m,k [t|t] = AAAm,k [t] PPP k [t|t − 1] AAAT 
+
+> m,k
+
+[t]+ γm,k [t]KKKm,k [t]RRRm,k [t]KKKT 
+
+> m,k
+
+[t], (81) where AAAm,k [t] ≜ III − γm,k [t]KKKm,k [t]HHHm,k [t]. The Joseph form in (81) preserves numerical symmetry and positive semidefinite-ness. When γm,k [t] = 0 , the update is skipped and the posterior reduces to the common prior, whereas for an associated pair the packet (2) carries the local posterior pair (ˆ sssm,k [t], P PP m,k [t|t]) with 
+
+ˆsssm,k [t] ≡ ˆsssm,k [t|t]. The fusion identities below assume that all UAVs associated with buoy k share the same common prior pair (ˆ sssk[t|t − 1] , P PP k[t|t − 1]) and the same linearization point 
+
+ˆsssk[t|t − 1] when building HHHm,k [t] and the innovation. 
+
+B.3 HAP-side information fusion and posterior recur-sion 
+
+Since all UAVs start from the common prior in (74), the HAP fuses only the measurement-induced information increments, which keeps the shared prior from being counted more than once. Then, the local information increment contributed by UAV m for buoy k is given by 
+
+JJJEIF 
+
+> m,k
+
+[t] = HHHT
+
+> m,k
+
+[t]RRR−1
+
+> m,k
+
+[t]HHHm,k [t]= 2
+
+σ21,m,k [t] ℜ
+
+n
+
+HHHH
+
+> m,k
+
+[t]HHHm,k [t]
+
+o
+
+, (82) and the matching information-state increment is 
+
+ηηηEIF 
+
+> m,k
+
+[t] = HHHT
+
+> m,k
+
+[t]RRR−1
+
+> m,k
+
+[t]νννm,k [t]. (83) The increment in (82) is exactly the local FIM of (31). The HAP then forms the fused posterior as 
+
+PPP k [t|t]−1 = PPP k [t|t − 1] −1 +
+
+> M
+
+X
+
+> m=1
+
+γm,k [t]JJJEIF  
+
+> m,k
+
+[t], (84) 
+
+ˆsssk [t|t] = ˆ sssk [t|t − 1] + PPP k [t|t]
+
+> M
+
+X
+
+> m=1
+
+γm,k [t]ηηηEIF  
+
+> m,k
+
+[t]. (85) The covariance in (84) is the posterior covariance after the superframe-t update, which is distinct from the prior covariance in (32). Substituting PPP k[t|t]−1 into (32) would double count the current echo information. Under the present linear-Gaussian ap-proximation, this fused posterior covariance equals the inverse of the fused Bayesian FIM JJJk[t] in (32), namely PPP k[t|t] = JJJ−1 
+
+> k
+
+[t].The PCRB metric and the EKF posterior covariance are therefore numerically consistent, even though they play different conceptual roles in the paper. The packet (2) can equivalently be realized by uploading local posterior pairs, where each UAV sends (ˆ sssm,k [t|t], P PP m,k [t|t]) 
+
+rather than the information increments. Let the number of UAVs associated with buoy k in superframe t be Lk[t] =PMm=1 γm,k [t]. Because each local posterior starts from the same prior, we have 
+
+PPP m,k [t|t]−1 = PPP k[t|t − 1] −1 + γm,k [t]JJJEIF 
+
+> m,k
+
+[t]. (86) Therefore, the HAP may equivalently fuse the uploaded local posterior pairs as 
+
+PPP k [t|t]−1 =
+
+> M
+
+X
+
+> m=1
+
+γm,k [t]PPP m,k [t|t]−1 −  Lk [t] − 1PPP k [t|t − 1] −1,
+
+(87) 
+
+ˆsssk [t|t] = PPP k [t|t] gggk [t] −  Lk [t] − 1PPP k [t|t − 1] −1ˆsssk [t|t − 1] .
+
+(88) Here gggk[t] ≜ PMm=1 γm,k [t]PPP m,k [t|t]−1ˆsssm,k [t|t] collects the information-weighted local estimates. Equations (87)–(88) are the packet-level fusion identities that make (2) directly imple-mentable while still avoiding double counting of the common prior. Applying the prediction in (74) to the fused posterior pair (ˆ sssk[t|t], P PP k[t|t]) then yields the next prior pair (ˆ sssk[t +1|t], P PP k[t + 1 |t]) , which closes the recursion. 
+
+REFERENCES           
+
+> [1] T. Xia, M. M. Wang, J. Zhang, and L. Wang, “Maritime internet of things: Challenges and solutions,” IEEE Wireless Communications , vol. 27, no. 2, pp. 188–196, 2020. [2] N. Nomikos, P. K. Gkonis, P. S. Bithas, and P. Trakadas, “A survey on UAV-aided maritime communications: Deployment considerations, applications, and future challenges,” IEEE Open Journal of the Commu-nications Society , vol. 4, pp. 56–78, 2023. [3] Z. Liu, X. Meng, Y. Yang, K. Ma, and X. Guan, “Energy-efficient UAV-aided ocean monitoring networks: Joint resource allocation and trajectory design,” IEEE Internet of Things Journal , vol. 9, no. 18, pp. 17 871– 17 884, 2022. [4] F. Liu, Y. Cui, C. Masouros, J. Xu, T. Han, Y. C. Eldar, and S. Buzzi, “Integrated sensing and communications: Toward dual-functional wire-less networks for 6G and beyond,” IEEE Journal on Selected Areas in Communications , vol. 40, no. 6, pp. 1728–1767, 2022. [5] G. Karabulut Kurt, M. G. Khoshkholgh, S. Alfattani, A. Ibrahim, T. S. J. Darwish, M. S. Alam, H. Yanikomeroglu, and A. Yongacoglu, “A vision and framework for the high altitude platform station (HAPS) networks of the future,” IEEE Communications Surveys & Tutorials , vol. 23, no. 2, pp. 729–779, 2021. 17
+
+[6] B. Li, J. Liu, Y. Liang, Q. Li, H. Liu, Y. Zhang, J. Mu, S. Mumtaz, and S. Chen, “UAV-enabled joint sensing, communication, powering, and backhaul transmission in maritime monitoring networks,” IEEE Internet of Things Journal , vol. 13, no. 4, pp. 7473–7486, 2026. [7] Z. Lyu, G. Zhu, and J. Xu, “Joint maneuver and beamforming design for UAV-enabled integrated sensing and communication,” IEEE Trans-actions on Wireless Communications , vol. 22, no. 4, pp. 2424–2440, 2023. [8] Y. Pan, R. Li, X. Da, H. Hu, M. Zhang, D. Zhai, K. Cumanan, and O. A. Dobre, “Cooperative trajectory planning and resource allocation for UAV-enabled integrated sensing and communication systems,” IEEE Transactions on Vehicular Technology , vol. 73, no. 5, pp. 6502–6516, 2024. [9] Y. Zhang, J. Lyu, and L. Fu, “Energy-efficient trajectory design for UAV-aided maritime data collection in wind,” IEEE Transactions on Wireless Communications , vol. 21, no. 12, pp. 10 871–10 886, 2022. [10] K. Meng, Q. Wu, S. Zhang, W. Chen, K. Huang, and J. Xu, “Throughput maximization for UAV-enabled integrated periodic sensing and commu-nication,” IEEE Transactions on Wireless Communications , vol. 22, no. 1, pp. 671–687, 2023. [11] Y. Zeng, J. Xu, and R. Zhang, “Energy minimization for wireless communication with rotary-wing UAV,” IEEE Transactions on Wireless Communications , vol. 18, no. 4, pp. 2329–2345, 2019. [12] K. Meng, Q. Wu, J. Xu, W. Chen, Z. Feng, R. Schober, and A. L. Swindlehurst, “UAV-enabled integrated sensing and communication: Opportunities and challenges,” IEEE Wireless Communications , vol. 31, no. 2, pp. 97–104, 2024. [13] Y. Jiang, Q. Wu, W. Chen, and K. Meng, “UAV-enabled integrated sensing and communication: Tracking design and optimization,” IEEE Communications Letters , vol. 28, no. 5, pp. 1024–1028, 2024. [14] T. Zhang, K. Zhu, S. Zheng, D. Niyato, and N. C. Luong, “Trajectory design and power control for joint radar and communication enabled multi-UAV cooperative detection systems,” IEEE Transactions on Com-munications , vol. 71, no. 1, pp. 158–172, 2023. [15] L. P. Qian, H. Zhang, Q. Wang, Y. Wu, and B. Lin, “Joint multi-domain resource allocation and trajectory optimization in UAV-assisted maritime IoT networks,” IEEE Internet of Things Journal , vol. 10, no. 1, pp. 539– 552, 2023. [16] B. Li, J. Liu, J. Mu, P. Xiao, and S. Chen, “UAV-enabled integrated sensing and communication in maritime emergency networks,” IEEE Internet of Things Journal , vol. 12, no. 24, pp. 53 997–54 012, 2025. [17] J. Zhang, G. Wang, H. Yang, B. Liu, and B. Li, “Multiuser maritime integrated sensing and communication shipboard base station deployment optimization,” IEEE Internet of Things Journal , vol. 11, no. 18, pp. 29 375–29 386, 2024. [18] X. Cao, S. Wang, and Y. Zhang, “Intelligent reflecting surface enhanced maritime joint sensing and communication systems: Performance opti-mization,” IEEE Transactions on Communications , 2024. [19] H. Yang, K. Lin, L. Xiao, Y. Zhao, Z. Xiong, and Z. Han, “Energy harvesting UAV-RIS-assisted maritime communications based on deep reinforcement learning against jamming,” IEEE Transactions on Wireless Communications , vol. 23, no. 8, pp. 9854–9868, 2024. [20] X. Fu, X. Huang, Q. Pan, P. Pace, G. Aloi, and G. Fortino, “Cooperative data collection for UAV-assisted maritime IoT based on deep reinforce-ment learning,” IEEE Transactions on Vehicular Technology , vol. 73, no. 7, pp. 10 333–10 349, 2024. [21] X. Liu, J. Wu, C. Zhao, and Z. Liu, “Integrated sensing and communi-cations for UAV assisted internet of things based on deep reinforcement learning,” IEEE Transactions on Vehicular Technology , vol. 74, no. 6, pp. 9604–9616, 2025. [22] X. Ye, H. Lin, X. Song, Y. Wu, and L. Fu, “Multi-objective ISAC for low-altitude economy based on multi-task deep reinforcement learning with mixture of experts,” IEEE Transactions on Mobile Computing , 2026. [23] S. Mao, L. Liu, X. Hou, M. Atiquzzaman, and K. Yang, “Multi-domain resource management for space–air–ground integrated sensing, communication, and computation networks,” IEEE Journal on Selected Areas in Communications , vol. 42, no. 12, pp. 3380–3394, 2024. [24] B. Hu, H. Liu, J. Du, M. López-Benítez, C. Wu, X. Chu, and D. Niyato, “MADQN-enhanced computation offloading and resource allocation for 6G low-altitude economy vehicular networks,” IEEE Transactions on Cognitive Communications and Networking , 2025. [25] Y. Shen, J. Zhang, S. H. Song, and K. B. Letaief, “Graph neural networks for wireless communications: From theory to practice,” IEEE Transactions on Wireless Communications , vol. 22, no. 5, pp. 3554–3569, 2023. [26] Z. Liu, J. Zhang, E. Shi, Z. Liu, B. Ai, Y. Shen, and D. W. K. Ng, “Graph neural network meets multi-agent reinforcement learning: Fundamentals, applications, and future directions,” IEEE Wireless Communications ,2024. [27] Z. Liu, J. Zhang, Y. Zhu, E. Shi, D. W. K. Ng, and B. Ai, “Mobile cell-free massive MIMO with multi-agent reinforcement learning: A scalable framework,” IEEE Transactions on Wireless Communications , 2024. [28] X. Zhang, H. Zhao, J. Wei, C. Yan, J. Xiong, and X. Liu, “Cooperative trajectory design of multiple UAV base stations with heterogeneous graph neural networks,” IEEE Transactions on Wireless Communications ,vol. 22, no. 3, pp. 1495–1509, 2023. [29] H. Liu, Z. Xie, J. Liu, and B. Li, “Heterogeneous graph neural network for beamforming design in cell-free massive MIMO with underlaid D2D maritime systems,” in Proc. IEEE 101st Veh. Technol. Conf. (VTC2025-Spring) , 2025, pp. 1–6. [30] J. Wang, X. Zhang, Z. Wei, F. Sun, Y. Li, Z. Feng, and J. Lu, “Multi-UAV collaborative ISAC with dynamic resource allocation: A hierarchical graph multi-agent reinforcement learning approach,” IEEE Journal of Selected Topics in Signal Processing , 2026. [31] L. H. Holthuijsen, Waves in Oceanic and Coastal Waters . Cambridge University Press, 2007. [32] L. Cavaleri, J.-H. G. M. Alves, F. Ardhuin, A. Babanin, M. Banner, K. Belibassakis, M. Benoit, M. Donelan, J. Groeneweg, T. H. C. Herbers 
+
+et al. , “Wave modelling - the state of the art,” Progress in Oceanography ,vol. 75, no. 4, pp. 603–674, 2007. [33] E. Hanert, D. Y. Le Roux, V. Legat, and E. Deleersnijder, “Advection schemes for unstructured grid ocean modelling,” Ocean Modelling ,vol. 7, no. 1–2, pp. 39–58, 2004. [34] R. A. Singer, “Estimating optimal tracking filter performance for manned maneuvering targets,” IEEE Transactions on Aerospace and Electronic Systems , vol. AES-6, no. 4, pp. 473–483, 1970. [35] C. Uluı¸ sık, G. Çakır, M. Çakır, and L. Sevgi, “Radar Cross Section (RCS) Modeling and Simulation, Part 1: A Tutorial Review of Definitions, Strategies, and Canonical Examples,” IEEE Antennas and Propagation Magazine , vol. 50, no. 1, pp. 115–126, 2008. [36] ETSI ISG ISAC, “Integrated Sensing And Communications (ISAC); Channel Modelling, Measurements and Evaluation Methodology,” ETSI, Tech. Rep. ETSI GR ISC 002 V1.1.1, Aug. 2025. [Online]. Available: https://www.etsi.org/deliver/etsi_gr/ISC/001_099/002/01.01. 01_60/gr_ISC002v010101p.pdf [37] T. K. Le, “Discussion on ISAC Channel Modeling,” 3GPP TSG RAN WG1 Meeting #119, Athens, Greece, Tech. Rep. R1-2500414, Feb. 2025. [Online]. Available: https://www.eurecom.fr/publication/ 8092/download/comsys-publi-8092.pdf [38] V. Gregers-Hansen and R. Mital, “An improved empirical model for radar sea clutter reflectivity,” IEEE Transactions on Aerospace and Electronic Systems , vol. 48, no. 4, pp. 3512–3524, 2012. [39] N. Gao, Y. Zeng, J. Wang, D. Wu, C. Zhang, Q. Song, J. Qian, and S. Jin, “Energy model for UAV communications: Experimental validation and model generalization,” China Communications , vol. 18, no. 7, pp. 253– 264, 2021. [40] B. Duo, Q. Wu, X. Yuan, and R. Zhang, “Energy efficiency maximization for full-duplex UAV secrecy communication,” IEEE Transactions on Vehicular Technology , vol. 69, no. 4, pp. 4590–4595, 2020. [41] L. Tassiulas and A. Ephremides, “Stability properties of constrained queueing systems and scheduling policies for maximum throughput in multihop radio networks,” IEEE Transactions on Automatic Control ,vol. 37, no. 12, pp. 1936–1948, 1992. [42] M. J. Neely, Stochastic Network Optimization with Application to Com-munication and Queueing Systems . Morgan & Claypool, 2010. [43] C. Yu, A. Velu, E. Vinitsky, J. Gao, Y. Wang, A. Bayen, and Y. Wu, “The surprising effectiveness of PPO in cooperative multi-agent games,” 
+
+Advances in Neural Information Processing Systems , vol. 35, pp. 24 611– 24 624, 2022. [44] C. S. de Witt, T. Gupta, D. Makoviichuk, V. Makoviychuk, P. H. S. Torr, M. Sun, and S. Whiteson, “Is independent learning all you need in the StarCraft multi-agent challenge?” arXiv preprint arXiv:2011.09533 ,2020.

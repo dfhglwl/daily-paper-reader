@@ -1,0 +1,849 @@
+Title: Adaptive Machine Learning Framework for UAV Trajectory Optimization in O-RAN
+
+URL Source: https://arxiv.org/pdf/2606.24483v1
+
+Published Time: Wed, 24 Jun 2026 00:57:10 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+> ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 1
+
+# Adaptive Machine Learning Framework for UAV Trajectory Optimization in O-RAN 
+
+Chenrui Sun Student Member, IEEE , Swarna Bindu Chetty Member, IEEE , Gianluca Fontanesi Member, IEEE ,Mahnaz Arvaneh Member, IEEE , Walid Saad Fellow, IEEE and Hamed Ahmadi Senior Member, IEEE 
+
+Abstract —The deployment of unmanned aerial vehicles (UAV) as open radio units (O-RUs) in 6G cellular systems presents a promising opportunity to achieve scalable and adaptive network coverage. However, optimizing UAV trajectories in dynamic and unfamiliar environments remains a critical challenge, partic-ularly due to the need for extensive retraining in each new scenario. In this paper, we introduce a novel UAV trajectory opti-mization framework that integrates enhanced continual transfer learning within the Open Radio Access Network (O-RAN) architecture. The proposed system maintains a library of pre-trained models and employs a model selection mechanism to identify and transfer knowledge from the most relevant envi-ronments, minimizing adaptation time and improving efficiency. When no sufficiently similar model is available, a fallback model empowered by continuous refinements ensures baseline performance. The framework leverages real-world city maps and ray tracing techniques to enhance learning reliability and improve trajectory planning. Simulation results demonstrate that the proposed model selection-based transfer learning approach reduces convergence time by 44% to 56% compared to retraining from scratch, and up to 40% compared to traditional transfer learning without model selection. 
+
+Index Terms —UAV, O-RAN, deep reinforcement learning, trajectory planning, transfer learning, ray tracing, 6G, CL. 
+
+I. I NTRODUCTION 
+
+Sixth Generation (6G) wireless cellular systems are ex-pected to provide ultra-low latency, massive connectivity, and unprecedented adaptability to diverse scenarios. The leap towards 6G requires a rethinking of traditional infrastruc-ture deployment to meet the demands of dynamic environ-ments such as disaster zones, dense urban areas, and remote regions. To achieve this, open radio access network (O-RAN) architecture is expected to be the cornerstone of 6G innovation [1]. O-RAN introduces an open and intelligent architecture that disaggregates traditional RAN functions and standardizes interfaces, enabling multi-vendor interoperability and enhanced control through centralized intelligence. Within this framework, unmanned aerial vehicle (UAV) present a new opportunity to operate as agile and reconfigurable open 
+
+C. Sun, S.B. Chetty and H. Ahmadi are with the school of Physics, Engi-neering and Technology, University of York, United Kingdom. G. Fontanesi is with Radio Systems Research, Nokia Bell Labs, Stuttgart, Germany. M. Arvaneh is with the School of Electrical and Electronic Engineering, University of Sheffield, United Kingdom. W. Saad is with the Bradley Department of Electrical and Computer Engineering, Virginia Tech, VA, 24061, USA 
+
+Fig. 1: Environmentally Adaptive UAV Trajectory Optimization with O-RAN System 
+
+radio units (O-RUs), dynamically extending coverage in the O-RAN architecture [2]. For instance, UAV-based O-RUs can provide connectivity in disaster affected regions, enhance capacity at crowded events, or deliver network access to remote communities. Their agility and mobility make UAVs an essential component of the O-RAN framework, ensuring rapid and scalable deployment of 6G networks. Due to limited capacity of UAV batteries, minimizing flight distance is crucial to extending mission duration and ensuring efficient coverage of objectives. This requires better optimization of the UAV’s trajectory [3]. At the same time, maintaining a good connection with the ground open dis-tributed units (O-DUs) is critical to support communication needs during flight. To meet the dual challenges of energy ef-ficiency and communication quality, trajectory planning must consider environmental dynamics, user locations, and signal quality. Traditional optimization methods are insufficient in such complex and time-varying scenarios. In contrast, Ma-chine Learning (ML) techniques, particularly reinforcement learning (RL), have shown promising results. RL enables UAVs to learn adaptive trajectory policies through interaction with the environment, balancing exploration and exploitation to discover efficient paths [4]. However, a significant limitation of RL is its poor adapt-ability across environments. Once deployed in a new scenario with different urban structures, terrain, or communication characteristics, an RL model typically requires retraining from scratch. This retraining process is computationally expensive and time-consuming, which hinders real-time UAV opera-tions and scalability across diverse settings. To overcome  
+
+> arXiv:2606.24483v1 [eess.SP] 23 Jun 2026 ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 2
+
+this, transfer learning (TL) has been proposed as a way to reuse knowledge from previously trained models to accelerate learning in new environments. TL can significantly reduce retraining time and improve initial performance. However, the practical deployment of TL in UAV trajectory planning still faces several challenges. Specifically, it is unclear how to evaluate the applicability of the learning path to a specific target environment, how to identify the most suitable source model from the pre-trained library, and under what conditions knowledge transfer leads to performance improvement rather than negative transfer. Addressing these issues is critical to ensure that TL not only accelerates convergence speed but also ensures robust and reliable operation of UAVs in heterogeneous urban scenarios. This work focuses on these critical questions. We design a model selection framework that enhances the reliability and performance of TL for UAV trajectory optimization. Our approach not only selects suitable models based on environ-mental similarity but also integrates this mechanism into the O-RAN platform, enabling real-time adaptation, continuous learning, and practical deployment. By combining TL with enhanced continuous learning and embedding the solution into the O-RAN architecture. This is able to address the limitations of previous ML-based trajectory systems. 
+
+A. Prior Works 
+
+Recent advances in ML have significantly enhanced UAV trajectory optimization, particularly in dynamic and com-plex wireless environments. RL has been widely adopted to enable UAVs to autonomously learn optimal paths through interaction with their surroundings. Early studies such as [5] and [6] showed the feasibility of RL for autonomous UAV navigation and trajectory design. deep reinforcement learning (DRL) techniques, including deep deterministic policy gra-dient (DDPG) and double deep Q network (DDQN), have further improved trajectory learning under uncertainty and mobility constraints, as shown in [7]–[9]. Energy efficiency has emerged as a parallel optimization goal. In [10] and [11], the authors used DRL and knowledge transfer to reduce UAV energy consumption while maintaining connectivity. Similarly, the work in [8] incorporated fairness and frequency allocation alongside energy-aware trajectory planning. Moreover, in [12], the authors applied heuristic learning to meet connectivity constraints in cellular-connected UAVs, while the work in [13] combined RL with greedy algorithms to balance performance and learning speed in mobile base station applications. Addi-tionally, model-based and optimization-driven methods remain relevant for scenarios requiring 3D placement and UAV-assisted network design [14]. Connectivity-aware planning using aerial coverage maps was also proposed in [15] to proactively guide UAV paths based on prior knowledge. More recently, TL has been employed to improve general-ization and reduce training time across environments. In [16] and [17], the authors demonstrated that transferring models between environments significantly accelerates adaptation and improves reliability, especially under outage constraints. In parallel, the work in [18] explored inter-UAV knowledge transfer for trajectory tracking, enabling faster learning in new missions. Recent studies have also investigated meta-learning for rapid adaptation by learning shared knowledge across tasks, and many of these approaches rely on repeated task-level training, whereas transfer learning focuses on reusing pre-trained models to reduce retraining cost in deployment scenarios [19]. Recent research has also explored distributed artificial in-telligence and multi-modal learning frameworks for intelligent control in future wireless and UAV-assisted networks. In par-ticular, [20] investigates distributed AI-based secure communi-cations across space-air-ground-sea integrated networks, while [21] introduces distributed foundation models for multi-modal learning in 6G networks under O-RAN architectures. These studies indicate that UAV trajectory optimization can benefit from multi-modal inputs, such as radio environment maps, sensing data, and network state information, with coordination supported by RAN Intelligent Controllers. However, most existing studies focus on single-environment learning and lack mechanisms for continuous adaptation in real-world heteroge-neous environments. In addition, there is a lack of systematic analysis on under what conditions UAV trajectory models are suitable for TL and which types of source environments can produce the most effective transfer performance. In Table I, we review relevant studies on UAV trajectory optimization using ML and highlight the distinctions of our contribution. 
+
+B. Contributions 
+
+The main contribution of this paper is introducing a flexible and adaptive framework for deploying UAVs as O-RU in 6G networks, addressing key challenges in trajectory optimization and adaptability in dynamic environments. In summary, our key contributions include:  
+
+> •
+
+We develop a model selection mechanism that selects the most appropriate pre-trained model from a library of trajectory policies based on an environment similar-ity metric. A fallback general model MG is employed when no sufficiently similar model exists. This approach significantly reduces the retraining overhead and further improves transfer efficiency.  
+
+> •
+
+We created a fallback model MG that is continuously updated based on new environments, MG initially trained on synthetic simulation environments, it will update using continual learning (CL) as UAVs encounter new environments. This enables the system to progressively accumulate knowledge across diverse urban scenarios.  
+
+> •
+
+We develop a integrated UAV trajectory system within O-RAN structure. Model selection and training are in-tegrated through xApps and rApps within the Near-RT and Non-RT RICs, enabling real-time inference and continuous learning. ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 3
+
+TABLE I: Summary of Machine Learning-Based UAV Trajectory Studies                                                                                            
+
+> Reference Year ML Method Focus Scenario Application
+> [15] 2019 Mapping with RL Trajectory UAV Connectivity-aware path [14] 2020 Optimization with RL Placement & Trajectory UAV-assisted Network 3D optimization [5] 2018 RL Trajectory Single UAV Autonomous navigation [6] 2019 RL Trajectory Single UAV Urban coverage [22] 2020 RL Trajectory Single UAV Object localization [7] 2020 DDPG Trajectory Single UAV Autonomous navigation [8] 2020 DRL Energy & Fairness Multi-UAV 3D trajectory + frequency allocation [10] 2021 DRL Energy WSNs Energy minimization [9] 2021 DRL Trajectory Multi-UAV Target tracking [13] 2021 RL + Greedy Trajectory UAV-MBS Optimal learning [11] 2023 RL + Transfer Energy UAV-BS Efficiency improvement [23] 2023 DDQN Trajectory + Resource UAV-MEC Secure communications [12] 2021 Heuristic + ML Trajectory Cellular UAV Connectivity constraints [18] 2020 Transfer Learning Trajectory Tracking Multi-UAV Cross-UAV adaptation [16] 2020 Transfer Learning Trajectory UAV Emergency communication [17] 2022 Transfer Learning Trajectory UAV Outage-aware design This work 2025 DDQN+TL+CFL Variable Target Trajectory Adaptive UAV with Muti-Cities Training time and Energy saving
+> •
+
+We validate our framework using ray-traced RSSI maps from real cities including York, Beijing, and Ottawa. The simulation settings replicate realistic propagation condi-tions such as diffraction and multipath, demonstrating the framework’s effectiveness in practical scenarios II. UAV T RAJECTORY SYSTEM MODEL AND PROBLEM FORMULATION 
+
+In this section, we present the overall system architecture, including trajectory model, and problem formulation. The main goal of this work is to enhance the adaptability and training speed of UAVs trajectory in different environments (cities) by strengthening the effectiveness of TL. Particularly, we aim to improve the selection of source models such that transferred knowledge is more relevant and useful, thereby accelerating training and improving performance. To contex-tualize the UAV trajectory planning task, Section II-A details our system model and environment settings, focusing on en-ergy constraints and communication requirements with ground O-DU. To increase the flexibility and realism of the trajectory planning, we also simulate different target destinations within each city. Building upon this foundation, Section II-B first lists the formulation of the trajectory problem and then defines the main problem to be solved in this study, with a special focus on how to improve the TL performance of adaptive UAV trajectory optimization. 
+
+A. UAV Trajectory System Model 
+
+We consider a single UAV-aided cellular network, where the UAV serves as a mobile O-RU, autonomously flying to its destination across various urban environments (cities). These urban environments, each corresponding to a different real-world city map segment (as shown in Fig. 2), are collectively defined as the space of cities E = {E 1, E2, . . . }. When the UAV encounters a new urban scenario, it is referred to as Enew . Each cities presents unique characteristics, including variations in building distribution, density, height, street layout, and so on, all of which influence communication requirements and signal propagation. Ground base stations (BSs) consists of O-DU which connect to open central unit (O-CU) and are deployed at predefined positions within each environment. It also hosts the O-RAN architecture, which will be introduced in Section VI. The UAV must maintain robust connectivity to the O-DU which is providing the fronthaul link while navigating through the urban environment. The UAV is initially deployed at position 
+
+q0 = (xUAV , y UAV , h UAV ) ∈ Alaunch ⊂ R3, where Alaunch 
+
+is the designated launch area. Users are modeled within a defined target region Atarget ⊂ R3, where U users are spatially distributed and the distribution of users changes over time. As the user distribution changes, the UAV will have a new target position qt. The UAV flies at a constant velocity V = Vmax 
+
+and must satisfy altitude constraints: hmin ≤ hUAV ≤ hmax . The UAV’s trajectory is represented as a sequence of 3D positions: 
+
+q = {q(n) = ( xn, y n, h n) | n = 0 , 1, . . . , K },
+
+where K is the total number of movement steps. We use two types of channel models: one for training in simulation environments and one for realistic evaluations using ray tracing. In simulation environments, we adopt a sim-plified analytical model consistent with [24], which captures large-scale path loss, small-scale fading, and environmental effects such as terrain and building obstructions. The large-scale path loss includes both Line-of-Sight (LoS) and Non-Line-of-Sight (NLoS) components, which adopt the ground-to-air (G2A) version of the 3GPP, respectively, as follows: 
+
+lLoS (d) = XLoS · d−αLoS , lNLoS (d) = XNLoS · d−αNLoS , (1) where d is the distance between the UAV and ground radio units (RUs) and DUs, α is the path loss exponent, and X is the path loss constant that is defined based on the environmental type. ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 4          
+
+> (a) Birmingham (b) London (c) Manchester
+> (d) York (e) Beijing (f) Ottawa
+> Fig. 2: 3D maps of different urban environments generated by wireless insite, including different city types (urban areas, skyscrapers, classical buildings, residential areas, etc.). Different materials are used for buildings and land according to the actual situation.
+
+For realistic evaluation, we adopt a ray-tracing-based chan-nel model using full 3D propagation. The simulation follows the Shooting and Bouncing Ray (SBR) method [25], account-ing for up to R reflections and D diffractions per ray path. Let the carrier frequency be fc, and the system bandwidth be B.The UAV and ground receivers are equipped with vertically polarized half-wave dipole antennas, each with gain Gt and 
+
+Gr , respectively, and the transmit power is given by Pt. The receiver operates with a noise figure Nf , and the thermal noise power is given by: N0 = kT B · 10 Nf 
+
+> 10
+
+where k is Boltzmann’s constant and T is the absolute temperature. The received power at position q(n) is the sum of all multipath components: 
+
+Pr (q(n)) = 
+
+> L
+
+X
+
+> l=1
+
+Pl(q(n)) , (2) where L is the number of multipath components and Pl(q(n)) 
+
+is the power of the path l. The signal-to-interference-plus-noise ratio (SINR) is defined as: SINR (q(n)) = Pr (q(n)) 
+
+N0 + I , (3) where N0 is the thermal-noise power and I denotes the aggregate interference generated by other terrestrial O-DU. Hence, I represents background network interference and not self-interference from the airborne link. The relevant channel model parameter settings will be introduced in detail in section IV. In order to quantify and avoid the UAV from being disconnected from the ground or entering a weak signal area, an outage event is defined as when the received SINR at position q(n) falls below a threshold ϕth . We define an indicator function: 
+
+β(q(n)) = 
+
+®1, if SINR (q(n)) ≤ ϕth 
+
+0, otherwise . (4) The total number of outage events during a trajectory is then computed as: 
+
+Γ = 
+
+> K
+
+X
+
+> n=0
+
+β(q(n)) (5) 
+
+B. Problem Formulation 
+
+In order to define what kind of trajectory model we want to make sustainable and adaptable, we first clarify the trajectory problem formulation. The UAV trajectory system aims to optimize the flight path from its initial position q0 ∈ A launch 
+
+to a target location qt ∈ A target , and target location changes dynamically based on the distribution of users [24]. The trajectory is defined as q = {q(n)}Kn=0 , where each q(n) = (xn, y n, h n) ∈ R3 represents the UAV’s position at time step 
+
+n. The optimization objective for trajectory problem is defined as: 
+
+q∗ = arg min 
+
+> q
+
+h
+
+S(q) + w Γ( q)
+
+i
+
+, (6a) s.t. q(0) = q0, q(K) = qt, (6b) 
+
+hmin ≤ hn ≤ hmax , (6c) 
+
+K ≤ Kmax . (6d) 
+
+S(q) is the number of steps (total travel distance), and 
+
+Γ( q) represents the total number of outage events along the trajectory. The weights w balance the tradeoff between mini-mizing travel and maintaining service quality. Constraint (6b) ensures that the UAV begins its trajectory at a known initial position q(0) and reaches the dynamically determined target location q(K). These positions define the start and end points of the mission within the environment. Constraint (6c) ensures that the UAV’s altitude hn at each step remains within allowable bounds. These bounds maintain flight safety and compliance with airspace regulations while influencing ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 5
+
+connectivity due to LoS constraints. Constraint (6d) imposes an upper limit on the total number of trajectory steps K,which corresponds to the UAV’s energy budget or battery capacity. This restricts how far or how long the UAV can operate within a given mission. Our prior works such as [26] have solved problem (6) using RL approaches. However, RL methods cannot efficiently adapt to new environments, as they require retraining from scratch, which consumes significant resources and time. Instead, there is a need for approaches that enable rapid adaptation and TL with minimal retraining overhead. We defined E as the space of urban environments, where each environment Ei ∈ E is characterized by its ground base station distribution, building distribution, and building height. When the UAV enters a new environment Enew /∈ E trained , it must adapt its trajectory policy to accommodate this envi-ronment’s unique spatial and communication characteristics. Since π is the policy used by the UAV to generate a trajectory 
+
+qπ in different E. The goal is to discover a policy π∗ that minimizes the time required for adaptation, Tadapt . We define the adaptation time as the number of training steps required for the UAV to become functionally operational in Enew , satisfying a predefined performance threshold formally: 
+
+Tadapt = min t | C (qtπ , Enew ) ≤ δ , (7) where C(·) is a performance cost function, and δ is the max-imum acceptable cost value reflecting mission requirements such as outage limit and trajectory efficiency. The learning approach Θ determines how the policy π is initialized and adapted in Enew . Our objective for the adaptive problem is to find the optimal learning strategy Θ∗ that results in the lowest adaptation time: 
+
+Θ∗ = arg min  
+
+> Θ∈H
+
+Tadapt (Θ , Enew ), (8) where H is the space of possible learning approaches (from-scratch training, fallbacks, or transferred models). This ab-stracts the adaptation problem independently from any specific solution method. It defines a general objective: to identify the most efficient strategy Θ for adapting UAV trajectory policies to previously unseen environments while maintaining required communication and navigation performance. III. DDQN AND TL WITH MODEL SELECTION 
+
+A. Dueling DDQN with Multi-Step Learning for UAV Trajec-tory Optimization 
+
+To establish a strong baseline for trajectory learning, we employ a Dueling Double Deep Q-Network (Dueling DDQN) with multi-step. This DDQN framework is particularly well-suited for high-dimensional and dynamic UAV environments within the O-RAN architecture. The UAV trajectory opti-mization problem is modeled as a Markov Decision Process (MDP), defined by the tuple (S, A, P, R, γ ), where S denotes the set of states and A the set of discrete UAV movement actions. Each state sn ∈ S corresponds to the UAV’s position 
+
+q(n) = ( xn, y n, h n) ∈ R3 at time step n. The goal is to learn an optimal policy π∗ that maximizes the expected cumulative reward: 
+
+π∗ = arg max  
+
+> π
+
+E
+
+" KX
+
+> n=0
+
+γnR(sn, a n, s n+1 )
+
+#
+
+, (9) The reward function is defined as: 
+
+R(sn, a n, s n+1 ) = −d(sn, s ∗) − wr · ψ(q(n)) + Rgoal − C out ,
+
+(10) where: d(sn, s ∗) is the Euclidean distance from the current UAV state sn to the dynamic target state s∗, Cout penalizes the UAV for moving outside defined operational boundaries, 
+
+Rgoal is a positive reward granted when the UAV reaches the dynamically determined target location. The weights wr
+
+control the tradeoff between minimizing travel distance and avoiding low-quality signal regions. ψ(q(n)) is a continuous penalty function based on the outage probability at position 
+
+q(n), defined as: 
+
+ψ(q(n)) = Pout (q(n)) = Pr ( SINR (q(n)) ≤ ϕth ) . (11) This represents the probability that the received SINR at po-sition q(n) falls below a threshold ϕth , indicating poor signal quality. Values of ψ(q(n)) range from 0 to 1, enabling more nuanced and stable learning behavior. The dueling architecture enhances learning efficiency by independently estimating the value of a state and the advantages of actions, while the multi-step return improves long-term trajectory planning. This baseline has been proven stable and generalizable trajectory learning [4], [24] and serves as a benchmark for evaluating TL and CL model updates in complex urban scenarios. The system-level parameters, UAV operating constraints, and ray-tracing settings used in the trajectory optimization model are summarized in Table II. 
+
+B. Advanced TL for UAV Adaptation in New Environments 
+
+Although RL has proven effective for UAV trajectory op-timization, it suffers from a critical limitation: the learned policy is highly environment specific. When the UAV enters a new urban scenario with different building layouts, the DDQN agent must be retrained from scratch to adapt. This retraining process is not only time-consuming but also computationally expensive, making it impractical for real-time deployment in dynamic or large-scale settings. To address this, we apply TL, which mitigates the cost of retraining by leveraging previously learned policies from other environments. In TL, the UAV begins its learning process in a new environment not from random initialization but from a pre-trained policy πsource , thus accelerating convergence and improving early-stage performance. The transferred policy is then fine-tuned to the new environment: 
+
+π(0)  
+
+> new
+
+= πsource , π(k+1)  
+
+> new
+
+= π(k) 
+
+> new
+
+− α · ∇ π L(π(k)
+
+> new
+
+), (12) where α is the learning rate, and L is the task-specific loss function in the new environment. The learning execution and ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 6
+
+training hyperparameters for RL, TL and CL including explo-ration strategies and optimization settings, are summarized in Table III. However, the effectiveness of TL largely depends on the quality of the source model. If the chosen source environment is dissimilar to the new one, transfer may lead to poor adaptation or even negative transfer. This brings us to the core of our model selection framework. Model selection is the mechanism that determines which pre-trained model is best suited for transfer to a new environment. This model selection approach has not been previously applied in any UAV related ML research.To support this, we maintain a library of models 
+
+{M1, M 2, . . . , M n}, where each Mi is trained using DDQN in a specific environment Ei (e.g., York, London, Ottawa). Each environment is described by a feature vector capturing characteristics such as average building height, building den-sity, station placement, and coverage area. When a UAV is deployed in a new environment Enew , we extract its feature representation and compute a similarity score S(Enew , Ei) for each known environment. Similarity metrics are employed to assess how closely environments align in feature space. However, this computation is challenging, as cities often differ across numerous dimensions that are hard to quantify. To address this, the next section introduces our proposed approach. If the highest similarity score exceeds a predefined threshold τ , the most similar model is selected for transfer. 
+
+M ∗ =
+
+®arg max i S(Enew , Ei), if max i S(Enew , Ei) ≥ τ, MG, otherwise .
+
+(13) Here, MG refers to fallback model trained in a synthetic urban environment. The synthetic environment is constructed by aggregating and averaging key structural and deployment parameters extracted from all real city environments available in the model library. These parameters include map size, average and maximum building height, building density, UAV operating altitude, and terrestrial base station density, as outlined in the system model. Rather than approximating any specific real city, the synthetic environment is deliberately de-signed to represent a neutral and unbiased urban setting. This design choice prevents the fallback model from overfitting to a particular city morphology and mitigates the risk of negative transfer when the target environment differs significantly from all available source environments. As a result, MG is able to achieve stable baseline perfor-mance across a wide range of previously unseen environments, particularly when no sufficiently similar source model is available for transfer. The role of MG is not to replace models selected through similarity based transfer learning, but to provide a reliable initialization when the similarity scores between the target environment and all existing library models fall below the predefined threshold. Furthermore, the synthetic environment serves as the foundation for continual learning, allowing knowledge acquired from newly trained models in real deployments to be incrementally aggregated   
+
+> Fig. 3: Model selection process includes updating MGand library
+
+into MG over time, thereby progressively improving its gen-eralization capability. By incorporating model selection and a synthetic fallback model, the proposed framework avoids blindly transferring knowledge from arbitrarily chosen source environments and instead performs TL in a targeted and context-aware manner. This selective reuse of prior knowledge improves adaptation efficiency, reduces the risk of negative transfer, and enhances the scalability and reliability of UAV trajectory optimization in heterogeneous urban environments. Fig. 3 illustrates the overall workflow, including model selec-tion, transfer learning, and the update of MG and the environ-ment library. The following sections detail the proposed city similarity measurement and the continual learning mechanism. IV. E NVIRONMENT SIMILARITY COMPARISON FOR 
+
+MODEL SELECTION TL To enable model selection for UAV trajectory transfer, we define a similarity function that compares a new environment 
+
+Enew with each pretrained environment Ei ∈ L . The goal is to find the environment most similar to Enew based on struc-tural, geographical, and deployment related features, thereby selecting the most suitable model for TL. Each environment is described using key similarity factors. These factors capture the dominant environmental factors affecting UAV trajectory optimization, including building height and density, terrestrial base station distribution, map scale, and UAV operating alti-tude. Rather than isolating individual factors, the proposed similarity representation aggregates these factors to reflect their combined effect on policy convergence and transfer reliability in realistic urban scenarios. The selection of these factors is guided by prior controlled simulation studies, where individual system variables were independently configured to identify their influence on transfer learning effectiveness [24]. Building on these insights, this work adopts the selected factors to construct a practical and scalable city similarity mechanism suitable for real world environments. ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 7
+
+A. Building Height Similarity 
+
+Let Hnew and Hi represent the average building heights in Enew and Ei, respectively. Building height is computed by averaging the heights of all 3D building polygons in the environment. The similarity is: 
+
+∆H = |Hnew − Hi|, Sheight (Enew , Ei) = 1 − ∆HHmax 
+
+, (14) where Hmax is the maximum observed difference in building height across all environments. Environments with similar urban scale (e.g., both residential or both high-rise) will have a higher similarity score. 
+
+B. Building Coverage Similarity 
+
+Building coverage ratio quantifies how much ground space is occupied by buildings. The map is divided into a uniform 2D grid, and the number of occupied cells is counted: 
+
+C = Ncovered 
+
+Ntotal 
+
+, (15) where Ncovered is the number of grid cells intersecting with building footprints, and Ntotal is the total number of grid cells. The similarity is: 
+
+∆C = |Cnew − Ci|, Scoverage (Enew , Ei) = 1 − ∆C. (16) A high similarity score indicates comparable building density and layout patterns. 
+
+C. UAV Altitude Similarity 
+
+Each environment uses a fixed UAV altitude during flight. Let hnew and hi be the UAV operating heights in the new and 
+
+i-th environment, respectively: 
+
+∆h = |hnew − hi|, Suav (Enew , Ei) = 1 − ∆hhmax 
+
+, (17) where hmax is the largest observed difference in UAV height across the dataset. Similar UAV altitudes often imply compa-rable LoS probability and SINR profiles. 
+
+D. Map Size Similarity 
+
+Map size refers to the physical area of the ray-traced region used for UAV trajectory simulation. Let Anew and Ai be the map areas (in m 2) of the new and i-th environments, respectively: 
+
+∆A = |Anew − Ai|, Smap (Enew , Ei) = 1 − ∆AAmax 
+
+. (18) A similar map size often reflects similar coverage scopes and expected UAV travel range. 
+
+E. Terrestrial O-DUs Density Similarity 
+
+Let N new bs and N i 
+
+> bs
+
+be the number of terrestrial O-DUs deployed in the new and i-th environment. This reflects the deployment density of the network: 
+
+∆Nbs = |N new bs − N i
+
+> bs
+
+|, Sbs (Enew , Ei) = 1 − ∆Nbs 
+
+N max 
+
+> bs
+
+, (19) where N max  
+
+> bs
+
+is the maximum number of stations across all environments. A similar terrestrial O-DUs layout ensures that learned coverage policies transfer more reliably. 
+
+F. Composite Similarity Score 
+
+The total similarity score between environments is com-puted as a weighted sum: 
+
+S(Enew , Ei) = w1Sheight + w2Scoverage + w3Suav 
+
++ w4Smap + w5Sbs , (20) where w1, . . . , w 5 ∈ [0 , 1] represent the relative importance of each feature. This weighted combination is designed as a taskoriented similarity abstraction that captures the com-bined impact of key environmental factors on UAV trajectory learning and transfer effectiveness, rather than as a detailed geometric or topological model of urban environments. The environment Ei with the highest similarity score is selected for model transfer. V. U PDATE MG WITH CONTINUAL LEARNING (CL) To enhance the effectiveness of the backup model MG, we employ CL to update it which is described in Algorithm 1. The model MG is initially trained in a simulated environment. When a UAV encounters a new environment, a new model 
+
+Mnew is created through TL. While Mnew is stored in the model library for future selection, it is also used to refine 
+
+MG. This allows MG to continuously accumulate knowledge from diverse environments, improving its generalization over time. During training, the UAV starts from an initial state st and selects an action at using an ϵ-greedy policy. The action is executed, leading to a new state st+1 and a corresponding reward rt. This transition is stored in a replay buffer and used to update Mnew . The training process iterates over multiple episodes, gradually improving the model’s ability to optimize UAV trajectories. After local training, the fallback model is updated using a weighted aggregation strategy. Instead of equal-weight averaging, the weights assigned to MG and 
+
+Mnew are adjusted based on the similarity between the new environment and the original training conditions. The updated model is computed as 
+
+M ′ 
+
+> G
+
+← w0MG + wnew Mnew , (21) where the weights are determined by an environment similar-ity metric Senv ,
+
+w0 = Senv 
+
+Senv + 1 , wnew = 1
+
+Senv + 1 . (22) ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 8
+
+Algorithm 1 Continual Learning for UAV Trajectory Opti-mization  
+
+> 1:
+
+Initialize fallback model MG, new environment model 
+
+Mnew , updated model MU , learning rate η, exploration 
+
+ϵ, discount factor γ 
+
+> 2:
+
+Distribute MG to local UAV models Mnew  
+
+> 3:
+
+Initialize replay buffers RG, Rnew  
+
+> 4:
+
+for t = 1 to T do  
+
+> 5:
+
+for i ∈ { G, new } do ▷ Train each local model  
+
+> 6:
+
+Reset environment i, initialize state si 
+
+> 7:
+
+for episode = 1 to Nepi do  
+
+> 8:
+
+for t = 0 to Nstep do  
+
+> 9:
+
+Execute at, observe next state st+1 , reward 
+
+rt 
+
+> 10:
+
+Store transition (st, a t, r t, s t+1 ) in Ri 
+
+> 11:
+
+Sample minibatch from Ri, update Mi 
+
+> 12:
+
+Update target network if necessary  
+
+> 13:
+
+st ← st+1  
+
+> 14:
+
+end for  
+
+> 15:
+
+end for  
+
+> 16:
+
+end for  
+
+> 17:
+
+if t mod E == 0 then ▷ Federated Model Update  
+
+> 18:
+
+UAVs send local model parameters to the global server  
+
+> 19:
+
+Compute weighted aggregation: 
+
+MU ← wGMG + wnew Mnew  
+
+> 20:
+
+Set updated model as new : MG ← MU 
+
+> 21:
+
+Synchronize models: Mnew ← MG 
+
+> 22:
+
+end if  
+
+> 23:
+
+if t mod 100 == 0 then ▷ Performance Evaluation  
+
+> 24:
+
+Test MG on both environments, log results  
+
+> 25:
+
+end if  
+
+> 26:
+
+Decay exploration rate: ϵ ← max( ϵ·decay factor , ϵ min ) 
+
+> 27:
+
+end for  
+
+> 28:
+
+return Final updated MG
+
+If the new environment closely resembles the original, the weight of MG remains dominant, ensuring knowledge reten-tion. Conversely, if the environment is significantly different, the contribution of Mnew is increased, allowing greater adapta-tion to new conditions. The updated M ′ 
+
+> G
+
+is then redistributed to UAVs for further training, ensuring consistency across deployments. The exploration rate ϵ is gradually reduced over time to encourage exploitation of learned policies. Periodic evaluations are conducted on both the simulation and real-world environments to assess performance and verify improve-ments in trajectory optimization. The proposed approach allows UAVs to dynamically bal-ance knowledge retention and adaptation, preventing catas-trophic forgetting while enabling continual learning. By lever-aging CL with adaptive weighting, UAV-based O-RAN sys-tems can improve trajectory planning in diverse and evolv-TABLE II: Summary of System and Ray-Tracing Parameters 
+
+Parameter Name Letter Value 
+
+Launch Area Alaunch 200m × 200m Target Area Atarget 400m × 400m Grid Resolution r 5m BS Transmit Power Pt 30 dBm SINR outage Threshold ϕth 0 dB Max Steps Kmax 200 Max UAV Velocity Vmax 20 m/s Altitude Bounds [hmin , h max ] [40m, 200m] Weighting Factor wr 0.8 Reflections (Ray Tracing) R 3Diffractions (Ray Tracing) D 1Carrier Frequency fc 450 MHz System Bandwidth B 1 MHz 
+
+ing conditions while maintaining efficiency and robustness. To evaluate this framework, we conduct simulations across multiple real-world environments. TABLE III: Learning and Training Parameters for RL, TL, and CL                         
+
+> Parameter Value
+> Learning rate ( α)0.001 Initial exploration rate (DDQN) ( ϵ)1.0 Exploration decay rate ( ϵdecay )0.998 Initial exploration rate (Transfer) ( ϵtransfer )0.5 Step penalty ( Rn)1Reward for reaching target ( Rgoal )2000 Outage penalty ( Cout )10000 Maximum training episodes (RL) 5000 Maximum training episodes (TL) 2000 Replay buffer size (RL/TL) 100000 Minimum replay size (RL/TL) 5000 Mini-batch size 32 Target network update interval 5 episodes Multi-step return length (RL/TL) 30 Maximum steps per episode 100 Action space size 4Federated learning rounds (CL) 1000 Local episodes per round 10 Total local episodes 10000 Number of clients 2 (Beijing, York) Aggregation method FedAvg Minimum replay size (CL) 1000 Multi-step return length (CL) 10
+
+VI. O-RAN-B ASED UAV A DAPTIVE SYSTEM 
+
+We consider a UAV trajectory optimization framework that integrates UAVs as O-RAN RUs, maintaining connectivity with ground O-DU. The system is built upon the O-RAN architecture where both the Non-Real Time Radio Intelligent Controller (Non-RT RIC) and Near Real-Time Radio Intelli-gent Controller (Near-RT RIC) are hosted within the ground-based DU/CU infrastructure. These RICs facilitate the storage, training, and deployment of UAV trajectory models. Through enhanced TL, the system enables efficient model adaptation in new environments, while CL ensures continued refinement of the fallback models. As illustrated in Figure 4, this architecture effectively combines TL and CL to improve the scalability, responsiveness, and planning accuracy of UAVs across diverse ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 9MX/M g
+
+Non-real time RIC 
+
+MNew 
+
+> Service Management and Orchestration (SMO)
+
+rApp : TL for UAV 
+
+Trajectory 
+
+> Near-real time RIC
+> Ground O-DU
+> UAV O-RU
+> Demand Identification
+> (Target Location)
+
+Target location 
+
+> Non-real time RIC
+> Model
+> Selection
+
+rApp : CL for 
+
+Model update 
+
+> City
+> similarity
+> comparison.
+> City Information
+> (Buidings,stations,
+> Envs size. etc)
+
+1
+
+M1, M2...... 
+
+MX
+
+> Falback
+> Model
+
+Mg
+
+> ENV
+> parameters
+
+2
+
+3
+
+4 MNew  
+
+> （UAV Trajectory ）
+> MNew
+
+5
+
+> Model Library
+
+6
+
+5  
+
+> Update Library MNew Update Fallback
+> Model
+> messaging
+> Infrastructure
+> Model
+> transfer
+
+xApps : 
+
+4
+
+Fig. 4: Workflow of UAV trajectory optimization in the O-RAN framework. 
+
+The service management and orchestration (SMO) frame-work hosts the Non-RT RIC, which handles long-term pol-icy management and ML tasks. Within the Non-RT RIC, dedicated rApps are implemented for TL and CL. The TL rApp is responsible for training UAV trajectory models to adapt to new environmentsand stores the resulting model in the shared library. Subsequently, the CL rApp aggregates these newly added models to update the fallback model MG
+
+by aggregating knowledge from newly trained models. The Near-RT RIC, operating on a timescale of 10 ms to 1 s, manages time-sensitive functions such as real-time trajectory selection, demand identification, and model dispatching. It contains a model library that stores all pre-trained models 
+
+M1, M 2, ..., M X , as well as the fallback model MG. Two dedicated xApps operate within the Near-RT RIC: a city similarity comparison xApp and a model selection xApp. The former computes structural similarity between the new environment and known cities, while the latter selects the most appropriate model from the library based on similarity scores. The UAV trajectory optimization process begins by iden-tifying new environmental information. When a UAV is de-ployed in a new environment, the city similarity comparison xApp compares the extracted map features with those in the database. If a sufficiently similar environment is found, the corresponding pre-trained model is selected for TL and apply to the UAV. Otherwise, the MG is used. City similarity comparison, model selection, and model library exchanges occur dynamically in real time within the Near-RT RIC. Once the selection is made, the TL rApp in the Non-RT RIC initiates fine-tuning of the selected model (or MG) based on the newly gathered environmental information and destination targets. The new trained model from TL will be uploaded to the model library and transferred to the UAV through Near-RT RIC. Simultaneously, newly trained models and associated map data are added to expand the model library, ensuring growing coverage and accuracy. To maintain and enhance the versatility of the MG over time, each newly trained trajectory model is used to incrementally update MG via CL implemented in the CL rApp. This guarantees that MG continuously evolves by incorporating knowledge from diverse environments while preserving broad generalization capabilities. VII. S IMULATION RESULTS AND ANALYSIS 
+
+A. Environment Setup 
+
+To evaluate the proposed UAV trajectory optimization framework, we employ Wireless InSite, a high-fidelity wire-less communication simulation software developed by Rem-com [27]. Wireless InSite uses ray-tracing and empirical models to provide accurate radio propagation predictions, making it suitable for modeling realistic urban environments. To ensure diverse and realistic evaluation of UAV-based O-RAN deployments, we conduct simulations across mul-tiple urban scenarios, including York, Manchester, London, ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 10 
+
+TABLE IV: City Map Information                                                 
+
+> City Area (m²) Building Coverage (%) Avg Height (m) Max Height (m) Station Count UAV Height (m)
+> Birmingham 769034.69 59.25 22.61 91.17 4100 Manchester 1032888.38 58.83 15.81 96.44 5100 York 629907.38 49.18 9.82 22.42 850 Beijing 558407.31 47.15 10.38 23.09 340 London 1290853.62 70.94 23.77 292.94 10 200 Rosslyn 305200.00 68.70 31.20 123.40 3140 Ottawa 604800.00 71.70 15.30 52.00 470
+
+TABLE V: Similarity Scores of maps in Library to Target maps                             
+
+> Reference City Birmingham Manchester London Rosslyn York Ottawa Beijing York (1st New Env) 0.548 0.536 0.456 0.44 1.000 --
+> Ottawa (2nd New Env) 0.682 0.729 0.642 0.610 0.648 1.000 -
+> Beijing (3rd New Env) 0.641 0.628 0.461 0.459 0.837 0.703 1.000
+
+Birmingham, Rosslyn, Ottawa, and Beijing, as illustrated in Fig. 2. Each selected map represents a unique urban landscape with distinct architectural and geographical characteristics. The London map focuses on the city center, where many buildings exceed typical UAV flight altitudes, requiring careful navigation around tall structures. In contrast, Manchester and Birmingham are modeled in urban but non-central areas that feature mixed environments, including mid-rise buildings and residential zones. York presents a low-rise cityscape due to historical preservation policies that limit building height. An especially unique case is the map of Beijing, which captures the Forbidden City, an ancient imperial complex characterized by its expansive layout and uniformly low building profiles, despite being located at the heart of a modern metropolis. Wireless InSite is used to generate high-fidelity radio maps for each city, providing realistic channel modeling that incorporates diffraction, reflection, and scattering effects. The tool supports multi-frequency propagation analysis across sub-6 GHz and mmWave bands and enables dynamic UAV simulation to accurately capture mobility-induced variations in wireless signal behavior. These features ensure that each simulated environment contributes meaningfully to assessing the adaptability and robustness of UAV trajectory learning systems under different urban conditions. To generate urban maps for Wireless InSite, we use two methods: the first is OpenStreetMap (OSM) + QGIS, which extracts city data, converts it into a .city file, and allows material property adjustments. Another method is using 3DCITYLoader, which directly downloads 3D city models in STL format, which can be imported along with terrain data. By integrating these high-fidelity simulations, we ensure an accurate evaluation of UAV trajectory planning and wireless performance in realistic urban settings. Table IV provides a comparative analysis of key urban char-acteristics across multiple cities, including total area, building coverage percentage, average and maximum building heights, station count, and suggested UAV operational altitude. The area represents the total land covered by the city model, while the building coverage percentage indicates the proportion of the city occupied by structures. Average and maximum building heights provide insight into the vertical profile of each city, which is essential for UAV flight planning and communication infrastructure deployment. The UAV height, calculated as the maximum building height plus an additional buffer, ensures safe and effective aerial operations. 
+
+B. Generation of City Radio Map 
+
+To enable trajectory learning and evaluation, it is essential to provide the UAV with realistic spatial information about signal availability and outage likelihood across the operating environment. The radio map serves as a critical input for training, offering localized communication quality data that allows the UAV to make informed decisions during path planning and avoid regions with high outage probability. The simulation map is generated using Wireless InSite and includes detailed material properties to enhance propagation accuracy. These materials include dielectric half-space types (e.g., concrete, wet earth) and one-layer dielectric structures (e.g., brick), enabling the simulation to more accurately capture real-world signal behavior. The terrestrial O-DUs is configured with four half-wave dipole antennas and a transmit power of 30 dBm, while the UAV operates at a fixed altitude of 80 meters to ensure consistent evaluation. To model the ground-to-air communication characteristics at UAV height, we deploy a dense grid of receivers at 80 meters altitude with 5-meter spacing between adjacent points. This setup creates a structured dataset of 192 × 126 points, effectively capturing SINR variations throughout the flight zone. However, because UAVs may fly through regions not directly sampled in the grid, gaps in the data can occur. To address this, we apply an interpolation technique that fills missing values using the median of neighboring points, ensuring spatial continuity. The processed data is then rescaled to the physical dimen-sions of the simulation area (960 meters by 630 meters). Finally, SINR values are converted into outage rate values, providing a more interpretable and policy-relevant measure of connectivity quality. As shown in Fig. 5, the resulting radio map visually depicts communication quality, where red areas indicate high SINR and low outage rates, and blue areas ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 11 
+
+(a) London (b) Manchester (c) York 
+
+(d) Birmingham (e) Beijing (f) Ottawa 
+
+Fig. 5: SINR radio maps generated by ray tracing in different cities, showing the UAV flight altitude. Cold colors such as blue indicate poor signal and high probability of disconnection. Warm colors such as red indicate good signal and low probability of disconnection, which are ideal areas for UAV flight. 
+
+correspond to low SINR and high outage zones. This radio map becomes the foundation for environment modeling and policy learning in all subsequent trajectory simulations. VIII. R ESULTS 
+
+We now present the results of the city comparison, model selection process, and the impact of CL in updating the MG.The study begins with York as the first new environment, where four existing environments and their trained models are used for TL. After evaluating model selection in York, it is added to the library, expanding the knowledge base to five environments before transitioning to Ottawa. The process is then repeated, incorporating Ottawa into the library, leading to a final evaluation in Beijing with six environments available for transfer. The results examine whether the model selection framework makes optimal choices for TL and how much it improves performance compared to DDQN and conventional TL methods. The key metrics analyzed include training speed and energy cost reduction. Additionally, the CL framework is evaluated for updating the fallback model MG,demonstrating how CL enhances its adaptability in dynamic urban environments. Table VI summarizes the lowest stable average outage rates and convergence episodes achieved by DDQN and the best-performing transfer models across three different environments. The results highlight the advantage of model selection, where transferring from structurally similar environments significantly reduces convergence time while maintaining low outage rates. 
+
+A. Outage Rate Performance Results 
+
+Table VI summarizes the outage rate performance of the best models across the new environments. For each target en-vironment, we report the lowest average outage rate achieved, the convergence episodes required by the DDQN baseline, and the best-performing TL model along with its convergence episodes. In the York environment, the target outage rate of 0.35 was achieved by the MG in just 880 episodes, compared to the DDQN baseline’s 1380 episodes. Similarly, for Ottawa, the Manchester transfer model significantly outperformed the baseline, reaching the target outage rate of 0.31 in 750 episodes versus 1340 for DDQN. In Beijing, TL from York enabled the UAV to achieve the target outage rate of 0.38 in only 590 episodes, whereas DDQN required 1090 episodes. These results directly address the challenge of optimizing UAV trajectories in unfamiliar environments. By leveraging TL, the UAVs rapidly adapt to new scenarios with minimal environmental data, achieving both low outage rates and faster convergence. This demonstrates that TL not only accelerates learning but also enhances performance, effectively solving the problem of dynamic trajectory optimization under limited prior knowledge. 
+
+B. Model Selection 150 300 450 600 750 900 1050 1200 1350 1500 
+
+> Episode Range
+> 70000
+> 60250
+> 50500
+> 40750
+> 31000
+> 21250
+> 11500
+> 1750
+> 8000
+> Reward
+> TL from Birmingham
+> TL from General Model
+> DDQN for York
+> Target Reward
+
+Fig. 6: Performance comparison of Model selection, Baseline model,and DDQN models for York. ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 12 
+
+TABLE VI: Outage Rate Performance of Best Model for Each New Environment 
+
+Environment Best Transfer Model Target (Lowest) Avg Outage Rate DDQN Convergence Episodes Best Transfer Convergence Episodes 
+
+York MG 0.35 1380 880 Ottawa Manchester 0.31 1340 750 Beijing York 0.38 1090 590 
+
+1) Model Selection and Transfer Learning to York: For the task of transferring to the York environment, model performance was evaluated using both direct transfer from the library and the base MG, with results shown in Figures 7 and 6. The similarity scores for York, presented in Table V, reveal that Birmingham (0.548) and Manchester (0.536) had the highest similarity among available environments. However, all similarity scores remained below the commonly accepted threshold (0.6), suggesting limited potential for effective direct transfer. Figure 7 shows the convergence episode count for each library model, where lower values indicate faster adaptation. The fallback model MG achieved convergence at approxi-mately 880 episodes, outperforming models from Birming-ham (940), Manchester (1100), London (1070), and Rosslyn (1250). Compared to the best library model which transfer from Birmingham, MG reduced convergence time by roughly 6.4%, and when compared to the worst case which is model from Rosslyn, by over 29.6%. For reference, our experiments were conducted on a system equipped with an Intel Core i9-12900H CPU and an NVIDIA GeForce RTX 3070 Ti Laptop GPU. Based on this setup, the observed reduction corresponds to a training time savings of approximately 2 hours. This rough estimate is provided to give practical context for understanding the efficiency gains and it is not necessarily a very accurate time or energy improvement measurement. Figure 6 includes the performance of the retrained DDQN model in York, which required around 1380 episodes to con-verge. This highlights that the MG, despite not being trained specifically for York, outperformed 36.2% faster than training from scratch. The consistent poor performance of models across all libraries reinforces the limitations of traditional TL when the target environment differs significantly from the available sources. In contrast, the MG served effectively as a fallback, offering both improved convergence and stability. These findings underscore the importance of complementing model selection strategies with a robust and continually up-dated fallback model to ensure reliable adaptation in edge cases. Maintaining such a model ensures that UAVs can still be effectively deployed in unseen environments, even in the absence of high-similarity city data. 
+
+2) Model Selection and Transfer Learning to Ottawa: To evaluate the transferability of pre-trained models to the Ottawa environment, Figure 8a presents the convergence performance of models selected from the environment library, now ex-panded to include York. The figure compares convergence episodes across transferred models, the base MG, and a freshly trained DDQN in Ottawa. 150 300 450 600 750 900 1050 1200 1350 1500 
+
+> Episode
+> 70000
+> 60000
+> 50000
+> 40000
+> 30000
+> 20000
+> 10000
+> 0
+> Average Reward (100-episode window)
+> TL from London
+> TL from Birmingham
+> TL from Rosslyn
+> TL from Manchester
+> TL from General Model
+> DDQN for York
+> Target Reward
+
+(a) Full training reward curves for all compared models in the York environment. DDQN-York 
+
+> Base Model
+> Birmingham
+> Manchester
+> London
+> Rosslyn
+> 0
+> 200
+> 400
+> 600
+> 800
+> 1000
+> 1200
+> 1400
+> Convergence Episodes
+
+(b) Performance comparison of different source models from the library in York. 
+
+Fig. 7: York environment: complete training reward curves and convergence performance comparison 
+
+Table V shows that Manchester has the highest similarity score to Ottawa (0.729), followed by Birmingham (0.682) and York (0.837). Despite this, Figure 8 reveals notable differ-ences in convergence behavior. The model from Manchester converged the fastest at around 750 episodes, followed by Birmingham (880) and York (980). In contrast, the base model MG required approximately 1180 episodes to converge, and the DDQN trained from scratch in Ottawa took around 1340 episodes. The model transferred from Rosslyn was the slowest to converge (1650 episodes), emphasizing its limited suitability for transfer. This result shows that transferring a model from an environment that does not share enough similarity can degrade performance which performing even worse than training from scratch with DDQN. These results shows significant convergence improvement, Manchester outperformed Ottawa by 44.8%, Birmingham by 34.3%, and even York by 26.9%. Figure 9 further highlights performance trajectories during training. The model from Manchester not only achieved the fastest convergence but also ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 13 200 400 600 800 1000 1200 1400 1600 1800 
+
+> Episode
+> 50000
+> 40000
+> 30000
+> 20000
+> 10000
+> 0
+> 10000
+> Average Reward (100-episode window)
+> TL from General Model
+> TL from Rosslyn
+> TL from Birmingham
+> TL from York
+> TL from Manchester
+> TL from London
+> DDDQN for Ottawa
+> Target Reward
+
+(a) Full training reward for all compared models in the Ottawa environment. DDQN-Ottawa 
+
+> Base Model
+> Birmingham
+> Manchester
+> London
+> Rosslyn
+> York
+> 0
+> 250
+> 500
+> 750
+> 1000
+> 1250
+> 1500
+> 1750
+> Convergence Episodes
+
+(b) Performance comparison of different source models from the library in Ottawa. 
+
+Fig. 8: Ottawa environment: complete training reward curves and convergence performance comparison across different source models. 
+
+maintained higher and more stable rewards. 150 450 750 1050 1350 1650 
+
+> Episode
+> 40000
+> 30000
+> 20000
+> 10000
+> 0
+> 10000
+> Reward
+> Transfer from General Model
+> TL from Manchester
+> DDDQN for Ottawa
+> Target Reward
+
+Fig. 9: Performance comparison of TL models for Ottawa. 
+
+3) Model Selection and Transfer Learning to Beijing: 
+
+For the TL evaluation in the Beijing environment, similarity scores (Table V) were used to identify appropriate source models from the environment library. Among all cities, York achieved the highest similarity score (0.837), followed by Ottawa (0.703), Birmingham (0.641), and Manchester (0.628). London (0.461) and Rosslyn (0.460) had the lowest similarity scores, indicating weaker suitability for direct transfer. Figure 10 presents the convergence episode counts of vari-ous models when transferred to Beijing. The model transferred from York achieved the fastest convergence at 590 episodes, 100 200 300 400 500 600 700 800 900 1000 1100 
+
+> Episode
+> 50000
+> 40000
+> 30000
+> 20000
+> 10000
+> 0
+> 10000
+> Average Reward (100-episode window)
+> TL from General Model
+> TL from London
+> TL from York
+> TL from Manchester
+> TL from Birmingham
+> DDQN for Beijing
+> Target Reward
+
+(a) Full training reward curves for all compared models in the Beijing environment. DDQN-Beijing 
+
+> Base Model (Mg)
+> Birmingham
+> Manchester
+> London
+> Rosslyn
+> York
+> 0
+> 200
+> 400
+> 600
+> 800
+> 1000
+> Convergence Episodes
+
+(b) Performance comparison of models from the library in Beijing. 
+
+Fig. 10: Beijing environment: complete training reward curves and convergence performance comparison across different source modele. 
+
+clearly outperforming all other models. Manchester and Birm-ingham followed at 765 and 812 episodes, respectively. The general base model MG, trained on a synthetic average en-vironment, required 990 episodes, while DDQN trained from scratch in Beijing converged after 1090 episodes. In contrast, models transferred from London and Rosslyn required 1030 and 1140 episodes, respectively, indicating poor adaptability. These results highlight the benefits of selecting source models based on environment similarity. York outperformed DDQN by 45.9%, and even the base model MG by 40.4%. In contrast, London and Rosslyn, which differ more significantly from Beijing, failed to provide efficient knowledge transfer. Figure 11 further supports these trends by showing that the model from York achieved the highest reward growth rate and maintained consistent performance throughout training. Conversely, the models transferred from Rosslyn and London demonstrated erratic learning behavior and poor reward trajec-tories, consistent with their low similarity scores. Importantly, these results align well with real world geographical expec-tations. The York map was derived from a residential area featuring predominantly low-rise buildings, while the Beijing map was extracted from the Palace Museum (Forbidden City), which is a large, open area filled with traditional, low-height structures. This environmental similarity facilitates more ef-fective transfer. In contrast, the London map represents a ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 14 
+
+TABLE VII: Performance Summary of Convergence with Statistical Variability 
+
+Environment Method Mean Episodes Std. Dev. (%) Improvement vs. DDQN 
+
+York DDQN (Scratch) 1380 ±6.5% –Model Selection 940 ±4.9% 31.9% MG ((Best model)) 880 ±5.4% 36.2% Ottawa DDQN (Scratch) 1340 ±6.2% –Model Selection (Best model) 750 ±4.6% 44.0% MG (Fallback) 1180 ±5.1% 11.9% Beijing DDQN (Scratch) 1090 ±6.0% –Model Selection (Best model) 590 ±4.4% 45.9% MG (Fallback) 990 ±5.0% 9.2% 
+
+dense city center with tall, closely packed buildings, making it structurally very different from Beijing and therefore less suitable for knowledge transfer. A critical observation is the repeated underperformance of model from Rosslyn across all target environments. The small geographical scale and limited complexity of the Rosslyn environment provide inadequate variability for robust learning, making it a poor candidate for generalization. The chosen environment should provide a variety of spatial characteristics and sufficient complexity while not being too small. 150 450 750 1050 1350 
+
+> Episode
+> 80000
+> 70000
+> 60000
+> 50000
+> 40000
+> 30000
+> 20000
+> 10000
+> 0
+> Reward
+> TL from York
+> TL from General Model
+> DDQN for Beijing
+> Target Reward
+
+Fig. 11: Performance comparison of TL models for Beijing. 
+
+Table VII summarizes the convergence performance of three representative approaches,DDQN training from scratch, the similarity-based model selection strategy for best transfer model, and the fallback model MG,by reporting the mean number of episodes required to reach convergence and the corresponding variability across multiple independent runs. 
+
+C. Consequences of non performative model selection 
+
+In this section, we evaluate the drawbacks of selecting a non appropriate model. As shown in Fig. 7, Fig. 8, and Fig. 10, transferring a model from a poorly matched or dissimilar source environment leads to slower convergence, increased performance variability, and in some cases inferior performance compared to training from scratch. In Environ-ment York city, TL from Birmingham and DDQN training lagged significantly, which differs from the candidate source environments in terms of building distribution, base station layout, and target location, the transferred models exhibit reduced stability and learning efficiency. These trends validate the positive correlation between architectural similarity and 150 300 450 600 750 900 1050 1200 1350 1500 
+
+> Episode Range
+> 100000
+> 80000
+> 60000
+> 40000
+> 20000
+> 0
+> Reward
+> TL from General Model (Mg)
+> TL from updated General Model (York)
+> TL from updated General Model (York & Ottawa)
+> Target Reward
+
+Fig. 12: Performance comparison of the initial MG and updated MG
+
+after CL. 
+
+transfer success while also exposing exceptions such as TL from Rosslyn and DDQN training in Ottawa lagged signif-icantly, it shows that despite the moderate similarity scores, the small map size limits the generalizability of the model. 
+
+D. Continuous Learning of the fallback model 
+
+Next, we evaluate the effectiveness of using CL to update the generalized model MG. We base our analysis on its per-formance in the Beijing environment. As shown in Figure 12, three versions of the general model are compared: the original model MG (black), the model updated via CL with data from York ( M 1
+
+> G
+
+), and the model further updated with York and then Ottawa ( M 2
+
+> G
+
+). The results indicate that both M 1 
+
+> G
+
+and M 2 
+
+> G
+
+exhibit modest improvements in performance compared to the original MG,demonstrating the benefit of incorporating knowledge from past deployments. Interestingly, M 1 
+
+> G
+
+and M 2 
+
+> G
+
+perform simi-larly, suggesting that for transfer to Beijing, the knowledge gained from York contributed more significantly than that from Ottawa. This aligns with the earlier similarity analysis, where York showed the highest resemblance to Beijing among all source environments. Although the CL updated fallback models do not outper-form the best model selected through the model selection mechanism, they still play a vital role in the broader system. Specifically, these results emphasize the importance of con-tinuously updating the fallback model MG with data from diverse environments. While CL updated models may not always provide the highest performance in specific scenarios, ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 15 
+
+they ensure that MG remains a robust and adaptive fallback option. In this context, the primary function of CL is not to make MG the best performing model in the short term, but rather to ensure its long-term adaptability and reliability. As the model accumulates knowledge from a growing number of heterogeneous environments, its ability to generalize and support new deployments improves over time. This highlights the significance of CL in sustaining the evolving capability of MG, making it a resilient backbone of the UAV trajectory optimization system. IX. C ONCLUSION 
+
+In this paper, we have presented a UAV trajectory opti-mization framework integrated with the O-RAN architecture, leveraging TL and CL to enhance adaptability in new environ-ments. By utilizing a structured model library and real-time trajectory adjustments, the system enables UAVs to dynami-cally respond to changing network conditions while minimiz-ing training overhead. We have used CL to ensures continuous model refinement, improving UAV trajectory planning across diverse urban scenarios. Simulation results demonstrate that the proposed TL with model selection approach reduces convergence time by 44% to 56% compared to retraining from scratch, and up to 40% compared to traditional TL without model selection. These gains highlight the effectiveness of intelligent model selection in accelerating adaptation while maintaining performance. The proposed approach enhances network coverage, scalability, and deployment efficiency, mak-ing it well-suited for 6G O-RAN networks. Future work will explore further enhancements in model selection strategies and energy efficient UAV trajectory planning. REFERENCES [1] H. Ahmadi, M. Rahmani, S. B. Chetty, E. E. Tsiropoulou, H. Ar-slan, M. Debbah, and T. Quek, “Towards sustainability in 6g and beyond: Challenges and opportunities of open ran,” arXiv preprint arXiv:2503.08353 , 2025. [2] C. Sun, G. Fontanesi, B. Canberk, A. Mohajerzadeh, S. Chatzinotas, D. Graces, and H. Ahmadi, “Advancing uav communications: A com-prehensive survey of cutting-edge machine learning techniques,” IEEE Open Journal of Vehicular Technology , pp. 1–31, 2024. [3] M. Mozaffari, W. Saad, M. Bennis, Y.-H. Nam, and M. Debbah, “A tutorial on uavs for wireless networks: Applications, challenges, and open problems,” IEEE communications surveys & tutorials , vol. 21, no. 3, pp. 2334–2360, 2019. [4] G. Fontanesi, A. Zhu, and H. Ahmadi, “Deep reinforcement learning for dynamic band switch in cellular-connected uav,” in 2021 IEEE 94th Vehicular Technology Conference (VTC2021-Fall) , 2021, pp. 1–5. [5] H. X. Pham, H. M. La, D. Feil-Seifer, and L. V. Nguyen, “Au-tonomous uav navigation using reinforcement learning,” arXiv preprint arXiv:1801.05086 , 2018. [6] S. Yin, S. Zhao, Y. Zhao, and F. R. Yu, “Intelligent trajectory design in UAV-aided communications with reinforcement learning,” IEEE Transactions on Vehicular Technology , vol. 68, no. 8, pp. 8227–8231, 2019. [7] O. Bouhamed, H. Ghazzai, H. Besbes, and Y. Massoud, “Autonomous uav navigation: A ddpg-based deep reinforcement learning approach,” in 2020 IEEE International Symposium on circuits and systems (ISCAS) .IEEE, 2020, pp. 1–5. [8] R. Ding, F. Gao, and X. S. Shen, “3D UAV trajectory design and fre-quency band allocation for energy-efficient and fair communication: A deep reinforcement learning approach,” IEEE Transactions on Wireless Communications , vol. 19, no. 12, pp. 7796–7809, 2020. [9] J. Moon, S. Papaioannou, C. Laoudias, P. Kolios, and S. Kim, “Deep reinforcement learning multi-UAV trajectory control for target tracking,” 
+
+IEEE Internet of Things Journal , vol. 8, no. 20, pp. 15 441–15 455, 2021. [10] B. Zhu, E. Bedeer, H. H. Nguyen, R. Barton, and J. Henry, “UAV trajectory planning in wireless sensor networks for energy consumption minimization by deep reinforcement learning,” IEEE Transactions on Vehicular Technology , vol. 70, no. 9, pp. 9540–9554, 2021. [11] Z. Hu, Y. Zhang, H. Huang, X. Wen, O. Agbodike, and J. Chen, “Rein-forcement learning for energy efficiency improvement in uav-bs access networks: A knowledge transfer scheme,” Engineering Applications of Artificial Intelligence , vol. 120, p. 105930, 2023. [12] D. Yang, Q. Dan, L. Xiao, and C. Liu, “An efficient trajectory planning for cellular-connected uav under the connectivity constraint,” China Communications , vol. 18, no. 1, pp. 41–52, 2021. [13] A. B. Bhandarkar and S. K. Jayaweera, “Optimal trajectory learning for uav-mounted mobile base stations using rl and greedy algorithms,” in 
+
+2021 17th International Conference on Network and Service Manage-ment (CNSM) . IEEE, 2021, pp. 1–5. [14] D. S. Lakew, A. Masood, and S.-L. Cho, “3d uav placement and trajectory optimization in uav assisted wireless networks,” in 2020 International Conference on Communications (ICC) . IEEE, 2020, pp. 1–6. [15] H. Yang, J. Zhang, S. Song, and K. B. Lataief, “Connectivity-aware uav path planning with aerial coverage maps,” in 2019 IEEE Wireless Communications and Networking Conference (WCNC) . IEEE, 2019, pp. 1–6. [16] X. Zhang, G. Zheng, and S. Lambotharan, “Trajectory design for UAV-assisted emergency communications: A transfer learning approach,” in 
+
+GLOBECOM 2020-2020 IEEE Global Communications Conference .IEEE, 2020, pp. 1–6. [17] G. Fontanesi, A. Zhu, M. Arvaneh, and H. Ahmadi, “A transfer learning approach for UAV path design with connectivity outage constraint,” 
+
+IEEE Internet of Things Journal , vol. 10, no. 6, pp. 4998–5012, 2022. [18] Z. Chen, X. Liang, and M. Zheng, “Knowledge transfer between different UAVs for trajectory tracking,” IEEE Robotics and Automation Letters , vol. 5, no. 3, pp. 4939–4946, 2020. [19] HuYe, M. Chen, W. Saad, H. V. Poor, and S. Cui, “Distributed multi-agent meta learning for trajectory design in wireless drone networks,” 
+
+IEEE Journal on Selected Areas in Communications , vol. 39, no. 10, pp. 3177–3192, 2021. [20] Y. Hu, M. Chen, W. Saad, H. V. Poor, and S. Cui, “Distributed multi-agent meta learning for trajectory design in wireless drone networks,” 
+
+IEEE Journal on Selected Areas in Communications , vol. 39, no. 10, pp. 3177–3192, 2021. [21] E. Eldeeb and H. Alves, “Multi-agent meta-offline reinforcement learn-ing for timely uav path planning and data collection,” arXiv preprint arXiv:2501.16098 , 2025. [22] D. Ebrahimi, S. Sharafeddine, P.-H. Ho, and C. Assi, “Autonomous uav trajectory for localizing ground objects: A reinforcement learning approach,” IEEE Transactions on Mobile Computing , vol. 20, no. 4, pp. 1312–1324, 2020. [23] Y. Ding, H. Han, W. Lu, Y. Wang, N. Zhao, X. Wang, and X. Yang, “Ddqn-based trajectory and resource optimization for uav-aided mec secure communications,” IEEE Transactions on Vehicular Technology ,vol. 73, no. 4, pp. 6006–6011, 2023. [24] C. Sun, G. Fontanesi, S. B. Chetty, X. Liang, B. Canberk, and H. Ahmadi, “Continuous transfer learning for uav communication-aware trajectory design,” in Internation Conference on Wireless Networks and Mobile Communications (WINCOM) , 2024, pp. 1–6. [25] Y. Wang, H. Cao, Y. Jin, Z. Zhou, Y. Wang, J. Huang, Y. Li, J. Huang, and C.-X. Wang, “An sbr based ray tracing channel modeling method for thz and massive mimo communications,” in 2022 IEEE 96th Vehicular Technology Conference (VTC2022-Fall) . IEEE, 2022, pp. 1–6. [26] C. Sun, S. B. Chetty, G. Fontanesi, J. Zhang, A. Mohajerzadeh, D. Grace, and H. Ahmadi, “Energy consumption reduction for uav trajectory training: A transfer learning approach,” in 2025 IEEE Wireless Communications and Networking Conference (WCNC) , 2025, pp. 1–6. ACCEPTED FOR PUBLICATION AT IEEE TVT 2026 16 
+
+[27] R. Inc., Wireless InSite Reference Manual, Version 3.3.3 , 2023, available at https://www.remcom.com/wireless-insite.

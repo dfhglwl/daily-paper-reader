@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-16T09:03:56.469410+00:00",
+  "generated_at": "2026-07-16T09:50:42.686866+00:00",
   "updated_date": "20260617-20260716",
   "carryover_days": 9,
   "tag_states": {
@@ -13,34 +13,120 @@
       "carryover_days": 9,
       "items": [
         {
-          "id": "2607.09295v1",
+          "id": "2607.02277v1",
           "source": "arxiv",
-          "title": "Multi-Agent Reinforcement Learning for SLA-Aware Network Slicing in UAV-Enabled MEC",
-          "abstract": "Unmanned Aerial Vehicle (UAV)-enabled Mobile Edge Computing (MEC) offers flexible capacity provisioning for heterogeneous network slices, including Hyper-Reliable and Low-Latency Communication (HRLLC), Enhanced Mobile Broadband (eMBB), and Massive Machine-Type Communications (mMTC). However, guaranteeing slice-level Service-Level Agreements (SLAs) under dynamic user mobility, stochastic task arrivals, and constrained onboard energy and computing resources remains a fundamental challenge. This paper proposes a predictive multi-agent Reinforcement Learning (RL) framework that proactively maintains SLA stability in UAV-enabled MEC through coordinated trajectory control and computation resource allocation. A lightweight prediction module forecasts near-future user mobility, enabling UAVs to anticipate congestion and reposition before SLA violations occur. We design an SLA-aware reward function that explicitly penalizes both violation probability and duration across slices, alongside total energy consumption. UAV agents are trained using Multi-Agent Proximal Policy Optimization (MAPPO) with centralized training and decentralized execution, enabling scalable online decision-making. Event-driven simulations with realistic mobility traces demonstrate that the proposed framework significantly improves SLA stability compared with baselines while maintaining competitive energy efficiency and delay performance, approaching oracle-level performance with sufficiently accurate predictive information.",
+          "title": "NEUROSYMLAND: Neuro-Symbolic Landing-Site Assessment for Robust and Edge-Deployable UAV Autonomy",
+          "abstract": "Safe landing-site assessment in unstructured environments remains a key challenge for autonomous UAV deployment, as vision-only learning approaches often degrade under terrain variability and provide limited transparency in safety decisions. We present NEUROSYMLAND, a neuro-symbolic landing-site assessment system that integrates lightweight perception with explicit safety reasoning. The framework constructs a probabilistic semantic scene graph from onboard visual input and evaluates candidate landing regions using symbolic constraints capturing terrain flatness, obstacle clearance, and spatial consistency, enabling structured reasoning under perceptual uncertainty while maintaining edge-feasible execution. Across 72 simulated landing scenarios spanning diverse terrains, NEUROSYMLAND achieves 61 successful assessments, outperforming four competitive baselines (37-57 successes). To evaluate deployability, we further conduct 100 hardware-in-the-loop trials with randomized initial poses, profiling end-to-end latency, stage-wise execution time, and system-level metrics including CPU/GPU utilization, memory footprint, and power consumption. Results demonstrate improved robustness and interpretability with bounded edge-resource usage. Profiling shows that symbolic reasoning contributes only a small fraction of end-to-end latency, while the main computational cost arises from perception and PSSG construction. These results demonstrate the feasibility of deploying the landing-site assessment stack on edge-constrained UAV hardware, and all source code, datasets, prompts, and symbolic rule refinement examples are released in an open-source repository",
           "authors": [
-            "Mohammad Farhoudi",
-            "Zeinab Sasan",
-            "Masoud Shokrnezhad",
-            "Tarik Taleb"
+            "Weixian Qian",
+            "Tianyi Yang",
+            "Sebastian Schroder",
+            "Yao Deng",
+            "Jiaohong Yao",
+            "Xiao Cheng",
+            "Richard Han",
+            "Xi Zheng"
           ],
-          "primary_category": "cs.NI",
+          "primary_category": "cs.RO",
           "categories": [
-            "cs.NI"
+            "cs.RO"
           ],
-          "published": "2026-07-10T11:19:06+00:00",
-          "link": "https://arxiv.org/pdf/2607.09295v1",
+          "published": "2026-07-02T14:58:14+00:00",
+          "link": "https://arxiv.org/pdf/2607.02277v1",
           "tags": [
             "keyword:upa",
             "query:upa"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "multi-agent RL framework for predictive trajectory control and resource allocation in UAV MEC",
-          "llm_evidence_cn": "多智能体强化学习框架用于无人机边缘计算中的预测性轨迹控制和资源分配",
-          "llm_evidence": "多智能体强化学习框架用于无人机边缘计算中的预测性轨迹控制和资源分配",
-          "canonical_evidence": "多智能体强化学习框架用于无人机边缘计算中的预测性轨迹控制和资源分配",
-          "llm_tldr_en": "A predictive multi-agent RL approach maintains SLA stability in UAV-enabled MEC through coordinated trajectory control and computation resource allocation.",
-          "llm_tldr_cn": "为应对无人机边缘计算中用户动态、任务随机和资源受限的挑战，本文提出一种预测性多智能体强化学习框架，通过协同轨迹控制与计算资源分配，主动维持网络切片的SLA稳定性。框架包含轻量预测模块，能够提前感知需求变化。实验表明，该方法在保障各类切片服务等级协议方面具有优势，为无人机支持的边缘计算提供了智能管理方案。",
-          "llm_tldr": "为应对无人机边缘计算中用户动态、任务随机和资源受限的挑战，本文提出一种预测性多智能体强化学习框架，通过协同轨迹控制与计算资源分配，主动维持网络切片的SLA稳定性。框架包含轻量预测模块，能够提前感知需求变化。实验表明，该方法在保障各类切片服务等级协议方面具有优势，为无人机支持的边缘计算提供了智能管理方案。",
+          "llm_evidence_en": "neuro-symbolic system for UAV landing-site assessment with obstacle clearance constraints",
+          "llm_evidence_cn": "无人机着陆场评估的神经符号系统，考虑障碍物间隙约束",
+          "llm_evidence": "无人机着陆场评估的神经符号系统，考虑障碍物间隙约束",
+          "canonical_evidence": "无人机着陆场评估的神经符号系统，考虑障碍物间隙约束",
+          "llm_tldr_en": "The paper proposes a neuro-symbolic landing-site assessment system for UAVs that integrates lightweight perception with explicit safety reasoning using probabilistic semantic scene graphs and symbolic constraints, achieving robust and edge-deployable autonomy.",
+          "llm_tldr_cn": "自主无人机在非结构化环境安全着陆是无人机自主性的关键挑战。本文提出NEUROSYMLAND神经符号降落场评估系统，融合轻量感知与显式安全推理，通过概率语义场景图构建与符号约束评估地形平坦度、障碍物间隙和空间一致性。在72个仿真场景中验证，系统在感知不确定性下仍能结构化推理，实现边缘可部署的鲁棒自主性评估。",
+          "llm_tldr": "自主无人机在非结构化环境安全着陆是无人机自主性的关键挑战。本文提出NEUROSYMLAND神经符号降落场评估系统，融合轻量感知与显式安全推理，通过概率语义场景图构建与符号约束评估地形平坦度、障碍物间隙和空间一致性。在72个仿真场景中验证，系统在感知不确定性下仍能结构化推理，实现边缘可部署的鲁棒自主性评估。",
+          "llm_tags": [
+            "query:upa"
+          ],
+          "matched_query_tag": "query:upa",
+          "matched_query_text": "UAV obstacle avoidance",
+          "matched_requirement_id": "req-2",
+          "selection_source": "carryover_cache",
+          "paper_id": "2607.02277v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2607.08359v1",
+          "source": "arxiv",
+          "title": "FSD-VLN: Fast-Slow Dual-System Modeling for Aerial Long-Horizon Vision-Language Navigation",
+          "abstract": "Vision-Language Navigation (VLN) enables UAV autonomous navigation in unknown environments by mapping language instructions to real-time visual inputs. Compared with GPS-dependent or pre-programmed navigation, VLN supports intuitive human-machine interaction and stronger environmental adaptability, requiring tight integration of high-level semantic reasoning and low-latency flight control.Existing methods suffer from structural misalignment between global multimodal understanding and sequential action generation, causing jittery trajectories and severe decision latency for long-horizon aerial navigation. To solve this issue, we propose FSD-VLN, a fast-slow dual-system architecture disentangling semantic reasoning and low-latency flight command generation.The framework has two asynchronous branches: a slow stream extracting stable semantic priors from pre-trained vision-language models, and a Diffusion Transformer (DiT) fast stream modeling cross-temporal action distributions to produce consistent flight outputs. We further introduce a time-aware adaptive optimizer to stabilize long-sequence training and reduce gradient oscillation.Large-scale low-altitude simulation experiments show FSD-VLN achieves up to 2X higher navigation success rates on unseen scenes than SOTA methods, while cutting single-action inference delay and total task runtime by over 50%. Our work validates the benefit of decoupled semantic-control modeling and provides a practical paradigm for long-horizon aerial VLN.",
+          "authors": [
+            "Xueke Zhu",
+            "Qingyan Meng",
+            "Liutao Yu",
+            "Wei Zhang",
+            "Zhengyu Ma",
+            "Huihui Zhou",
+            "Yonghong Tian"
+          ],
+          "primary_category": "cs.RO",
+          "categories": [
+            "cs.RO",
+            "cs.AI"
+          ],
+          "published": "2026-07-09T11:17:04+00:00",
+          "link": "https://arxiv.org/pdf/2607.08359v1",
+          "tags": [
+            "keyword:upa",
+            "query:upa"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "dual-system architecture for UAV vision-language navigation generating long-horizon trajectories",
+          "llm_evidence_cn": "双系统架构用于无人机视觉语言导航生成长时域轨迹",
+          "llm_evidence": "双系统架构用于无人机视觉语言导航生成长时域轨迹",
+          "canonical_evidence": "双系统架构用于无人机视觉语言导航生成长时域轨迹",
+          "llm_tldr_en": "The paper addresses long-horizon aerial VLN by proposing a fast-slow dual-system that separates semantic reasoning and low-latency flight control, achieving smoother trajectories and improved navigation success.",
+          "llm_tldr_cn": "空中长时域视觉语言导航面临全局多模态理解与序列动作生成的结构性错位，导致轨迹抖动和决策延迟。本文提出FSD-VLN快慢双系统架构，解耦语义推理与低延迟飞行控制：慢系统进行全局规划，快系统实时执行平滑轨迹。实验表明该方法显著提升导航成功率与轨迹平滑度，为人机交互式无人机自主导航提供了新思路。",
+          "llm_tldr": "空中长时域视觉语言导航面临全局多模态理解与序列动作生成的结构性错位，导致轨迹抖动和决策延迟。本文提出FSD-VLN快慢双系统架构，解耦语义推理与低延迟飞行控制：慢系统进行全局规划，快系统实时执行平滑轨迹。实验表明该方法显著提升导航成功率与轨迹平滑度，为人机交互式无人机自主导航提供了新思路。",
+          "llm_tags": [
+            "query:upa"
+          ],
+          "matched_query_tag": "query:upa",
+          "matched_query_text": "UAV trajectory planning",
+          "matched_requirement_id": "req-5",
+          "selection_source": "carryover_cache",
+          "paper_id": "2607.08359v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2607.09060v1",
+          "source": "arxiv",
+          "title": "Dec-MARVEL: Decentralized Multi-Agent Exploration without Communication under Budget Constraints",
+          "abstract": "Multi-UAV exploration is often constrained by unreliable communication, limited field-of-view sensing (e.g., lightweight onboard camera), and finite travel budgets that require each robot to reserve enough budget to return to its base. We present Dec-MARVEL, a decentralized budget-aware exploration framework for communication-free teams with directional sensing. Rather than exchanging maps, goals, or messages, each robot coordinates through its incidental observations: any teammate trajectory within its field of view serves as a coordination signal. A graph-attention actor fuses local frontier geometry, teammate motion, and budget features to select return-feasible waypoint-heading actions. The actor is trained with phase-conditioned critics, a training-only task-oriented privileged critic, and a mixture-based budget curriculum. Across 900 held-out trials spanning three team sizes (2, 4, 8 robots) and three travel budgets (720, 800, 1024 meters) against four baselines, Dec-MARVEL achieves the highest or tied-highest exploration rate and lowest sensing overlap across all nine team-size budget configurations. Under our tightest 720m budget, it reaches 53%, 94%, and 100% success for 2, 4, and 8 robots, versus 37%, 83%, and 99% for the strongest baseline. Physical-robot experiments demonstrate successful sim-to-real transfer and real-world deployment of Dec-MARVEL.",
+          "authors": [
+            "Janghyun Cho",
+            "Jimmy Chiun",
+            "Guillaume Sartoretti",
+            "Changjoo Nam"
+          ],
+          "primary_category": "cs.RO",
+          "categories": [
+            "cs.RO"
+          ],
+          "published": "2026-07-10T03:06:08+00:00",
+          "link": "https://arxiv.org/pdf/2607.09060v1",
+          "tags": [
+            "keyword:upa",
+            "query:upa"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "Multi-UAV exploration using graph-attention actor trained with RL",
+          "llm_evidence_cn": "使用强化学习训练图注意力策略的多无人机探索",
+          "llm_evidence": "使用强化学习训练图注意力策略的多无人机探索",
+          "canonical_evidence": "使用强化学习训练图注意力策略的多无人机探索",
+          "llm_tldr_en": "Presents Dec-MARVEL, a decentralized multi-UAV exploration framework that uses RL with incidental observations for coordination, handling budget constraints without communication.",
+          "llm_tldr_cn": "面对多无人机探索中通信不可靠、视场有限与续航预算约束，提出Dec-MARVEL去中心化框架。各无人机以机载相机偶然捕捉的同伴轨迹为协调信号，图注意力策略融合局部前沿、队友运动与预算特征，选择可返回的航点-朝向动作。仿真表明，在无通信条件下该方法实现了预算感知的高效探索，为资源受限的多无人机协同探测提供了新方法。",
+          "llm_tldr": "面对多无人机探索中通信不可靠、视场有限与续航预算约束，提出Dec-MARVEL去中心化框架。各无人机以机载相机偶然捕捉的同伴轨迹为协调信号，图注意力策略融合局部前沿、队友运动与预算特征，选择可返回的航点-朝向动作。仿真表明，在无通信条件下该方法实现了预算感知的高效探索，为资源受限的多无人机协同探测提供了新方法。",
           "llm_tags": [
             "query:upa"
           ],
@@ -48,89 +134,86 @@
           "matched_query_text": "reinforcement learning",
           "matched_requirement_id": "req-1",
           "selection_source": "carryover_cache",
-          "paper_id": "2607.09295v1",
+          "paper_id": "2607.09060v1",
           "carry_days": 1
         },
         {
-          "id": "2607.07350v1",
+          "id": "2607.03554v1",
           "source": "arxiv",
-          "title": "Towards Reliable Aerial Ground Vehicle Collaboration: An Integrated Planning and Autonomy Framework for Field Deployment",
-          "abstract": "Limited flight endurance significantly restricts the operational range of unmanned aerial vehicles (UAVs) in long duration missions such as surveillance and inspection, where multiple spatially distributed Areas of Interest (AOIs) must be visited. These tasks require efficient routing determining the sequence of visits which directly impacts mission time, energy consumption, and overall feasibility. Pairing UAVs with unmanned ground vehicles (UGVs) for mobile recharging offers a promising solution, but introduces a tightly coupled cooperative routing problem involving UAV route planning, UGV road constrained movement, energy management, and rendezvous scheduling under uncertainty. In this work, we present an integrated planning and autonomy framework for reliable field deployment. We formulate the problem as an energy constrained cooperative routing task and solve it using a Deep Reinforcement Learning (DRL) based planner that jointly optimizes the UAV visitation sequence and rendezvous locations with the UGV, outperforming baseline heuristics in minimizing total mission time. To bridge the gap between planning and execution, we introduce a standardized two layer YAML based mission API that captures environment states and structures lightweight, synchronized action sequences. This framework is supported by a complete autonomy stack using PX4/MAVSDK for UAV control and ROS 2/Nav2 for UGV navigation. Furthermore, we propose a lightweight Rendezvous Aware Replanner (RARP) that operates online to handle environmental uncertainties, reducing energy margin violations from 83.33% to 20.00%. The full system is validated through outdoor field experiments, demonstrating robust cooperative navigation and adaptability in dynamic tasks, including a search and rescue scenario with vision language model (VLM) based hazard detection",
+          "title": "Interception-Driven Inverse Reachability for Engagement Zone Construction",
+          "abstract": "In contested environments, autonomous vehicles may need to plan around adversarial pursuers whose launch locations are unknown. This paper presents an interception-driven inverse-reachability framework for inferring a feasible pursuer launch region directly from observed interception events for a single pursuer. Each interception induces a geometric constraint on the unknown launch location, and intersecting these constraints yields a bounded set guaranteed to contain the true origin under maximum-capability assumptions. Mapping this inferred set through the pursuer reachable region produces deterministic engagement zones with an explicit worst-case safety interpretation. A probabilistic extension models uncertainty in the pursuer launch location and yields graded engagement-risk fields for risk-aware planning. To accelerate localization, we introduce an information-driven planner for sacrificial agents that selects trajectories to maximize expected contraction of the feasible launch region. Monte Carlo simulations show that the proposed framework rapidly reduces launch-location uncertainty and enables substantially shorter safe trajectories after only a small number of sacrificial deployments.",
           "authors": [
-            "Md Safwan Mondal",
-            "Luca Russo",
-            "James D. Humann",
-            "James M. Dotterweich",
-            "Pranav Bhounsule"
+            "Grant Stagg",
+            "Cameron K. Peterson",
+            "Alexander Von Moll",
+            "Isaac Weintraub"
           ],
-          "primary_category": "cs.RO",
+          "primary_category": "eess.SY",
           "categories": [
-            "cs.RO"
+            "eess.SY"
           ],
-          "published": "2026-07-07T15:59:49+00:00",
-          "link": "https://arxiv.org/pdf/2607.07350v1",
+          "published": "2026-07-03T18:35:39+00:00",
+          "link": "https://arxiv.org/pdf/2607.03554v1",
           "tags": [
             "keyword:upa",
             "query:upa"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "UAV-UGV cooperative routing and path planning",
-          "llm_evidence_cn": "无人机-无人车协同路径规划与任务调度",
-          "llm_evidence": "无人机-无人车协同路径规划与任务调度",
-          "canonical_evidence": "无人机-无人车协同路径规划与任务调度",
-          "llm_tldr_en": "Develops an integrated planning framework for UAV-UGV collaboration, addressing cooperative routing, energy management, and rendezvous scheduling to extend UAV mission endurance.",
-          "llm_tldr_cn": "为解决无人机续航能力受限的问题，提出面向野外部署的无人机-无人车协同规划与自治框架。该框架综合优化无人机访问序列、无人车路径、能量管理和会合调度，有效延长了任务执行时间。实验表明，该协同方法显著提升了多兴趣点覆盖任务的可行性和效率，为长航时任务提供了可靠的自主方案。",
-          "llm_tldr": "为解决无人机续航能力受限的问题，提出面向野外部署的无人机-无人车协同规划与自治框架。该框架综合优化无人机访问序列、无人车路径、能量管理和会合调度，有效延长了任务执行时间。实验表明，该协同方法显著提升了多兴趣点覆盖任务的可行性和效率，为长航时任务提供了可靠的自主方案。",
+          "llm_evidence_en": "engagement zone construction for adversarial pursuers in contested environments",
+          "llm_evidence_cn": "对抗环境下的拦截逆可达与交战区构建",
+          "llm_evidence": "对抗环境下的拦截逆可达与交战区构建",
+          "canonical_evidence": "对抗环境下的拦截逆可达与交战区构建",
+          "llm_tldr_en": "The paper proposes an interception-driven inverse-reachability framework to infer feasible pursuer launch regions and construct deterministic engagement zones, aiding autonomous vehicles in contested air combat planning.",
+          "llm_tldr_cn": "针对自主飞行器在对抗环境中需预判敌方发射区域并规划安全路径的问题，提出拦截驱动逆可达性框架。通过观测拦截事件推导几何约束，反推追击者可能发射区域，进而构建确定性和概率交战区，提供最坏情形安全解释。该方法为近距空战中的态势感知与规避决策提供了理论基础，有助于提升无人机在未知威胁下的生存能力。",
+          "llm_tldr": "针对自主飞行器在对抗环境中需预判敌方发射区域并规划安全路径的问题，提出拦截驱动逆可达性框架。通过观测拦截事件推导几何约束，反推追击者可能发射区域，进而构建确定性和概率交战区，提供最坏情形安全解释。该方法为近距空战中的态势感知与规避决策提供了理论基础，有助于提升无人机在未知威胁下的生存能力。",
           "llm_tags": [
             "query:upa"
           ],
           "matched_query_tag": "query:upa",
-          "matched_query_text": "UAV trajectory planning",
-          "matched_requirement_id": "req-5",
+          "matched_query_text": "UAV close range air combat trajectory optimization and strategy generation",
+          "matched_requirement_id": "req-7",
           "selection_source": "carryover_cache",
-          "paper_id": "2607.07350v1",
+          "paper_id": "2607.03554v1",
           "carry_days": 1
         },
         {
-          "id": "2607.11386v1",
+          "id": "2607.10014v1",
           "source": "arxiv",
-          "title": "From Sketch Prior to Trajectories: A Mission-Oriented Coordinated Navigation Framework for Indoor UAV Swarm",
-          "abstract": "UAV swarm for applications, such as indoor inspection, security patrol, and logistics delivery, are often mission-oriented rather than exploration-oriented. In these tasks, UAVs are required to visit task-relevant regions in a prescribed sequence, and such region-level mission information can often be obtained from pre-deployment sketch-map priors, such as floor plans, CAD layouts, or evacuation diagrams. Although these tasks are executed in three-dimensional space, UAVs usually fly within a specific altitude layer or a nearly fixed altitude range on each floor, making mission-level region transitions mainly governed by planar connectivity. Based on these observations, this paper proposes a mission-oriented coordinated navigation framework that exploits sketch-map priors for multi-UAV indoor operations. Onboard observations are used to perform topological alignment, and the aligned prior is fused with online observations to construct a mission-oriented traversability representation. A layered 2D--3D coordinated navigation framework is further developed, where 2D guided path planning generates mission-oriented guide paths and guide-driven 3D trajectory optimization produces dynamically feasible and collision-free trajectories. Simulation and real-world experiments validate the effectiveness of the proposed framework in structured multi-room indoor environments and further demonstrate its coordinated navigation capability under both communication-available and communication-loss conditions. Multi-floor simulation results show the scalability of the system to layered indoor structures.",
+          "title": "Runtime Safety Filtering for Learned Small UAS Separation Policies under GNSS Degradation",
+          "abstract": "Learning-based separation assurance for small Unmanned Aircraft Systems (sUAS) achieves near-zero collision rates in simulation, but assumes accurate position and velocity information from Global Navigation Satellite Systems (GNSS). This assumption fails in urban environments, where multipath propagation, signal blockage, and intentional interference degrade navigation integrity. This raises a fundamental architectural question for deploying learned separation policies under GNSS degradation: should runtime safety mechanisms filter the policy's actions or its observations? This work evaluates both approaches for multi-agent sUAS separation under adversarial GNSS degradation. Both architectures first estimate a worst-case traffic state consistent with bounded observation uncertainty, then diverge: action filtering constrains policy outputs via discrete-time control barrier functions evaluated at the worst-case state, while observation filtering presents the worst-case state directly to the policy as corrected input. Experimental results show that action filtering provides negligible safety improvement, while observation filtering reduces near mid-air collisions by 90% and remains robust to the barrier function's tradeoff between separation distance and closing rate. These results suggest that, for policies with learned safety behaviors, preserving the policy's decision authority outperforms overriding its actions with hand-designed constraints.",
           "authors": [
-            "Xinhang Xu",
-            "Ruiyang Liu",
-            "Haotian Jin",
-            "Yi Wang",
-            "Hongming Shen",
-            "Jianping Li",
-            "Lihua Xie"
+            "Alex Zongo",
+            "Peng Wei"
           ],
           "primary_category": "cs.RO",
           "categories": [
-            "cs.RO"
+            "cs.RO",
+            "cs.LG",
+            "cs.MA",
+            "eess.SY"
           ],
-          "published": "2026-07-13T10:47:14+00:00",
-          "link": "https://arxiv.org/pdf/2607.11386v1",
+          "published": "2026-07-10T22:33:35+00:00",
+          "link": "https://arxiv.org/pdf/2607.10014v1",
           "tags": [
             "keyword:upa",
             "query:upa"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "coordinated navigation framework for UAV swarm using sketch-map priors",
-          "llm_evidence_cn": "利用草图先验的无人机群协调导航框架",
-          "llm_evidence": "利用草图先验的无人机群协调导航框架",
-          "canonical_evidence": "利用草图先验的无人机群协调导航框架",
-          "llm_tldr_en": "Proposes a mission-oriented navigation framework for indoor UAV swarms that leverages sketch-map priors to generate coordinated trajectories.",
-          "llm_tldr_cn": "针对室内无人机群执行巡检、安防等面向任务的导航需求，提出一种利用楼层平面图等草图先验的协调导航框架，将任务级别区域过渡建模为平面连接性问题，生成满足指定序列的轨迹，在三维空间中以固定高度层飞行，简化了规划过程，为室内多无人机协同任务提供了高效解决方案。",
-          "llm_tldr": "针对室内无人机群执行巡检、安防等面向任务的导航需求，提出一种利用楼层平面图等草图先验的协调导航框架，将任务级别区域过渡建模为平面连接性问题，生成满足指定序列的轨迹，在三维空间中以固定高度层飞行，简化了规划过程，为室内多无人机协同任务提供了高效解决方案。",
+          "llm_evidence_en": "Safety filtering for learned sUAS separation policy, collision avoidance in degraded GNSS conditions.",
+          "llm_evidence_cn": "针对学习的小型无人机间隔策略的安全过滤，在GNSS退化条件下实现碰撞规避。",
+          "llm_evidence": "针对学习的小型无人机间隔策略的安全过滤，在GNSS退化条件下实现碰撞规避。",
+          "canonical_evidence": "针对学习的小型无人机间隔策略的安全过滤，在GNSS退化条件下实现碰撞规避。",
+          "llm_tldr_en": "Compares action-filtering and observation-filtering runtime safety mechanisms for multi-agent sUAS separation under adversarial GNSS degradation, highlighting architectural trade-offs for safe navigation.",
+          "llm_tldr_cn": "本文研究在GNSS信号退化环境下，部署学习的小型无人机间隔策略的安全过滤架构问题，比较了对策略动作和观测进行安全过滤两种方案。在对抗性信号退化条件下，评估了两种架构的多机安全分离性能，为城市环境无人机安全导航提供了设计参考。",
+          "llm_tldr": "本文研究在GNSS信号退化环境下，部署学习的小型无人机间隔策略的安全过滤架构问题，比较了对策略动作和观测进行安全过滤两种方案。在对抗性信号退化条件下，评估了两种架构的多机安全分离性能，为城市环境无人机安全导航提供了设计参考。",
           "llm_tags": [
             "query:upa"
           ],
           "matched_query_tag": "query:upa",
-          "matched_query_text": "UAV trajectory planning",
-          "matched_requirement_id": "req-5",
+          "matched_query_text": "UAV obstacle avoidance",
+          "matched_requirement_id": "req-2",
           "selection_source": "carryover_cache",
-          "paper_id": "2607.11386v1",
+          "paper_id": "2607.10014v1",
           "carry_days": 1
         }
       ]

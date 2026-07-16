@@ -1,88 +1,55 @@
 {
   "mode": "standard",
-  "generated_at": "2026-07-16T09:03:56.467379+00:00",
+  "generated_at": "2026-07-16T09:50:42.684650+00:00",
   "stats": {
     "mode": "standard",
     "tag_count": 1,
-    "deep_divecandidates": 21,
+    "deep_divecandidates": 22,
     "deep_cap": 6,
-    "deep_selected": 14,
-    "quick_candidates": 20,
+    "deep_selected": 13,
+    "quick_candidates": 25,
     "quick_skim_target": 11,
     "quick_selected": 11
   },
   "deep_dive": [
     {
-      "id": "2607.02797v1",
+      "id": "2607.01794v1",
       "source": "arxiv",
-      "title": "RCOA Extension and Applications",
-      "abstract": "The Relaxed Convex Obstacle Avoidance (RCOA) formulation is the first approach to enable a fully convex optimal control problem (OCP) for obstacle avoidance. Convergence analysis of RCOA yields an analytical framework that defines a unique characteristic: the ability to maintain obstacle avoidance (OA) efficacy even when obstacles reside beyond the controller's prediction horizon. In this paper, RCOA is extended to three-dimensional environments and apply it to Unmanned Aerial Vehicle (UAV) navigation. Furthermore, the formulation is enhanced to incorporate vehicle geometries, moving beyond point-mass representations to enable collision avoidance between 3D objects. Numerical simulations demonstrate that RCOA provides computational performance on par or exceeding state-of-the-art methods. Notably, RCOA is demonstrated to enable a Nonlinear Model Predictive Controller (NMPC) to execute aggressive maneuvers through narrow passages with reduced prediction horizons, ensuring real-time feasibility at frequencies exceeding 30~Hz.",
+      "title": "Lightweight Safe Reinforcement Learning for End-to-End UAV Navigation",
+      "abstract": "With the rapid development of autonomous aerial systems, Unmanned Aerial Vehicles (UAVs) are increasingly deployed in applications such as inspection, environmental monitoring, and rescue, creating growing demand for reliable autonomous navigation. However, autonomous UAV navigation in dense environments remains challenging under sparse perception and dynamic constraints. Most reinforcement learning (RL) methods lack explicit safety mechanisms, leading to unsafe exploration, unstable training, and risky behaviors, especially during high-speed flight. Even in safe RL approaches, safety is often enforced by projecting policy outputs onto a safe action set, which may introduce instability. Meanwhile, many learning-based methods rely on dense inputs or large networks, increasing computational burden and limiting lightweight onboard deployment. Facing the above challenges, we propose a safety-constrained perception-control integrated framework for UAV navigation. A lightweight network encodes sparse observations into collision-risk-aware features using asymmetric and depthwise separable convolutions. We formulate the task as a constrained Markov decision process within a hierarchical control architecture and solve it using a Lagrangian-based safe PPO algorithm. Curriculum learning further improves training stability. Experiments with varying obstacle densities and flight speeds demonstrate higher success rates, improved safety, and better efficiency than existing reinforcement learning baselines.",
       "authors": [
-        "Ricardo Tapia",
-        "Iman Soltani"
+        "Shenghui Zhang",
+        "YuXuan Gao",
+        "Songwei Zhao",
+        "Jifeng Hu",
+        "Zijing Zhang",
+        "Hechang Chen"
       ],
-      "primary_category": "eess.SY",
+      "primary_category": "cs.RO",
       "categories": [
-        "eess.SY"
+        "cs.RO",
+        "cs.AI"
       ],
-      "published": "2026-07-02T22:17:11+00:00",
-      "link": "https://arxiv.org/pdf/2607.02797v1",
+      "published": "2026-07-02T07:12:24+00:00",
+      "link": "https://arxiv.org/pdf/2607.01794v1",
       "tags": [
         "keyword:upa",
         "query:upa"
       ],
       "llm_score": 10.0,
-      "llm_evidence_en": "convex obstacle avoidance extended to 3D UAV navigation",
-      "llm_evidence_cn": "凸障碍规避方法扩展到三维无人机导航，并考虑车辆几何",
-      "llm_evidence": "凸障碍规避方法扩展到三维无人机导航，并考虑车辆几何",
-      "canonical_evidence": "凸障碍规避方法扩展到三维无人机导航，并考虑车辆几何",
-      "llm_tldr_en": "Extends the Relaxed Convex Obstacle Avoidance (RCOA) formulation to 3D UAV navigation, incorporating vehicle geometry for collision avoidance, with computational performance matching or exceeding state-of-the-art.",
-      "llm_tldr_cn": "本文将松弛凸障碍规避(RCOA)方法从二维扩展到三维，应用于无人机导航，并进一步考虑无人机几何形状，实现三维物体间的碰撞避免。数值仿真表明，RCOA在不牺牲计算性能的前提下，即使障碍物超出预测范围仍能保持规避，优于现有方法。",
-      "llm_tldr": "本文将松弛凸障碍规避(RCOA)方法从二维扩展到三维，应用于无人机导航，并进一步考虑无人机几何形状，实现三维物体间的碰撞避免。数值仿真表明，RCOA在不牺牲计算性能的前提下，即使障碍物超出预测范围仍能保持规避，优于现有方法。",
+      "llm_evidence_en": "Lightweight safe RL for end-to-end UAV navigation in dense environments, directly addresses obstacle avoidance.",
+      "llm_evidence_cn": "轻量级安全强化学习用于端到端无人机导航，直接解决障碍物规避问题。",
+      "llm_evidence": "轻量级安全强化学习用于端到端无人机导航，直接解决障碍物规避问题。",
+      "canonical_evidence": "轻量级安全强化学习用于端到端无人机导航，直接解决障碍物规避问题。",
+      "llm_tldr_en": "Introduces a lightweight safe RL method that uses a safety monitor to intervene only when necessary, enabling stable and safe UAV navigation in cluttered settings with sparse perception.",
+      "llm_tldr_cn": "本文针对无人机在密集环境中自主导航的安全性问题，提出一种轻量级安全强化学习方法。通过只在必要时介入的安全监视器，避免策略投影带来的不稳定，实现高速飞行下的安全探索与稳定控制，在稀疏感知和动态约束下表现更优。",
+      "llm_tldr": "本文针对无人机在密集环境中自主导航的安全性问题，提出一种轻量级安全强化学习方法。通过只在必要时介入的安全监视器，避免策略投影带来的不稳定，实现高速飞行下的安全探索与稳定控制，在稀疏感知和动态约束下表现更优。",
       "llm_tags": [
         "query:upa"
       ],
       "matched_query_tag": "query:upa",
       "matched_query_text": "UAV obstacle avoidance",
       "matched_requirement_id": "req-2",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2607.13789v1",
-      "source": "arxiv",
-      "title": "Dynamical Vehicle Orienteering Problem for Multi-Rotor Unmanned Aerial Vehicles",
-      "abstract": "This paper introduces the Dynamical Vehicle Orienteering Problem (DVOP), a generalization of the Orienteering Problem (OP). The OP maximizes the reward collected from spatial targets under a limited travel budget; the DVOP extends it by accounting for both external and vehicle-actuated forces. We study the DVOP in the context of multi-rotor Unmanned Aerial Vehicle (UAV) flight planning, using a three-dimensional Point-Mass Model (PMM) constrained by maximum velocity and acceleration magnitudes and subject to gravitational acceleration, with the travel budget expressed as a maximum flight time. Because the DVOP couples reward maximization with time-optimal trajectory planning, it cannot be formulated as a simple graph problem and solved exactly without relaxing or under-actuating the vehicle dynamics. We therefore propose two solution approaches: a Branch-and-Bound (BnB) procedure that combines Non-Linear Programming (NLP) and Mixed-Integer Linear Programming (MILP) to provide high-quality solutions, and a Large Neighborhood Search (LNS) metaheuristic that supplies an initial reward bound and scales to instances intractable for the BnB. The BnB relies on a novel MILP formulation of travel costs based on minimum-time trajectory primitives through target triplets, yielding a tight reward upper bound, while the LNS uses limited thrust decomposition to compute fast, high-quality PMM trajectories. Experiments on benchmark instances show improvements of up to 37 % over state-of-the-art solutions for the Kinematic Orienteering Problem, and a real-world deployment on a multi-rotor UAV verifies the proposed PMM solution trajectories.",
-      "authors": [
-        "František Nekovář",
-        "Matej Novosad",
-        "Martin Saska",
-        "Robert Pěnička"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO",
-        "math.OC"
-      ],
-      "published": "2026-07-15T12:48:18+00:00",
-      "link": "https://arxiv.org/pdf/2607.13789v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 10.0,
-      "llm_evidence_en": "UAV flight planning with dynamics and travel budget",
-      "llm_evidence_cn": "带动力学与旅程预算的无人机飞行规划",
-      "llm_evidence": "带动力学与旅程预算的无人机飞行规划",
-      "canonical_evidence": "带动力学与旅程预算的无人机飞行规划",
-      "llm_tldr_en": "The paper introduces the Dynamical Vehicle Orienteering Problem for multi-rotor UAVs, coupling reward maximization with time-optimal trajectory planning under dynamics constraints.",
-      "llm_tldr_cn": "本论文针对多旋翼无人机飞行规划问题，提出动力学车辆定向问题(DVOP)，在旅程时间约束下最大化空间目标奖励，并考虑重力和运动约束。传统定向问题无法处理动力学耦合，DVOP将其与时间最优轨迹规划统一建模，解决了复杂三维环境下的轨迹优化问题。",
-      "llm_tldr": "本论文针对多旋翼无人机飞行规划问题，提出动力学车辆定向问题(DVOP)，在旅程时间约束下最大化空间目标奖励，并考虑重力和运动约束。传统定向问题无法处理动力学耦合，DVOP将其与时间最优轨迹规划统一建模，解决了复杂三维环境下的轨迹优化问题。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
       "selection_source": "fresh_fetch"
     },
     {
@@ -109,13 +76,13 @@
         "query:upa"
       ],
       "llm_score": 9.0,
-      "llm_evidence_en": "continuous-time navigation policy for LiDAR-based UAV obstacle avoidance",
-      "llm_evidence_cn": "基于激光雷达的连续时间无人机避障导航策略",
-      "llm_evidence": "基于激光雷达的连续时间无人机避障导航策略",
-      "canonical_evidence": "基于激光雷达的连续时间无人机避障导航策略",
-      "llm_tldr_en": "LNN-Fly, a continuous-time policy with structured recurrence and adaptive forgetting, enables robust UAV obstacle avoidance under timing mismatch.",
-      "llm_tldr_cn": "针对端到端无人机导航策略部署后因模拟器失配、感知不规则和变速率控制导致的避障性能下降问题，本文提出LNN-Fly，一种连续时间导航策略。该策略结合动态规划启发的结构化递归更新、显式控制间隔条件与输入驱动的自适应遗忘门，能刷新状态并处理定时不匹配。实验表明，在杂乱环境中，LNN-Fly在变速率控制下仍保持鲁棒避障，显著降低碰撞率，为现实无人机避障提供了可靠方案。",
-      "llm_tldr": "针对端到端无人机导航策略部署后因模拟器失配、感知不规则和变速率控制导致的避障性能下降问题，本文提出LNN-Fly，一种连续时间导航策略。该策略结合动态规划启发的结构化递归更新、显式控制间隔条件与输入驱动的自适应遗忘门，能刷新状态并处理定时不匹配。实验表明，在杂乱环境中，LNN-Fly在变速率控制下仍保持鲁棒避障，显著降低碰撞率，为现实无人机避障提供了可靠方案。",
+      "llm_evidence_en": "deployment-oriented continuous-time UAV obstacle avoidance policy",
+      "llm_evidence_cn": "面向部署的连续时间无人机避障策略",
+      "llm_evidence": "面向部署的连续时间无人机避障策略",
+      "canonical_evidence": "面向部署的连续时间无人机避障策略",
+      "llm_tldr_en": "LNN-Fly proposes a continuous-time policy for LiDAR-based UAV obstacle avoidance that handles timing mismatches, simulator gaps, and sensing irregularities, achieving robust real-world deployment.",
+      "llm_tldr_cn": "针对无人机端到端导航策略在实际部署中因仿真失配、传感不规则和变速率控制导致的避障性能下降问题，提出LNN-Fly连续时间导航策略。该策略融合动态规划启发的结构化递归更新、显式控制间隔条件与输入驱动自适应遗忘门，实现LiDAR无人机在时序失配下的鲁棒避障。仿真与实验表明，方法显著提升了杂乱环境中的安全性与可靠性，为无人机在复杂真实场景下的自主飞行提供了可部署解决方案。",
+      "llm_tldr": "针对无人机端到端导航策略在实际部署中因仿真失配、传感不规则和变速率控制导致的避障性能下降问题，提出LNN-Fly连续时间导航策略。该策略融合动态规划启发的结构化递归更新、显式控制间隔条件与输入驱动自适应遗忘门，实现LiDAR无人机在时序失配下的鲁棒避障。仿真与实验表明，方法显著提升了杂乱环境中的安全性与可靠性，为无人机在复杂真实场景下的自主飞行提供了可部署解决方案。",
       "llm_tags": [
         "query:upa"
       ],
@@ -145,93 +112,19 @@
         "query:upa"
       ],
       "llm_score": 9.0,
-      "llm_evidence_en": "cooperative obstacle avoidance algorithm for multi-UAV formations",
-      "llm_evidence_cn": "多无人机编队协同避障算法",
-      "llm_evidence": "多无人机编队协同避障算法",
-      "canonical_evidence": "多无人机编队协同避障算法",
-      "llm_tldr_en": "Proposes a BI-APF-RRT and affine transformation based method for multi-UAV formation obstacle avoidance and shape deformation in complex environments, avoiding local optima.",
-      "llm_tldr_cn": "针对多无人机编队复杂环境中避障灵活性与队形完整性难以共存、传统人工势场法易陷入局部最优的问题，提出融合BI-APF-RRT和仿射变换的协同避障算法。通过目标偏置双向人工势场RRT进行领导编队全局避碰路径规划，并利用仿射变换实现自适应形状变形。实验表明，该方法能有效实现编队避障与队形保持，提高了复杂环境下的协同能力。",
-      "llm_tldr": "针对多无人机编队复杂环境中避障灵活性与队形完整性难以共存、传统人工势场法易陷入局部最优的问题，提出融合BI-APF-RRT和仿射变换的协同避障算法。通过目标偏置双向人工势场RRT进行领导编队全局避碰路径规划，并利用仿射变换实现自适应形状变形。实验表明，该方法能有效实现编队避障与队形保持，提高了复杂环境下的协同能力。",
+      "llm_evidence_en": "proposes BI-APF-RRT cooperative obstacle avoidance for multi-UAV formations",
+      "llm_evidence_cn": "提出BI-APF-RRT多无人机编队协同避障算法",
+      "llm_evidence": "提出BI-APF-RRT多无人机编队协同避障算法",
+      "canonical_evidence": "提出BI-APF-RRT多无人机编队协同避障算法",
+      "llm_tldr_en": "Aims to balance obstacle avoidance flexibility and formation integrity in multi-UAV formations, proposing BI-APF-RRT with affine transformation for cooperative obstacle avoidance.",
+      "llm_tldr_cn": "针对复杂障碍环境中多无人机编队避障灵活性与队形完整性难以共存的问题，提出融合目标偏置双向人工势场RRT与仿射变换的协同避障算法，有效克服传统APF局部极值缺陷，提升编队协同性能。",
+      "llm_tldr": "针对复杂障碍环境中多无人机编队避障灵活性与队形完整性难以共存的问题，提出融合目标偏置双向人工势场RRT与仿射变换的协同避障算法，有效克服传统APF局部极值缺陷，提升编队协同性能。",
       "llm_tags": [
         "query:upa"
       ],
       "matched_query_tag": "query:upa",
       "matched_query_text": "UAV obstacle avoidance",
       "matched_requirement_id": "req-2",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2606.30575v1",
-      "source": "arxiv",
-      "title": "MOAR Planner: Multi-Objective and Adaptive Risk-Aware Path Planning for Infrastructure Inspection with a UAV",
-      "abstract": "The problem of autonomous navigation for UAV inspection remains challenging as it requires effectively navigating in close proximity to obstacles, while accounting for dynamic risk factors such as weather conditions, communication reliability, and battery autonomy. This paper introduces the MOAR path planner which addresses the complexities of evolving risks during missions. It offers real-time trajectory adaptation while concurrently optimizing safety, time, and energy. The planner employs a risk-aware cost function that integrates pre-computed cost maps, the new concepts of damage and insertion costs, and an adaptive speed planning framework. With that, the optimal path is searched in a graph using a discrete representation of the state and action spaces. The method is evaluated through simulations and real-world flight tests. The results show the capability to generate real-time trajectories spanning a broad range of evaluation metrics: around 90% of the range occupied by popular algorithms. The proposed framework contributes by enabling UAVs to navigate more autonomously and reliably in critical missions.",
-      "authors": [
-        "Louis Petit",
-        "Alexis Lussier Desbiens"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO"
-      ],
-      "published": "2026-06-29T17:18:02+00:00",
-      "link": "https://arxiv.org/pdf/2606.30575v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "UAV path planner for close-proximity obstacle navigation with adaptive risk-aware trajectory adjustment",
-      "llm_evidence_cn": "无人机路径规划器，实现近障碍物导航与自适应风险感知轨迹调整",
-      "llm_evidence": "无人机路径规划器，实现近障碍物导航与自适应风险感知轨迹调整",
-      "canonical_evidence": "无人机路径规划器，实现近障碍物导航与自适应风险感知轨迹调整",
-      "llm_tldr_en": "Introduces MOAR Planner, a multi-objective adaptive risk-aware path planner for UAV infrastructure inspection, enabling real-time trajectory adaptation near obstacles while optimizing safety, time, and energy.",
-      "llm_tldr_cn": "针对无人机巡检需要在近障碍物飞行并应对动态风险的问题，提出MOAR路径规划器，通过风险感知代价函数和自适应速度规划，实时优化安全、时间和能耗，在仿真中实现贴近障碍物的安全高效飞行，为复杂环境下的无人机巡检提供新方法。",
-      "llm_tldr": "针对无人机巡检需要在近障碍物飞行并应对动态风险的问题，提出MOAR路径规划器，通过风险感知代价函数和自适应速度规划，实时优化安全、时间和能耗，在仿真中实现贴近障碍物的安全高效飞行，为复杂环境下的无人机巡检提供新方法。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV obstacle avoidance",
-      "matched_requirement_id": "req-2",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2606.31487v1",
-      "source": "arxiv",
-      "title": "Energy-Optimal Spatial Iterative Learning within a Virtual Tube",
-      "abstract": "Due to the limited endurance of embedded energy sources such as lithium-polymer (LiPo) batteries, the flight duration and operational range of unmanned aerial vehicles (UAVs) are severely constrained. Although energy-efficient trajectory planning and control have been widely studied, most existing approaches rely on accurate system models and computationally expensive optimization procedures. This paper proposes a model-free online iterative learning (IL) framework to minimize energy consumption. Without requiring explicit models of UAV dynamics or energy consumption, the proposed method improves energy efficiency while maintaining a low computational cost. The per-iteration computational complexity is O(n), where n denotes the number of path points. In the tested cases, the proposed method is approximately 50--60 times faster than the model-based IPOPT benchmark. Simulation results and real-world flight experiments across multiple UAV platforms validate the effectiveness, computational efficiency, and practical applicability of the proposed approach.",
-      "authors": [
-        "Chen Min",
-        "Shuli Lv",
-        "Pengda Mao",
-        "Huixin Cao",
-        "Li Hong",
-        "Quan Quan"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO"
-      ],
-      "published": "2026-06-30T11:01:06+00:00",
-      "link": "https://arxiv.org/pdf/2606.31487v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "Energy-optimal UAV trajectory planning using model-free iterative learning",
-      "llm_evidence_cn": "基于无模型迭代学习的无人机能量最优轨迹规划",
-      "llm_evidence": "基于无模型迭代学习的无人机能量最优轨迹规划",
-      "canonical_evidence": "基于无模型迭代学习的无人机能量最优轨迹规划",
-      "llm_tldr_en": "Presents a model-free online iterative learning framework that minimizes UAV energy consumption during trajectory planning within a virtual tube, achieving O(n) computational complexity.",
-      "llm_tldr_cn": "针对无人机因电池续航限制而难以长时间飞行的问题，提出一种无模型的在线迭代学习框架，在虚拟管道中进行能量最优轨迹规划。该方法无需精确模型，计算复杂度仅为O(n)，显著降低了能耗。仿真结果表明，该方法在保证低计算开销的同时有效提升了能量效率，为无人机长航时任务提供了实用规划手段。",
-      "llm_tldr": "针对无人机因电池续航限制而难以长时间飞行的问题，提出一种无模型的在线迭代学习框架，在虚拟管道中进行能量最优轨迹规划。该方法无需精确模型，计算复杂度仅为O(n)，显著降低了能耗。仿真结果表明，该方法在保证低计算开销的同时有效提升了能量效率，为无人机长航时任务提供了实用规划手段。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
       "selection_source": "fresh_fetch"
     },
     {
@@ -265,13 +158,13 @@
         "query:upa"
       ],
       "llm_score": 9.0,
-      "llm_evidence_en": "Dynamic-aware continuous trajectory generation for UAV navigation",
-      "llm_evidence_cn": "面向无人机视觉语言导航的动态感知连续轨迹生成",
-      "llm_evidence": "面向无人机视觉语言导航的动态感知连续轨迹生成",
-      "canonical_evidence": "面向无人机视觉语言导航的动态感知连续轨迹生成",
-      "llm_tldr_en": "Introduces DynFly, a dynamic-aware continuous trajectory generation framework that bridges high-level navigation intent and executable UAV motion, enabling smooth and stable flight in urban environments.",
-      "llm_tldr_cn": "针对无人机视觉语言导航中高层推理与可执行运动之间的接口缺失问题，提出动态感知连续轨迹生成框架DynFly，将导航意图转化为连续、稳定的无人机运动。实验表明，该方法有效提升了轨迹的连续性和可执行性，在城市环境中实现了更流畅的自主飞行。该工作为无人机高级导航与运动控制架起了重要桥梁。",
-      "llm_tldr": "针对无人机视觉语言导航中高层推理与可执行运动之间的接口缺失问题，提出动态感知连续轨迹生成框架DynFly，将导航意图转化为连续、稳定的无人机运动。实验表明，该方法有效提升了轨迹的连续性和可执行性，在城市环境中实现了更流畅的自主飞行。该工作为无人机高级导航与运动控制架起了重要桥梁。",
+      "llm_evidence_en": "dynamic-aware continuous trajectory generation for UAV navigation",
+      "llm_evidence_cn": "面向UAV导航的动态感知连续轨迹生成",
+      "llm_evidence": "面向UAV导航的动态感知连续轨迹生成",
+      "canonical_evidence": "面向UAV导航的动态感知连续轨迹生成",
+      "llm_tldr_en": "Proposes DynFly, a framework that generates continuous, executable UAV trajectories from high-level navigation commands by bridging the gap between vision-language reasoning and motion, ensuring dynamic-aware and stable flight paths.",
+      "llm_tldr_cn": "针对现有UAV视觉语言导航方法仅输出离散动作或稀疏路径点、导致轨迹不连续的问题，提出DynFly框架。DynFly通过动态感知的连续轨迹生成，弥合了高层导航意图与可执行UAV运动之间的鸿沟，确保轨迹的连续性和稳定性。实验表明，该方法能生成符合动力学约束的平滑飞行轨迹，提升了城市环境中UAV导航的实用性。",
+      "llm_tldr": "针对现有UAV视觉语言导航方法仅输出离散动作或稀疏路径点、导致轨迹不连续的问题，提出DynFly框架。DynFly通过动态感知的连续轨迹生成，弥合了高层导航意图与可执行UAV运动之间的鸿沟，确保轨迹的连续性和稳定性。实验表明，该方法能生成符合动力学约束的平滑飞行轨迹，提升了城市环境中UAV导航的实用性。",
       "llm_tags": [
         "query:upa"
       ],
@@ -281,616 +174,76 @@
       "selection_source": "fresh_fetch"
     },
     {
-      "id": "2607.01281v1",
+      "id": "2607.02797v1",
       "source": "arxiv",
-      "title": "WaveLander: A Generalizable Hierarchical Control Framework for UAV Landing on Wave-Disturbed Platforms via Reinforcement Learning",
-      "abstract": "Autonomous landing of unmanned aerial vehicles (UAVs) on wave-disturbed marine platforms remains challenging due to stochastic platform motion, time-varying platform attitude, and uncertain touchdown conditions. Existing model-based methods often require accurate motion prediction and online optimization, while end-to-end learning approaches may suffer from high training complexity and limited interpretability. This paper presents WaveLander, a hierarchical control framework via reinforcement learning (RL) that decouples vertical landing decision-making from low-level flight stabilization. The RL policy maps a compact platform-relative observation to a scalar vertical velocity reference, while a conventional low-level flight controller maintains attitude stability and lateral tracking. This formulation reduces dynamic platform landing to a low-dimensional, timing-aware control problem and enables smooth landing behavior without explicit switching rules. Simulation results under randomized wave-induced platform motions show that WaveLander achieves robust landing performance and generalizes to unseen disturbance conditions, demonstrating the potential of hierarchical learning-based control for marine UAV recovery.",
+      "title": "RCOA Extension and Applications",
+      "abstract": "The Relaxed Convex Obstacle Avoidance (RCOA) formulation is the first approach to enable a fully convex optimal control problem (OCP) for obstacle avoidance. Convergence analysis of RCOA yields an analytical framework that defines a unique characteristic: the ability to maintain obstacle avoidance (OA) efficacy even when obstacles reside beyond the controller's prediction horizon. In this paper, RCOA is extended to three-dimensional environments and apply it to Unmanned Aerial Vehicle (UAV) navigation. Furthermore, the formulation is enhanced to incorporate vehicle geometries, moving beyond point-mass representations to enable collision avoidance between 3D objects. Numerical simulations demonstrate that RCOA provides computational performance on par or exceeding state-of-the-art methods. Notably, RCOA is demonstrated to enable a Nonlinear Model Predictive Controller (NMPC) to execute aggressive maneuvers through narrow passages with reduced prediction horizons, ensuring real-time feasibility at frequencies exceeding 30~Hz.",
       "authors": [
-        "Chun-Kit Li",
-        "Iok Long Sit",
-        "Ming Fung Siu",
-        "Ka Yu Kui",
-        "Hin Wang Lin",
-        "Pengyu Wang",
-        "Ling Shi"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO"
-      ],
-      "published": "2026-07-01T08:28:15+00:00",
-      "link": "https://arxiv.org/pdf/2607.01281v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "uses RL for UAV landing decision-making on dynamic platforms",
-      "llm_evidence_cn": "利用强化学习在动态平台上进行无人机着陆决策",
-      "llm_evidence": "利用强化学习在动态平台上进行无人机着陆决策",
-      "canonical_evidence": "利用强化学习在动态平台上进行无人机着陆决策",
-      "llm_tldr_en": "Presents WaveLander, an RL-based hierarchical control for UAV landing on wave-disturbed platforms, decoupling decision-making and stabilization.",
-      "llm_tldr_cn": "针对波浪扰动平台无人机自主着陆难题，提出分层强化学习框架WaveLander，将垂向着陆决策与低层飞行稳定控制解耦，RL策略输出垂直速度参考，在多种海况下实现稳健着陆，增强了可解释性和泛化能力，为动态环境下的精确着陆任务提供了有效方案。",
-      "llm_tldr": "针对波浪扰动平台无人机自主着陆难题，提出分层强化学习框架WaveLander，将垂向着陆决策与低层飞行稳定控制解耦，RL策略输出垂直速度参考，在多种海况下实现稳健着陆，增强了可解释性和泛化能力，为动态环境下的精确着陆任务提供了有效方案。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "reinforcement learning",
-      "matched_requirement_id": "req-1",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2607.01525v1",
-      "source": "arxiv",
-      "title": "Mean Field Reinforcement Learning",
-      "abstract": "This monograph provides an introduction to mean field reinforcement learning through the lens of Markov decision processes arising from large-population stochastic control with mean field interactions and common noise. Starting from the connection between multi-agent reinforcement learning and mean field control, it develops the probabilistic, mathematical, and control-theoretic framework needed to formulate representative-agent learning problems, analyze their relationship with finite-population systems, and study both general and linear-quadratic models. The presentation includes dynamic programming principles, propagation-of-chaos limits, and theoretical analyses of tabular Q-learning and policy-gradient methods. It also discusses numerical implementations, including tabular schemes and deep reinforcement learning methods such as deep deterministic policy gradient. The goal is to give readers a coherent bridge between mean field control theory and reinforcement learning methodology, emphasizing the mathematical structure of the problems and the design of tractable learning approaches for large stochastic populations.",
-      "authors": [
-        "René Carmona",
-        "Mathieu Laurière"
-      ],
-      "primary_category": "math.OC",
-      "categories": [
-        "math.OC",
-        "cs.LG",
-        "cs.MA",
-        "math.PR"
-      ],
-      "published": "2026-07-01T22:44:24+00:00",
-      "link": "https://arxiv.org/pdf/2607.01525v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "Monograph on mean field reinforcement learning",
-      "llm_evidence_cn": "平均场强化学习专著",
-      "llm_evidence": "平均场强化学习专著",
-      "canonical_evidence": "平均场强化学习专著",
-      "llm_tldr_en": "A comprehensive introduction to mean field reinforcement learning for large-population systems, covering theory, algorithms, and applications.",
-      "llm_tldr_cn": "该专著从大群体随机控制视角系统阐述平均场强化学习，涵盖马尔可夫决策过程、动态规划原理、混沌传播极限，以及表格Q学习与策略梯度方法的理论分析和仿真实现，为大规模多智能体系统中的个体决策与群体交互建模提供了坚实的数学基础，对无人机集群协同等场景有重要参考价值。",
-      "llm_tldr": "该专著从大群体随机控制视角系统阐述平均场强化学习，涵盖马尔可夫决策过程、动态规划原理、混沌传播极限，以及表格Q学习与策略梯度方法的理论分析和仿真实现，为大规模多智能体系统中的个体决策与群体交互建模提供了坚实的数学基础，对无人机集群协同等场景有重要参考价值。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "reinforcement learning",
-      "matched_requirement_id": "req-1",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2607.01794v1",
-      "source": "arxiv",
-      "title": "Lightweight Safe Reinforcement Learning for End-to-End UAV Navigation",
-      "abstract": "With the rapid development of autonomous aerial systems, Unmanned Aerial Vehicles (UAVs) are increasingly deployed in applications such as inspection, environmental monitoring, and rescue, creating growing demand for reliable autonomous navigation. However, autonomous UAV navigation in dense environments remains challenging under sparse perception and dynamic constraints. Most reinforcement learning (RL) methods lack explicit safety mechanisms, leading to unsafe exploration, unstable training, and risky behaviors, especially during high-speed flight. Even in safe RL approaches, safety is often enforced by projecting policy outputs onto a safe action set, which may introduce instability. Meanwhile, many learning-based methods rely on dense inputs or large networks, increasing computational burden and limiting lightweight onboard deployment. Facing the above challenges, we propose a safety-constrained perception-control integrated framework for UAV navigation. A lightweight network encodes sparse observations into collision-risk-aware features using asymmetric and depthwise separable convolutions. We formulate the task as a constrained Markov decision process within a hierarchical control architecture and solve it using a Lagrangian-based safe PPO algorithm. Curriculum learning further improves training stability. Experiments with varying obstacle densities and flight speeds demonstrate higher success rates, improved safety, and better efficiency than existing reinforcement learning baselines.",
-      "authors": [
-        "Shenghui Zhang",
-        "YuXuan Gao",
-        "Songwei Zhao",
-        "Jifeng Hu",
-        "Zijing Zhang",
-        "Hechang Chen"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO",
-        "cs.AI"
-      ],
-      "published": "2026-07-02T07:12:24+00:00",
-      "link": "https://arxiv.org/pdf/2607.01794v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "Safe reinforcement learning for end-to-end UAV navigation",
-      "llm_evidence_cn": "面向无人机端到端导航的轻量级安全强化学习",
-      "llm_evidence": "面向无人机端到端导航的轻量级安全强化学习",
-      "canonical_evidence": "面向无人机端到端导航的轻量级安全强化学习",
-      "llm_tldr_en": "Proposes a lightweight safe reinforcement learning method for end-to-end UAV navigation, addressing unsafe exploration and training instability, and achieving reliable autonomous flight in dense environments.",
-      "llm_tldr_cn": "针对无人机在密集环境中自主导航存在的不安全探索和训练不稳定问题，提出一种轻量级安全强化学习方法，实现端到端的可靠自主飞行。该方法在缺乏显式安全机制的RL基础上引入安全约束，并通过实验验证了其在高速飞行中的安全性和稳定性。该工作为无人机安全导航提供了高效且实用的解决方案。",
-      "llm_tldr": "针对无人机在密集环境中自主导航存在的不安全探索和训练不稳定问题，提出一种轻量级安全强化学习方法，实现端到端的可靠自主飞行。该方法在缺乏显式安全机制的RL基础上引入安全约束，并通过实验验证了其在高速飞行中的安全性和稳定性。该工作为无人机安全导航提供了高效且实用的解决方案。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "reinforcement learning",
-      "matched_requirement_id": "req-1",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2607.05939v1",
-      "source": "arxiv",
-      "title": "Intercepting an Agile Target with Net-Carrying Drones using Competitive Multi-Agent Reinforcement Learning",
-      "abstract": "This article presents a solution to intercept an agile drone by a team of agile drone carrying catching nets. We formulate the problem as a competitive Multi-Agent Reinforcement Learning (MARL) task. To address the problem of nonstationarity and catastrophic forgetting of agents overfitting to the current opponent strategy, we train the pursuers and the evader using Multi-Agent Proximal Policy Optimization (MAPPO) with Prioritized Fictitious Self Play (PFSP). We train the agents in a high-fidelity simulator using low-level control commands, collective thrust and body rates (CTBR), to achieve agile flights for both the pursuers and the evader. We compare the performance of the trained policies in terms of catch rate, time to catch and crash rates, against heuristic baselines and show that our solution outperforms them. Ablation studies show that PFSP lead to more robust policies that can adapt to different opponent strategies, and that a low-level control commands are crucial for learning performing strategies in the pursuit-evasion task. Finally, a qualitative analysis of the learned behaviours highlights the emergence of cooperative tactics among the pursuers.",
-      "authors": [
-        "Timothée Gavin",
-        "Murat Bronz"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO"
-      ],
-      "published": "2026-07-07T07:41:09+00:00",
-      "link": "https://arxiv.org/pdf/2607.05939v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "Uses competitive multi-agent RL for agile drone interception, akin to close-range air combat maneuvers",
-      "llm_evidence_cn": "使用竞争多智能体强化学习进行敏捷无人机拦截，类似于近距空战机动决策",
-      "llm_evidence": "使用竞争多智能体强化学习进行敏捷无人机拦截，类似于近距空战机动决策",
-      "canonical_evidence": "使用竞争多智能体强化学习进行敏捷无人机拦截，类似于近距空战机动决策",
-      "llm_tldr_en": "Formulates agile drone interception as a competitive MARL task, training pursuers and evader with MAPPO and PFSP to address nonstationarity and overfitting, achieving high catch rates in high-fidelity simulation with low-level control.",
-      "llm_tldr_cn": "针对多架网捕无人机拦截敏捷目标的问题，本文将该任务建模为竞争多智能体强化学习，采用MAPPO算法结合优先虚拟自博弈（PFSP）训练追逃双方，在提供集合推力和体速率的低层控制下实现高机动飞行。实验表明，该方法有效解决了非平稳性和灾难性遗忘，显著提升了拦截成功率，对近距空战自主机动决策具有重要参考价值。",
-      "llm_tldr": "针对多架网捕无人机拦截敏捷目标的问题，本文将该任务建模为竞争多智能体强化学习，采用MAPPO算法结合优先虚拟自博弈（PFSP）训练追逃双方，在提供集合推力和体速率的低层控制下实现高机动飞行。实验表明，该方法有效解决了非平稳性和灾难性遗忘，显著提升了拦截成功率，对近距空战自主机动决策具有重要参考价值。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "close-range air combat maneuver decision-making",
-      "matched_requirement_id": "req-3",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2607.12590v1",
-      "source": "arxiv",
-      "title": "Environment Parameter Gradient Theorem for Policy-Environment Co-Design in Reinforcement Learning",
-      "abstract": "Reinforcement learning (RL) is traditionally concerned with learning a control policy for a fixed environment. In many engineering systems, however, the environment itself is alterable: physical or operational parameters can be tuned to shape the transition dynamics and costs experienced by the agent. This motivates jointly optimizing both the policy and the environment design parameters. To this end, we establish an Environment Parameter Gradient Theorem -- a formal expression for the gradient of the value function with respect to environment parameters. The key theoretical device is a generalized action-value function $Q_{π,ξ}(s,a,ζ)$, which comprises two copies of the environment parameters: $ζ$ governs the cost and transition dynamics at the current state--action pair, while $ξ$ governs the future rollouts. This decoupling yields a tractable closed-form gradient expression and is essential to the theorem's derivation. Building on this result, we develop a model-free algorithm that simultaneously learns the optimal policy and the environment parameters. We demonstrate the efficacy of our framework on a UAV network design problem, where the optimal UAV placement (environment parameters) and communication routes (governed by the policy) are learned jointly to minimize the total communication cost in the network.",
-      "authors": [
-        "Amber Srivastava"
-      ],
-      "primary_category": "eess.SY",
-      "categories": [
-        "eess.SY",
-        "cs.LG"
-      ],
-      "published": "2026-07-14T10:05:06+00:00",
-      "link": "https://arxiv.org/pdf/2607.12590v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "Proves a gradient theorem for jointly optimizing policy and environment parameters in RL",
-      "llm_evidence_cn": "证明了强化学习中联合优化策略和环境参数的梯度定理",
-      "llm_evidence": "证明了强化学习中联合优化策略和环境参数的梯度定理",
-      "canonical_evidence": "证明了强化学习中联合优化策略和环境参数的梯度定理",
-      "llm_tldr_en": "This paper establishes an Environment Parameter Gradient Theorem, enabling joint optimization of policy and environment design in reinforcement learning.",
-      "llm_tldr_cn": "本文建立了环境参数梯度定理，使得在强化学习中能够联合优化策略和环境设计参数。通过引入广义动作值函数，推导出价值函数对环境参数的梯度，可用于同时学习控制策略和调整环境动态。该理论为工程系统中的策略-环境协同设计提供了基础工具，具有广泛的应用潜力。",
-      "llm_tldr": "本文建立了环境参数梯度定理，使得在强化学习中能够联合优化策略和环境设计参数。通过引入广义动作值函数，推导出价值函数对环境参数的梯度，可用于同时学习控制策略和调整环境动态。该理论为工程系统中的策略-环境协同设计提供了基础工具，具有广泛的应用潜力。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "reinforcement learning",
-      "matched_requirement_id": "req-1",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "2607.12801v1",
-      "source": "arxiv",
-      "title": "Autonomous Tracking and Terminal Guidance of Moving Targets for Fixed-Wing UAVs",
-      "abstract": "This study introduces a unified control framework for fixed-wing unmanned aerial vehicles (UAVs) fitted with a pan-tilt (PT) camera, intended to perform an end-to-end mission spanning from initial target detection to accurate terminal engagement. The proposed system employs a three-phase strategy: a vision-based target acquisition phase, an NMPC-based tracking phase, and a terminal guidance phase. During tracking, the framework uses an Unscented Kalman Filter (UKF) to fuse YOLO-based visual detections with inertial measurements, enabling robust target state estimation under unknown dynamics. To ensure reliable visual contact, we introduce a constraint-aware Nonlinear Model Predictive Control (NMPC) strategy that incorporates Control Barrier Functions (CBFs) to explicitly prevent UAV self-occlusion -- a common limitation in fixed-wing tracking. Upon satisfying terminal engagement conditions, the system seamlessly transitions control to a quaternion-based Biased Proportional Navigation Guidance (BPNG) law, enforcing precise impact angle constraints. High-fidelity simulations demonstrate that the framework achieves stable, robust tracking and accurate terminal interception while strictly respecting the vehicle's dynamic limits and camera field-of-view constraints.",
-      "authors": [
-        "Wei-Hao Liou",
-        "Teng-Hu Cheng"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO",
-        "cs.AI",
-        "eess.SY"
-      ],
-      "published": "2026-07-14T14:16:05+00:00",
-      "link": "https://arxiv.org/pdf/2607.12801v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "target trajectory prediction via UKF and NMPC-based engagement guidance",
-      "llm_evidence_cn": "通过UKF进行目标轨迹预测和基于NMPC的交战制导",
-      "llm_evidence": "通过UKF进行目标轨迹预测和基于NMPC的交战制导",
-      "canonical_evidence": "通过UKF进行目标轨迹预测和基于NMPC的交战制导",
-      "llm_tldr_en": "Proposes a unified framework for fixed-wing UAVs to track and engage moving targets using UKF for trajectory prediction and NMPC for guidance, with potential for air combat.",
-      "llm_tldr_cn": "针对固定翼无人机对移动目标的跟踪与末端交战问题，提出三阶段策略：基于视觉的目标捕获、基于无迹卡尔曼滤波（UKF）的目标状态估计和约束感知非线性模型预测控制（NMPC）制导，实现了未知动态下稳健的目标状态估计与视觉接触维持，其轨迹预测与策略生成方法可应用于近距空战场景。",
-      "llm_tldr": "针对固定翼无人机对移动目标的跟踪与末端交战问题，提出三阶段策略：基于视觉的目标捕获、基于无迹卡尔曼滤波（UKF）的目标状态估计和约束感知非线性模型预测控制（NMPC）制导，实现了未知动态下稳健的目标状态估计与视觉接触维持，其轨迹预测与策略生成方法可应用于近距空战场景。",
-      "llm_tags": [
-        "query:uac:composite"
-      ],
-      "matched_query_tag": "query:uac:composite",
-      "matched_query_text": "Papers central to 无人机近距空战轨迹预测与策略生成研究，涵盖敌机机动预测、强化学习决策及预测辅助方法。, especially work that connects or combines: maneuvering target trajectory prediction in aerial combat; autonomous maneuver decision making for UAVs; deep reinforcement learning for air combat strategy generation; prediction-based decision making framework for aerial combat; autonomous tactical strategy generation for unmanned aircraft; deep reinforcement learning for autonomous UAV air combat maneuvers; maneuvering target trajectory prediction algorithms in aerial dogfights; prediction based autonomous decision making for close in air combat.",
-      "matched_requirement_id": "req-composite-uac",
-      "selection_source": "fresh_fetch"
-    },
-    {
-      "id": "biorxiv-10-64898-2026-07-08-736783-v1",
-      "source": "biorxiv",
-      "title": "Interpreting Rewards from Inverse Reinforcement Learning",
-      "abstract": "Inverse reinforcement learning can recover reward functions from observed behavior, but interpreting those rewards remains a fundamental challenge for understanding intelligent behavior and decision-making. To address this challenge, we introduce a novel framework for reward interpretation that combines reward-function analysis, latent mode assignments, and short-history behavioral analysis to infer latent motivations and behavioral dynamics. As a proof-of-concept, we instantiated the framework using switching inverse reinforcement learning on a large-scale dataset of multi-agent social interactions. Our framework interpreted the learned latent modes as  cautious and  volatile motivational profiles, demonstrating that recovered reward functions can reveal distinct patterns of behavioral dynamics. More broadly, these findings suggest that the proposed framework provides a promising approach for reverse-engineering and interpreting latent rewards underlying intelligent behavior and decision-making.",
-      "authors": [
-        "Chow, J.",
-        "Yang, Y.",
-        "Laschowski, B."
-      ],
-      "primary_category": "neuroscience",
-      "categories": [
-        "neuroscience"
-      ],
-      "published": "2026-07-13T00:00:00+00:00",
-      "link": "https://www.biorxiv.org/content/10.64898/2026.07.08.736783v1.full.pdf",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 9.0,
-      "llm_evidence_en": "inverse reinforcement learning for reward interpretation",
-      "llm_evidence_cn": "逆向强化学习从观测行为中解释奖励函数",
-      "llm_evidence": "逆向强化学习从观测行为中解释奖励函数",
-      "canonical_evidence": "逆向强化学习从观测行为中解释奖励函数",
-      "llm_tldr_en": "Proposes a framework combining reward-function analysis, latent mode assignments, and short-history behavioral analysis to interpret rewards from inverse RL, demonstrated on multi-agent social interactions.",
-      "llm_tldr_cn": "本文针对逆向强化学习难以解释所得奖励函数的挑战，提出结合奖励函数分析、潜在模式分配和短时行为分析的解释框架，并在大规模多智能体社交交互数据上验证，成功揭示出谨慎与易变两种动机模式，为理解决策行为提供了新工具。",
-      "llm_tldr": "本文针对逆向强化学习难以解释所得奖励函数的挑战，提出结合奖励函数分析、潜在模式分配和短时行为分析的解释框架，并在大规模多智能体社交交互数据上验证，成功揭示出谨慎与易变两种动机模式，为理解决策行为提供了新工具。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "reinforcement learning",
-      "matched_requirement_id": "req-1",
-      "selection_source": "fresh_fetch"
-    }
-  ],
-  "quick_skim": [
-    {
-      "id": "2606.25480v1",
-      "source": "arxiv",
-      "title": "Rate-Aware Quantum-Inspired Trajectory Learning for Interference-Limited Multi-UAV Networks",
-      "abstract": "Unmanned aerial vehicle (UAV) can provide on-demand, high-capacity connectivity in disaster and normal situation. However, it faces a challenge of curse of dimensionality in trajectory optimization, where interference-limited environments and vast search spaces make real-time coordination computationally expensive. To overcome this challenge, we propose the Rate-Aware Quantum-Annealed Graph Condensation (RA-QAGC) scheme, which combines rate-aware graph abstraction with decentralized reinforcement learning to enable scalable, interference-aware UAV coordination. By identifying high throughput locations and guiding UAV trajectory adaptation toward throughput-optimal regions, RA-QAGC effectively balances network capacity by maintaining quality-of-service (QoS) requirements. Simulation results demonstrate the proposal outperformed over existing schemes by achieving 59.4 Mbps total throughput and 23.9 Mbps priority-user throughput, representing gains of approximately 15% and 34%, respectively, over the baseline schemes.",
-      "authors": [
-        "Khaoula Khaled",
-        "Muhammad Afaq",
-        "Ali Arshad Nasir",
-        "Zeeshan Kaleem"
-      ],
-      "primary_category": "cs.MA",
-      "categories": [
-        "cs.MA",
-        "cs.AI"
-      ],
-      "published": "2026-06-24T07:10:37+00:00",
-      "link": "https://arxiv.org/pdf/2606.25480v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 8.0,
-      "llm_evidence_en": "UAV trajectory optimization via decentralized reinforcement learning in interference-limited networks",
-      "llm_evidence_cn": "通过去中心化强化学习在干扰受限网络中优化无人机轨迹",
-      "llm_evidence": "通过去中心化强化学习在干扰受限网络中优化无人机轨迹",
-      "canonical_evidence": "通过去中心化强化学习在干扰受限网络中优化无人机轨迹",
-      "llm_tldr_en": "Proposes RA-QAGC, a rate-aware quantum-annealed graph condensation scheme for scalable multi-UAV trajectory coordination, using decentralized RL to balance network capacity in interference-limited environments.",
-      "llm_tldr_cn": "针对多无人机通信网络中干扰受限导致的维度灾难问题，提出速率感知量子退火图压缩方案RA-QAGC，结合图抽象与去中心化强化学习，引导无人机向高吞吐区域移动，有效提升网络容量并实现可扩展协调，为密集无人机网络轨迹优化提供新思路。",
-      "llm_tldr": "针对多无人机通信网络中干扰受限导致的维度灾难问题，提出速率感知量子退火图压缩方案RA-QAGC，结合图抽象与去中心化强化学习，引导无人机向高吞吐区域移动，有效提升网络容量并实现可扩展协调，为密集无人机网络轨迹优化提供新思路。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "8plus"
-    },
-    {
-      "id": "2606.18556v2",
-      "source": "arxiv",
-      "title": "Wind-Resilient Trajectory Optimization for UAV-BS Networks: TD3 for Continuous Service Availability",
-      "abstract": "Unmanned aerial vehicle (UAV)-mounted base stations are highly susceptible to wind disturbances such as gusts and turbulence, which induce positional drift and degrade communication link quality, particularly in emergency scenarios. To address this challenge, we propose a DRL-based framework for wind-resilient trajectory adjustment and positioning based on the Twin Delayed Deep Deterministic Policy Gradient (TD3) algorithm. The method models wind as a stochastic kinematic perturbation, avoiding complex aerodynamic modeling, thereby enabling the TD3 agent to learn adaptive control policies that maintain optimal coverage footprints. By prioritizing user-centric performance metrics under turbulent conditions, the proposed architecture ensures continuous service availability despite external disruptions. Simulation results demonstrate that the TD3-based approach effectively compensates for wind-induced displacements and outperforms benchmark methods, including Proximal Policy Optimization (PPO), in terms of throughput stability and robustness in windy environments.",
-      "authors": [
-        "Azim Akhtarshenas",
-        "German Svistunov",
-        "Kuangyu Zheng",
-        "David Lopez-Perez"
-      ],
-      "primary_category": "eess.SY",
-      "categories": [
-        "eess.SY",
-        "eess.SP"
-      ],
-      "published": "2026-06-17T00:12:23+00:00",
-      "link": "https://arxiv.org/pdf/2606.18556v2",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 7.0,
-      "llm_evidence_en": "TD3-based DRL for wind-resilient UAV trajectory optimization",
-      "llm_evidence_cn": "基于TD3深度强化学习的抗风无人机轨迹优化",
-      "llm_evidence": "基于TD3深度强化学习的抗风无人机轨迹优化",
-      "canonical_evidence": "基于TD3深度强化学习的抗风无人机轨迹优化",
-      "llm_tldr_en": "Uses TD3 algorithm to learn adaptive UAV trajectories resilient to wind disturbances, avoiding complex aerodynamic modeling.",
-      "llm_tldr_cn": "无人机基站在应急或动态场景中受阵风、湍流等风扰导致位置漂移，严重损害通信服务质量。传统方法需精确风场模型，实现复杂且适应性强。本文提出基于TD3深度强化学习的抗风轨迹优化框架，将风扰动抽象为随机运动学噪声，无需气动建模，由智能体学习根据实时状态调整航点与悬停位置，以维持最优覆盖范围。实验结果表明，所提方法在多种风况下均能显著提升服务可用性和通信可靠性，在应急通信中价值突出。",
-      "llm_tldr": "无人机基站在应急或动态场景中受阵风、湍流等风扰导致位置漂移，严重损害通信服务质量。传统方法需精确风场模型，实现复杂且适应性强。本文提出基于TD3深度强化学习的抗风轨迹优化框架，将风扰动抽象为随机运动学噪声，无需气动建模，由智能体学习根据实时状态调整航点与悬停位置，以维持最优覆盖范围。实验结果表明，所提方法在多种风况下均能显著提升服务可用性和通信可靠性，在应急通信中价值突出。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "7"
-    },
-    {
-      "id": "2606.20045v1",
-      "source": "arxiv",
-      "title": "See-and-Reach: Precise Vision-Language Navigation for UAVs within the Field of View",
-      "abstract": "UAV Vision-Language Navigation (UAV-VLN) is typically formulated as a holistic search-and-reach problem, where long-range target discovery and final target approach are optimized and evaluated jointly. This formulation makes it difficult to assess a critical capability of aerial embodied agents, namely whether a UAV can accurately ground a visible target and translate vision-language evidence into precise 3D motion once the target enters its field of view. To address this limitation, we introduce UAV-VLN-FOV, a target-visible navigation task that isolates the see-and-reach stage and enables a more diagnostic evaluation of terminal reaching ability. We further propose 3DG-VLN, a vision-language waypoint prediction framework guided by dynamic 3D direction cues to enhance fine-grained visual grounding and spatial direction alignment for precise target reaching. Specifically, 3DG-VLN adaptively processes high-resolution front-view and downward-view observations to preserve fine-grained visual and geometric details for target grounding. It also updates the target-relative direction online during closed-loop navigation, allowing the agent to maintain spatial alignment with the target and reduce accumulated direction drift. To support this task, we construct a dedicated high-resolution benchmark which contains 2,717 trajectories with target-oriented high-level instructions, high-resolution front-view and downward-view egocentric observations, and continuous 3D waypoint annotations. Experiments show that 3DG-VLN outperforms competitive UAV-VLN baselines, achieving a 13.82\\% improvement in success rate. Real-world trials further demonstrate the potential of 3DG-VLN for practical see-and-reach navigation. The source code and benchmark are available at https://github.com/xuefanfu/3DG-VLN.",
-      "authors": [
-        "Fanfu Xue",
-        "En Yu",
-        "Yantian Shen",
-        "Zhikun Hu",
-        "Hongjun Wang",
-        "Yang Yang",
-        "Xindi Wang",
-        "Jiande Sun"
-      ],
-      "primary_category": "cs.CV",
-      "categories": [
-        "cs.CV",
-        "cs.AI"
-      ],
-      "published": "2026-06-18T10:21:42+00:00",
-      "link": "https://arxiv.org/pdf/2606.20045v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 6.0,
-      "llm_evidence_en": "vision-language waypoint prediction for precise UAV navigation",
-      "llm_evidence_cn": "视场范围内精确无人机视觉语言导航的航点预测",
-      "llm_evidence": "视场范围内精确无人机视觉语言导航的航点预测",
-      "canonical_evidence": "视场范围内精确无人机视觉语言导航的航点预测",
-      "llm_tldr_en": "Introduces a target-visible navigation task for UAVs to evaluate see-and-reach ability, and proposes a dynamic 3D waypoint prediction framework guided by vision-language cues.",
-      "llm_tldr_cn": "本文针对现有无人机视觉语言导航将长距离搜索与末端接近联合评估的不足，提出UAV-VLN-FOV任务，专门考察目标可见后的精确到达能力，并设计动态三维航点预测框架3DG-VLN，利用视觉语言信息引导生成可靠航点，提高了终端可达性评估的准确性。",
-      "llm_tldr": "本文针对现有无人机视觉语言导航将长距离搜索与末端接近联合评估的不足，提出UAV-VLN-FOV任务，专门考察目标可见后的精确到达能力，并设计动态三维航点预测框架3DG-VLN，利用视觉语言信息引导生成可靠航点，提高了终端可达性评估的准确性。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "6"
-    },
-    {
-      "id": "2606.31197v1",
-      "source": "arxiv",
-      "title": "Diffusion-based 4D Trajectory Prediction and Distributed Control for UAV Swarms",
-      "abstract": "Accurate 4D trajectory prediction and closed-loop tracking are essential for Unmanned Aerial Vehicle (UAV) swarms to achieve safe and efficient operations in complex low-altitude environments such as urban airspaces, industrial sites, and indoor facilities. However, this task remains challenging due to intrinsic nonlinearity of UAV swarm dynamics and strict real-time constraints of swarm formation control. To address these challenges, we propose a unified framework that couples coarse-to-fine trajectory forecasting with uncertainty-aware Distributed Nonlinear Model Predictive Control (DNMPC). Our approach features two key innovations: 1) a dimension-decoupled trajectory prediction module that reduces computational complexity by forecasting axis-wise motion, and 2) a diffusion-based residual dynamics refinement module that captures temporally correlated dynamic uncertainties. These refined predictions are then integrated into a DNMPC loop to ensure formation stability. We also introduce a synchronized multi-scenario 4D UAV swarm dataset spanning six representative airspace scenarios. The dataset contains over \\textbf{7,900} frames of synchronized three-UAV trajectories with frame-level annotations of speed intention and target sector. Extensive experiments demonstrate that our approach outperforms state-of-the-art baselines, reducing trajectory tracking error by up to \\textbf{10-15\\%} and achieving sub-\\textbf{0.07\\,m} average tracking error in complex urban and industrial environments, while maintaining real-time inference speeds of 34 FPS (sub-30 ms latency) suitable for agile flight.",
-      "authors": [
-        "Tianshun Li",
-        "Hongliang Lu",
-        "Haoang Li",
-        "Xinhu Zheng"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO"
-      ],
-      "published": "2026-06-30T06:26:34+00:00",
-      "link": "https://arxiv.org/pdf/2606.31197v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 8.0,
-      "llm_evidence_en": "4D trajectory prediction and distributed control for UAV swarms",
-      "llm_evidence_cn": "面向无人机集群的扩散模型4D轨迹预测与分布式控制",
-      "llm_evidence": "面向无人机集群的扩散模型4D轨迹预测与分布式控制",
-      "canonical_evidence": "面向无人机集群的扩散模型4D轨迹预测与分布式控制",
-      "llm_tldr_en": "Proposes a diffusion-based framework for 4D trajectory prediction and uncertainty-aware distributed control of UAV swarms, improving safety and efficiency in complex low-altitude environments.",
-      "llm_tldr_cn": "为解决无人机集群在复杂低空环境中的安全高效运行问题，提出基于扩散模型的4D轨迹预测与不确定性感知分布式控制统一框架。通过维度解耦预测降低计算复杂度，结合分布式非线性模型预测控制实现集群协同。实验表明，该方法在轨迹预测准确性和实时性方面表现优越，提升了集群飞行的安全裕度。该工作为无人机集群自主飞行提供了可靠的轨迹预测与控制方案。",
-      "llm_tldr": "为解决无人机集群在复杂低空环境中的安全高效运行问题，提出基于扩散模型的4D轨迹预测与不确定性感知分布式控制统一框架。通过维度解耦预测降低计算复杂度，结合分布式非线性模型预测控制实现集群协同。实验表明，该方法在轨迹预测准确性和实时性方面表现优越，提升了集群飞行的安全裕度。该工作为无人机集群自主飞行提供了可靠的轨迹预测与控制方案。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "8plus"
-    },
-    {
-      "id": "2606.22670v1",
-      "source": "arxiv",
-      "title": "Semantic-Aware Autonomous Exploration for UAVs in Unknown Indoor Environments",
-      "abstract": "Autonomous exploration in unknown environments requires unmanned aerial vehicles (UAVs) to efficiently generate informative trajectories while simultaneously constructing accurate maps. Although many existing exploration methods rely on geometric information, they often lack semantic awareness, resulting in suboptimal exploration efficiency and limited environmental understanding. To address this limitation, this paper proposes a semantic-aware exploration framework that adds semantic information to a roadmap-based exploration strategy. The proposed method builds on the Dynamic Exploration Planner (DEP), which incrementally constructs a Probabilistic Roadmap (PRM), and augments this roadmap with a semantic layer. A semantic reward function is introduced to prioritize regions containing meaningful objects and structures, enabling the UAV to focus on areas with higher information value. Furthermore, the roadmap is continuously updated to support efficient frontier selection and path planning during exploration. The proposed framework is implemented in ROS Noetic and Gazebo using an RGB-D sensor for simultaneous acquisition of geometric and semantic information. Experimental results in multiple simulated environments demonstrate that the proposed approach achieves exploration coverage rates between 90% and 94% while reducing exploration time and travel distance compared with conventional geometry-based exploration methods.",
-      "authors": [
-        "Duc-Thien Nguyen",
-        "Ngoc Minh Do",
-        "Xiem HoangVan",
-        "Thanh Nguyen Canh"
-      ],
-      "primary_category": "cs.RO",
-      "categories": [
-        "cs.RO"
-      ],
-      "published": "2026-06-21T21:07:40+00:00",
-      "link": "https://arxiv.org/pdf/2606.22670v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 7.0,
-      "llm_evidence_en": "semantic-aware trajectory planning for UAV exploration",
-      "llm_evidence_cn": "面向未知室内环境的无人机语义感知自主探索轨迹规划",
-      "llm_evidence": "面向未知室内环境的无人机语义感知自主探索轨迹规划",
-      "canonical_evidence": "面向未知室内环境的无人机语义感知自主探索轨迹规划",
-      "llm_tldr_en": "Proposes a semantic-aware exploration framework for UAVs that augments a roadmap-based planner with semantic rewards to improve exploration efficiency and environmental understanding.",
-      "llm_tldr_cn": "针对无人机在未知室内环境自主探索时依赖几何信息导致效率低下的问题，本文提出语义感知探索框架，在动态探索规划器生成的概率路图上添加语义层，并设计语义奖励函数引导轨迹生成。该方法增强了对环境语义的理解，提高了探索效率。",
-      "llm_tldr": "针对无人机在未知室内环境自主探索时依赖几何信息导致效率低下的问题，本文提出语义感知探索框架，在动态探索规划器生成的概率路图上添加语义层，并设计语义奖励函数引导轨迹生成。该方法增强了对环境语义的理解，提高了探索效率。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "7"
-    },
-    {
-      "id": "2606.24979v1",
-      "source": "arxiv",
-      "title": "CKM-Driven Communication-Aware UAV Intelligent Trajectory Optimization for Urban Inspection",
-      "abstract": "Unmanned aerial vehicles (UAVs) are increasingly employed in urban inspection tasks, where reliable communication is critical but challenging due to the severe spatial channel heterogeneity. To address the issue, in this paper, we focus on the communication-aware path planning for multi-UAV tasks, and propose a channel knowledge map (CKM)-driven trajectory planning framework which integrates the channel modeling and trajectory decision-making. Specifically, we apply the diffusion model to construct a time-accumulated CKM and achieve the accurate perception with low flight overhead, which leverages the sparse observation data to reconstruct the high-fidelity global channel quality distribution. Based on the CKM, we propose a global-to-local graph attention network soft actor-critic algorithm. The graph attention network optimizes the complex combinatorial node ordering problem, generating an optimal and communication-aware sequence for the inspection targets. Subsequently, the soft actor-critic algorithm performs continuous action control to ensure the smoothness of the flight path and dynamically avoid communication attenuation areas. Simulation results demonstrate that the proposed method effectively guides UAVs through high-quality channel regions without dependence on real-time channel feedback, significantly improving both the trajectory efficiency and communication reliability.",
-      "authors": [
-        "Yang Xiaomeng",
-        "Jia Ziye",
-        "Zhu Qiuming",
-        "Wu Qihui"
-      ],
-      "primary_category": "cs.LG",
-      "categories": [
-        "cs.LG"
-      ],
-      "published": "2026-06-23T12:54:18+00:00",
-      "link": "https://arxiv.org/pdf/2606.24979v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 6.0,
-      "llm_evidence_en": "communication-aware path planning for multi-UAV trajectory optimization",
-      "llm_evidence_cn": "多无人机通信感知路径规划与轨迹优化",
-      "llm_evidence": "多无人机通信感知路径规划与轨迹优化",
-      "canonical_evidence": "多无人机通信感知路径规划与轨迹优化",
-      "llm_tldr_en": "Proposes a channel knowledge map-driven framework using diffusion models for communication-aware UAV trajectory planning in urban inspection missions.",
-      "llm_tldr_cn": "针对城市多无人机巡检中信道空间异质性导致通信不可靠的问题，提出信道知识地图驱动的轨迹规划框架。利用扩散模型构建时域累积CKM，从稀疏观测重建高质量全局信道分布，进而基于CKM进行全局轨迹优化。实验表明，该方法能显著提升通信可靠性并优化飞行路径，为复杂环境下的通信感知无人机轨迹规划提供了新思路。",
-      "llm_tldr": "针对城市多无人机巡检中信道空间异质性导致通信不可靠的问题，提出信道知识地图驱动的轨迹规划框架。利用扩散模型构建时域累积CKM，从稀疏观测重建高质量全局信道分布，进而基于CKM进行全局轨迹优化。实验表明，该方法能显著提升通信可靠性并优化飞行路径，为复杂环境下的通信感知无人机轨迹规划提供了新思路。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "6"
-    },
-    {
-      "id": "2607.00288v1",
-      "source": "arxiv",
-      "title": "Communication-Aware and Safety-Aware UAV Control via Predictive Latent Models",
-      "abstract": "This article presents a communication-aware and risk-aware predictive latent control (CRPL) framework for unmanned aerial vehicle (UAV) systems operating under partial observability and uncertain environment dynamics. CRPL integrates a joint-embedding predictive architecture (JEPA) with probabilistic communication and safety constraints to jointly optimize UAV motion and transmission power. The learned latent model generates recursive multi-step rollouts, enabling the controller to anticipate future motion, channel degradation, and collision risk. These predictions are incorporated into a unified safety-aware optimization framework for proactive, energy-aware trajectory and communication adaptation. Simulation results show that CRPL closely approaches the performance of an oracle analytical predictive controller and outperforms reactive constrained and unconstrained baselines under limited bandwidth and dynamic uncertainty. In the bandwidth-limited regime, CRPL reduces terminal error, i.e., the final UAV-to-goal distance, by up to a factor of approximately $3$ and outage duration by up to approximately $18$, while also lowering communication energy and collision risk. These improvements are achieved with only a moderate motion-energy overhead, demonstrating a favorable trade-off among mobility effort, communication reliability, and operational safety.",
-      "authors": [
-        "Hamid Shiri",
-        "Mehdi Bennis"
+        "Ricardo Tapia",
+        "Iman Soltani"
       ],
       "primary_category": "eess.SY",
       "categories": [
         "eess.SY"
       ],
-      "published": "2026-07-01T00:31:53+00:00",
-      "link": "https://arxiv.org/pdf/2607.00288v1",
+      "published": "2026-07-02T22:17:11+00:00",
+      "link": "https://arxiv.org/pdf/2607.02797v1",
       "tags": [
         "keyword:upa",
         "query:upa"
       ],
-      "llm_score": 8.0,
-      "llm_evidence_en": "UAV control with collision risk avoidance and communication adaptation using predictive latent models",
-      "llm_evidence_cn": "利用预测潜在模型进行无人机控制，实现碰撞风险规避和通信适应",
-      "llm_evidence": "利用预测潜在模型进行无人机控制，实现碰撞风险规避和通信适应",
-      "canonical_evidence": "利用预测潜在模型进行无人机控制，实现碰撞风险规避和通信适应",
-      "llm_tldr_en": "Presents CRPL, a predictive latent control framework for UAVs under partial observability, integrating joint-embedding predictive architecture with safety constraints to jointly optimize motion and communication, achieving proactive collision avoidance.",
-      "llm_tldr_cn": "针对部分可观测和不确定环境下的无人机控制问题，提出通信与安全感知的预测潜在控制框架CRPL，结合联合嵌入预测架构与概率安全约束，通过多步预测实现主动轨迹与通信优化，仿真表明能有效降低碰撞风险并提升通信性能，为受限环境下的无人机安全导航提供新方案。",
-      "llm_tldr": "针对部分可观测和不确定环境下的无人机控制问题，提出通信与安全感知的预测潜在控制框架CRPL，结合联合嵌入预测架构与概率安全约束，通过多步预测实现主动轨迹与通信优化，仿真表明能有效降低碰撞风险并提升通信性能，为受限环境下的无人机安全导航提供新方案。",
+      "llm_score": 9.0,
+      "llm_evidence_en": "Extends convex obstacle avoidance to 3D UAV navigation",
+      "llm_evidence_cn": "将凸避障扩展到三维无人机导航",
+      "llm_evidence": "将凸避障扩展到三维无人机导航",
+      "canonical_evidence": "将凸避障扩展到三维无人机导航",
+      "llm_tldr_en": "Extends RCOA to 3D UAV obstacle avoidance with vehicle geometry, achieving competitive computational performance in simulations.",
+      "llm_tldr_cn": "针对无人机三维导航中的避障问题，将松弛凸避障（RCOA）方法扩展至三维环境并纳入载具几何形状，避免了传统点质量假设的限制。通过收敛性分析确保预测范围外仍有效避障，数值仿真表明该方法计算性能与最先进方法相当或更优，为无人机安全导航提供了高效的全凸优化框架。",
+      "llm_tldr": "针对无人机三维导航中的避障问题，将松弛凸避障（RCOA）方法扩展至三维环境并纳入载具几何形状，避免了传统点质量假设的限制。通过收敛性分析确保预测范围外仍有效避障，数值仿真表明该方法计算性能与最先进方法相当或更优，为无人机安全导航提供了高效的全凸优化框架。",
       "llm_tags": [
         "query:upa"
       ],
       "matched_query_tag": "query:upa",
       "matched_query_text": "UAV obstacle avoidance",
       "matched_requirement_id": "req-2",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "8plus"
+      "selection_source": "fresh_fetch"
     },
     {
-      "id": "2606.23008v1",
+      "id": "2607.04352v1",
       "source": "arxiv",
-      "title": "Scalable Online Flight Trajectory Optimization via Sequential Quadratic Programming for Urban Air Mobility in Ultra Low-Altitude Airspace",
-      "abstract": "As Urban Air Mobility (UAM) scales toward high-density operations, generating collision-free trajectories within complex 3D cityscapes is a critical safety requirement. This paper proposes a scalable Sequential Quadratic Programming (SQP) framework that integrates geometric environmental constraints, operational limits, and vehicle dynamics within a single online trajectory optimization process. Rather than precomputing obstacle-free corridors ahead of time, our method encodes obstacle avoidance as live separating-hyperplane constraints regenerated at every solver iteration, so that dense urban geometry and full-DOF vehicle dynamics are resolved jointly and online as the reference and environment evolve. A variable-scale quadtree decomposition keeps computation bounded, enabling the framework to scale to city-wide environments while preserving real-time performance for high-speed flight. We validate the framework against conventional SQP, Iterative Linear Quadratic Regulator, and Differential Dynamic Programming across flights in five real-world urban centers, attaining 100% success and clearance rates on CPU-only hardware.",
+      "title": "Last-Meter Precision Navigation for UAVs: A Diffusion-Refined Aerial Visual Servoing Approach",
+      "abstract": "In this work, we study the last-meter precision navigation for UAVs, e.g., autonomously reaching a target within the final 10 meters using monocular vision. This task is challenging due to scale ambiguity, rotation discontinuities, and the need for fine-grained spatial reasoning. Existing methods often fail under large viewpoint changes or lack generalization to unseen environments. To this end, we propose DreamNav, a coarse-to-fine diffusion-refined aerial visual servoing framework. In the first coarse-estimation stage, a robust regression policy employs a trigonometric parameterization to predict rotation by jointly modeling sine and cosine components, effectively mitigating optimization instabilities caused by angular periodicity. Given this coarse estimate, the second diffusion-refined stage utilizes a pre-trained world model to simulate future visual observations for candidate actions, selecting the trajectory that minimizes visual discrepancy with the target through a process of visual imagination. To support rigorous evaluation, we contribute PairUAV, a large-scale benchmark comprising 4.8 million image pairs across 72 scenes, curated from the University-1652 dataset. Extensive experiments show DreamNav outperforms strong visual servoing and foundation model baselines in accuracy and generalization, with zero-shot transfer to unseen scenes.",
       "authors": [
-        "Josue N. Rivera",
-        "Bohang Liang",
-        "Chen Lv",
-        "James Wang"
+        "Yaxuan Li",
+        "Jiarui Zeng",
+        "Shaofei Huang",
+        "Zhedong Zheng"
       ],
-      "primary_category": "eess.SY",
+      "primary_category": "cs.CV",
       "categories": [
-        "eess.SY",
-        "cs.ET"
+        "cs.CV"
       ],
-      "published": "2026-06-22T08:21:24+00:00",
-      "link": "https://arxiv.org/pdf/2606.23008v1",
+      "published": "2026-07-05T15:16:44+00:00",
+      "link": "https://arxiv.org/pdf/2607.04352v1",
       "tags": [
         "keyword:upa",
         "query:upa"
       ],
-      "llm_score": 7.0,
-      "llm_evidence_en": "online SQP trajectory optimization with obstacle avoidance for aerial vehicles",
-      "llm_evidence_cn": "在线SQP轨迹优化方法，包含避障，用于空中飞行器",
-      "llm_evidence": "在线SQP轨迹优化方法，包含避障，用于空中飞行器",
-      "canonical_evidence": "在线SQP轨迹优化方法，包含避障，用于空中飞行器",
-      "llm_tldr_en": "This paper presents an SQP framework for online flight trajectory optimization in dense urban environments, integrating obstacle constraints dynamically.",
-      "llm_tldr_cn": "针对超低空域城市空中交通的高密度运行，本文提出一种可扩展的序列二次规划（SQP）框架，将几何环境约束、运行限制和飞行器动力学集成到单一在线轨迹优化过程中，通过实时分离超平面约束动态集成避障，联合求解密集城市几何与全自由度动力学，实现了无预计算走廊的在线轨迹生成。实验表明方法可扩展，为复杂城市环境下的安全飞行提供了有效方案。",
-      "llm_tldr": "针对超低空域城市空中交通的高密度运行，本文提出一种可扩展的序列二次规划（SQP）框架，将几何环境约束、运行限制和飞行器动力学集成到单一在线轨迹优化过程中，通过实时分离超平面约束动态集成避障，联合求解密集城市几何与全自由度动力学，实现了无预计算走廊的在线轨迹生成。实验表明方法可扩展，为复杂城市环境下的安全飞行提供了有效方案。",
+      "llm_score": 9.0,
+      "llm_evidence_en": "diffusion-refined aerial visual servoing for last-meter UAV precision navigation",
+      "llm_evidence_cn": "扩散优化的空中视觉伺服实现无人机终端精度导航",
+      "llm_evidence": "扩散优化的空中视觉伺服实现无人机终端精度导航",
+      "canonical_evidence": "扩散优化的空中视觉伺服实现无人机终端精度导航",
+      "llm_tldr_en": "Proposes DreamNav, a coarse-to-fine diffusion-refined framework for last-meter UAV precision navigation using monocular vision, effectively handling large viewpoint changes and scale ambiguity for robust target reaching.",
+      "llm_tldr_cn": "针对无人机最后一米精密导航难题，提出DreamNav框架。采用由粗到精的扩散优化空中视觉伺服方法，第一阶段使用三角函数参数化稳健回归策略预测旋转，第二阶段利用扩散模型细化空间推理。解决了单目视觉下的尺度模糊和旋转不连续问题，在跨场景大视角变化下表现出强泛化能力，显著提升了终端导航精度。",
+      "llm_tldr": "针对无人机最后一米精密导航难题，提出DreamNav框架。采用由粗到精的扩散优化空中视觉伺服方法，第一阶段使用三角函数参数化稳健回归策略预测旋转，第二阶段利用扩散模型细化空间推理。解决了单目视觉下的尺度模糊和旋转不连续问题，在跨场景大视角变化下表现出强泛化能力，显著提升了终端导航精度。",
       "llm_tags": [
         "query:upa"
       ],
       "matched_query_tag": "query:upa",
       "matched_query_text": "UAV trajectory planning",
       "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "7"
-    },
-    {
-      "id": "2607.03781v1",
-      "source": "arxiv",
-      "title": "Handover-Aware Trajectory Planning for Cellular-Connected UAVs under STL Specifications and URLLC Constraints",
-      "abstract": "This paper investigates handover-aware trajectory planning for cellular-connected UAVs executing mission-centric tasks under ultra-reliable low-latency communication (URLLC) constraints. Signal temporal logic (STL) provides a formal specification layer for translating mission semantics into time-bounded trajectory requirements, while finite-blocklength URLLC feasibility characterizes reliable command-and-control (C2) links with serving base stations (BSs). We formulate a joint planning problem that optimizes the UAV trajectory, STL mission satisfaction, serving-BS association, and handover behavior. To solve this mixed discrete-continuous problem, we adopt and integrate a Logic Network Flow (LNF) based STL reformulation with Bézier-parameterized motion, disk-shaped URLLC service regions, and binary association variables, so that the resulting mixed-integer quadratically constrained formulation can be solved by standard branch-and-bound solvers. Numerical simulations over a library of STL missions show that the proposed planner can execute different mission specifications under the same cellular map while maintaining URLLC feasibility. The results further reveal how mission timing, handover-aware association, and finite-blocklength stringency jointly affect trajectory shape, serving margin, and computational complexity.",
-      "authors": [
-        "Yuqi Ping",
-        "Tianhao Liang",
-        "Bofeng Zheng",
-        "Bingyan Xie",
-        "Tingting Zhang"
-      ],
-      "primary_category": "eess.SY",
-      "categories": [
-        "eess.SY"
-      ],
-      "published": "2026-07-04T09:12:12+00:00",
-      "link": "https://arxiv.org/pdf/2607.03781v1",
-      "tags": [
-        "keyword:upa",
-        "query:upa"
-      ],
-      "llm_score": 6.0,
-      "llm_evidence_en": "trajectory planning for cellular-connected UAVs with handover awareness and STL mission specs",
-      "llm_evidence_cn": "考虑切换感知和STL任务规范的蜂窝连接无人机轨迹规划",
-      "llm_evidence": "考虑切换感知和STL任务规范的蜂窝连接无人机轨迹规划",
-      "canonical_evidence": "考虑切换感知和STL任务规范的蜂窝连接无人机轨迹规划",
-      "llm_tldr_en": "Joint optimization of UAV trajectory, base station association, and handover under URLLC constraints using STL reformulation.",
-      "llm_tldr_cn": "针对蜂窝连接无人机在URLLC约束下执行任务的轨迹规划问题，本文提出一种联合优化方法，将STL任务规范转化为时间约束，并与基站关联和切换行为协同优化。通过逻辑网络流（LNF）重构STL，解决混合离散连续问题。实验展示了该方法在满足通信可靠性与任务规范方面的有效性，为无人机通信感知规划提供参考。",
-      "llm_tldr": "针对蜂窝连接无人机在URLLC约束下执行任务的轨迹规划问题，本文提出一种联合优化方法，将STL任务规范转化为时间约束，并与基站关联和切换行为协同优化。通过逻辑网络流（LNF）重构STL，解决混合离散连续问题。实验展示了该方法在满足通信可靠性与任务规范方面的有效性，为无人机通信感知规划提供参考。",
-      "llm_tags": [
-        "query:upa"
-      ],
-      "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV trajectory planning",
-      "matched_requirement_id": "req-5",
-      "selection_source": "fresh_fetch",
-      "quick_tier": "6"
+      "selection_source": "fresh_fetch"
     },
     {
       "id": "2607.04825v1",
@@ -915,56 +268,668 @@
         "keyword:upa",
         "query:upa"
       ],
-      "llm_score": 8.0,
-      "llm_evidence_en": "multi-UAV collision avoidance using MAPPO algorithm",
-      "llm_evidence_cn": "采用MAPPO算法进行多无人机碰撞避免",
-      "llm_evidence": "采用MAPPO算法进行多无人机碰撞避免",
-      "canonical_evidence": "采用MAPPO算法进行多无人机碰撞避免",
-      "llm_tldr_en": "Proposes Pharos, a collaborative multi-UAV airspace management system using MAPPO for collision avoidance and human safety in urban environments.",
-      "llm_tldr_cn": "针对复杂城市环境中无人机空域管理的碰撞避免和人员安全问题，提出基于多智能体近端策略优化（MAPPO）的协作管理系统Pharos，协调多无人机安全并行执行，并创新性地考虑人类恐惧对安全的影响，为低空经济中无人机安全运行提供了有效的解决方案。",
-      "llm_tldr": "针对复杂城市环境中无人机空域管理的碰撞避免和人员安全问题，提出基于多智能体近端策略优化（MAPPO）的协作管理系统Pharos，协调多无人机安全并行执行，并创新性地考虑人类恐惧对安全的影响，为低空经济中无人机安全运行提供了有效的解决方案。",
+      "llm_score": 9.0,
+      "llm_evidence_en": "Collaborative multi-UAV airspace management with collision avoidance using MAPPO",
+      "llm_evidence_cn": "基于MAPPO的协同多无人机空域管理与避碰",
+      "llm_evidence": "基于MAPPO的协同多无人机空域管理与避碰",
+      "canonical_evidence": "基于MAPPO的协同多无人机空域管理与避碰",
+      "llm_tldr_en": "Proposes Pharos, a multi-UAV airspace management system that uses MAPPO for dynamic collision avoidance and integrates human fear impact, enabling safe navigation in urban environments.",
+      "llm_tldr_cn": "针对低空经济中城市复杂环境下的无人机安全挑战，提出Pharos协同多无人机空域管理系统。该系统介于分布式感知与集中控制之间，创新地纳入人类恐惧影响，采用MAPPO算法协调共享空域内的避碰并行飞行。实验表明在动态城市环境中，Pharos能有效保障无人机运行安全与人类接受度，为兼顾物理安全和心理影响的无人机城市运行提供了可行方案。",
+      "llm_tldr": "针对低空经济中城市复杂环境下的无人机安全挑战，提出Pharos协同多无人机空域管理系统。该系统介于分布式感知与集中控制之间，创新地纳入人类恐惧影响，采用MAPPO算法协调共享空域内的避碰并行飞行。实验表明在动态城市环境中，Pharos能有效保障无人机运行安全与人类接受度，为兼顾物理安全和心理影响的无人机城市运行提供了可行方案。",
       "llm_tags": [
         "query:upa"
       ],
       "matched_query_tag": "query:upa",
-      "matched_query_text": "UAV obstacle avoidance",
-      "matched_requirement_id": "req-2",
+      "matched_query_text": "Online adaptive path planning for UAV in dynamic threat environment",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2607.05939v1",
+      "source": "arxiv",
+      "title": "Intercepting an Agile Target with Net-Carrying Drones using Competitive Multi-Agent Reinforcement Learning",
+      "abstract": "This article presents a solution to intercept an agile drone by a team of agile drone carrying catching nets. We formulate the problem as a competitive Multi-Agent Reinforcement Learning (MARL) task. To address the problem of nonstationarity and catastrophic forgetting of agents overfitting to the current opponent strategy, we train the pursuers and the evader using Multi-Agent Proximal Policy Optimization (MAPPO) with Prioritized Fictitious Self Play (PFSP). We train the agents in a high-fidelity simulator using low-level control commands, collective thrust and body rates (CTBR), to achieve agile flights for both the pursuers and the evader. We compare the performance of the trained policies in terms of catch rate, time to catch and crash rates, against heuristic baselines and show that our solution outperforms them. Ablation studies show that PFSP lead to more robust policies that can adapt to different opponent strategies, and that a low-level control commands are crucial for learning performing strategies in the pursuit-evasion task. Finally, a qualitative analysis of the learned behaviours highlights the emergence of cooperative tactics among the pursuers.",
+      "authors": [
+        "Timothée Gavin",
+        "Murat Bronz"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-07-07T07:41:09+00:00",
+      "link": "https://arxiv.org/pdf/2607.05939v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "competitive multi-agent RL for agile drone interception",
+      "llm_evidence_cn": "竞争性多智能体强化学习用于敏捷无人机拦截",
+      "llm_evidence": "竞争性多智能体强化学习用于敏捷无人机拦截",
+      "canonical_evidence": "竞争性多智能体强化学习用于敏捷无人机拦截",
+      "llm_tldr_en": "Presents a competitive multi-agent RL approach for a team of net-carrying drones to intercept an agile drone, using MAPPO with PFSP to handle nonstationarity and achieve high catch rates.",
+      "llm_tldr_cn": "针对敏捷无人机拦截问题，提出一种基于竞争性多智能体强化学习的方法。使用多智能体PPO与优先级虚构自博弈训练追捕者和逃避者，在仿真器中实现敏捷飞行。实验表明，训练后的策略具有较高的捕获成功率，为无人机空中对抗决策提供了有效解决方案。",
+      "llm_tldr": "针对敏捷无人机拦截问题，提出一种基于竞争性多智能体强化学习的方法。使用多智能体PPO与优先级虚构自博弈训练追捕者和逃避者，在仿真器中实现敏捷飞行。实验表明，训练后的策略具有较高的捕获成功率，为无人机空中对抗决策提供了有效解决方案。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "close-range air combat maneuver decision-making",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2607.05957v1",
+      "source": "arxiv",
+      "title": "Delay-Aware Active Triangulation with Uncertainty-Driven Multi-Agent Reinforcement Learning for Counter-UAS",
+      "abstract": "Multi-agent active visual triangulation enables precise 3D localization of aerial targets by coordinating mobile observers with controllable cameras. However, existing methods assume instantaneous state feedback, ignoring cumulative latency from detection, communication, and decision propagation. We present a delay-aware, uncertainty-driven multi-agent reinforcement learning framework for target localization in Counter-UAS applications. Our contributions are: (1) a Dec-POMDP formulation with Age-of-Information (AoI) augmented observations enabling delay-aware coordination -- AoI improves triangulation validity by 10.6 percentage points; (2) a controlled comparison showing that perception-consistent rewards outperform privileged clean-state rewards (0.547 m vs.0.633 m RMSE, 27% fewer track losses) -- both policies are trained through identical observation noise but differ in what they are optimized for, producing a stability-robustness tradeoff; and (3) multi-source analytical covariance propagation incorporating pixel, pose, gimbal, and intrinsics uncertainties -- restricting to angular noise alone causes 2.8-fold RMSE degradation. Experiments with MAPPO in 4096 parallel environments achieve 0.547 +- 0.217 m RMSE with 78.1% triangulation validity, while MLP policies achieve near-zero validity (0.7%), confirming recurrent memory as essential for delay compensation.",
+      "authors": [
+        "Seungwook Lee",
+        "David Hyunchul Shim"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.MA"
+      ],
+      "published": "2026-07-07T07:58:13+00:00",
+      "link": "https://arxiv.org/pdf/2607.05957v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "delay-aware MARL for adaptive UAV path planning in counter-UAS",
+      "llm_evidence_cn": "延迟感知多智能体强化学习用于反无人机系统中的自适应路径规划",
+      "llm_evidence": "延迟感知多智能体强化学习用于反无人机系统中的自适应路径规划",
+      "canonical_evidence": "延迟感知多智能体强化学习用于反无人机系统中的自适应路径规划",
+      "llm_tldr_en": "Proposes a delay-aware MARL framework for UAV-based active triangulation, using AoI-augmented observations to improve coordination and localization accuracy under latency, achieving 10.6 pp improvement in triangulation validity.",
+      "llm_tldr_cn": "针对多智能体主动视觉三角测量中的时延问题，提出延迟感知的不确定性驱动多智能体强化学习框架，引入信息年龄增强观测实现延迟感知协调，使三角测量有效性提升10.6个百分点，并显示感知一致性奖励优于距离奖励，为反无人机目标定位提供了实时鲁棒方案。",
+      "llm_tldr": "针对多智能体主动视觉三角测量中的时延问题，提出延迟感知的不确定性驱动多智能体强化学习框架，引入信息年龄增强观测实现延迟感知协调，使三角测量有效性提升10.6个百分点，并显示感知一致性奖励优于距离奖励，为反无人机目标定位提供了实时鲁棒方案。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "Online adaptive path planning for UAV in dynamic threat environment",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2607.07350v1",
+      "source": "arxiv",
+      "title": "Towards Reliable Aerial Ground Vehicle Collaboration: An Integrated Planning and Autonomy Framework for Field Deployment",
+      "abstract": "Limited flight endurance significantly restricts the operational range of unmanned aerial vehicles (UAVs) in long duration missions such as surveillance and inspection, where multiple spatially distributed Areas of Interest (AOIs) must be visited. These tasks require efficient routing determining the sequence of visits which directly impacts mission time, energy consumption, and overall feasibility. Pairing UAVs with unmanned ground vehicles (UGVs) for mobile recharging offers a promising solution, but introduces a tightly coupled cooperative routing problem involving UAV route planning, UGV road constrained movement, energy management, and rendezvous scheduling under uncertainty. In this work, we present an integrated planning and autonomy framework for reliable field deployment. We formulate the problem as an energy constrained cooperative routing task and solve it using a Deep Reinforcement Learning (DRL) based planner that jointly optimizes the UAV visitation sequence and rendezvous locations with the UGV, outperforming baseline heuristics in minimizing total mission time. To bridge the gap between planning and execution, we introduce a standardized two layer YAML based mission API that captures environment states and structures lightweight, synchronized action sequences. This framework is supported by a complete autonomy stack using PX4/MAVSDK for UAV control and ROS 2/Nav2 for UGV navigation. Furthermore, we propose a lightweight Rendezvous Aware Replanner (RARP) that operates online to handle environmental uncertainties, reducing energy margin violations from 83.33% to 20.00%. The full system is validated through outdoor field experiments, demonstrating robust cooperative navigation and adaptability in dynamic tasks, including a search and rescue scenario with vision language model (VLM) based hazard detection",
+      "authors": [
+        "Md Safwan Mondal",
+        "Luca Russo",
+        "James D. Humann",
+        "James M. Dotterweich",
+        "Pranav Bhounsule"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-07-07T15:59:49+00:00",
+      "link": "https://arxiv.org/pdf/2607.07350v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "integrated planning framework for UAV-UGV cooperative routing and energy management",
+      "llm_evidence_cn": "面向空地协作的集成规划框架进行路径规划与能量管理",
+      "llm_evidence": "面向空地协作的集成规划框架进行路径规划与能量管理",
+      "canonical_evidence": "面向空地协作的集成规划框架进行路径规划与能量管理",
+      "llm_tldr_en": "Proposes an integrated planning and autonomy framework for reliable UAV-UGV collaboration, addressing UAV route planning, UGV road constraints, energy management, and rendezvous scheduling under uncertainty for long-duration missions.",
+      "llm_tldr_cn": "为克服无人机续航短对长时任务覆盖的限制，提出空地协作集成规划框架。解决无人机路径规划、地面车辆道路约束、能量管理和不确定条件下会合调度等紧密耦合问题。通过高效路由确定访问序列，最小化任务时间与能耗，并在真实场景中验证了框架的可靠性和自主性，为大范围监测任务提供了现实可行的解决方案。",
+      "llm_tldr": "为克服无人机续航短对长时任务覆盖的限制，提出空地协作集成规划框架。解决无人机路径规划、地面车辆道路约束、能量管理和不确定条件下会合调度等紧密耦合问题。通过高效路由确定访问序列，最小化任务时间与能耗，并在真实场景中验证了框架的可靠性和自主性，为大范围监测任务提供了现实可行的解决方案。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2607.12721v1",
+      "source": "arxiv",
+      "title": "High-Precision Hybrid FA-PSO Based Inversion of Building Material Parameters for Fundamental Wireless Performance Evaluation",
+      "abstract": "In this paper, we propose an inversion method based on the firefly particle swarm optimization (FA-PSO) algorithm to estimate the permittivity, conductivity, and thickness of building materials using the free-space method. To improve convergence efficiency and robustness, an adaptive firefly algorithm (FA) is employed to systematically optimize the hyperparameters of the particle swarm optimization (PSO). By optimizing the parameters of the Gaussian distribution used for population initialization, the accuracy of parameter estimation is gradually improved. Furthermore, we derive the Cramer-Rao lower bound (CRLB) for the permittivity, conductivity, and thickness under a complex Gaussian noise model, which serves as a theoretical benchmark for evaluating the estimation accuracy of the FA-PSO algorithm. Numerical results indicate that for relatively thin materials, the estimation accuracy of the proposed method approaches this theoretical lower bound, confirming the effectiveness of the inversion framework. This study accurately extracts the electromagnetic properties of building materials, providing strong support for evaluating their wireless performance.",
+      "authors": [
+        "Zhuowei Li",
+        "Yalei Zhu",
+        "Hanqing Zhang",
+        "Sui Li",
+        "Meng Chen",
+        "Tong Zhang",
+        "Zi-Yang Wu",
+        "Dan Yang",
+        "Songjiang Yang",
+        "Jiliang Zhang"
+      ],
+      "primary_category": "cs.NI",
+      "categories": [
+        "cs.NI"
+      ],
+      "published": "2026-07-14T12:46:08+00:00",
+      "link": "https://arxiv.org/pdf/2607.12721v1",
+      "tags": [
+        "keyword:upa"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "hybrid firefly particle swarm optimization algorithm (FA-PSO)",
+      "llm_evidence_cn": "混合萤火虫粒子群优化算法(FA-PSO)",
+      "llm_evidence": "混合萤火虫粒子群优化算法(FA-PSO)",
+      "canonical_evidence": "混合萤火虫粒子群优化算法(FA-PSO)",
+      "llm_tldr_en": "Proposes FA-PSO algorithm for estimating building material electromagnetic parameters, using adaptive firefly to optimize PSO hyperparameters.",
+      "llm_tldr_cn": "为提高建筑材料介电常数、电导率和厚度的估计精度，提出混合萤火虫粒子群优化(FA-PSO)算法，通过自适应萤火虫算法优化PSO超参数与种群初始化，并推导了复杂高斯噪声下的克拉美罗下界。实验表明该方法在收敛效率与估计精度上优于传统PSO，为无线信道建模提供了高精度参数反演工具。",
+      "llm_tldr": "为提高建筑材料介电常数、电导率和厚度的估计精度，提出混合萤火虫粒子群优化(FA-PSO)算法，通过自适应萤火虫算法优化PSO超参数与种群初始化，并推导了复杂高斯噪声下的克拉美罗下界。实验表明该方法在收敛效率与估计精度上优于传统PSO，为无线信道建模提供了高精度参数反演工具。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "particle swarm optimization algorithm and its variants",
+      "matched_requirement_id": "req-4",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2607.12801v1",
+      "source": "arxiv",
+      "title": "Autonomous Tracking and Terminal Guidance of Moving Targets for Fixed-Wing UAVs",
+      "abstract": "This study introduces a unified control framework for fixed-wing unmanned aerial vehicles (UAVs) fitted with a pan-tilt (PT) camera, intended to perform an end-to-end mission spanning from initial target detection to accurate terminal engagement. The proposed system employs a three-phase strategy: a vision-based target acquisition phase, an NMPC-based tracking phase, and a terminal guidance phase. During tracking, the framework uses an Unscented Kalman Filter (UKF) to fuse YOLO-based visual detections with inertial measurements, enabling robust target state estimation under unknown dynamics. To ensure reliable visual contact, we introduce a constraint-aware Nonlinear Model Predictive Control (NMPC) strategy that incorporates Control Barrier Functions (CBFs) to explicitly prevent UAV self-occlusion -- a common limitation in fixed-wing tracking. Upon satisfying terminal engagement conditions, the system seamlessly transitions control to a quaternion-based Biased Proportional Navigation Guidance (BPNG) law, enforcing precise impact angle constraints. High-fidelity simulations demonstrate that the framework achieves stable, robust tracking and accurate terminal interception while strictly respecting the vehicle's dynamic limits and camera field-of-view constraints.",
+      "authors": [
+        "Wei-Hao Liou",
+        "Teng-Hu Cheng"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.AI",
+        "eess.SY"
+      ],
+      "published": "2026-07-14T14:16:05+00:00",
+      "link": "https://arxiv.org/pdf/2607.12801v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Unified control framework with NMPC for tracking and terminal engagement of moving targets, directly applicable to close-range air combat.",
+      "llm_evidence_cn": "统一控制框架，采用NMPC进行移动目标跟踪和末端交战，直接适用于近距空战。",
+      "llm_evidence": "统一控制框架，采用NMPC进行移动目标跟踪和末端交战，直接适用于近距空战。",
+      "canonical_evidence": "统一控制框架，采用NMPC进行移动目标跟踪和末端交战，直接适用于近距空战。",
+      "llm_tldr_en": "A unified control framework for fixed-wing UAVs that performs autonomous target tracking and terminal engagement using vision, NMPC, and UKF, enabling close-range combat maneuver decisions.",
+      "llm_tldr_cn": "针对固定翼无人机执行移动目标自主交战任务的需求，提出统一控制框架，采用三阶段策略，融合视觉目标检测、无迹卡尔曼滤波状态估计和约束感知非线性模型预测控制，实现从初始探测到精确末端导引的端到端自主机动，该方法可直接应用于近距空战轨迹优化与策略生成。",
+      "llm_tldr": "针对固定翼无人机执行移动目标自主交战任务的需求，提出统一控制框架，采用三阶段策略，融合视觉目标检测、无迹卡尔曼滤波状态估计和约束感知非线性模型预测控制，实现从初始探测到精确末端导引的端到端自主机动，该方法可直接应用于近距空战轨迹优化与策略生成。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV close range air combat trajectory optimization and strategy generation",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2607.13789v1",
+      "source": "arxiv",
+      "title": "Dynamical Vehicle Orienteering Problem for Multi-Rotor Unmanned Aerial Vehicles",
+      "abstract": "This paper introduces the Dynamical Vehicle Orienteering Problem (DVOP), a generalization of the Orienteering Problem (OP). The OP maximizes the reward collected from spatial targets under a limited travel budget; the DVOP extends it by accounting for both external and vehicle-actuated forces. We study the DVOP in the context of multi-rotor Unmanned Aerial Vehicle (UAV) flight planning, using a three-dimensional Point-Mass Model (PMM) constrained by maximum velocity and acceleration magnitudes and subject to gravitational acceleration, with the travel budget expressed as a maximum flight time. Because the DVOP couples reward maximization with time-optimal trajectory planning, it cannot be formulated as a simple graph problem and solved exactly without relaxing or under-actuating the vehicle dynamics. We therefore propose two solution approaches: a Branch-and-Bound (BnB) procedure that combines Non-Linear Programming (NLP) and Mixed-Integer Linear Programming (MILP) to provide high-quality solutions, and a Large Neighborhood Search (LNS) metaheuristic that supplies an initial reward bound and scales to instances intractable for the BnB. The BnB relies on a novel MILP formulation of travel costs based on minimum-time trajectory primitives through target triplets, yielding a tight reward upper bound, while the LNS uses limited thrust decomposition to compute fast, high-quality PMM trajectories. Experiments on benchmark instances show improvements of up to 37 % over state-of-the-art solutions for the Kinematic Orienteering Problem, and a real-world deployment on a multi-rotor UAV verifies the proposed PMM solution trajectories.",
+      "authors": [
+        "František Nekovář",
+        "Matej Novosad",
+        "Martin Saska",
+        "Robert Pěnička"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "math.OC"
+      ],
+      "published": "2026-07-15T12:48:18+00:00",
+      "link": "https://arxiv.org/pdf/2607.13789v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "DVOP for UAV flight planning with dynamics and time-optimal trajectories",
+      "llm_evidence_cn": "考虑动力学的UAV飞行规划动态定向问题",
+      "llm_evidence": "考虑动力学的UAV飞行规划动态定向问题",
+      "canonical_evidence": "考虑动力学的UAV飞行规划动态定向问题",
+      "llm_tldr_en": "Introduces the Dynamical Vehicle Orienteering Problem (DVOP) for multi-rotor UAVs, which couples reward maximization with time-optimal trajectory planning under dynamic constraints, requiring a novel approach beyond graph-based methods.",
+      "llm_tldr_cn": "本文提出动态车辆定向问题（DVOP），将传统定向问题扩展至考虑多旋翼无人机动力学和飞行时间约束。DVOP耦合奖励最大化与时间最优轨迹规划，无法用简单图方法求解。通过建立三维点质量模型并考虑速度、加速度限制及重力，为UAV飞行规划提供了更精确的模型，有助于提升任务执行效率。",
+      "llm_tldr": "本文提出动态车辆定向问题（DVOP），将传统定向问题扩展至考虑多旋翼无人机动力学和飞行时间约束。DVOP耦合奖励最大化与时间最优轨迹规划，无法用简单图方法求解。通过建立三维点质量模型并考虑速度、加速度限制及重力，为UAV飞行规划提供了更精确的模型，有助于提升任务执行效率。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2606.18556v2",
+      "source": "arxiv",
+      "title": "Wind-Resilient Trajectory Optimization for UAV-BS Networks: TD3 for Continuous Service Availability",
+      "abstract": "Unmanned aerial vehicle (UAV)-mounted base stations are highly susceptible to wind disturbances such as gusts and turbulence, which induce positional drift and degrade communication link quality, particularly in emergency scenarios. To address this challenge, we propose a DRL-based framework for wind-resilient trajectory adjustment and positioning based on the Twin Delayed Deep Deterministic Policy Gradient (TD3) algorithm. The method models wind as a stochastic kinematic perturbation, avoiding complex aerodynamic modeling, thereby enabling the TD3 agent to learn adaptive control policies that maintain optimal coverage footprints. By prioritizing user-centric performance metrics under turbulent conditions, the proposed architecture ensures continuous service availability despite external disruptions. Simulation results demonstrate that the TD3-based approach effectively compensates for wind-induced displacements and outperforms benchmark methods, including Proximal Policy Optimization (PPO), in terms of throughput stability and robustness in windy environments.",
+      "authors": [
+        "Azim Akhtarshenas",
+        "German Svistunov",
+        "Kuangyu Zheng",
+        "David Lopez-Perez"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY",
+        "eess.SP"
+      ],
+      "published": "2026-06-17T00:12:23+00:00",
+      "link": "https://arxiv.org/pdf/2606.18556v2",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "TD3 DRL for wind-resilient UAV trajectory adjustment",
+      "llm_evidence_cn": "基于TD3深度强化学习的抗风无人机轨迹调整",
+      "llm_evidence": "基于TD3深度强化学习的抗风无人机轨迹调整",
+      "canonical_evidence": "基于TD3深度强化学习的抗风无人机轨迹调整",
+      "llm_tldr_en": "A DRL framework with TD3 enables UAV base stations to maintain optimal coverage footprints under wind disturbances by learning adaptive control policies, improving service continuity in emergencies.",
+      "llm_tldr_cn": "为解决无人机基站易受风扰导致服务中断的问题，提出基于TD3深度强化学习的抗风轨迹优化框架，将风建模为随机运动学扰动，训练智能体学习自适应控制策略以维持最优覆盖范围，实验表明该方法在湍流条件下有效提升通信服务连续性和用户性能。",
+      "llm_tldr": "为解决无人机基站易受风扰导致服务中断的问题，提出基于TD3深度强化学习的抗风轨迹优化框架，将风建模为随机运动学扰动，训练智能体学习自适应控制策略以维持最优覆盖范围，实验表明该方法在湍流条件下有效提升通信服务连续性和用户性能。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
       "selection_source": "fresh_fetch",
       "quick_tier": "8plus"
     },
     {
-      "id": "2606.31073v1",
+      "id": "2606.24483v1",
       "source": "arxiv",
-      "title": "MultiUAV-Plat: An LLM-Oriented Platform, Benchmark and Framework for Multi-UAV Collaborative Task Planning",
-      "abstract": "Large language models (LLMs) provide a promising interface for high-level robotic task planning, but their use in multi-UAV collaboration remains difficult to evaluate systematically. Existing UAV simulators mainly emphasize dynamics, perception, or low-level control, while existing LLM-agent benchmarks rarely capture aerial-robotics constraints such as partial observability, spatial coverage, UAV assignment, and multi-vehicle coordination. To bridge this gap, we present MultiUAV-Plat, a lightweight, easy-to-use, LLM-agent-oriented simulation platform for multi-UAV collaborative task planning. The platform exposes concise RESTful APIs, agent-facing observations, role-based information access, hidden validation logic, and optional 2D/3D visualization, allowing agents to solve missions through realistic tool interaction rather than privileged simulator access. Built on this platform, the MultiUAV-Plat Benchmark contains 75 mission sessions, 1500 natural-language tasks, and 9396 validation checks across target assignment, area search, and area assignment and patrol scenarios. We further propose Agent4Drone, a task-specific LLM agent framework that structures multi-UAV behavior into memory, observation, task understanding, planning, execution, and verification. In a full paired benchmark comparison, Agent4Drone achieves a 57.9% task pass rate, a 74.6% average task check pass rate, and a 72.0% global check pass rate, substantially outperforming a ReAct baseline at 30.6%, 47.9%, and 43.1%, respectively. Agent4Drone also reduces the total failed task rate from 32.4% to 12.9%. These results demonstrate that MultiUAV-Plat and MultiUAV-Plat Benchmark provide a reproducible foundation for studying LLM-driven multi-UAV autonomy under realistic information and execution constraints.",
+      "title": "Adaptive Machine Learning Framework for UAV Trajectory Optimization in O-RAN",
+      "abstract": "The deployment of unmanned aerial vehicles (UAV) as open radio units (O-RUs) in 6G cellular systems presents a promising opportunity to achieve scalable and adaptive network coverage. However, optimizing UAV trajectories in dynamic and unfamiliar environments remains a critical challenge, particularly due to the need for extensive retraining in each new scenario. In this paper, we introduce a novel UAV trajectory optimization framework that integrates enhanced continual transfer learning within the O-RAN architecture. The proposed system maintains a library of pre-trained models and employs a model selection mechanism to identify and transfer knowledge from the most relevant environments, minimizing adaptation time and improving efficiency. When no sufficiently similar model is available, a fallback model empowered by continuous refinements ensures baseline performance. The framework leverages real-world city maps and ray tracing techniques to enhance learning reliability and improve trajectory planning. Simulation results demonstrate that the proposed model selection-based transfer learning approach reduces convergence time by 44% to 56% compared to retraining from scratch, and up to 40% compared to traditional transfer learning without model selection.",
       "authors": [
-        "Sheng Zhang",
-        "Qinglin Li",
-        "Yuechao Zang",
-        "Xueqin Huang",
-        "Yijia Fu",
-        "Cheng Zhu"
+        "Chenrui Sun",
+        "Swarna Bindu Chetty",
+        "Gianluca Fontanesi",
+        "Mahnaz Arvaneh",
+        "Walid Saad",
+        "Hamed Ahmadi"
       ],
-      "primary_category": "cs.AI",
+      "primary_category": "eess.SP",
       "categories": [
-        "cs.AI",
-        "cs.MA",
-        "cs.RO"
+        "eess.SP",
+        "cs.AI"
       ],
-      "published": "2026-06-30T03:02:12+00:00",
-      "link": "https://arxiv.org/pdf/2606.31073v1",
+      "published": "2026-06-23T12:18:45+00:00",
+      "link": "https://arxiv.org/pdf/2606.24483v1",
       "tags": [
         "keyword:upa",
         "query:upa"
       ],
       "llm_score": 7.0,
-      "llm_evidence_en": "LLM-agent-oriented simulation platform for multi-UAV collaborative task planning and evaluation",
-      "llm_evidence_cn": "面向LLM智能体的多无人机协同任务规划仿真平台与基准",
-      "llm_evidence": "面向LLM智能体的多无人机协同任务规划仿真平台与基准",
-      "canonical_evidence": "面向LLM智能体的多无人机协同任务规划仿真平台与基准",
-      "llm_tldr_en": "MultiUAV-Plat is a lightweight, LLM-agent-oriented simulation platform and benchmark for evaluating multi-UAV collaborative task planning under aerial constraints.",
-      "llm_tldr_cn": "MultiUAV-Plat是一个轻量级、面向LLM智能体的多无人机协同任务规划仿真平台和基准，旨在系统评估在部分可观、空间覆盖、任务分配等航空约束下的规划能力。平台提供简洁API、角色信息访问和隐蔽验证逻辑，支持基准测试。该工具为多无人机LLM规划研究提供了标准化的实验环境，促进算法比较与进步。",
-      "llm_tldr": "MultiUAV-Plat是一个轻量级、面向LLM智能体的多无人机协同任务规划仿真平台和基准，旨在系统评估在部分可观、空间覆盖、任务分配等航空约束下的规划能力。平台提供简洁API、角色信息访问和隐蔽验证逻辑，支持基准测试。该工具为多无人机LLM规划研究提供了标准化的实验环境，促进算法比较与进步。",
+      "llm_evidence_en": "uses continual transfer learning for UAV trajectory optimization in dynamic environments",
+      "llm_evidence_cn": "使用持续迁移学习进行动态环境下的无人机轨迹优化",
+      "llm_evidence": "使用持续迁移学习进行动态环境下的无人机轨迹优化",
+      "canonical_evidence": "使用持续迁移学习进行动态环境下的无人机轨迹优化",
+      "llm_tldr_en": "Proposes an adaptive machine learning framework using continual transfer learning to optimize UAV trajectories in O-RAN, reducing retraining needs in new environments.",
+      "llm_tldr_cn": "针对无人机在动态陌生环境中轨迹优化需大量重新训练的问题，提出融入增强持续迁移学习的自适应框架，在O-RAN架构下维护预训练模型库，通过模型选择机制快速适应新环境，最小化适应时间，为6G蜂窝网络提供可扩展的轨迹优化方案。",
+      "llm_tldr": "针对无人机在动态陌生环境中轨迹优化需大量重新训练的问题，提出融入增强持续迁移学习的自适应框架，在O-RAN架构下维护预训练模型库，通过模型选择机制快速适应新环境，最小化适应时间，为6G蜂窝网络提供可扩展的轨迹优化方案。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2606.22670v1",
+      "source": "arxiv",
+      "title": "Semantic-Aware Autonomous Exploration for UAVs in Unknown Indoor Environments",
+      "abstract": "Autonomous exploration in unknown environments requires unmanned aerial vehicles (UAVs) to efficiently generate informative trajectories while simultaneously constructing accurate maps. Although many existing exploration methods rely on geometric information, they often lack semantic awareness, resulting in suboptimal exploration efficiency and limited environmental understanding. To address this limitation, this paper proposes a semantic-aware exploration framework that adds semantic information to a roadmap-based exploration strategy. The proposed method builds on the Dynamic Exploration Planner (DEP), which incrementally constructs a Probabilistic Roadmap (PRM), and augments this roadmap with a semantic layer. A semantic reward function is introduced to prioritize regions containing meaningful objects and structures, enabling the UAV to focus on areas with higher information value. Furthermore, the roadmap is continuously updated to support efficient frontier selection and path planning during exploration. The proposed framework is implemented in ROS Noetic and Gazebo using an RGB-D sensor for simultaneous acquisition of geometric and semantic information. Experimental results in multiple simulated environments demonstrate that the proposed approach achieves exploration coverage rates between 90% and 94% while reducing exploration time and travel distance compared with conventional geometry-based exploration methods.",
+      "authors": [
+        "Duc-Thien Nguyen",
+        "Ngoc Minh Do",
+        "Xiem HoangVan",
+        "Thanh Nguyen Canh"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-06-21T21:07:40+00:00",
+      "link": "https://arxiv.org/pdf/2606.22670v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Proposes a semantic-aware exploration framework for generating informative UAV trajectories.",
+      "llm_evidence_cn": "提出用于生成信息丰富无人机轨迹的语义感知探索框架。",
+      "llm_evidence": "提出用于生成信息丰富无人机轨迹的语义感知探索框架。",
+      "canonical_evidence": "提出用于生成信息丰富无人机轨迹的语义感知探索框架。",
+      "llm_tldr_en": "A semantic-aware exploration framework for UAVs that adds semantic information to roadmap-based planning to generate more informative trajectories and improve environmental understanding.",
+      "llm_tldr_cn": "针对无人机在未知环境中自主探索缺乏语义感知的问题，本文提出了一种语义感知探索框架，在动态探索规划器（DEP）基础上增加语义层，利用语义奖励函数引导生成信息丰富的轨迹，从而提升探索效率和环境理解能力。该工作将高层语义融入传统几何路径规划，为无人机智能探索提供了新思路。",
+      "llm_tldr": "针对无人机在未知环境中自主探索缺乏语义感知的问题，本文提出了一种语义感知探索框架，在动态探索规划器（DEP）基础上增加语义层，利用语义奖励函数引导生成信息丰富的轨迹，从而提升探索效率和环境理解能力。该工作将高层语义融入传统几何路径规划，为无人机智能探索提供了新思路。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2606.23008v1",
+      "source": "arxiv",
+      "title": "Scalable Online Flight Trajectory Optimization via Sequential Quadratic Programming for Urban Air Mobility in Ultra Low-Altitude Airspace",
+      "abstract": "As Urban Air Mobility (UAM) scales toward high-density operations, generating collision-free trajectories within complex 3D cityscapes is a critical safety requirement. This paper proposes a scalable Sequential Quadratic Programming (SQP) framework that integrates geometric environmental constraints, operational limits, and vehicle dynamics within a single online trajectory optimization process. Rather than precomputing obstacle-free corridors ahead of time, our method encodes obstacle avoidance as live separating-hyperplane constraints regenerated at every solver iteration, so that dense urban geometry and full-DOF vehicle dynamics are resolved jointly and online as the reference and environment evolve. A variable-scale quadtree decomposition keeps computation bounded, enabling the framework to scale to city-wide environments while preserving real-time performance for high-speed flight. We validate the framework against conventional SQP, Iterative Linear Quadratic Regulator, and Differential Dynamic Programming across flights in five real-world urban centers, attaining 100% success and clearance rates on CPU-only hardware.",
+      "authors": [
+        "Josue N. Rivera",
+        "Bohang Liang",
+        "Chen Lv",
+        "James Wang"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY",
+        "cs.ET"
+      ],
+      "published": "2026-06-22T08:21:24+00:00",
+      "link": "https://arxiv.org/pdf/2606.23008v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "Online SQP trajectory optimization with live obstacle avoidance constraints for UAVs",
+      "llm_evidence_cn": "在线SQP轨迹优化与实时避障约束用于城市空中机动",
+      "llm_evidence": "在线SQP轨迹优化与实时避障约束用于城市空中机动",
+      "canonical_evidence": "在线SQP轨迹优化与实时避障约束用于城市空中机动",
+      "llm_tldr_en": "Proposes an online SQP framework for UAV trajectory optimization that jointly solves obstacle avoidance and vehicle dynamics via live separating-hyperplane constraints, enabling safe navigation in dense urban environments.",
+      "llm_tldr_cn": "针对城市空中交通高密度运行下的安全轨迹需求，提出一种在线序列二次规划框架，通过每次迭代重新生成分离超平面约束将避障与飞行器动力学联合求解，实现超低空复杂城市环境中的实时安全导航。该方法无需预先计算无障走廊，可直接处理任意密集几何障碍，为城市空中交通的可扩展运行提供了高效轨迹优化手段。",
+      "llm_tldr": "针对城市空中交通高密度运行下的安全轨迹需求，提出一种在线序列二次规划框架，通过每次迭代重新生成分离超平面约束将避障与飞行器动力学联合求解，实现超低空复杂城市环境中的实时安全导航。该方法无需预先计算无障走廊，可直接处理任意密集几何障碍，为城市空中交通的可扩展运行提供了高效轨迹优化手段。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2606.30575v1",
+      "source": "arxiv",
+      "title": "MOAR Planner: Multi-Objective and Adaptive Risk-Aware Path Planning for Infrastructure Inspection with a UAV",
+      "abstract": "The problem of autonomous navigation for UAV inspection remains challenging as it requires effectively navigating in close proximity to obstacles, while accounting for dynamic risk factors such as weather conditions, communication reliability, and battery autonomy. This paper introduces the MOAR path planner which addresses the complexities of evolving risks during missions. It offers real-time trajectory adaptation while concurrently optimizing safety, time, and energy. The planner employs a risk-aware cost function that integrates pre-computed cost maps, the new concepts of damage and insertion costs, and an adaptive speed planning framework. With that, the optimal path is searched in a graph using a discrete representation of the state and action spaces. The method is evaluated through simulations and real-world flight tests. The results show the capability to generate real-time trajectories spanning a broad range of evaluation metrics: around 90% of the range occupied by popular algorithms. The proposed framework contributes by enabling UAVs to navigate more autonomously and reliably in critical missions.",
+      "authors": [
+        "Louis Petit",
+        "Alexis Lussier Desbiens"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-06-29T17:18:02+00:00",
+      "link": "https://arxiv.org/pdf/2606.30575v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "real-time trajectory adaptation for UAV inspection under dynamic risk factors",
+      "llm_evidence_cn": "动态风险因素下无人机巡检的实时轨迹自适应",
+      "llm_evidence": "动态风险因素下无人机巡检的实时轨迹自适应",
+      "canonical_evidence": "动态风险因素下无人机巡检的实时轨迹自适应",
+      "llm_tldr_en": "MOAR Planner enables real-time UAV trajectory adaptation for inspection, concurrently optimizing safety, time, and energy under evolving risks like weather and communication, using a risk-aware cost function and adaptive speed planning.",
+      "llm_tldr_cn": "针对无人机巡检中动态风险因素（天气、通信、电池）下的自主导航难题，提出MOAR路径规划器。该规划器采用风险感知代价函数，融合损伤成本与插入成本新概念，通过自适应速度规划在图中搜索最优路径，实时平衡安全性、时间与能耗。实验表明，能有效适应动态风险，提升任务成功率，为高风险环境下的自主巡检提供了灵活可靠的规划框架。",
+      "llm_tldr": "针对无人机巡检中动态风险因素（天气、通信、电池）下的自主导航难题，提出MOAR路径规划器。该规划器采用风险感知代价函数，融合损伤成本与插入成本新概念，通过自适应速度规划在图中搜索最优路径，实时平衡安全性、时间与能耗。实验表明，能有效适应动态风险，提升任务成功率，为高风险环境下的自主巡检提供了灵活可靠的规划框架。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "Online adaptive path planning for UAV in dynamic threat environment",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2607.00288v1",
+      "source": "arxiv",
+      "title": "Communication-Aware and Safety-Aware UAV Control via Predictive Latent Models",
+      "abstract": "This article presents a communication-aware and risk-aware predictive latent control (CRPL) framework for unmanned aerial vehicle (UAV) systems operating under partial observability and uncertain environment dynamics. CRPL integrates a joint-embedding predictive architecture (JEPA) with probabilistic communication and safety constraints to jointly optimize UAV motion and transmission power. The learned latent model generates recursive multi-step rollouts, enabling the controller to anticipate future motion, channel degradation, and collision risk. These predictions are incorporated into a unified safety-aware optimization framework for proactive, energy-aware trajectory and communication adaptation. Simulation results show that CRPL closely approaches the performance of an oracle analytical predictive controller and outperforms reactive constrained and unconstrained baselines under limited bandwidth and dynamic uncertainty. In the bandwidth-limited regime, CRPL reduces terminal error, i.e., the final UAV-to-goal distance, by up to a factor of approximately $3$ and outage duration by up to approximately $18$, while also lowering communication energy and collision risk. These improvements are achieved with only a moderate motion-energy overhead, demonstrating a favorable trade-off among mobility effort, communication reliability, and operational safety.",
+      "authors": [
+        "Hamid Shiri",
+        "Mehdi Bennis"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY"
+      ],
+      "published": "2026-07-01T00:31:53+00:00",
+      "link": "https://arxiv.org/pdf/2607.00288v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "predictive latent control for UAV trajectory adaptation with safety and communication",
+      "llm_evidence_cn": "基于预测潜模型的无人机轨迹自适应控制",
+      "llm_evidence": "基于预测潜模型的无人机轨迹自适应控制",
+      "canonical_evidence": "基于预测潜模型的无人机轨迹自适应控制",
+      "llm_tldr_en": "CRPL framework uses joint-embedding predictive architecture for UAV control under partial observability, unifying communication and safety constraints for proactive trajectory and power adaptation.",
+      "llm_tldr_cn": "针对部分可观测和动态环境下的无人机控制，提出通信与风险感知预测潜控制框架CRPL。该框架集成联合嵌入预测架构与概率约束，通过学习潜模型生成多步推演，实现运动、信道衰减和碰撞风险的统一预测与安全优化。仿真表明能逼近理想性能，为复杂环境中无人机通信与安全的联合主动调控提供了有效途径。",
+      "llm_tldr": "针对部分可观测和动态环境下的无人机控制，提出通信与风险感知预测潜控制框架CRPL。该框架集成联合嵌入预测架构与概率约束，通过学习潜模型生成多步推演，实现运动、信道衰减和碰撞风险的统一预测与安全优化。仿真表明能逼近理想性能，为复杂环境中无人机通信与安全的联合主动调控提供了有效途径。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2606.24979v1",
+      "source": "arxiv",
+      "title": "CKM-Driven Communication-Aware UAV Intelligent Trajectory Optimization for Urban Inspection",
+      "abstract": "Unmanned aerial vehicles (UAVs) are increasingly employed in urban inspection tasks, where reliable communication is critical but challenging due to the severe spatial channel heterogeneity. To address the issue, in this paper, we focus on the communication-aware path planning for multi-UAV tasks, and propose a channel knowledge map (CKM)-driven trajectory planning framework which integrates the channel modeling and trajectory decision-making. Specifically, we apply the diffusion model to construct a time-accumulated CKM and achieve the accurate perception with low flight overhead, which leverages the sparse observation data to reconstruct the high-fidelity global channel quality distribution. Based on the CKM, we propose a global-to-local graph attention network soft actor-critic algorithm. The graph attention network optimizes the complex combinatorial node ordering problem, generating an optimal and communication-aware sequence for the inspection targets. Subsequently, the soft actor-critic algorithm performs continuous action control to ensure the smoothness of the flight path and dynamically avoid communication attenuation areas. Simulation results demonstrate that the proposed method effectively guides UAVs through high-quality channel regions without dependence on real-time channel feedback, significantly improving both the trajectory efficiency and communication reliability.",
+      "authors": [
+        "Yang Xiaomeng",
+        "Jia Ziye",
+        "Zhu Qiuming",
+        "Wu Qihui"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-06-23T12:54:18+00:00",
+      "link": "https://arxiv.org/pdf/2606.24979v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "proposes a CKM-driven trajectory planning framework for UAVs",
+      "llm_evidence_cn": "提出CKM驱动的无人机轨迹规划框架",
+      "llm_evidence": "提出CKM驱动的无人机轨迹规划框架",
+      "canonical_evidence": "提出CKM驱动的无人机轨迹规划框架",
+      "llm_tldr_en": "Proposes a channel knowledge map-driven intelligent trajectory optimization framework for multi-UAV urban inspection tasks, using a diffusion model for channel perception and global path planning.",
+      "llm_tldr_cn": "针对城市巡检中多无人机通信挑战，提出信道知识图谱驱动的智能轨迹优化框架，利用扩散模型构建时间累积CKM，实现低飞行开销下的高精度信道感知与全局路径规划，为复杂信道环境下无人机巡检提供可靠方案。",
+      "llm_tldr": "针对城市巡检中多无人机通信挑战，提出信道知识图谱驱动的智能轨迹优化框架，利用扩散模型构建时间累积CKM，实现低飞行开销下的高精度信道感知与全局路径规划，为复杂信道环境下无人机巡检提供可靠方案。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2606.31197v1",
+      "source": "arxiv",
+      "title": "Diffusion-based 4D Trajectory Prediction and Distributed Control for UAV Swarms",
+      "abstract": "Accurate 4D trajectory prediction and closed-loop tracking are essential for Unmanned Aerial Vehicle (UAV) swarms to achieve safe and efficient operations in complex low-altitude environments such as urban airspaces, industrial sites, and indoor facilities. However, this task remains challenging due to intrinsic nonlinearity of UAV swarm dynamics and strict real-time constraints of swarm formation control. To address these challenges, we propose a unified framework that couples coarse-to-fine trajectory forecasting with uncertainty-aware Distributed Nonlinear Model Predictive Control (DNMPC). Our approach features two key innovations: 1) a dimension-decoupled trajectory prediction module that reduces computational complexity by forecasting axis-wise motion, and 2) a diffusion-based residual dynamics refinement module that captures temporally correlated dynamic uncertainties. These refined predictions are then integrated into a DNMPC loop to ensure formation stability. We also introduce a synchronized multi-scenario 4D UAV swarm dataset spanning six representative airspace scenarios. The dataset contains over \\textbf{7,900} frames of synchronized three-UAV trajectories with frame-level annotations of speed intention and target sector. Extensive experiments demonstrate that our approach outperforms state-of-the-art baselines, reducing trajectory tracking error by up to \\textbf{10-15\\%} and achieving sub-\\textbf{0.07\\,m} average tracking error in complex urban and industrial environments, while maintaining real-time inference speeds of 34 FPS (sub-30 ms latency) suitable for agile flight.",
+      "authors": [
+        "Tianshun Li",
+        "Hongliang Lu",
+        "Haoang Li",
+        "Xinhu Zheng"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-06-30T06:26:34+00:00",
+      "link": "https://arxiv.org/pdf/2606.31197v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "4D trajectory prediction and control for UAV swarms",
+      "llm_evidence_cn": "无人机群四维轨迹预测与控制",
+      "llm_evidence": "无人机群四维轨迹预测与控制",
+      "canonical_evidence": "无人机群四维轨迹预测与控制",
+      "llm_tldr_en": "Proposes a unified framework coupling diffusion-based trajectory prediction with distributed model predictive control for UAV swarms in complex environments.",
+      "llm_tldr_cn": "针对复杂低空环境中无人机群的四维轨迹预测与编队控制难题，提出一种将粗到细扩散轨迹预测与不确定性感知的分布式非线性模型预测控制相耦合的统一框架。通过维度解耦预测降低复杂度，利用不确定性估计算法分配带宽与提升跟踪精度，在仿真中验证了实时预测与控制的有效性，为无人机群协作提供了高性能轨迹管理方案。",
+      "llm_tldr": "针对复杂低空环境中无人机群的四维轨迹预测与编队控制难题，提出一种将粗到细扩散轨迹预测与不确定性感知的分布式非线性模型预测控制相耦合的统一框架。通过维度解耦预测降低复杂度，利用不确定性估计算法分配带宽与提升跟踪精度，在仿真中验证了实时预测与控制的有效性，为无人机群协作提供了高性能轨迹管理方案。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2607.00324v1",
+      "source": "arxiv",
+      "title": "Queue-Aware Graph Reinforcement Learning for UAV-ISAC-Assisted Maritime Data Collection",
+      "abstract": "This paper studies high-altitude platform (HAP)-assisted sparse cooperative integrated sensing and communication (ISAC) for UAV-enabled ocean monitoring. A fleet of rotary-wing UAVs senses drifting buoys, collects their monitoring data, and reports local posterior estimates to a HAP that performs fusion and sparse cooperation control. The model explicitly accounts for a spatially correlated sea-patch field, patch-aware buoy dynamics, RCS- and clutter-aware echo sensing, fused posterior Cramér-Rao bounds (PCRBs), and propulsion-energy-limited UAV mobility. The long-horizon objective is cast as a queue-weighted buffered-collection Markov decision process rather than instantaneous throughput, where each buoy maintains a backlog of buffered observations. The resulting long-horizon design is formulated as a mixed discrete-continuous problem with sensing, communication, mobility, safety, buffered-collection, and onboard-energy constraints. To address the combinatorial association component without replacing learning by a deterministic optimizer, we propose a structured feasible-association graph-MARL framework. A heterogeneous graph encoder produces candidate-edge logits, and a masked sequential b-matching policy samples legal UAV-buoy associations while exactly satisfying UAV-load and buoy-cluster constraints. A MAPPO-style training procedure, an independent queue-state value critic, and a consistency-verification protocol are then specified to support reproducible training. Simulation results on congested maritime scenarios show that the proposed policy improves the cumulative queue-weighted collection utility by about 106\\% over the rate-driven deterministic decoder, maintains a large margin across sea-state sweeps and medium-to-heavy traffic loads, and transfers to larger networks without fine-tuning.",
+      "authors": [
+        "Bohan Li",
+        "Min Ye",
+        "Haochen Liu",
+        "Yongkang Gong",
+        "Ning Gao",
+        "Jie Nie",
+        "Pei Xiao",
+        "Xiuzhen Cheng"
+      ],
+      "primary_category": "eess.SY",
+      "categories": [
+        "eess.SY"
+      ],
+      "published": "2026-07-01T01:50:04+00:00",
+      "link": "https://arxiv.org/pdf/2607.00324v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "queue-aware graph reinforcement learning for UAV-ISAC trajectory planning",
+      "llm_evidence_cn": "基于队列感知图强化学习的无人机ISAC轨迹规划",
+      "llm_evidence": "基于队列感知图强化学习的无人机ISAC轨迹规划",
+      "canonical_evidence": "基于队列感知图强化学习的无人机ISAC轨迹规划",
+      "llm_tldr_en": "A graph RL approach for UAV maritime data collection that models queue-weighted buffered-collection MDP, enabling efficient multi-UAV coordination under sensing and energy constraints.",
+      "llm_tldr_cn": "针对无人机辅助海洋监测中的数据收集问题，提出队列感知图强化学习方法。将长期目标建模为队列加权缓冲收集马尔可夫决策过程，结合图神经网络处理多无人机协同，考虑传感器覆盖、能量限制和海况动态。仿真表明能有效提升数据收集效率，为无人机海洋监测的多机调度与轨迹优化提供新方案。",
+      "llm_tldr": "针对无人机辅助海洋监测中的数据收集问题，提出队列感知图强化学习方法。将长期目标建模为队列加权缓冲收集马尔可夫决策过程，结合图神经网络处理多无人机协同，考虑传感器覆盖、能量限制和海况动态。仿真表明能有效提升数据收集效率，为无人机海洋监测的多机调度与轨迹优化提供新方案。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2606.29917v1",
+      "source": "arxiv",
+      "title": "Flying to Image-Specified Objects: 3D Quadrotor Navigation via Cross-Graph Memory and Viewpoint Planning",
+      "abstract": "Instance-Specific Image-Goal Navigation (InstanceImageNav) requires a robot to navigate toward the exact object instance depicted in a query image. Extending this task to quadrotors is challenging due to continuous 3D control, limited field of view (FOV), and safety constraints, which make successful navigation highly dependent on selecting informative viewpoints. We propose a hierarchical navigation framework for quadrotor InstanceImageNav that separates high-level decision making from low-level motion execution. Instead of navigating directly to spatial locations, the system generates viewpoint-aware action nodes around frontier regions and potential target objects, enabling the robot to explore while maintaining informative viewpoints for detecting the target instance. A lightweight semantic memory maintains object-level and observation-level context, allowing semantic cues to propagate to candidate action nodes for decision making. A learning-based policy selects the most promising action node, and a trajectory planner generates dynamically feasible 3D flight paths for safe execution. Experiments in simulation demonstrate consistent improvements over strong baselines, and real-world quadrotor flights validate the practicality and robustness of the proposed framework.",
+      "authors": [
+        "Junjie Gao",
+        "Yuqi Chen",
+        "Yongzhou Pan",
+        "Yaosheng Deng",
+        "Jiaping Xiao",
+        "Mir Feroskhan"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-06-29T07:54:24+00:00",
+      "link": "https://arxiv.org/pdf/2606.29917v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "hierarchical 3D quadrotor navigation with viewpoint planning",
+      "llm_evidence_cn": "基于分层规划的3D四旋翼视点导航",
+      "llm_evidence": "基于分层规划的3D四旋翼视点导航",
+      "canonical_evidence": "基于分层规划的3D四旋翼视点导航",
+      "llm_tldr_en": "Proposes a hierarchical navigation framework for quadrotor instance-specific image-goal navigation, separating high-level decision making with viewpoint-aware action nodes and low-level motion execution, enabling effective exploration and target approach.",
+      "llm_tldr_cn": "针对四旋翼无人机按图像寻找特定物体实例的导航任务，提出分层框架。高层生成视点感知的行动节点以探索和定位目标，低层执行运动控制。该方法在3D连续控制、有限视场和安全约束下，通过选择信息量丰富的视点，提升了导航成功率。仿真表明其有效性，为无人机自主导航提供了新思路。",
+      "llm_tldr": "针对四旋翼无人机按图像寻找特定物体实例的导航任务，提出分层框架。高层生成视点感知的行动节点以探索和定位目标，低层执行运动控制。该方法在3D连续控制、有限视场和安全约束下，通过选择信息量丰富的视点，提升了导航成功率。仿真表明其有效性，为无人机自主导航提供了新思路。",
+      "llm_tags": [
+        "query:upa"
+      ],
+      "matched_query_tag": "query:upa",
+      "matched_query_text": "UAV trajectory planning",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2606.31487v1",
+      "source": "arxiv",
+      "title": "Energy-Optimal Spatial Iterative Learning within a Virtual Tube",
+      "abstract": "Due to the limited endurance of embedded energy sources such as lithium-polymer (LiPo) batteries, the flight duration and operational range of unmanned aerial vehicles (UAVs) are severely constrained. Although energy-efficient trajectory planning and control have been widely studied, most existing approaches rely on accurate system models and computationally expensive optimization procedures. This paper proposes a model-free online iterative learning (IL) framework to minimize energy consumption. Without requiring explicit models of UAV dynamics or energy consumption, the proposed method improves energy efficiency while maintaining a low computational cost. The per-iteration computational complexity is O(n), where n denotes the number of path points. In the tested cases, the proposed method is approximately 50--60 times faster than the model-based IPOPT benchmark. Simulation results and real-world flight experiments across multiple UAV platforms validate the effectiveness, computational efficiency, and practical applicability of the proposed approach.",
+      "authors": [
+        "Chen Min",
+        "Shuli Lv",
+        "Pengda Mao",
+        "Huixin Cao",
+        "Li Hong",
+        "Quan Quan"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-06-30T11:01:06+00:00",
+      "link": "https://arxiv.org/pdf/2606.31487v1",
+      "tags": [
+        "keyword:upa",
+        "query:upa"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "proposes model-free online iterative learning for energy-optimal UAV trajectory",
+      "llm_evidence_cn": "提出无模型在线迭代学习实现无人机节能轨迹",
+      "llm_evidence": "提出无模型在线迭代学习实现无人机节能轨迹",
+      "canonical_evidence": "提出无模型在线迭代学习实现无人机节能轨迹",
+      "llm_tldr_en": "Proposes a model-free online iterative learning framework to minimize UAV energy consumption in spatial trajectory tracking, achieving O(n) complexity per iteration.",
+      "llm_tldr_cn": "为解决无人机续航受限问题，提出无模型在线迭代学习框架，在虚拟管道内进行空间轨迹跟踪以最小化能耗，方法无需精确模型，每次迭代计算复杂度仅O(n)，在保持低计算成本的同时有效提升能效，延长操作范围。",
+      "llm_tldr": "为解决无人机续航受限问题，提出无模型在线迭代学习框架，在虚拟管道内进行空间轨迹跟踪以最小化能耗，方法无需精确模型，每次迭代计算复杂度仅O(n)，在保持低计算成本的同时有效提升能效，延长操作范围。",
       "llm_tags": [
         "query:upa"
       ],

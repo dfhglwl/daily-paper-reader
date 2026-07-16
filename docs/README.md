@@ -7,96 +7,93 @@
 
 ## 每次日报
 - 最新运行日期：2026-06-17 ~ 2026-07-16
-- 运行时间：2026-07-16 09:21:56 UTC
+- 运行时间：2026-07-16 10:05:56 UTC
 - 运行状态：成功
-- 本次总论文数：25
-- 精读区：14
+- 本次总论文数：24
+- 精读区：13
 - 速读区：11
 
 ### 今日简报（AI）
-从自主优化到集群学习，本期聚焦无人机轨迹规划的前沿突破，精读两篇满分论文领衔。  
-最值得关注的是资源配置重构方法在组合优化中的泛化能力，以及面向多旋翼动态车辆路径问题的实时求解框架。  
-建议读者优先从速读论文切入，理解扩散模型与量子启发方法如何提升复杂环境下的协同控制。
+无人机自主导航新突破：精读13篇文献，聚焦轻量安全强化学习与连续时间避障，其中端到端轻量安全RL实现满分评价。  
+最值得关注的两个方向：用轻量级安全强化学习实现无人机端到端导航，以及LNN-Fly在时序不匹配下的连续避障方案，均兼顾实时性与鲁棒性。  
+建议从这两项工作入手，探索如何将轻量模型与安全约束结合，应对真实场景中的时序干扰和持续服务需求。
 - 详情：[/20260617-20260716/README](/20260617-20260716/README)
 
 ### 精读区论文标签
-1. [RCOA Extension and Applications](/20260617-20260716/2607.02797v1-rcoa-extension-and-applications)  
+1. [Lightweight Safe Reinforcement Learning for End-to-End UAV Navigation](/20260617-20260716/2607.01794v1-lightweight-safe-reinforcement-learning-for-end-to-end-uav-navigation)  
    标签：评分：10.0/10、query:upa
-   evidence：凸障碍规避方法扩展到三维无人机导航，并考虑车辆几何
-2. [Dynamical Vehicle Orienteering Problem for Multi-Rotor Unmanned Aerial Vehicles](/20260617-20260716/2607.13789v1-dynamical-vehicle-orienteering-problem-for-multi-rotor-unmanned-aerial-vehicles)  
-   标签：评分：10.0/10、query:upa
-   evidence：带动力学与旅程预算的无人机飞行规划
-3. [LNN-Fly: Continuous-Time UAV Navigation for Robust Obstacle Avoidance under Timing Mismatch](/20260617-20260716/2606.28827v1-lnn-fly-continuous-time-uav-navigation-for-robust-obstacle-avoidance-under-timing-mismatch)  
+   evidence：轻量级安全强化学习用于端到端无人机导航，直接解决障碍物规避问题。
+2. [LNN-Fly: Continuous-Time UAV Navigation for Robust Obstacle Avoidance under Timing Mismatch](/20260617-20260716/2606.28827v1-lnn-fly-continuous-time-uav-navigation-for-robust-obstacle-avoidance-under-timing-mismatch)  
    标签：评分：9.0/10、query:upa
-   evidence：基于激光雷达的连续时间无人机避障导航策略
-4. [Multi-UAV Formation Cooperative Obstacle Avoidance and Adaptive Shape Deformation Control in Complex Environments Based on BI-APF-RRT and Affine Transformation](/20260617-20260716/2606.29755v1-multi-uav-formation-cooperative-obstacle-avoidance-and-adaptive-shape-deformation-control-in-complex-environments-based-on-bi-apf-rrt-and-affine-transformation)  
+   evidence：面向部署的连续时间无人机避障策略
+3. [Multi-UAV Formation Cooperative Obstacle Avoidance and Adaptive Shape Deformation Control in Complex Environments Based on BI-APF-RRT and Affine Transformation](/20260617-20260716/2606.29755v1-multi-uav-formation-cooperative-obstacle-avoidance-and-adaptive-shape-deformation-control-in-complex-environments-based-on-bi-apf-rrt-and-affine-transformation)  
    标签：评分：9.0/10、query:upa
-   evidence：多无人机编队协同避障算法
-5. [MOAR Planner: Multi-Objective and Adaptive Risk-Aware Path Planning for Infrastructure Inspection with a UAV](/20260617-20260716/2606.30575v1-moar-planner-multi-objective-and-adaptive-risk-aware-path-planning-for-infrastructure-inspection-with-a-uav)  
+   evidence：提出BI-APF-RRT多无人机编队协同避障算法
+4. [DynFly: Dynamic-Aware Continuous Trajectory Generation for UAV Vision-Language Navigation in Urban Environments](/20260617-20260716/2606.31654v1-dynfly-dynamic-aware-continuous-trajectory-generation-for-uav-vision-language-navigation-in-urban-environments)  
    标签：评分：9.0/10、query:upa
-   evidence：无人机路径规划器，实现近障碍物导航与自适应风险感知轨迹调整
-6. [Energy-Optimal Spatial Iterative Learning within a Virtual Tube](/20260617-20260716/2606.31487v1-energy-optimal-spatial-iterative-learning-within-a-virtual-tube)  
+   evidence：面向UAV导航的动态感知连续轨迹生成
+5. [RCOA Extension and Applications](/20260617-20260716/2607.02797v1-rcoa-extension-and-applications)  
    标签：评分：9.0/10、query:upa
-   evidence：基于无模型迭代学习的无人机能量最优轨迹规划
-7. [DynFly: Dynamic-Aware Continuous Trajectory Generation for UAV Vision-Language Navigation in Urban Environments](/20260617-20260716/2606.31654v1-dynfly-dynamic-aware-continuous-trajectory-generation-for-uav-vision-language-navigation-in-urban-environments)  
+   evidence：将凸避障扩展到三维无人机导航
+6. [Last-Meter Precision Navigation for UAVs: A Diffusion-Refined Aerial Visual Servoing Approach](/20260617-20260716/2607.04352v1-last-meter-precision-navigation-for-uavs-a-diffusion-refined-aerial-visual-servoing-approach)  
    标签：评分：9.0/10、query:upa
-   evidence：面向无人机视觉语言导航的动态感知连续轨迹生成
-8. [WaveLander: A Generalizable Hierarchical Control Framework for UAV Landing on Wave-Disturbed Platforms via Reinforcement Learning](/20260617-20260716/2607.01281v1-wavelander-a-generalizable-hierarchical-control-framework-for-uav-landing-on-wave-disturbed-platforms-via-reinforcement-learning)  
+   evidence：扩散优化的空中视觉伺服实现无人机终端精度导航
+7. [Dynamic Airspace Management for UAVs in Evolving Urban Environments: Collaborative Coordination and Human Safety](/20260617-20260716/2607.04825v1-dynamic-airspace-management-for-uavs-in-evolving-urban-environments-collaborative-coordination-and-human-safety)  
    标签：评分：9.0/10、query:upa
-   evidence：利用强化学习在动态平台上进行无人机着陆决策
-9. [Mean Field Reinforcement Learning](/20260617-20260716/2607.01525v1-mean-field-reinforcement-learning)  
+   evidence：基于MAPPO的协同多无人机空域管理与避碰
+8. [Intercepting an Agile Target with Net-Carrying Drones using Competitive Multi-Agent Reinforcement Learning](/20260617-20260716/2607.05939v1-intercepting-an-agile-target-with-net-carrying-drones-using-competitive-multi-agent-reinforcement-learning)  
    标签：评分：9.0/10、query:upa
-   evidence：平均场强化学习专著
-10. [Lightweight Safe Reinforcement Learning for End-to-End UAV Navigation](/20260617-20260716/2607.01794v1-lightweight-safe-reinforcement-learning-for-end-to-end-uav-navigation)  
+   evidence：竞争性多智能体强化学习用于敏捷无人机拦截
+9. [Delay-Aware Active Triangulation with Uncertainty-Driven Multi-Agent Reinforcement Learning for Counter-UAS](/20260617-20260716/2607.05957v1-delay-aware-active-triangulation-with-uncertainty-driven-multi-agent-reinforcement-learning-for-counter-uas)  
    标签：评分：9.0/10、query:upa
-   evidence：面向无人机端到端导航的轻量级安全强化学习
-11. [Intercepting an Agile Target with Net-Carrying Drones using Competitive Multi-Agent Reinforcement Learning](/20260617-20260716/2607.05939v1-intercepting-an-agile-target-with-net-carrying-drones-using-competitive-multi-agent-reinforcement-learning)  
+   evidence：延迟感知多智能体强化学习用于反无人机系统中的自适应路径规划
+10. [Towards Reliable Aerial Ground Vehicle Collaboration: An Integrated Planning and Autonomy Framework for Field Deployment](/20260617-20260716/2607.07350v1-towards-reliable-aerial-ground-vehicle-collaboration-an-integrated-planning-and-autonomy-framework-for-field-deployment)  
    标签：评分：9.0/10、query:upa
-   evidence：使用竞争多智能体强化学习进行敏捷无人机拦截，类似于近距空战机动决策
-12. [Environment Parameter Gradient Theorem for Policy-Environment Co-Design in Reinforcement Learning](/20260617-20260716/2607.12590v1-environment-parameter-gradient-theorem-for-policy-environment-co-design-in-reinforcement-learning)  
+   evidence：面向空地协作的集成规划框架进行路径规划与能量管理
+11. [High-Precision Hybrid FA-PSO Based Inversion of Building Material Parameters for Fundamental Wireless Performance Evaluation](/20260617-20260716/2607.12721v1-high-precision-hybrid-fa-pso-based-inversion-of-building-material-parameters-for-fundamental-wireless-performance-evaluation)  
    标签：评分：9.0/10、query:upa
-   evidence：证明了强化学习中联合优化策略和环境参数的梯度定理
-13. [Autonomous Tracking and Terminal Guidance of Moving Targets for Fixed-Wing UAVs](/20260617-20260716/2607.12801v1-autonomous-tracking-and-terminal-guidance-of-moving-targets-for-fixed-wing-uavs)  
-   标签：评分：9.0/10、query:uac
-   evidence：通过UKF进行目标轨迹预测和基于NMPC的交战制导
-14. [Interpreting Rewards from Inverse Reinforcement Learning](/20260617-20260716/biorxiv-10-64898-2026-07-08-736783-v1-interpreting-rewards-from-inverse-reinforcement-learning)  
+   evidence：混合萤火虫粒子群优化算法(FA-PSO)
+12. [Autonomous Tracking and Terminal Guidance of Moving Targets for Fixed-Wing UAVs](/20260617-20260716/2607.12801v1-autonomous-tracking-and-terminal-guidance-of-moving-targets-for-fixed-wing-uavs)  
    标签：评分：9.0/10、query:upa
-   evidence：逆向强化学习从观测行为中解释奖励函数
+   evidence：统一控制框架，采用NMPC进行移动目标跟踪和末端交战，直接适用于近距空战。
+13. [Dynamical Vehicle Orienteering Problem for Multi-Rotor Unmanned Aerial Vehicles](/20260617-20260716/2607.13789v1-dynamical-vehicle-orienteering-problem-for-multi-rotor-unmanned-aerial-vehicles)  
+   标签：评分：9.0/10、query:upa
+   evidence：考虑动力学的UAV飞行规划动态定向问题
 
 ### 速读区论文标签
-1. [Rate-Aware Quantum-Inspired Trajectory Learning for Interference-Limited Multi-UAV Networks](/20260617-20260716/2606.25480v1-rate-aware-quantum-inspired-trajectory-learning-for-interference-limited-multi-uav-networks)  
+1. [Wind-Resilient Trajectory Optimization for UAV-BS Networks: TD3 for Continuous Service Availability](/20260617-20260716/2606.18556v2-wind-resilient-trajectory-optimization-for-uav-bs-networks-td3-for-continuous-service-availability)  
    标签：评分：8.0/10、query:upa
-   evidence：通过去中心化强化学习在干扰受限网络中优化无人机轨迹
-2. [Diffusion-based 4D Trajectory Prediction and Distributed Control for UAV Swarms](/20260617-20260716/2606.31197v1-diffusion-based-4d-trajectory-prediction-and-distributed-control-for-uav-swarms)  
+   evidence：基于TD3深度强化学习的抗风无人机轨迹调整
+2. [Scalable Online Flight Trajectory Optimization via Sequential Quadratic Programming for Urban Air Mobility in Ultra Low-Altitude Airspace](/20260617-20260716/2606.23008v1-scalable-online-flight-trajectory-optimization-via-sequential-quadratic-programming-for-urban-air-mobility-in-ultra-low-altitude-airspace)  
    标签：评分：8.0/10、query:upa
-   evidence：面向无人机集群的扩散模型4D轨迹预测与分布式控制
-3. [Communication-Aware and Safety-Aware UAV Control via Predictive Latent Models](/20260617-20260716/2607.00288v1-communication-aware-and-safety-aware-uav-control-via-predictive-latent-models)  
+   evidence：在线SQP轨迹优化与实时避障约束用于城市空中机动
+3. [CKM-Driven Communication-Aware UAV Intelligent Trajectory Optimization for Urban Inspection](/20260617-20260716/2606.24979v1-ckm-driven-communication-aware-uav-intelligent-trajectory-optimization-for-urban-inspection)  
    标签：评分：8.0/10、query:upa
-   evidence：利用预测潜在模型进行无人机控制，实现碰撞风险规避和通信适应
-4. [Dynamic Airspace Management for UAVs in Evolving Urban Environments: Collaborative Coordination and Human Safety](/20260617-20260716/2607.04825v1-dynamic-airspace-management-for-uavs-in-evolving-urban-environments-collaborative-coordination-and-human-safety)  
+   evidence：提出CKM驱动的无人机轨迹规划框架
+4. [Flying to Image-Specified Objects: 3D Quadrotor Navigation via Cross-Graph Memory and Viewpoint Planning](/20260617-20260716/2606.29917v1-flying-to-image-specified-objects-3d-quadrotor-navigation-via-cross-graph-memory-and-viewpoint-planning)  
    标签：评分：8.0/10、query:upa
-   evidence：采用MAPPO算法进行多无人机碰撞避免
-5. [Wind-Resilient Trajectory Optimization for UAV-BS Networks: TD3 for Continuous Service Availability](/20260617-20260716/2606.18556v2-wind-resilient-trajectory-optimization-for-uav-bs-networks-td3-for-continuous-service-availability)  
+   evidence：基于分层规划的3D四旋翼视点导航
+5. [Adaptive Machine Learning Framework for UAV Trajectory Optimization in O-RAN](/20260617-20260716/2606.24483v1-adaptive-machine-learning-framework-for-uav-trajectory-optimization-in-o-ran)  
    标签：评分：7.0/10、query:upa
-   evidence：基于TD3深度强化学习的抗风无人机轨迹优化
-6. [Semantic-Aware Autonomous Exploration for UAVs in Unknown Indoor Environments](/20260617-20260716/2606.22670v1-semantic-aware-autonomous-exploration-for-uavs-in-unknown-indoor-environments)  
+   evidence：使用持续迁移学习进行动态环境下的无人机轨迹优化
+6. [MOAR Planner: Multi-Objective and Adaptive Risk-Aware Path Planning for Infrastructure Inspection with a UAV](/20260617-20260716/2606.30575v1-moar-planner-multi-objective-and-adaptive-risk-aware-path-planning-for-infrastructure-inspection-with-a-uav)  
    标签：评分：7.0/10、query:upa
-   evidence：面向未知室内环境的无人机语义感知自主探索轨迹规划
-7. [Scalable Online Flight Trajectory Optimization via Sequential Quadratic Programming for Urban Air Mobility in Ultra Low-Altitude Airspace](/20260617-20260716/2606.23008v1-scalable-online-flight-trajectory-optimization-via-sequential-quadratic-programming-for-urban-air-mobility-in-ultra-low-altitude-airspace)  
+   evidence：动态风险因素下无人机巡检的实时轨迹自适应
+7. [Diffusion-based 4D Trajectory Prediction and Distributed Control for UAV Swarms](/20260617-20260716/2606.31197v1-diffusion-based-4d-trajectory-prediction-and-distributed-control-for-uav-swarms)  
    标签：评分：7.0/10、query:upa
-   evidence：在线SQP轨迹优化方法，包含避障，用于空中飞行器
-8. [MultiUAV-Plat: An LLM-Oriented Platform, Benchmark and Framework for Multi-UAV Collaborative Task Planning](/20260617-20260716/2606.31073v1-multiuav-plat-an-llm-oriented-platform-benchmark-and-framework-for-multi-uav-collaborative-task-planning)  
+   evidence：无人机群四维轨迹预测与控制
+8. [Energy-Optimal Spatial Iterative Learning within a Virtual Tube](/20260617-20260716/2606.31487v1-energy-optimal-spatial-iterative-learning-within-a-virtual-tube)  
    标签：评分：7.0/10、query:upa
-   evidence：面向LLM智能体的多无人机协同任务规划仿真平台与基准
-9. [See-and-Reach: Precise Vision-Language Navigation for UAVs within the Field of View](/20260617-20260716/2606.20045v1-see-and-reach-precise-vision-language-navigation-for-uavs-within-the-field-of-view)  
+   evidence：提出无模型在线迭代学习实现无人机节能轨迹
+9. [Semantic-Aware Autonomous Exploration for UAVs in Unknown Indoor Environments](/20260617-20260716/2606.22670v1-semantic-aware-autonomous-exploration-for-uavs-in-unknown-indoor-environments)  
    标签：评分：6.0/10、query:upa
-   evidence：视场范围内精确无人机视觉语言导航的航点预测
-10. [CKM-Driven Communication-Aware UAV Intelligent Trajectory Optimization for Urban Inspection](/20260617-20260716/2606.24979v1-ckm-driven-communication-aware-uav-intelligent-trajectory-optimization-for-urban-inspection)  
+   evidence：提出用于生成信息丰富无人机轨迹的语义感知探索框架。
+10. [Communication-Aware and Safety-Aware UAV Control via Predictive Latent Models](/20260617-20260716/2607.00288v1-communication-aware-and-safety-aware-uav-control-via-predictive-latent-models)  
    标签：评分：6.0/10、query:upa
-   evidence：多无人机通信感知路径规划与轨迹优化
-11. [Handover-Aware Trajectory Planning for Cellular-Connected UAVs under STL Specifications and URLLC Constraints](/20260617-20260716/2607.03781v1-handover-aware-trajectory-planning-for-cellular-connected-uavs-under-stl-specifications-and-urllc-constraints)  
+   evidence：基于预测潜模型的无人机轨迹自适应控制
+11. [Queue-Aware Graph Reinforcement Learning for UAV-ISAC-Assisted Maritime Data Collection](/20260617-20260716/2607.00324v1-queue-aware-graph-reinforcement-learning-for-uav-isac-assisted-maritime-data-collection)  
    标签：评分：6.0/10、query:upa
-   evidence：考虑切换感知和STL任务规范的蜂窝连接无人机轨迹规划
+   evidence：基于队列感知图强化学习的无人机ISAC轨迹规划
 
 
 <div class="dpr-home-promo-card">
