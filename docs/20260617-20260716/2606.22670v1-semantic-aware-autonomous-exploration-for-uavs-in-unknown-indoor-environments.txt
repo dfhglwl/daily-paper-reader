@@ -1,0 +1,319 @@
+Title: Semantic-Aware Autonomous Exploration for UAVs in Unknown Indoor Environments
+
+URL Source: https://arxiv.org/pdf/2606.22670v1
+
+Published Time: Tue, 23 Jun 2026 02:55:28 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# Semantic-Aware Autonomous Exploration for UAVs in Unknown Indoor Environments 
+
+Duc-Thien Nguyen 1, Ngoc Minh Do 1, ∗Xiem HoangVan 1 , Thanh Nguyen Canh 1, 2 ,
+
+> 1
+
+University of Engineering and Technology, Vietnam National University, 10000, Hanoi, Vietnam. 
+
+> 2
+
+School of Information Science, Japan Advanced Institute of Science and Technology, Nomi, 923-1211, Ishikawa, Japan. *Corresponding author: xiemhoang@vnu.edu.vn 
+
+Abstract —Autonomous exploration in unknown environments requires unmanned aerial vehicles (UAVs) to efficiently generate informative trajectories while simultaneously constructing accu-rate maps. Although many existing exploration methods rely on geometric information, they often lack semantic awareness, resulting in suboptimal exploration efficiency and limited envi-ronmental understanding. To address this limitation, this paper proposes a semantic-aware exploration framework that adds semantic information to a roadmap-based exploration strategy. The proposed method builds on the Dynamic Exploration Planner (DEP), which incrementally constructs a Probabilistic Roadmap (PRM), and augments this roadmap with a semantic layer. A semantic reward function is introduced to prioritize regions containing meaningful objects and structures, enabling the UAV to focus on areas with higher information value. Furthermore, the roadmap is continuously updated to support efficient frontier selection and path planning during exploration. The proposed framework is implemented in ROS Noetic and Gazebo using an RGB-D sensor for simultaneous acquisition of geometric and semantic information. Experimental results in multiple simulated environments demonstrate that the proposed approach achieves exploration coverage rates between 90% and 94% while reducing exploration time and travel distance compared with conventional geometry-based exploration methods. 
+
+Index Terms —UAV, autonomous exploration, semantic explo-ration, 3D mapping, probabilistic roadmap 
+
+I. I NTRODUCTION 
+
+Autonomous exploration is a core capability for unmanned aerial vehicles (UAVs) operating in unknown environments, with applications in search and rescue, infrastructure in-spection, environmental monitoring, and warehouse manage-ment [1]. Efficient exploration requires the UAV to select informative viewpoints and generate safe trajectories that max-imize map coverage while minimizing exploration cost [2]. Early methods select the boundaries between known and unknown space as exploration targets [3], [4]. Such frontier-based approaches are computationally efficient but degrade in large and complex three-dimensional environments. Sampling-based planners [5]–[11] instead evaluate candidate viewpoints by information gain. These planners generally provide better scalability and exploration performance in three-dimensional environments. However, most of these methods rely solely on geometric information from occupancy or voxel maps [12], so every unexplored region is treated as equally important regardless of its relevance to the task. In practice, regions such as door-ways, corridors, and object-rich areas often carry more useful information than ordinary free space, and ignoring this leads to redundant motion and inefficient exploration. Recent advances [13]–[16] in semantic perception allow robots to extract such high-level context, and semantic-guided exploration has been shown to improve efficiency by directing the UAV toward semantically informative regions. Motivated by these observations, this paper proposes a semantic-aware exploration framework for UAVs operating in unknown indoor environments. The proposed method extends the DEP by integrating semantic rewards into the viewpoint evaluation process. A voxel-based semantic map is constructed to represent both geometric and semantic information, while a PRM-based planner generates efficient trajectories between candidate viewpoints. By jointly considering geometric infor-mation gain and semantic importance, the proposed framework enables the UAV to explore unknown environments more ef-fectively. The main contributions of this work are summarized as follows:  
+
+> •
+
+A semantic-aware exploration framework that integrates semantic information into a DEP-based exploration ar-chitecture.  
+
+> •
+
+A semantic reward mechanism that prioritizes exploration targets according to their contextual significance.  
+
+> •
+
+Evaluation in multiple indoor environments demonstrat-ing improved exploration efficiency. The remainder of this paper is organized as follows: Sec II presents the related works, while Sec III describes the proposed system for semantic-aware autonomous exploration. The experiments conducted and results analysis are presented in Sec IV. Finally, Sec V draws a conclusion with future work. II. R ELATED WORK 
+
+A. Autonomous Exploration 
+
+Autonomous exploration is broadly divided into frontier-based and sampling-based approaches. Frontier-based methods select the boundaries between known and unknown space as exploration targets [17]. They are efficient in two-dimensional settings but scale poorly to large three-dimensional environ-ments. Sampling-based planners instead generate candidate viewpoints and rank them by expected information gain, which gives better flexibility and scalability in 3D. Representative approaches include the PRM [9], Rapidly-exploring Random Tree [18], Next-Best View (NBV) [7], DEP [19], and Au-tonomous Exploration Planner (AEP) [5]. Later work adds 
+
+> arXiv:2606.22670v1 [cs.RO] 21 Jun 2026
+
+historical reuse, trajectory optimization, and uncertainty-aware planning [20], and recent UAV planners [6], [8], [10], [11], [21] improve speed and scalability through hierarchical and dual-stage planning, mixed frontier-sampling strategies, and learning-based viewpoint selection. However, these frame-works rely mainly on geometric information and treat all unexplored regions as equally important. 
+
+B. Semantic-Aware Exploration 
+
+Semantic perception lets robots reason about an environ-ment beyond its geometry, and semantic mapping enriches occupancy maps with object labels and scene context [22]. Building on this, semantic-aware exploration prioritizes re-gions that contain task-relevant objects or landmarks [14], [15], and recent object-centric and information-theoretic for-mulations search for objects of interest more efficiently [13], [16]. Most of these studies target ground robots or rely on computationally expensive perception [22], and the use of semantic rewards within sampling-based UAV exploration remains limited [23]. Motivated by this gap, we integrate semantic rewards into a DEP-based architecture that combines semantic information with voxel-based mapping and PRM-based planning to improve exploration efficiency in unknown indoor environments [9], [12]. III. P ROPOSED METHOD 
+
+The proposed framework integrates semantic information into a roadmap-based exploration strategy to improve ex-ploration efficiency in unknown environments. As illustrated in Fig. 1, the system consists of three main modules: the Map Module, Semantic Module, and Roadmap Management Module. These modules operate in a closed-loop manner and continuously exchange information during exploration. 
+
+A. Problem Formulation 
+
+Consider an unknown indoor environment Vb ⊂ R3, where a UAV equipped with an RGB-D sensor is deployed for au-tonomous exploration. The environment representation follows standard volumetric mapping approaches [12]. The environ-ment consists of free space Vf ree , occupied space Vocc , and unexplored space Vun with Vb = Vf ree ∪ Vocc ∪ Vun . Initially, only a local region around the UAV, denoted by Vinit , is known, while the remaining environment remains unexplored. The objective of autonomous exploration is to maximize en-vironment coverage while minimizing exploration cost. Given the current occupancy map M , the UAV incrementally samples candidate viewpoints and constructs a PRM for navigation. Following the DEP [7], the information gain associated with a candidate viewpoint n is computed as in: 
+
+G(n) = wnUn + wf Uf + wsUs, (1) where Un, Uf , and Us denote the numbers of normal voxels, frontier voxels, and surface voxels observable from viewpoint 
+
+n, respectively, and wn, wf , and ws are their corresponding weighting factors. At each exploration iteration, the UAV selects the viewpoint with the highest utility and generates a collision-free trajectory through the roadmap. The exploration process is considered complete when all reachable regions have been mapped: 
+
+Vmapped = ( Vf ree ∪ Vocc ) \ Vunreachable . (2) 
+
+B. Map Module 
+
+The Map Module is responsible for constructing and main-taining a three-dimensional occupancy representation of the environment from incoming point cloud measurements. In-spired by [16], [19], the occupancy state of each voxel is represented using the log-odds formulation: 
+
+ℓ(vi) = log p(vi)1 − p(vi) , (3) As new point cloud data arrive, ray-casting is performed to update free and occupied voxels within the volumetric map representation, as commonly adopted in octree-based mapping frameworks [12]. Simultaneously, an Euclidean Signed Dis-tance Field is generated from the occupancy map to provide obstacle distance information for safe trajectory generation. 
+
+C. Semantic Module 
+
+Conventional exploration methods evaluate candidate view-points solely according to geometric information gain. How-ever, not all unexplored regions contribute equally to the exploration objective. Regions containing entrances, corridors, intersections, or task-relevant objects often provide higher con-textual value than ordinary free space. The Semantic Module introduces task-oriented exploration by assigning importance to specific regions of interest, extending semantic-aware explo-ration strategies proposed in [24]. For each detected semantic object, the system generates a semantic region: 
+
+Si = ( pi, l i, w i, r i), (4) where pi denotes the centroid position, li is the semantic label, 
+
+wi is the semantic importance weight, and ri is the influence radius. Given a roadmap node n located at position pn, the distance to semantic region Si is di = ∥pn −pi∥. The semantic reward contributed by region Si is defined as 
+
+Ri(n) = 
+
+
+
+wi
+
+
+
+1 − di
+
+ri
+
+
+
+, di ≤ ri,
+
+0, di > r i.
+
+(5) The total semantic reward of node n is then computed as 
+
+Rsem (n) = X
+
+> i∈S
+
+Ri(n), (6) where S is the set of semantic regions. The reward decreases linearly with distance and vanishes outside the influence radius, so the UAV is encouraged to prioritize semantic targets while maintaining exploration efficiency, following information-driven exploration methods [5]. The overall utility combines the geometric information gain and the semantic reward: Odometry / Pose 
+
+> Point Cloud
+
+Map Module 
+
+> 3D occupancy (log-odds) ESDF
+
+Semantic Module 
+
+> detect & filter create regions
+
+Roadmap Mgmt. 
+
+> sample & connect score & update
+
+Main Loop 
+
+> check goal / safety trigger replanning
+> Exploration Planner
+
+Trajectory  
+
+> generate path ESDF optimization
+> Control Signal
+> pose
+> 3D map
+> semantic regions
+> reference path
+> ESDF
+> control
+> Fig. 1. Overview of the proposed semantic-aware exploration framework. Sensor inputs build the 3D map, which feeds the exploration planner.
+
+U (p) = G(p) + Rsem (p). (7) The exploration problem is therefore formulated as: 
+
+p∗ = arg max  
+
+> p∈P
+
+U (p), (8) where P denotes the set of candidate viewpoints. In prac-tice, this utility is divided by the estimated travel cost during viewpoint selection, so that nearby high-value viewpoints are preferred. By jointly considering geometric information gain and semantic importance, the proposed framework enables the UAV to prioritize informative and semantically meaningful regions during exploration. 
+
+D. Roadmap Management Module 
+
+The roadmap management module is responsible for in-crementally constructing and maintaining a navigation graph that guides the UAV toward informative exploration targets. Inspired by incremental sampling-based exploration strategies [19], [23] and classical roadmap construction methods [20], the roadmap is continuously updated as new observations become available. At each planning cycle, the current UAV position is inserted into the existing roadmap and serves as the root node for subsequent graph expansion. A set of candidate nodes is then sampled within the unexplored and traversable space, following frontier-based exploration principles. To guarantee flight safety, each sampled node must satisfy collision-free constraints and lie inside the sensor-observable region, which is typically derived from volumetric mapping frameworks. These nodes are subsequently connected to nearby roadmap vertices if the connecting edge is free of obstacles. Figure 2 illustrates the incremental roadmap update process. Figure 2(a) shows the roadmap after completing the previous trajectory. Figure 2(b) presents newly sampled nodes generated in the unexplored region. Finally, Figure 2(c) depicts the insertion of valid nodes and the creation of new collision-free edges, resulting in an updated roadmap for future planning. After the roadmap has been updated, each candidate node is evaluated according to its expected exploration utility. The geometric information gain G(ni) of node ni is computed from the numbers of observable normal, frontier, and surface voxels, as defined in Eq. (1). The semantic reward Rsem (ni) of the same node is obtained from Eq. (6), which sums the contributions of all semantic regions whose influence radius covers the node. The travel cost associated with reaching node ni is estimated as 
+
+Tpath = di
+
+v + wψ
+
+∆ψi
+
+ω , (9) where di is the path length, v is the UAV translational velocity, 
+
+∆ψi is the required yaw rotation, ω is the angular velocity, and 
+
+wψ is a weighting coefficient. The final utility score of node 
+
+ni is the per-node form of the utility U in Eq. (7), normalized by the travel cost: 
+
+Score i = G(ni) + Rsem (ni)
+
+Tpath 
+
+. (10) Nodes with higher exploration gain, stronger semantic rel-evance, and lower traversal cost obtain larger scores and are therefore preferred as exploration targets. The node evaluation procedure is summarized in Algorithm 1. IV. E XPERIMENTAL SETUP 
+
+A. Simulation Environments 
+
+To evaluate the performance of the proposed method under different levels of environmental complexity, three indoor environments were constructed in Gazebo with ROS Noetic. The environments differ in size, room layout, obstacle density, and visibility constraints, as shown in Fig. 3. Environment 1 represents a small single-room apartment with a size of 50m 2,Environment 2 contains two interconnected rooms separated by a narrow passage with a size of 100m 2, and Environment 3 represents a large apartment with multiple connected rooms and corridors with a size of 200m 2. A quadrotor UAV was employed in all experiments. The UAV was equipped with an RGB-D camera and an IMU sensor for perception and state estimation. The sensor specifications used throughout the experiments are listed in Table I. unknown 
+
+> start
+
+(a) 
+
+> new samples
+
+(b) 
+
+> new edges
+
+(c) 
+
+> semantic reward
+
+(d)      
+
+> semantic node Siinfluence radius risemantically rewarded node guided exploration
+
+Fig. 2. Incremental roadmap update process. Green nodes and edges form the current roadmap, the thick red path is the previously executed trajectory, the magenta marker is the current UAV pose, and the gray region is unexplored. (a) The roadmap after the previous trajectory is completed. (b) New candidate nodes (orange) are sampled in the unexplored, traversable space. (c) Valid candidates (cyan) are connected to the roadmap by new collision-free edges (blue), giving the updated graph for the next planning cycle. (d) The semantic layer is then applied to the updated roadmap. Each detected object defines a semantic node Si (purple star) with an influence radius ri (dashed circle). Roadmap nodes inside this radius receive a semantic reward (purple ring), which biases viewpoint selection toward semantically relevant regions (arrow). The UAV is therefore guided toward objects of interest in addition to geometric frontiers. 
+
+Algorithm 1: Semantic Node Evaluation 
+
+Input: Roadmap R, semantic regions {Sk}
+
+Output: Node scores {Score i} 
+
+> 1
+
+for node ni ∈ R do  
+
+> 2
+
+G(ni) ← wnUn + wf Uf + wsUs; 
+
+> 3
+
+Rsem (ni) ← 0; 
+
+> 4
+
+for semantic region Sk do  
+
+> 5
+
+dk ← ∥ pi − pk∥; 
+
+> 6
+
+if dk ≤ rk then  
+
+> 7
+
+Rsem (ni) ← Rsem (ni) + wk
+
+
+
+1 − dk
+
+> rk
+
+
+
+; 
+
+> 8
+
+Tpath ← di
+
+v + wψ
+
+∆ψi
+
+ω ; 
+
+> 9
+
+Score i ← G(ni) + Rsem (ni)
+
+Tpath 
+
+; 
+
+> 10
+
+return {Score i}
+
+B. Sampling Density Analysis 
+
+The performance was assessed using four metrics: total flight time (Time f, ↓), traveled distance (Distance, ↓), map coverage (Coverage, ↑), and the time required to reach 85% 
+
+coverage (Time r, ↓). Table II presents the influence of sam-pling density on exploration performance. In Environment 1, the roadmap with 30 sampled nodes achieved the best trade-off between exploration efficiency and map coverage, completing exploration in 81.22 s over a path of 20.81 m while covering 91.23% of the environment. Although the 25-node configu-ration reached a slightly higher final coverage of 91.89%, it required a substantially longer exploration time of 130.41 s and a longer travel distance of 30.83 m. Increasing the number of samples beyond 35 nodes did not improve coverage and instead introduced additional computational overhead. A similar tendency can be observed in Environment 2, where the 35-node configuration reached the 85% coverage threshold in the shortest time of 95.03 s while maintaining a 
+
+Fig. 3. The three simulated indoor environments used for evaluation, ordered from left to right by increasing size and complexity. TABLE I UAV AND SENSOR PARAMETERS USED IN SIMULATION .
+
+Parameter Value 
+
+UAV size 0.5 × 0.5 × 0.3 mCamera type RGB-D camera Image resolution 640 × 480 pixels Frame rate 30 FPS Horizontal FOV 90 ◦
+
+Vertical FOV 90 ◦
+
+Depth range 0.5 − 5.0 mFocal length fx = fy = 554 .25 
+
+IMU noise density 1.7 × 10 −2 m/s2/√Hz 
+
+Gyroscope noise density 1.7 × 10 −2 rad /s/√Hz 
+
+high final coverage of 93.78% and the shortest travel distance of 35.25 m. For Environment 3, which contains more complex spatial structures, a denser roadmap was required. The 45-node configuration achieved the highest overall exploration efficiency, reaching the threshold in 176.42 s and attaining the highest coverage of 90.42% among all settings, and was therefore selected for the subsequent comparison experiments. AEP [5] NBV [7] DEP [19] Our Proposed 
+
+Fig. 4. Qualitative results comparison in Environment 3. TABLE II EVALUATION OF RANDOM SAMPLING DENSITY IN THREE EXPERIMENTAL ENVIRONMENTS . “N/A” INDICATES THAT THE 85% COVERAGE THRESHOLD WAS NOT REACHED . T HE BEST AND SECOND -BEST VALUES OF EACH METRIC AMONG THE SETTINGS .                                                                 
+
+> Env. no. S. Time f (s) Distance (m) Coverage (%) Time r (s)
+> 125 130.41 30.83 91.89 102.09 30 81.22 20.81 91.23 79.01 35 89.12 21.43 90.78 72.01
+> 40 107.99 24.53 90.94 93.94 45 62.18 8.09 72.36 N/A 225 225.24 57.08 95.75 146.01 30 128.72 36.56 92.76 107.02 35 129.04 35.25 93.78 95.03
+> 40 225.78 47.19 96.01 148.01 45 228.03 48.55 93.86 153.04 330 262.11 70.01 79.89 N/A 35 329.52 77.63 87.66 217.27 40 310.04 78.04 89.06 190.34 45 293.12 79.93 90.42 176.42
+> 50 351.69 83.93 89.85 224.03
+
+These results indicate that an appropriate sampling density is essential for maintaining roadmap connectivity while avoid-ing redundant computations. Excessive sampling increases planning complexity, whereas insufficient sampling degrades exploration performance. 
+
+C. Quantitative and Qualitative Results 
+
+The quantitative comparison is summarized in Table III. In Environment 1, the proposed framework achieved the shortest exploration duration of 81.22 s while obtaining the highest map coverage of 91.23%. Compared with DEP, NBV, and AEP, the exploration time was reduced by approximately 11.3%, 29.8%, and 39.7%, respectively. In Environment 2, the proposed method maintained a comparable coverage level of 94.18% while significantly reducing the exploration duration to 129.04 s. Compared with DEP and AEP, the exploration time was reduced by 29.4% and 33.7%, respectively. Although NBV generated shorter paths, its coverage was considerably lower (81.06% against 94.18%), indicating inefficient explo-ration behavior. The largest improvement was observed in 
+
+TABLE III EXPLORATION PERFORMANCE ACROSS DIFFERENT ENVIRONMENTS . F OR EACH ENVIRONMENT , BEST AND SECOND -BEST VALUES ARE HIGHLIGHTED AMONG THE METHODS THAT COMPLETE EXPLORATION 
+
+(DEP, AEP, AND THE PROPOSED METHOD ). NBV IS REPORTED FOR REFERENCE BUT NOT RANKED , SINCE IT ATTAINS THE LOWEST COVERAGE IN EVERY ENVIRONMENT AND ITS SHORTER TIME AND DISTANCE RESULT FROM INCOMPLETE EXPLORATION .                                        
+
+> Env. Algorithm Time f (s) Distance (m) Coverage (%)
+> 1NBV [7] 115.69 11.84 82.70 AEP [5] 134.71 24.69 83.10 DEP [19] 91.53 21.47 83.53
+> Our Proposed 81.22 20.81 91.23
+> 2NBV [7] 150.71 15.56 81.06 AEP [5] 194.68 45.72 92.04 DEP [19] 182.72 51.99 94.03
+> Our Proposed 129.04 35.25 94.18
+> 3NBV [7] 209.35 20.96 51.11 AEP [5] 443.23 123.46 79.75 DEP [19] 351.69 95.37 83.27
+> Our Proposed 293.12 79.93 90.42
+
+Environment 3. The proposed framework achieved a coverage of 90.42%, outperforming DEP, NBV, and AEP by 7.15, 39.31, and 10.67 percentage points, respectively. Furthermore, the exploration duration was reduced by 16.7% compared with DEP and by 33.9% compared with AEP. Figure 4 shows the qualitative comparison in this environment, where the proposed method explores the connected rooms and corridors more completely than the baselines. The superior performance of the proposed framework can be attributed to the integration of semantic information into the viewpoint evaluation process. By assigning higher priorities to semantically meaningful regions, the planner is able to discover informative areas earlier and reduce unnecessary exploration. In addition, the incremental roadmap management strategy preserves previously generated roadmap structures, re-ducing redundant sampling and improving planning efficiency. Overall, the experimental results, together with the qualitative exploration maps in Fig. 5, demonstrate that the proposed method consistently achieves higher map coverage and shorter Fig. 5. Qualitative results of the proposed method in the three environments. 
+
+exploration times than existing exploration approaches across different environments. V. C ONCLUSION 
+
+This paper presented a semantic-aware autonomous explo-ration framework for UAVs operating in unknown indoor environments. The proposed approach integrates semantic information into the viewpoint evaluation process, enabling the UAV to prioritize exploration targets that are not only geometrically informative but also semantically meaningful. In addition, an incremental roadmap management strategy was employed to maintain roadmap connectivity and improve planning efficiency throughout the exploration process. Exper-imental results demonstrated that the integration of semantic rewards significantly improved exploration performance com-pared with existing exploration methods. Future work will focus on integrating real-time semantic perception using deep learning models and validating the proposed framework on real UAV platforms. Furthermore, adaptive semantic weight-ing strategies and multi-UAV cooperative exploration will be investigated to further improve exploration efficiency in large-scale and dynamic environments. REFERENCES [1] A. A. Kareem, A. J. Abid, D. A. Hammood, A. Al-Naji, and J. Chahl, “Safe search and rescue operations based on autonomous robots: A systematic review of the general system architecture,” IEEE Access ,2026. [2] M. Collignon, A. Perrusqu´ ıa, A. Tsourdos, and W. Guo, “Search and rescue operations in wildfires using unmanned aerial vehicles: A multi-agent deep reinforcement learning approach,” Neurocomputing , p. 131211, 2025. [3] D. Shim, H. Chung, H. J. Kim, and S. Sastry, “Autonomous exploration in unknown urban environments for unmanned aerial vehicles,” in AIAA Guidance, Navigation, and Control Conference and Exhibit , 2005, p. 6478. [4] C. Rasche, C. Stern, W. Richert, L. Kleinjohann, and B. Kleinjohann, “Combining autonomous exploration, goal-oriented coordination and task allocation in multi-uav scenarios,” in 2010 Sixth International Conference on Autonomic and Autonomous Systems . IEEE, 2010, pp. 52–57. [5] M. Selin, M. Tiger, D. Duberg, F. Heintz, and P. Jensfelt, “Efficient autonomous exploration planning of large-scale 3-d environments,” 
+
+IEEE Robotics and Automation Letters , vol. 4, no. 2, pp. 1699–1706, 2019. [6] B. Zhou, Y. Zhang, X. Chen, and S. Shen, “Fuel: Fast uav exploration using incremental frontier structure and hierarchical planning,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 779–786, 2021. [7] A. Bircher, M. Kamel, K. Alexis, H. Oleynikova, and R. Siegwart, “Receding horizon” next-best-view” planner for 3d exploration,” in 
+
+2016 IEEE international conference on robotics and automation (ICRA) .IEEE, 2016, pp. 1462–1468. [8] C. Cao, H. Zhu, H. Choset, and J. Zhang, “Tare: A hierarchical frame-work for efficiently exploring complex 3d environments.” in Robotics: Science and Systems , vol. 5, 2021, p. 2. [9] M. H¨ uppi, L. Bartolomei, R. Mascaro, and M. Chli, “T-prm: Temporal probabilistic roadmap for path planning in dynamic environments,” in 
+
+2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2022, pp. 10 320–10 327. [10] S. Zhang, X. Zhang, Q. Dong, Z. Wang, H. Xi, and J. Yuan, “Fsmp: A frontier-sampling-mixed planner for fast autonomous exploration of complex and large 3-d environments,” IEEE Transactions on Instrumen-tation and Measurement , 2025. [11] Y. Cao, R. Zhao, Y. Wang, B. Xiang, and G. Sartoretti, “Deep reinforce-ment learning-based large-scale robot exploration,” IEEE Robotics and Automation Letters , vol. 9, no. 5, pp. 4631–4638, 2024. [12] A. Hornung, K. M. Wurm, M. Bennewitz, C. Stachniss, and W. Burgard, “Octomap: An efficient probabilistic 3d mapping framework based on octrees,” Autonomous Robots , vol. 34, no. 3, pp. 189–206, 2013. [13] L. Lu, Y. Zhang, P. Zhou, J. Qi, Y. Pan, C. Fu, and J. Pan, “Semantics-aware receding horizon planner for object-centric active mapping,” IEEE Robotics and Automation Letters , vol. 9, no. 4, pp. 3838–3845, 2024. [14] M. Dharmadhikari and K. Alexis, “Semantics-aware exploration and inspection path planning,” in 2023 IEEE International Conference on Robotics and Automation (ICRA) , 2023, pp. 3360–3367. [15] S. Papatheodorou, N. Funk, D. Tzoumanikas, C. Choi, B. Xu, and S. Leutenegger, “Finding things in the unknown: Semantic object-centric exploration with an mav,” in 2023 IEEE International Conference on Robotics and Automation (ICRA) , 2023, pp. 3339–3345. [16] A. Asgharivaskasi and N. Atanasov, “Semantic octree mapping and Shannon mutual information computation for robot exploration,” IEEE Transactions on Robotics , 2023. [17] B. Yamauchi, “A frontier-based approach for autonomous exploration,” in Proceedings 1997 IEEE International Symposium on Computational Intelligence in Robotics and Automation CIRA’97.’Towards New Com-putational Principles for Robotics and Automation’ . IEEE, 1997, pp. 146–151. [18] S. Luo, M. Zhang, Y. Zhuang, C. Ma, and Q. Li, “A survey of path planning of industrial robots based on rapidly exploring random trees,” 
+
+Frontiers in Neurorobotics , vol. 17, p. 1268447, 2023. [19] Z. Xu, D. Deng, and K. Shimada, “Autonomous uav exploration of dynamic environments via incremental sampling and probabilistic roadmap,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 2729–2736, 2021. [20] S. Karaman and E. Frazzoli, “Sampling-based algorithms for optimal motion planning,” The international journal of robotics research , vol. 30, no. 7, pp. 846–894, 2011. [21] Y. Zhao, L. Yan, H. Xie, J. Dai, and P. Wei, “Autonomous exploration method for fast unknown environment mapping by using uav equipped with limited fov sensor,” IEEE Transactions on Industrial Electronics ,vol. 71, no. 5, pp. 4933–4943, 2023. [22] R. P. De Figueiredo, J. le Fevre Sejersen, J. G. Hansen, M. Brand˜ ao, and E. Kayacan, “Real-time volumetric-semantic exploration and map-ping: An uncertainty-aware approach,” in 2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 2021, pp. 9064–9070. [23] Z. Xu, C. Suzuki, X. Zhan, and K. Shimada, “Heuristic-based incre-mental probabilistic roadmap for efficient uav exploration in dynamic environments,” in 2024 IEEE International Conference on Robotics and Automation (ICRA) . IEEE, 2024, pp. 11 832–11 838. [24] T. N. Canh, V.-T. Nguyen, X. HoangVan, A. Elibol, and N. Y. Chong, “S3m: Semantic segmentation sparse mapping for uavs with rgb-d cam-era,” in 2024 IEEE/SICE International Symposium on System Integration (SII) . IEEE, 2024, pp. 899–905.

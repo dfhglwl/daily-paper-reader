@@ -1,0 +1,358 @@
+Title: Diffusion-based 4D Trajectory Prediction and Distributed Control for UAV Swarms
+
+URL Source: https://arxiv.org/pdf/2606.31197v1
+
+Published Time: Wed, 01 Jul 2026 00:36:53 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# Diffusion-based 4D Trajectory Prediction and Distributed Control for UAV Swarms 
+
+Tianshun Li 1, Hongliang Lu 2, Haoang Li 3 and Xinhu Zheng 3,∗
+
+Abstract —Accurate 4D trajectory prediction and closed-loop tracking are essential for Unmanned Aerial Vehicle (UAV) swarms to achieve safe and efficient operations in complex low-altitude environments such as urban airspaces, industrial sites, and indoor facilities. However, this task remains challenging due to intrinsic nonlinearity of UAV swarm dynamics and strict real-time constraints of swarm formation control. To address these challenges, we propose a unified framework that couples coarse-to-fine trajectory forecasting with uncertainty-aware Distributed Nonlinear Model Predictive Control (DNMPC). Our approach features two key innovations: 1) a dimension-decoupled trajectory prediction module that reduces computational complexity by forecasting axis-wise motion, and 2) a diffusion-based residual dynamics refinement module that captures temporally correlated dynamic uncertainties. These refined predictions are then inte-grated into a DNMPC loop to ensure formation stability. We also introduce a synchronized multi-scenario 4D UAV swarm dataset spanning six representative airspace scenarios. The dataset contains over 7,900 frames of synchronized three-UAV trajectories with frame-level annotations of speed intention and target sector. Extensive experiments demonstrate that our ap-proach outperforms state-of-the-art baselines, reducing trajectory tracking error by up to 10-15% and achieving sub-0.07 m average tracking error in complex urban and industrial environments, while maintaining real-time inference speeds of 34 FPS (sub-30 ms latency) suitable for agile flight. 
+
+I. I NTRODUCTION 
+
+Birds exhibit remarkable swarm intelligence to maintain compact formation in highly uncertain aerial environments; however, endowing UAV swarms with simultaneous capabil-ities remains a fundamental challenge [1]. In recent years, UAVs have demonstrated strong potential in applications such as low-altitude logistics, surveillance, inspection, and indoor operations. When deployed as swarms in 4D airspace, UAVs must operate under significant temporal uncertainty arising from dense interactions. To achieve compact formation main-tenance, each UAV is required to arrive at its destination at the expected time point. But accurate 4D trajectory prediction for multiple UAVs becomes markedly more difficult, as modeling their joint spatiotemporal evolution requires reasoning over strongly coupled dynamics; the temporal dimension further exacerbates the difficulty of 4D trajectory prediction. Second,  
+
+> ∗
+
+Corresponding author.  
+
+> 1
+
+Tianshun Li is with The Hong Kong University of Science and Technol-ogy (Guangzhou), China tli449@connect.hkust-gz.edu.cn 
+
+> 2
+
+Hongliang Lu is with the Southern University of Science and Technology, China and MoSense Technologies, China 
+
+honglianglu36@gmail.com 
+
+> 3
+
+Haoang Li and Xinhu Zheng are with The Hong Kong University of Science and Technology (Guangzhou), China 
+
+{haoangli,xinhuzheng }@hkust-gz.edu.cn (a) A conventional  prediction -only forecasting  module .     
+
+> (b) Our proposed coarse -to -fine prediction -control integration with residual -refined rollouts .
+> Trajectory Feature
+> Decoder
+> Axis -decoupled
+> Trajectory Feature
+> Denoising
+> Head
+> Distributed
+> NMPC Control
+> Residual -based
+> Refinement
+> Current status of each UAV
+> Reference Trajectories
+> Feedback actual status
+> Optimiz ed control command u*(T)
+> Potential Collision
+
+Fig. 1. Conceptual comparison between a prediction-only forecasting module and prediction-control integration with residual-refined rollouts. 
+
+increased interaction density amplifies mutual collision risks, demanding predictive models that are compatible with coor-dinated control and formation maintenance. Third, additional sources of uncertainty, such as communication delay, down-wash, and aerodynamic disturbances, introduce stochasticity that is difficult to model and propagate over time. Taken together, maintaining compact formation remains challenging for UAV swarms to operate safely and simultaneously in complex low-altitude environments. Currently, most existing prediction approaches focus on 2D or 3D settings, either omitting control feedback or treating time as an auxiliary variable, as shown in Fig. 1(a). Such formulations are inherently limited in their ability to capture long-horizon temporal dependencies, and coordinated group behaviors that are fundamental to UAV swarms. Moreover, although trajectory prediction for pedestrians and ground ve-hicles has been extensively studied, the advantages of these approaches do not readily translate into UAV swarms. These methods typically assume planar motion and weak inter-agent coupling, which are insufficient for aerial swarms, where formation maintenance, altitude variation, and aerodynamic coupling introduce additional complexity. To address this problem, several model-based and data-driven approaches have been employed for UAV swarm 4D trajectory prediction; however, they still suffer from unstable performance [2], [3]. First, classical model-based methods rely heavily on faithful nominal dynamics and well-characterized uncertainty bounds, assumptions that are difficult to satisfy in real-world swarm flight due to nonlinear dynamics, aerody-
+
+> arXiv:2606.31197v1 [cs.RO] 30 Jun 2026
+
+namic disturbances, and communication delays. Second, many learning-based trajectory prediction methods adopt determin-istic formulations or simplified uncertainty structures, limiting their ability to represent temporally correlated disturbances such as airflow interaction and downwash effects. Third, ex-isting approaches often treat trajectory prediction and control as separate modules, making it difficult to propagate pre-diction uncertainty into downstream control decisions, espe-cially under nonlinear dynamics, strong inter-agent coupling, and limited information exchange. These limitations highlight the necessity of integrating uncertainty-aware 4D trajectory prediction with closed-loop control in a unified and scalable manner. In this study, we propose a unified framework for 4D UAV swarm trajectory prediction and uncertainty-aware control, which jointly addresses spatiotemporal forecasting and closed-loop control under uncertainty. By explicitly coupling predic-tion and control, the framework enables reliable multi-UAV coordination under nonlinear dynamics, strong inter-agent interactions, and limited information exchange. As shown in Fig. 1(b), our framework decouples spatial axes for coarse prediction, refines temporally correlated residual dynamics via denoising, and ultimately embeds future-aware predictions into a DNMPC loop for closed-loop UAV swarm control. The key contributions are summarized as follows:  
+
+> •
+
+Unified prediction-control framework: We propose acoarse-to-fine architecture that combines efficient axis-wise forecasting with diffusion-based residual modeling. This design effectively captures nonlinear swarm dy-namics and temporally correlated disturbances without sacrificing real-time feasibility.  
+
+> •
+
+Stability-Oriented DNMPC Integration: We theoreti-cally analyze and empirically validate the integration of diffusion-based predictions into a DNMPC scheme. Compared with prediction-only forecasting modules that are typically evaluated without explicit control-oriented residual compensation, our framework refines coarse fore-casts using diffusion-based residual dynamics and feeds the refined rollouts into a DNMPC loop.  
+
+> •
+
+Dataset: We release a diverse multi-scenario dataset fea-turing synchronized 4D trajectories (3D position + time) with frame-level annotations of speed intention and target sectors, addressing the scarcity of realistic benchmarks for close-proximity swarm operations. II. R ELATED WORK 
+
+A. Trajectory Prediction Methods 
+
+Trajectory prediction aims to forecast the future motions of agents based on their historical observations. In multi-agent settings, a central challenge lies in modeling inter-agent inter-actions and collective behaviors under uncertainty. To address the inherent diversity and stochasticity of future trajectories, a wide range of generative models has been proposed, including Generative Adversarial Networks (GANs) [4], Conditional Variational Autoencoders (CVAEs) [5], and diffusion-based models [6], [7]. Sequential models based on recurrent neural networks (RNNs) [8] and Transformers [9] further enable flexible handling of variable-length inputs. These approaches have demonstrated strong predictive performance on bench-mark datasets, particularly in pedestrian and vehicle trajectory prediction. Despite their success, most existing trajectory prediction methods are designed for offline forecasting or benchmarking purposes and primarily optimize prediction accuracy without explicitly considering deployment in closed-loop control sys-tems. As a result, their adaptability often degrades under real-world conditions characterized by strong disturbances, sens-ing uncertainty, and complex agent interactions. In contrast, our work targets 4D multi-UAV swarm trajectory prediction ,where temporal uncertainty, inter-agent coupling, and control-oriented robustness must be jointly addressed. 
+
+B. Diffusion Models for Motion Dynamics 
+
+Diffusion models have recently emerged as a power-ful paradigm for motion generation across a variety of domains [10]. Existing diffusion-based approaches can be broadly categorized into two lines: holistic trajectory diffusion 
+
+and end-to-end diffusion policy methods, which differ funda-mentally in their modeling targets and system integration. 
+
+1) Holistic Trajectory Diffusion: Holistic trajectory diffu-sion methods aim to model the entire spatiotemporal trajectory as a single structured random variable, and directly learn its joint distribution through diffusion processes. Representa-tive works such as SwarmDiff [11] and MotionDiffuser [12] employ diffusion models to generate full future trajectories by capturing high-order temporal correlations and cross-agent interactions in a unified manner. However, the holistic formulation often treats trajectory generation as an open-loop process, without explicitly incorpo-rating system dynamics or control feedback during generation. 
+
+2) End-to-End Diffusion Policy: In contrast, end-to-end diffusion policy methods use diffusion models to directly learn a mapping from observations to control actions, effectively treating diffusion as a stochastic policy representation. In [13], the action sequence is generated directly from sensory ob-servations through a conditional diffusion process. Related works in motion planning further integrate diffusion models with reinforcement learning or cost-guided objectives [14], enabling the generation of action or trajectory samples that optimize task-specific rewards or constraints [15], [16]. Be-yond robotics, diffusion-based policies have also demonstrated strong performance in human motion synthesis, where high-dimensional motion sequences are generated and edited under diverse conditioning signals, such as text descriptions [17] or partial state constraints [18]. While these end-to-end ap-proaches offer seamless integration between perception and control [13], [19], they typically entangle dynamics modeling and decision-making into a single learned policy, which can limit robustness in safety-critical control scenarios. Motivated by these gaps, we propose a unified framework that couples control-oriented 4D multi-UAV trajectory predic-Observed  UAV Swarm Trajectories 
+
+> UAV Agent
+
+i             
+
+> Trajectory
+> Encoder
+> Decoupled Trajectory Predictor
+> Key Point
+> Extraction (x)
+> Trajectory
+> Predictor (x)
+> MLP
+> Encoder (x)
+> Predicted Reference Trajectories
+> Residual Dynamics Learning Refined Prediction 2tp−1tp−tp
+> Diffusion Model ()
+> ,,,Tu K
+> 
+> DNMPC Control Law
+> with N Prediction Horizon ➢Communication Delay
+> ➢Inter -UAV Airflow
+> ➢Downwash ...
+> Disturbance & Unmodeled Dynamics
+> Coarse Prediction ˆt1
+> ˆt+
+> Prediction Sequence
+
+( )         
+
+> ˆ,,kkkbfum
+> 
+> =
+> Nominal Model
+
+( )                 
+
+> nom ,,;kkkkbpfppum= 3ut−2ut−1ut−
+> feature
+> Key Point
+> Extraction (y)
+> Trajectory
+> Predictor (y)
+> MLP
+> Encoder (y)
+> feature
+> Key Point
+> Extraction (z)
+> Trajectory
+> Predictor (z)
+> MLP
+> Encoder (z)
+> feature
+> x
+> y
+> z
+> Learning Temporally
+> Correlated Residuals
+> East (m )North (m )North (m )
+> Height (m )
+> Height (m )
+> East (m )
+
+Fig. 2. Framework of the proposed distributed trajectory prediction and control scheme for UAV swarms. Future trajectories are first predicted in a decoupled manner along each spatial axis from historical observations. A diffusion-based residual dynamics module then refines these predictions by compensating for unmodeled dynamics. The refined trajectories are incorporated into a DNMPC controller, where each UAV optimizes its control inputs over a finite horizon while satisfying inter-UAV formation constraints. This architecture enables accurate trajectory tracking and stable coordination under disturbances and modeling uncertainties. 
+
+tion with closed-loop tracking. Specifically, we first generate coarse axis-wise forecasts to reduce prediction complexity, then model temporally correlated inter-agent residual dynam-ics via diffusion, and finally integrate the refined predictions into a DNMPC scheme, shown in Fig. 2. The proposed method is detailed in the following section. III. M ETHOD 
+
+We consider a swarm consisting of M UAVs, indexed by 
+
+i ∈ { 1, . . . , M }. Let xi,k denote the true state of UAV i
+
+at discrete time step k, and ¯xi,k the predicted state along the NMPC horizon. We denote reference trajectories by xref 
+
+i,k .Position components are denoted by p, with ¯p indicating predicted positions and pobs historical observations. Each UAV maintains formation by enforcing inter-UAV distance constraints with its neighbors. Let dref 
+
+ij denote the desired relative distance between UAV i and UAV j. At time step 
+
+k, the formation constraint is defined as: 
+
+Cij (k) = ¯pi,k − ¯pj,k 2 − dref 
+
+ij , (1) where ¯pi,k is extracted from ¯xi,k .
+
+A. Decoupled Trajectory Prediction 
+
+Predicting future UAV trajectories in four-dimensional space requires balancing model expressiveness and controllability. Existing keypoint-conditioned methods such as LBEBM [20] decode coupled 4D trajectories, which may entangle predic-tion errors across spatial dimensions. We therefore formulate trajectory forecasting as a dimension-factorized prediction problem .We retain the encoder of LBEBM to extract interaction-aware representations from historical observations pobs i . Let 
+
+ξe denote the encoded latent feature. Axis-specific key points are predicted as: 
+
+qλκ = Φ λ(ξe), λ ∈ { x, y, z }, (2) where κ indexes key points and Φλ(·) is an axis-dependent predictor. The predicted key points are aggregated to form a compact structural descriptor: 
+
+ξk = Ψ  [qxκ; qyκ; qzκ], (3) where Ψ( ·) encodes multi-axis geometric cues. Trajectory decoding is then performed independently along each axis: 
+
+ˆTλ = Γ λ
+
+ [ξe, ξk], λ ∈ { x, y, z }. (4) 
+
+B. Residual Dynamics Refinement 
+
+To compensate for modeling errors and aerodynamic dis-turbances, we introduce a diffusion-based residual dynamics model. The translational dynamics of a quadrotor are given by: 
+
+˙p = v, mb ˙v = mbg + Rf u + fa, (5) where mb is the body mass, g is the gravity vector, and fa
+
+aggregates unmodeled disturbances. Using a nominal mass ¯mb,the dynamics are rewritten as: 
+
+¯mb ¨p = u − ∆( p, ˙p, ¨p), (6) where ∆ collects all state-dependent uncertainties. ∆( ·) is assumed to be an unknown but bounded and locally Lipschitz residual function capturing unmodeled dynamics and aerody-namic disturbances. We model residual dynamics over a finite estimation horizon 
+
+T . Define the observation set Ω = {p, ˙p, ¨p} and the joint sequence: 
+
+S = [Ω 1: T , u 1: T , ∆1: T ]⊤. (7) For each UAV, p, ˙p, ¨p ∈ R3, and the diffusion model is applied agent-wise with shared parameters across the swarm. Residual estimation is formulated as sampling from 
+
+p(∆ 1: T | Ω1: T , u 1: T ). The previous control input ut−1 is used as a proxy under receding-horizon operation. (a) Orthographic Projection  (b) Front View  (c) Top View  (d) Side View Fig. 3. Visualization of real-world 4D UAV swarm trajectories in one urban scenario in the dataset. Each trajectory is parameterized by time and represented in three spatial dimensions (North, East, Height). The orthographic projection and the front, top, and side views correspond to different projections of the same time-indexed trajectories, illustrating the temporal evolution and spatial coordination of the UAV swarm. The curvature of these trajectories is caused by communication delay and external wind. 
+
+C. DNMPC Control 
+
+The refined residual estimate ˆ∆ is incorporated into aDNMPC scheme. We use N to denote the NMPC prediction horizon, distinct from the residual estimation horizon T .The residual horizon T determines the temporal extent of uncertainty estimation, while the NMPC horizon N governs control foresight, with T ≤ N ensuring consistent dis-turbance compensation within receding-horizon optimization. Each UAV solves a local NMPC problem to track its reference trajectory while respecting formation constraints. The discrete-time prediction model is: 
+
+¯xi,k +j+1 = fd(¯ xi,k +j , ¯ui,k +j , ˆ∆i,k +j , δt ). (8) Only the first control input is applied at each step, yielding a receding-horizon closed-loop control law. 
+
+Proposition 1: Practical tracking stability. Assume recur-sive feasibility of the DNMPC subproblems. Then the optimal value function Vi,k := J⋆i (xi,k ) is Lyapunov-like for the closed-loop error dynamics, i.e., there exist αi > 0 and βi > 0,
+
+Vi,k +1 − Vi,k ≤ − αi∥ei,k ∥22 + βi
+
+ ¯δ2∆ + ¯δ2
+
+> n
+
+ . (9) Consequently, the closed-loop tracking error is input-to-state stable w.r.t. ( ˜∆i,k , ¯xj,k − xj,k ) and is practically stable: 
+
+lim sup 
+
+> k→∞
+
+∥ei,k ∥2 ≤ ci
+
+q¯δ2∆ + ¯δ2
+
+> n
+
+, (10) for some constant ci > 0. In the ideal case ˜∆i,k ≡ 0 and 
+
+¯δn = 0 , (9) implies asymptotic tracking of xref  
+
+> i,k
+
+.IV. 4D M OTION TRAJECTORY DATASET 
+
+Our dataset comprises six scenarios featuring 4D trajectories collected from UAVs operating in real typical urban environ-ments. The 4D trajectories, shown in Fig. 3, are recorded using positioning devices installed on the UAVs. Each scenario in-cludes three UAVs following predefined formations. The three-UAV setting is chosen to reflect tightly coupled formations, while the distributed NMPC formulation does not impose an upper bound on swarm size. The dataset contains a total of 7,900 frames, with scenario lengths ranging from 800 to 2,000 frames. As summarized in Table I, the inter-UAV distance varies between 1.3 m and 5.8 m 
+
+on average, reflecting realistic formation maintenance under environmental constraints. The recorded flight speed spans 
+
+2.4–5.6 m /s, while acceleration and turning intensity statistics reveal diverse maneuvering behaviors across scenarios. These characteristics jointly capture both smooth cruising and ag-gressive directional changes that frequently arise in practical low-altitude UAV operations. V. E XPERIMENTS 
+
+A. Implementation Details 
+
+We consider a short-horizon trajectory prediction setting, where the past 8 frames are used as observations to forecast the subsequent 12 frames. Rather than predicting all future states densely, the model outputs a set of representative future key points corresponding to the 3rd, 6th, 9th, and 12th prediction steps, which are subsequently interpolated and incorporated into the NMPC reference trajectory. This design reduces prediction redundancy while preserving sufficient temporal resolution for control. Model training is performed for 100 epochs with a batch size of 70 using the Adam optimizer. The initial learning rate is set to 5 × 10 −4 and decayed by a factor of 0.5 after the fifth epoch. Prediction accuracy is evaluated using Average Displacement Error (ADE) and Final Displacement Error (FDE), while closed-loop control performance is assessed using trajectory tracking error and RMSE. The diffusion noise predictor ϵθ is implemented using a temporal U-Net architecture composed of three residual stages [14], each including two temporal convolution lay-ers followed by group normalization [21] and Mish activa-tion [22]. To encode diffusion timesteps and conditional inputs, we employ two separate two-layer MLPs with 64 hidden units, producing 16-dimensional embeddings. The noise predictor is optimized with Adam using a learning rate of 2 × 10 −4 over TABLE I SCENARIO -WISE TRAJECTORY STATISTICS (MEAN ± STD ) AND INTENTION DISTRIBUTIONS FOR DRONE SWARM PREDICTION . U, L, F, AND R DENOTE                                                                          
+
+> Urban ,Lab ,Factory ,AND Rural MOTION SCENARIOS ,RESPECTIVELY .
+> Scenario U1-Dense U2-Sparse L1-Indoor F1-Large F2-Complex R1-Open
+> Frame number 800 1600 1200 1500 2000 900 Inter-UAV distance (m) 3.45 ±0.18 5.80 ±0.22 1.30 ±0.15 1.70 ±0.25 1.55 ±0.20 3.90 ±0.30
+> Speed (m/s) 3.20 ±0.60 4.10 ±0.70 2.40 ±0.50 4.80 ±0.80 4.20 ±0.75 5.60 ±0.90
+> Turning intensity (1/m) 0.18 ±0.10 0.12 ±0.08 0.22 ±0.12 0.09 ±0.06 0.15 ±0.09 0.07 ±0.05
+> Speed intention
+> ↑:180,
+> ↓:260,
+> →:360
+> ↑:320,
+> ↓:420,
+> →:860
+> ↑:210,
+> ↓:290,
+> →:700
+> ↑:360,
+> ↓:420,
+> →:720
+> ↑:480,
+> ↓:520,
+> →:1000
+> ↑:200,
+> ↓:260,
+> →:440 Target sector #1:90, #2:80, #3:140, #4:60, #5:120, #6:110, #7:150, #8:50 #1:160, #2:140, #3:260, #4:180, #5:300, #6:280, #7:190, #8:90 #1:110, #2:160, #3:220, #4:180, #5:90, #6:150, #7:210, #8:80 #1:200, #2:220, #3:260, #4:300, #5:180, #6:220, #7:80, #8:40 #1:260, #2:300, #3:320, #4:360, #5:240, #6:260, #7:180, #8:80 #1:120, #2:140, #3:160, #4:180, #5:110, #6:100, #7:60, #8:30
+
+50,000 training steps with a batch size of 256 and K = 20 
+
+diffusion steps. For control performance evaluation, we benchmark the proposed framework against a physics-driven DNMPC base-line, which has demonstrated strong stability and coordination capabilities in multi-agent control scenarios [23]. To assess the benefit of incorporating diffusion-based residual modeling, we further compare it with representative data-driven dynamics learning methods, including Gaussian Processes (GP) mod-els [24] and deep neural network (DNN) predictors [25], both of which have been widely adopted for quadrotor dynamics approximation. An autoregressive sequence modeling baseline based on GPT4 [26] is also included. The GPT-based autore-gressive model serves as a strong sequence modeling baseline to assess whether generic temporal predictors can approximate residual dynamics. For a fair tracking comparison, all learning-based models are trained on the same offline dataset to predict residual dynamics ∆, and are integrated into the identical con-trol law in (8). Each method is evaluated over 10 independent trials. 
+
+B. Comparisons to State-of-the-art Methods 
+
+We compare our method with representative baselines span-ning classical filtering, deterministic sequence models, and generative trajectory predictors, as detailed in Table II. Kalman Filter (KF) and Unscented Kalman Filter (UKF) serve as clas-sical model-based baselines for state estimation [27]. Temporal Convolutional Networks (TCN) and MSRL represent deter-ministic learning-based predictors [28], [29]. LBEBM and NPSN capture energy-based and probabilistic sequence mod-eling paradigms [20], [30]. GAN- and CVAE-based methods are included as canonical generative baselines for multimodal trajectory prediction [31], [32], while MTRTraj represents recent large-capacity transformer-based trajectory models [33]. We modify all compared methods to accept 4D observed trajectories as inputs and predict 4D future trajectories. Addi-tionally, we adjust their data augmentation strategies, such as rotation, flipping, and reversing, to their 4D counterparts for consistency. The experimental results indicate that our method outperforms all evaluated approaches in 4D trajectory predic-tion. Specifically, our method achieves a 16.7% improvement in the ADE metric, reducing it from 0.18 to 0.15, and a 18.2% enhancement in the FDE metric, lowering it from 0.33 to 0.27, compared to the second-best method, MTRTraj. While Unscented Kalman Filter (UKF) shows an ADE metric close to ours, our FDE metric surpasses it by 48%, decreasing from 0.52 to 0.27. Table II also compares prediction accuracy and compu-tational efficiency across representative baselines. Classical filters (KF/UKF) achieve low latency but suffer from large prediction errors, while lightweight neural models such as TCN and MSRL offer moderate accuracy gains at increased cost. Our diffusion-based prediction improves accuracy but incurs substantial runtime overhead due to iterative sampling. Our method adopting DDIM acceleration [34] attains the best accuracy-efficiency trade-off, achieving the lowest ADE/FDE with sub-30 ms inference latency at about 34 FPS. These results indicate that reusing multistep diffusion predictions effectively reduces sampling overhead while preserving real-time feasibility for control deployment. Thus, the diffusion-based predictor provides NMPC with more reliable and temporally consistent state rollouts, reducing abrupt prediction errors that may otherwise lead to infeasible or aggressive control actions. This effect becomes particularly pronounced under tight formation constraints and high-speed maneuvers, where small modeling errors can be significantly amplified by inter-UAV interactions. As a result, DM-NMPC achieves improved tracking accuracy and robustness by implic-itly regularizing the NMPC optimization landscape, leading to smoother control inputs and enhanced stability in multi-UAV swarm. 
+
+C. Robustness and Adaptation Analysis 
+
+Table III compares learning-assisted NMPC controllers across four motion scenarios. Overall, DM-NMPC achieves the lowest prediction and tracking errors, indicating im-TABLE II TRAJECTORY PREDICTION EFFICIENCY AND ACCURACY COMPARISON ON THE DATASET . A LL METHODS ARE EVALUATED ON AN NVIDIA RTX 4070 GPU WITH AN INPUT SIZE OF 70 × 8 × 3, WHERE 70 DENOTES THE NUMBER OF AGENTS PREDICTED SIMULTANEOUSLY , EXCEEDING THE SCALE OF MOST REAL -WORLD DEPLOYMENT SCENARIOS . KF-BASED METHODS DO NOT INVOLVE LEARNABLE PARAMETERS , SO PARAMETER COUNTS ARE OMITTED .
+
+Method Efficiency Accuracy ⇓
+
+Params (M) FLOPs (G) Speed (ms) ADE FDE KF – 0.08 18 0.31 0.58 UKF – 0.11 22 0.18 0.52 TCN 0.21 0.18 26 0.24 0.43 MSRL 0.62 0.14 20 0.23 0.41 LBEBM 1.31 0.12 15 0.20 0.36 NPSN 0.28 0.19 29 0.21 0.38 GAN 0.44 0.24 31 0.22 0.39 CVAE 0.58 0.27 34 0.20 0.36 MTRTraj 4.52 6.80 34 0.28 0.33 
+
+Ours 3.48 0.42 48 0.17 0.31 
+
+w DDIM 3.48 0.26 29 0.15 0.27                                            
+
+> TABLE III FORCE PREDICTION AND TRACKING ERRORS OF DIFFERENT
+> DNMPC-BASED CONTROLLERS .
+> Pred. Err. (N) ⇓Track. Err. (m) ⇓
+> NMPC
+> Method ULFRULFRGP 0.139 0.147 0.105 0.116 0.091 0.096 0.076 0.071 DNN 0.128 0.140 0.096 0.108 0.081 0.089 0.069 0.064 GPT 0.121 0.129 0.091 0.099 0.075 0.083 0.063 0.059
+> DM 0.104 0.112 0.079 0.089 0.066 0.071 0.055 0.052
+
+proved compensation for unmodeled dynamics and inter-UAV interactions. The prediction error, measured in Newtons, quantifies the accuracy of estimating interaction-induced and environment-dependent disturbance forces between neighbor-ing UAVs. Accurate force prediction is critical for DNMPC, as these estimates are directly used in the feedback compensation term of the control law. Compared with GP-NMPC and DNN-NMPC, our DM-NMPC reduces trajectory tracking RMSE by 15-22% in Urban and Factory scenarios and by 10-15% in Lab and Rural environments. Fig. 4 compares inter-UAV distance convergence under Gaussian (left) and heavy-tailed (right) disturbances. Under Gaussian noise, most learning-based compensation strategies achieve stable convergence, with GP-based methods benefiting from smoothness assumptions. However, under heavy-tailed Cauchy disturbances, GP- and DNN-based compensators ex-hibit degraded performance, characterized by persistent os-cillations or steady-state offsets. In contrast, diffusion-based compensation consistently maintains bounded inter-UAV dis-tance with reduced oscillations across both regimes, demon-strating superior robustness to non-Gaussian and extreme      
+
+> Fig. 4. Convergence comparison of the inter-UAV distance dynamics under different disturbance compensation strategies, evaluated with 10 s of training data sampled at 20 Hz. TABLE IV FORMATION -KEEPING RMSE OF DIFFERENT NMPC VARIANTS UNDER VARYING REFERENCE DISTANCES AND FLIGHT VELOCITIES .
+
+Method Formation Constraint RMSE (m) ⇓
+
+dref ij =1 .2m dref ij =0 .8m
+
+v=8 m/s v=10 m/s v=8 m/s v=10 m/s DNMPC 0.118 0.146 0.156 0.181 GP-NMPC 0.123 0.152 0.162 0.189 DNN-NMPC 0.109 0.135 0.144 0.168 GPT-NMPC 0.101 0.124 0.133 0.156 
+
+DM-NMPC 0.089 0.107 0.118 0.137 
+
+disturbances in multi-UAV formation control. Under different reference spacing and speed settings, Ta-ble IV reports the formation constraint RMSE of various NMPC variants. When the speed is increased from 8 m/s to 10 m/s, the RMSE of all methods increases. The baseline methods exhibit a more pronounced increase in error under the combination of high speed and large spacing, reflecting their limited ability to compensate for unmodeled disturbances or residual dynamics. In contrast, DM-NMPC achieves the lowest RMSE across all conditions and maintains a relatively stable error level even in the more challenging setting (10 m/s, 0.8 m), indicating its capacity to more effectively absorb pre-diction errors and disturbances during the closed-loop control process, thereby enhancing the robustness and consistency of the formation constraints. 
+
+D. Prediction Efficiency and Runtime Performance 
+
+As illustrated in Fig. 5, increasing the prediction horizon initially improves tracking accuracy because the controller can anticipate future motion more effectively. However, when the horizon becomes too long, performance deteriorates as modelling errors accumulate and the system is more likely to violate real-time assumptions. In parallel, the solver time per step rises almost linearly with the horizon length and exceeds the 50 ms real-time limit when N ≥ 32 . Overall, a moderate horizon of N , from 8 to 16, offers the most balanced compromise between tracking quality and computational fea-sibility for DNMPC in UAV swarms. This decline at large NFig. 5. Steady-state tracking error and solver time during a hovering task under different NMPC prediction horizons N over 60 seconds. 
+
+is mainly due to estimating ∆ from increasingly outdated state observations and control inputs. As shown in Fig. 6, GP and DNN tend to concentrate in the inner region or exhibit distorted coverage, while GPT produces scattered interior mass. In contrast, the diffusion-based model aligns well with the high-density manifold, particularly along the outer ring, indicating improved distributional fidelity.    
+
+> Fig. 6. t-SNE visualization of residual dynamics ∆extracted from real-world flight data (red circle in Fig. 1 (b)) and estimated by different models. Compared with GP-, DNN-, and GPT-based predictors, the proposed diffusion model exhibits a distribution that more closely aligns with the true residual manifold.
+
+E. Failure Case Analysis 
+
+We further analyze a representative failure case in Fig. 7. Although our method accurately captures short-term motion trends, prediction errors accumulate in highly curved segments where inter-UAV interactions intensify. This suggests that the current residual dynamics model, trained under fixed forma-tion assumptions, may be insufficient to fully capture abrupt interaction changes or rare coordination patterns. We leave adaptive interaction modeling and uncertainty-aware horizon adjustment as future work. (b) Front View  (c) Side View    
+
+> (a) Orthographic Projection
+> North (m) East (m)
+> Fig. 7. A representative failure case under strong inter-UAV interaction and highly curved motion, where accumulated residual prediction errors lead to formation degradation. Black solid lines denote ground-truth trajectories, while dashed lines indicate failed predictions. TABLE V CROSS -DATASET TRAJECTORY PREDICTION PERFORMANCE ON THE
+> CITY NAV DATASET . M ODELS ARE TRAINED ON OUR DATASET AND EVALUATED ON CITY NAV WITHOUT RETRAINING .
+
+Method ADE (m) ⇓ FDE (m) ⇓
+
+Kalman Filter 1.32 2.08 LSTM-based 1.21 1.98 Transformer-based 1.08 1.76 Diffusion 0.97 1.62 
+
+Ours 0.86 1.44 
+
+F. Generalization Discussion 
+
+To evaluate cross-dataset generalization, we additionally conduct trajectory prediction experiments on the public City-Nav dataset [35]. Since CityNav does not provide synchro-nized multi-UAV trajectories or control annotations, this eval-uation focuses on open-loop trajectory prediction rather than closed-loop control. As shown in Table V, despite the domain gap between datasets, our method achieves consistently lower prediction errors, suggesting enhanced robustness to scenario variations. VI. C ONCLUSION AND FUTURE WORK 
+
+In this paper, we present a unified framework for 4D UAV swarm trajectory prediction and distributed control. By decou-pling the trajectory prediction task and employing a diffusion model solely for residual dynamics refinement, our approach balances uncertainty modeling with the real-time demands of onboard control. Experimental results confirm that our method outperforms existing transformer and generative baselines. The distributed DNMPC formulation does not impose a fixed upper bound on the swarm size, and the residual model shares parameters across UAVs. However, the current dataset and empirical validation are limited to three-UAV formations, scaling to larger swarms remains future work. VII. A CKNOWLEDGEMENT 
+
+This work was partially supported by the National Nat-ural Science Foundation of China Grant 62373315 and U24A20252, and National Key Research and Development Program of China Grant 2024YFB4707603. REFERENCES [1] R. Wu, Y. Zhang, J. Chen, L. Huang, S. Zhang, X. Zhou, L. Wang, and S. Liu, “Aeroduo: Aerial duo for uav-based vision and language navigation,” in Proceedings of the 33rd ACM International Conference on Multimedia , ser. MM ’25. New York, NY, USA: Association for Computing Machinery, 2025, p. 2576–2585. [Online]. Available: https://doi.org/10.1145/3746027.3754498 [2] F. Yan, J. Chu, J. Hu, and X. Zhu, “Cooperative task allocation with si-multaneous arrival and resource constraint for multi-uav using a genetic algorithm,” Expert Syst. Appl. , vol. 245, p. 123023, 2023. [Online]. Available: https://api.semanticscholar.org/CorpusID:266666228 [3] B. Pang, K. H. Low, and C. Lv, “Adaptive conflict resolution for multi-uav 4d routes optimization using stochastic fractal search algorithm,” 
+
+Transportation Research Part C: Emerging Technologies , vol. 139, p. 103666, 2022. [4] T. Salzmann, B. Ivanovic, P. Chakravarty, and M. Pavone, “Trajectron++: Dynamically-feasible trajectory forecasting with heterogeneous data,” in 
+
+Proceedings of the European Conference on Computer Vision (ECCV) ,2020. [5] Y. Yuan, X. Weng, Y. Ou, and K. M. Kitani, “Agentformer: Agent-aware transformers for socio-temporal multi-agent forecasting,” in Proceedings of the IEEE/CVF international conference on computer vision , 2021, pp. 9813–9823. [6] M. Bansal, A. Krizhevsky, and A. Ogale, “Chauffeurnet: Learning to drive by imitating the best and synthesizing the worst,” Robotics: Science and Systems (RSS) , 2019. [7] S. Yang, Z. Shi, and Z. Zou, “Unified multi-agent trajectory modeling with masked trajectory diffusion,” in Proceedings of the IEEE/CVF International Conference on Computer Vision , 2025, pp. 27 563–27 574. [8] B. Ivanovic, K.-H. Lee, P. Tokmakov, B. Wulfe, R. T. McAllister, A. Gaidon, and M. Pavone, “Heterogeneous-agent trajectory forecasting incorporating class uncertainty,” 2022 IEEE/RSJ International Confer-ence on Intelligent Robots and Systems (IROS) , pp. 12 196–12 203, 2021. [9] X. Chen, H. Zhang, Y. Hu, J. Liang, and H. Wang, “Vnagt: Variational non-autoregressive graph transformer network for multi-agent trajectory prediction,” IEEE Transactions on Vehicular Technology , vol. 72, no. 10, pp. 12 540–12 552, 2023. [10] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,” ArXiv , vol. abs/2006.11239, 2020. [Online]. Available: https://api.semanticscholar.org/CorpusID:219955663 [11] K. Ding, C. Jiao, Y. Hu, K. Zhou, P. Wu, Y. Mu, and C. Liu, “Swarmdiff: Swarm robotic trajectory planning in cluttered environments via diffusion transformer,” 2025 IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops (CVPRW) , pp. 4164–4173, 2025. [Online]. Available: https://api.semanticscholar.org/CorpusID:278783000 [12] C. Jiang, A. Cornman, C. Park, B. Sapp, Y. Zhou, D. Anguelov 
+
+et al. , “Motiondiffuser: Controllable multi-agent motion prediction using diffusion,” in Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , 2023, pp. 9644–9653. [13] C. Chi, S. Feng, Y. Du, Z. Xu, E. Cousineau, B. Burchfiel, and S. Song, “Diffusion policy: Visuomotor policy learning via action diffusion,” The International Journal of Robotics Research , vol. 44, pp. 1684 – 1704, 2023. [Online]. Available: https://api.semanticscholar.org/CorpusID:257378658 [14] M. Janner, Y. Du, J. B. Tenenbaum, and S. Levine, “Planning with diffu-sion for flexible behavior synthesis,” in Proceedings of the International Conference on Machine Learning (ICML) , 2022. [15] K. Saha, V. Mandadi, J. Reddy, A. Srikanth, A. Agarwal, B. Sen, A. Singh, and M. Krishna, “Edmp: Ensemble-of-costs-guided diffu-sion for motion planning,” in 2024 IEEE International Conference on Robotics and Automation (ICRA) , 2024, pp. 10 351–10 358. [16] Y. Zeng, H. Ren, S. Wang, J. Huang, and H. Cheng, “Navidiffusor: Cost-guided diffusion model for visual navigation,” 2025. [Online]. Available: https://arxiv.org/abs/2504.10003 [17] M. Zhang, Z. Cai, L. Pan, F. Hong, X. Guo, L. Yang, and Z. Liu, “Motiondiffuse: Text-driven human motion generation with diffusion model,” IEEE Transactions on Pattern Analysis and Machine Intelli-gence , vol. 46, pp. 4115–4128, 2022. [18] K. Karunratanakul, K. Preechakul, S. Suwajanakorn, and S. Tang, “Guided motion diffusion for controllable human motion synthesis,” in 
+
+2023 IEEE/CVF International Conference on Computer Vision (ICCV) ,2023, pp. 2151–2162. [19] D. Wang, C. Liu, F. Chang, and Y. Xu, “Hierarchical diffusion policy: Manipulation trajectory generation via contact guidance,” IEEE Trans-actions on Robotics , vol. 41, pp. 2086–2104, 2025. [20] B. Pang, T. Zhao, X. Xie, and Y. N. Wu, “Trajectory prediction with latent belief energy-based model,” 2021 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 11 809–11 819, 2021. [Online]. Available: https://api.semanticscholar.org/CorpusID:233168683 [21] Y. Wu and K. He, “Group normalization,” International Journal of Computer Vision , vol. 128, pp. 742 – 755, 2018. [Online]. Available: https://api.semanticscholar.org/CorpusID:4076251 [22] D. Misra, “Mish: A self regularized non-monotonic activation function,” 
+
+Proceedings of the British Machine Vision Conference 2020 , 2020. [On-line]. Available: https://api.semanticscholar.org/CorpusID:221113156 [23] G. Stomberg, A. Engelmann, M. Diehl, and T. Faulwasser, “Decen-tralized real-time iterations for distributed nonlinear model predictive control,” arXiv preprint arXiv:2401.14898 , 2024. [24] G. Torrente, E. Kaufmann, P. F¨ ohn, and D. Scaramuzza, “Data-driven mpc for quadrotors,” IEEE Robotics and Automation Letters , vol. 6, no. 2, pp. 3769–3776, 2021. [25] G. Shi, X. Shi, M. O’Connell, R. Yu, K. Azizzadenesheli, A. Anand-kumar, Y. Yue, and S.-J. Chung, “Neural lander: Stable drone landing control using learned dynamics,” in 2019 international conference on robotics and automation (icra) . IEEE, 2019, pp. 9784–9790. [26] X. Liu, Y. Liu, H. Qiu, Q. Yang, and Z. Lian, “Indooruav: Benchmarking vision-language uav navigation in continuous indoor environments,” in 
+
+Proceedings of the AAAI Conference on Artificial Intelligence (AAAI) ,vol. 40, 2026. [27] E. Wan and R. Van Der Merwe, “The unscented kalman filter for non-linear estimation,” in Proceedings of the IEEE 2000 Adaptive Systems for Signal Processing, Communications, and Control Symposium (Cat. No.00EX373) , 2000, pp. 153–158. [28] S. Bai, J. Z. Kolter, and V. Koltun, “An empirical evaluation of generic convolutional and recurrent networks for sequence modeling,” 
+
+arXiv:1803.01271 , 2018. [29] Y. Wu, L. Wang, S. Zhou, J. Duan, G. Hua, and W. Tang, “Multi-stream representation learning for pedestrian trajectory prediction,” in 
+
+Proceedings of the AAAI Conference on Artificial Intelligence , vol. 37, 2023, pp. 2875–2882. [30] I. Bae, J.-H. Park, and H.-G. Jeon, “Non-probability sampling network for stochastic human trajectory prediction,” in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition ,2022. [31] V. Kosaraju, A. Sadeghian, R. Mart´ ın-Mart´ ın, I. Reid, S. H. Rezatofighi, and S. Savarese, “Social-bigat: multimodal trajectory forecasting using bicycle-gan and graph attention networks,” Proceedings of the 33rd International Conference on Neural Information Processing Systems ,2019. [32] Z. Zhou, G. Huang, Z. Su, Y. Li, and W. Hua, “Dynamic attention-based cvae-gan for pedestrian trajectory prediction,” IEEE Robotics and Automation Letters , vol. 8, no. 2, pp. 704–711, 2022. [33] S. Shi, L. Jiang, D. Dai, and B. Schiele, “Motion transformer with global intention localization and local movement refinement,” Advances in Neural Information Processing Systems , 2022. [34] J. Song, C. Meng, and S. Ermon, “Denoising diffusion implicit models,” ArXiv , vol. abs/2010.02502, 2020. [Online]. Available: https://api.semanticscholar.org/CorpusID:222140788 [35] J. Lee, T. Miyanishi, S. Kurita, K. Sakamoto, D. Azuma, Y. Matsuo, and N. Inoue, “Citynav: A large-scale dataset for real-world aerial navigation,” 2025. [Online]. Available: https://arxiv.org/abs/2406.14240

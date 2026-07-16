@@ -1,0 +1,677 @@
+Title: CKM-Driven Communication-Aware UAV Intelligent Trajectory Optimization for Urban Inspection
+
+URL Source: https://arxiv.org/pdf/2606.24979v1
+
+Published Time: Thu, 25 Jun 2026 00:05:35 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# CKM-Driven Communication-Aware UAV Intelligent Trajectory Optimization for Urban Inspection 
+
+Xiaomeng Yang †, Ziye Jia †, Qiuming Zhu † and Qihui Wu †
+
+> †
+
+The Key Laboratory of Dynamic Cognitive System of Electromagnetic Spectrum Space, Ministry of Industry and Information Technology, Nanjing University of Aeronautics and Astronautics, Nanjing, Jiangsu, 211106, China {yangxiaomeng, jiaziye, zhuqiuming, wuqihui}@nuaa.edu.cn. 
+
+Abstract —Unmanned aerial vehicles (UAVs) are increasingly employed in urban inspection tasks, where reliable communication is critical but challenging due to the severe spatial channel heterogeneity. To address the issue, in this paper, we focus on the communication-aware path planning for multi-UAV tasks, and propose a channel knowledge map (CKM)-driven trajectory planning framework which integrates the channel modeling and trajectory decision-making. Specifically, we apply the diffusion model to construct a time-accumulated CKM and achieve the accurate perception with low flight overhead, which leverages the sparse observation data to reconstruct the high-fidelity global channel quality distribution. Based on the CKM, we propose a global-to-local graph attention network soft actor-critic al-gorithm. The graph attention network optimizes the complex combinatorial node ordering problem, generating an optimal and communication-aware sequence for the inspection targets. Subsequently, the soft actor-critic algorithm performs continuous action control to ensure the smoothness of the flight path and dynamically avoid communication attenuation areas. Simulation results demonstrate that the proposed method effectively guides UAVs through high-quality channel regions without dependence on real-time channel feedback, significantly improving both the trajectory efficiency and communication reliability. 
+
+Index Terms —Channel knowledge map (CKM), UAV trajectory planning, communication sensing, graph attention network (GAT), soft actor-critic (SAC). 
+
+I. I NTRODUCTION 
+
+# THE unmanned aerial vehicle (UAV) has emerged as a flexible platform showing unique advantages in urban inspection tasks [1], [2]. However, ensuring reliable air-to-ground communication during the task remains challenging, particularly in urban environments where dense buildings, street canyons, and dynamic blockages may cause severe path loss and rapid channel variations [3]. Thus, it is crucial to perform communication-aware path planning for urban inspection tasks. The conventional UAV path planning approaches typically optimize geometric metrics such as distance or energy con-sumption, while neglecting essential communication constraints or assuming simplified channel models [4]. These assumptions fail to capture the complex spatial heterogeneity of wireless propagation, potentially leading UAVs to traverse regions with 
+
+This work was supported by National Key R&D Program of China 2025YFF0514704. (Corresponding author: Ziye Jia) 
+
+severely degraded communication quality. To address this issue, increasing attention has been paid to the communication- aware UAV path planning, where the knowledge of the radio environ-ment is incorporated into trajectory design. For instance, [5] preconstructs a signal to interference plus noise ratio (SINR) map to determine flyable space meeting a given SINR threshold. Similarly, [6] achieves continuous control of the UAV during flight by constraining the communication rate to remain above the preset threshold. [7] calculates the signal strength and SINR based on the path loss model and integrates them into the path planning of multi-UAV networks. Beyond static algo-rithms, reinforcement learning (RL)-based and active sensing approaches have also been explored. For example, [8] and [9] use deep Q-networks and periodic environmental observations to jointly optimize the task completion rates and communication quality. Furthermore, the UAV-assisted channel mapping is gaining significant attention. Notably, works such as [10] and [11] dynamically couple UAV trajectory planning with real-time environmental perceptions to achieve autonomous, high-precision three-dimensional spatial spectrum mapping. Despite these advancements, existing methods struggle to balance the environmental uncertainty and task complexity. These methods typically rely on perfectly known channel models as passive constraints, or focus exclusively on map reconstruction while ignoring the sequential constraints of practical physical tasks. To this end, we consider introducing the channel knowledge map (CKM) to characterize the spatial distribution of received signal strength (RSS) during the inspection task. However, con-structing an accurate CKM in urban environments remains chal-lenging due to the scarcity of spatio-temporal channel measure-ment data, which hinders the practical communication-aware planning [12]–[14]. Therefore, we construct the diffusion-enhanced time-accumulated CKM, which yields a dense and stable channel representation without relying on extensive real-time sensing infrastructure by aggregating RSS measure-ments over time. Building upon the time-accumulated CKM, a communication-aware UAV path planning strategy, termed as Graph Attention Network Soft Actor-Critic (GATSAC), is proposed to proactively avoid poor signal zones during urban inspection tasks. In detail, we reformulate the multi-target urban inspection issue as a traveling salesman problem (TSP) guided by graph attention network (GAT). The GAT effectively fuses 
+
+> arXiv:2606.24979v1 [cs.LG] 23 Jun 2026
+
+spatial node features with CKM channel indicators, learning both local and global graph representations to infer an optimal visiting order that balances the flight duration and signal quality. Subsequently, a soft actor-critic (SAC)-based trajectory planner is designed to ensure the smooth and communication-efficient UAV trajectory based on the inferred sequence. The rest of this paper is arranged as follows. Section II presents the system model and problem formulation. In Sec-tion III, we design the CKM-driven path planning algorithm GATSAC. In Section IV, we conduct simulations and analyze the results. Finally, Section V draws the conclusions. II. S YSTEM MODEL AND PROBLEM FORMULATION 
+
+In this section, the network model for the multi-UAV urban inspection scenario and the CKM model are presented, followed by the problem formulation. 
+
+A. Network Model 
+
+As shown in Fig. 1, we consider an urban UAV inspection scenario, where M UAVs must visit N target nodes distributed across an operational area A ⊂ R2 at a fixed altitude h. The UAVs and target nodes are denoted as U = {u1, ..., u M } and 
+
+V = {v1, ..., v N }, respectively. ui represents the i-th UAV, and 
+
+vj represents the j-th target node. All UAVs are required to depart from and return to a depot v0.To enable the communication-aware path planning, we con-struct the CKM to capture the RSS spatial distribution across A.The CKM is leveraged to guide UAV trajectories toward regions with favorable channel conditions while minimizing the flight distance. Considering the coordination complexity, the task nodes are clustered into M distinct groups based on the initial positions of UAVs, establishing a one-to-one correspondence which is expressed as 
+
+V =
+
+> M
+
+∪
+
+> m=1
+
+Vm, Vm ∩ V n = ∅, m ̸ = n. (1) 
+
+Vm represents the target node cluster with Nm waypoints of the m-th UAV. Each UAV independently serves one cluster, which transforms the multi-UAV mission into multiple single-UAV routing problems. Without loss of generality, we focus on one representative UAV um with the cluster Vm.
+
+B. CKM Model 
+
+Considering that RSS is mainly determined by the large-scale path loss, we assume that the CKM during flight can be regarded as quasi-static. To facilitate spatial representation, the area A is discretized into a uniform grid of size H × W ,where H and W are determined by the physical dimensions and grid resolution. The mapping from continuous coordinates 
+
+(x, y ) to discrete indices is denoted as (gx(x), g y (y)) , given by 
+
+gx(x) = clip 
+
+(⌊ x − Xmin 
+
+Xmax − Xmin 
+
+· (H − 1) 
+
+⌋
+
+, 0, H − 1
+
+)
+
+, (2) 
+
+> Fig. 1: Multi-UAV urban inspection scenario. The trajectory is gener-ated based on the constructed CKM.
+
+and 
+
+gy (y) = clip 
+
+(⌊ y − Ymin 
+
+Ymax − Ymin 
+
+· (W − 1) 
+
+⌋
+
+, 0, W − 1
+
+)
+
+, (3) where Xmin , Xmax , Ymin and Ymax represent the spatial boundaries of the target area A, and ⌊·⌋ indicates the floor operation. The clip functions (2) and (3) restrict the resulting indices within the valid grid dimensions to prevent out-of-bound errors, and then each cell stores a channel quality indicator. In addition, the RSS is used as the channel quality metric, i.e., 
+
+K(gx, g y ) ≜ RSS (gx, g y ). (4) With the quasi-static assumption, RSS samples are accumulated over time to form a fully observed CKM, which serves as the complete CKM for training. Then, the model is trained to learn the conditional distribution of the complete CKM under sparse measurements, enabling the full CKM reconstruction. 
+
+C. Problem Formulation 
+
+To achieve efficient urban inspection with guaranteed com-munication quality, we formulate the trajectory optimization problem P0 over the continuous trajectory pm(t) of UAV um
+
+with Nm nodes in cluster Vm. For notational brevity, the spatial channel quality at the continuous UAV position is mapped to the discrete grid indices, which is defined as 
+
+K(pm(t)) ≜ K(gx(px,m (t)) , g y (py,m (t)) ), (5) where (px,m (t), p y,m (t)) is the instantaneous spatial coordinate of the UAV um at time t. Besides, the UAV follows a second-order kinematic model during flight, where ˙pm(t) = ξm(t) and 
+
+˙ξm(t) = am(t), with (˙) denoting time derivative. ξm(t) and 
+
+am(t) are the velocity and acceleration vectors of UAV um,respectively. In addition, to avoid nested minimization in the objective function, an auxiliary variable qm is introduced to represent the worst communication quality along the trajectory. The optimization problem is formulated as 
+
+P0 : min 
+
+> pm(t), q m
+
+∫ Tm
+
+> 0
+
+∥ξm(t)∥ dt − λq m (6a) s.t. ∥pm(tk) − pvk ∥ ≤ r, k = 1 , . . . , N m, (6b) K(pm(t)) ≥ qm, ∀t ∈ [0 , T m], (6c) 
+
+∥ξm(t)∥ ≤ ξmax , ∀t ∈ [0 , T m], (6d) 
+
+∥am(t)∥ ≤ amax , ∀t ∈ [0 , T m], (6e) 
+
+ξm(0) = ξm(Tm) = 0, (6f) 
+
+pm(0) = pm(Tm) = pvm, 0 , (6g) 
+
+Kmin ≤ qm ≤ K max , (6h) 
+
+0 ≤ tk ≤ Tm, k = 1 , . . . , N m, (6i) 
+
+pm(t) ∈ A , ∀t ∈ [0 , T m]. (6j) The objective function minimizes the total flight path length ∫ Tm 
+
+> 0
+
+∥ξm(t)∥dt while maximizing the communication quality 
+
+qm, where Tm represents the total task time, and λ > 0
+
+balances the flight efficiency and communication reliability. Constraint (6b) ensures that the UAV passes within capture radius r of each waypoint pvk at time tk. In detail, pvk is the position of the waypoint vk in cluster Vm, and tk is the arrival time in continuous trajectory pm(t) at vk. Constraint (6c) requires that the RSS value K(pm(t)) along the entire trajectory remains no less than qm, for all times t ∈ [0 , T m], thereby imposing qm as a global lower bound on the communication quality throughout the flight. Constraints (6d) and (6e) impose speed and acceleration limits, bounding the first and second derivatives of pm(t), respectively. Constraint (6f) enforces zero velocity at departure and return, and constraint (6g) requires the UAV to return to the depot pvm, 0 . In constraint (6h), qm
+
+is restricted within the interval [Kmin , Kmax ], where Kmin and 
+
+Kmax represent the minimum and maximum RSS values stored in the CKM, respectively. Constraint (6i) enforces that the arrival time of each waypoint is within the horizon [0 , T m].Constraint (6j) confines the trajectory within the operational area A.
+
+P0 is challenging to solve due to the non-differentiable CKM, nonconvex coverage constraints, and continuous kine-matic constraints. Accordingly, we propose the CKM-driven GATSAC algorithm, which decomposes the problem into a discrete waypoint ordering stage and a continuous trajectory optimization stage solved in sequence. III. A LGORITHM DESIGN 
+
+In this section, we present the CKM-driven GATSAC frame-work for communication-aware urban inspection, as illustrated in Fig. 2. We firstly present the construction of a complete CKM via a diffusion-based generative model. Then, we divide task-level path planning problem into two layers, which jointly addresses the communication-aware node ordering and contin-uous trajectory planning. In detail, a graph-based model firstly serves as the upper layer to determine the communication-aware visiting sequence of task nodes. Then, a continuous trajectory planner generates feasible UAV paths between consecutive nodes while avoiding regions with poor channel quality. The overall framework enables efficient and communication-aware urban UAV inspection tasks, detailed in Algorithm 1. 
+
+> Fig. 2: The overall framework of CKM-driven GATSAC algorithm.
+
+A. Time-Accumulated CKM Construction 
+
+The CKM serves as the fundamental information layer that supports communication-aware trajectory planning. 
+
+1) Temporal Accumulation under Quasi-Static Assumption: 
+
+Exploiting the assumption of urban propagation quasi-static nature, RSS measurements across sequential episodes can be regarded as a sampling accumulation dimension and aggregated to form progressively denser spatial maps. Specically, we use 
+
+δtr (i, j ) ≜ I[(i, j ) = ( gx(t, r ), g y (t, r )) ] to denote whether the channel measurements of receiver r mapping to grid cell (i, j )
+
+at time step t are available. The accumulated signal sum and measurement count are updated via 
+
+St(i, j ) = St−1(i, j ) + ∑
+
+> r∈R t
+
+Rt,r · δtr (i, j ), (7) and 
+
+Ct(i, j ) = Ct−1(i, j ) + ∑
+
+> r∈R t
+
+δtr (i, j ), (8) where St(i, j ) and Ct(i, j ) denote the accumulated signal sum and measurement count at grid (i, j ), Rt is the receiver set, and 
+
+Rt,r is the RSS value of receiver r at time step t. An observation mask Mt(i, j ) = I [Ct(i, j ) > 0] is defined to indicate the measured cells. Then, the accumulated CKM at time step t
+
+can be expressed as 
+
+Kraw  
+
+> t
+
+(i, j ) = 
+
+{ St(i,j ) 
+
+> Ct(i,j )
+
+, if Mt(i, j ) = 1 ,
+
+0, otherwise , (9) where Kraw  
+
+> t
+
+(i, j ) depicts the average sparse measurement value of grid (i, j ) at time step t. RSS samples collected over multiple time steps are projected onto a unified spatial grid, forming a sparse CKM as 
+
+Kaccum (i, j ) = Kraw  
+
+> t
+
+(i, j ), (10) where the observed grid cells are masked as a matrix, expressed as Kaccum , and Kaccum (i, j ) represents the value of the grid 
+
+(i, j ) in the accumulated CKM. After sufficient accumulation, certain scenes achieve full coverage, yielding complete maps that serve as ground truth for model training. 
+
+2) Diffusion-Based CKM Generation: While the time ac-cumulation densifies the CKM, practical missions must plan trajectories based on the sparse observations from limited flight time, which typically cover only a small portion of the operational area. To enable reliable planning from such sparse data, we train a diffusion model on historical dense CKMs to learn the spatial propagation patterns. Given the time-accumulated CKM as ground truth, repre-sented as K0 = Kaccum , we simulate sparse observations by randomly sampling to form training pairs, denoted as 
+
+(Ksparse , M). Ksparse is the sparse observations, and M ∈{0, 1}H×W is the observation mask. The forward diffusion process gradually adds Gaussian noise to K0 over T steps, i.e., 
+
+Kt = √¯αtK0 + √1 − ¯αtϵ, ϵ ∼ N (0 , I), (11) where ¯αt controls the noise level at diffusion step t. Then, a UNet-based denoising network ϵθ learns to predict the noise component conditioned on sparse observations, which is de-tailed as 
+
+ϵθ = fθ (Kt, t, Ksparse , M). (12) During the inference, the reverse process iteratively denoises from KT ∼ N (0 , I) to K0. The observed radio measurements are strictly preserved by replacing Kt at each denoising step as 
+
+Kt ← Kt ⊙ (1 − Mt) + Ksparse ⊙ Mt, (13) where Mt denotes the mask signal which take the value of 1 in grid with sparse observation, and 0 otherwise. The training objective minimizes the noise prediction error as 
+
+L = Et, K0,ϵ
+
+[|ϵ − ϵθ (Kt, t, Ksparse , M)|2] . (14) 
+
+B. Graph-Based TSP Solver 
+
+We employ the GAT to better aggregate the channel state and the spatial information of target nodes and 3-opt [15] to dynamically adjust the node order in the TSP problem. Firstly, we combine the information of nodes and edges to construct the graph. For a single UAV assigned with task nodes set V,we construct a complete graph as 
+
+G = ( V ∪ { v0}, E), (15) where v0 is the initial position of the UAV, and E contains all pairwise edges. Additionally, the feature vector of each node vi ∈ V is defined as xi = [xi, y i, k i], consisting of spatial coordinates (xi, y i) and the corresponding RSS value 
+
+ki extracted from the CKM. The edge feature between nodes 
+
+vi and vj consists of the Euclidean distance and the minimum channel quality kij along the straight-line path between the two nodes. Then, GAT is employed to aggregate the node and edge information and learn expressive node embeddings, depicted as 
+
+hi = GAT( xi, {xj , eij }j∈N (i)), (16) where xj and eij represent the nodes and edges in the graph structure, respectively. Through iterative message passing, GAT captures both geometric relationships and communication-aware interactions among task nodes. Based on the learned node embeddings, a decoding module generates a visiting sequence 
+
+π0 that starts and ends at the depot v0. The decoding process is implemented using the attention-based selection strategy. 
+
+Algorithm 1 CKM-Driven GATSAC for UAV Urban Inspection 
+
+Input: Target nodes V = {v1, . . . , v N }, depot v0, dense CKM 
+
+KCKM , trained GAT ϕ∗, and trained SAC policy π∗ 
+
+> θ
+
+.
+
+Output: UAV trajectory p(t) for all UAVs.  
+
+> 1:
+
+Partition V into M clusters {V 1, . . . , VM } of Nm waypoints via K-means clustering.  
+
+> 2:
+
+for each UAV um with assigned cluster Vm do  
+
+> 3:
+
+Construct graph Gm = ( Vm ∪ { v0}, Em). 
+
+> 4:
+
+Extract node features xi = [ xi, y i, k i] and edge features 
+
+[dij , k ij ] from KCKM . 
+
+> 5:
+
+Compute node embeddings according to (16).  
+
+> 6:
+
+Decode initial visiting sequence πm, 0 via attention-based selection.  
+
+> 7:
+
+Refine πm, 0 with 3-opt and obtain π∗
+
+> m
+
+. 
+
+> 8:
+
+Convert π∗ 
+
+> m
+
+to sequence {vm, 0, v i1 , . . . , v iNm , v m, 0}. 
+
+> 9:
+
+Initialize UAV at pm(0) = pvm, 0 , ξm(0) = 0, and waypoint index k ← 1. 
+
+> 10:
+
+while k ≤ Nm do  
+
+> 11:
+
+Observe state st = [˜ px, ˜py , ˜ξx, ˜ξy , ˜gx, ˜gy , ˜d, q norm ]. 
+
+> 12:
+
+Inquire KCKM at current position to obtain qnorm . 
+
+> 13:
+
+Select action at ∼ π∗ 
+
+> θ
+
+(·| st). 
+
+> 14:
+
+Execute at, then update ξm(t + 1) and pm(t + 1) . 
+
+> 15:
+
+if ∥pm(t) − pvik ∥ ≤ r then  
+
+> 16:
+
+Advance to next waypoint, k ← k + 1 . 
+
+> 17:
+
+end if  
+
+> 18:
+
+end while  
+
+> 19:
+
+Record trajectory pm(t). 
+
+> 20:
+
+end for  
+
+> 21:
+
+return {pm(t)}Mm=1 .
+
+C. SAC-Based Continuous Trajectory Planning 
+
+To further account for UAV kinematic constraints and en-vironmental dynamics, the TSP solution is used as an initial policy for a SAC agent. Specifically, given the visiting sequence 
+
+π = {v0, v i1 , . . . , v in , v 0}, the UAV is required to generate a continuous trajectory connecting consecutive nodes. The trajec-tory planning objective is to minimize the mission completion time T while maintaining the communication quality. In this work, the problem is formulated as a Markov decision process, which mainly consists of the following three parts: 
+
+1) State Space: At time step t, the state st encodes the UAV normalized position (˜ cx, ˜cy ) = ( cx/W, c y /H ), velocity 
+
+( ˜ξx, ˜ξy ) = ( ξx/ξ max , ξ y /ξ max ), next waypoint position (˜ gx, ˜gy ),distance to goal ˜d, and the current RSS quality qnorm ∈ [0 , 1] 
+
+extracted from the CKM. (cx, c y ) and (ξx, ξ y ) represent the mapping grid position and the velocity of the UAV. 
+
+2) Action Space: The continuous action ˜at = [˜ ax, ˜ay ]T ∈
+
+[−1, 1] 2 is a two-dimensional vector representing normalized acceleration commands along the x and y axes, respectively. 
+
+˜at maps to the physical UAV acceleration via at = ˜atamax ,where amax is the maximum UAV acceleration. 
+
+3) Reward Function: The reward function is designed to encourage the progress toward the target node while penalizing 0 20 40 60          
+
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> (a)
+> Sparse RSS
+> 020 40 60
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> (b)
+> Mask
+> 020 40 60
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> (c)
+> Predicted Dense RSS
+> 020 40 60
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> (d)
+> Ground Truth
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+> 0.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> 1.0
+
+Fig. 3: Diffusion-based time-accumulated CKM Construction. 
+
+communication bottlenecks and excessive control effort, which is modeled as 
+
+rt = λ1∆dprog  
+
+> t
+
+− λ2 max(0 , q t−1min − qt)I[qt < q t−1min ] − λ3∥at∥,
+
+(17) where ∆dprog  
+
+> t
+
+denotes the progress increment towards the target, 
+
+qt denotes the communication quality from the CKM, and ∥at∥
+
+penalizes the excessive control actions. 
+
+4) Objective Function: The policy network πθ (at|st) pa-rameterizes a Gaussian distribution over actions conditioned on the current state. The SAC maximizes the entropy-regularized expected return, i.e., 
+
+max  
+
+> θ
+
+Eπθ
+
+[ T∑
+
+> t=0
+
+γt(rt + αH(πθ (·| st))) 
+
+]
+
+, (18) where γ ∈ (0 , 1) is the discount factor, α > 0 is the entropy coefficient, and H(·) denotes entropy. The optimized objective via the soft policy iteration is 
+
+LSAC = Est,a t [α log πθ (at|st) − Qϕ(st, a t)] , (19) where Qϕ(st, a t) is the soft Q-function approximated by a critic network. The entropy term encourages exploration while the Q-value guides exploitation, enabling stable and efficient learning. IV. S IMULATION ANALYSIS 
+
+A. Experiment Setup 
+
+To evaluate the effectiveness of the proposed CKM-driven GATSAC joint framework, comprehensive simulations are con-ducted in an urban UAV inspection scenario. The simulation environment is constructed based on the Raymobtime urban dataset [16], which provides ray-tracing-based channel mea-surements and accurate geographical information. In detail, the target area for UAV network simulation is divided into 64 × 64 
+
+grids. Besides, to reduce the inference latency, we adopt the 0 10 20 30 40 50 60         
+
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> (a)
+> K-means Clustering
+> UAV1 start
+> UAV2 start
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 78
+> 9
+> 10
+> 010 20 30 40 50 60
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> (b)
+> Combined Trajectories
+> UAV1
+> UAV2
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 78
+> 9
+> 10
+
+Fig. 4: Multi-UAV cooperative trajectory planning. 
+
+denoising diffusion implicit model sampling with T = 20 steps, achieving a 50 -fold acceleration over the standard denoising diffusion probabilistic model while maintaining comparable re-construction quality. To accurately evaluate the communication quality of a flight segment over a discretized CKM, the edge communication cost is defined as the minimum RSS among all grid cells intersected by the path between two nodes. Aimed at demonstrating the performance of the proposed algorithm, five related methods are compared as follows. 
+
+1) Distance-Only TSP without CKM: This baseline solves the TSP using greedy and 3-opt algorithms based solely on Euclidean distance.Subsequently, its continuous trajectories are generated by a basic proportional controller. 
+
+2) Distance-Only TSP-SAC: This method combines the distance-based TSP ordering with a pre-trained SAC agent for communication sensing and continuous trajectory planning. It enables the UAV to bypass poor communication areas, verifying the SAC module’s independent contribution. 
+
+3) TSP-A*: After determining the node order, this baseline replaces our SAC-based continuous trajectory planner with the classical A* algorithm. It is implemented to evaluate the superiority of RL in continuous control. 
+
+4) SAC without GAT-TSP Initialization: Instead of utilizing GAT-TSP for sequence optimization, this approach adopts a random node visiting order and purely relies on the pre-trained SAC agent to achieve communication-aware continuous trajectory planning. 
+
+5) Joint SAC: The method relies solely on the SAC agent to jointly optimize the discrete node ordering and continuous trajectory control, verifying the necessity of TSP initialization. 
+
+B. Performance Analysis 
+
+Fig. 3 shows the process and performance of the CKM construction, where the discrete measurement points are shown in Fig. 3(a), and marked in the form of a mask in Fig. 3(b). Then, the reconstructed CKM in Fig. 3(c) is obtained through the pre-trained diffusion model, and Fig. 3(d) is the ground truth in the current region, which is relatively intuitive to observe that the error between the reconstructed CKM and ground truth is extremely small. Fig. 4 shows the results of trajectory planning for two UAVs, where Fig. 4(a) shows the node division results for multiple UAVs, and Fig. 4(b) is the final planning trajectory. 0 10 20 30 40 50 60                               
+
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> Exp1: Dist-TSP + Controller
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 7
+> 8
+> 9
+> 010 20 30 40 50 60
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> Exp2: Dist-TSP + SAC
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 7
+> 8
+> 9
+> 010 20 30 40 50 60
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> Exp3: GAT-TSP + A*
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 7
+> 8
+> 9
+> 010 20 30 40 50 60
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> Exp4: SAC only
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 7
+> 8
+> 9
+> 010 20 30 40 50 60
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> Exp5: Joint SAC
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 7
+> 8
+> 9
+> 010 20 30 40 50 60
+> X
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> 60
+> Y
+> Ours: GAT-CKM + SAC
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> 7
+> 8
+> 9
+
+Fig. 5: Trajectory comparisons of multiple planning methods. 208.2 188.1 211.7 323.4 235.1 192.6 84.1 82.4 80.1 89.1 83.7 79.7 Dist-Only TSP Dist-TSP +SAC TSP +A* SAC (No TSP) Joint  SAC Ours 150 175 200 225 250 275 300 325 350 Distance (a)  Distance Dist-Only TSP Dist-TSP +SAC TSP +A* SAC (No TSP) Joint  SAC Ours 75 80 85 90 -Min RSS dBm (b)  -Min RSS dBm 
+
+Fig. 6: Comparison performance of six planning methods. 
+
+Moreover, the trajectory planning results and performance comparison results of various algorithms are shown in Figs. 5 and 6. As observed in Fig. 5, compared with other algorithms, the planned trajectory of the proposed algorithm effectively avoids low-quality communication areas while maintaining a relatively low route cost. Furthermore, it can be observed from Fig. 6(a) that the total flight distance of the proposed method is significantly shorter than most baseline methods. Besides, since the RSS in dBm is inherently negative, −MinRSS is used as the vertical axis, such that a smaller value indicates better communication quality. It is obvious that our algo-rithm achieves the optimal communication performance from Fig. 6(b). Compared with the Distance-Only TSP and TSP+A*, the CKM-driven GATSAC algorithm reduces the path length while incorporating communication awareness. Additionally, although Dist-TSP+SAC yields the shortest distance, it does not explicitly optimize the communication quality and tends to traverse regions with poor communication quality due to the lack of channel awareness. Meanwhile, the Joint SAC algorithm improves performance by incorporating learning-based plan-ning, but it is still inferior to our proposed method due to the lack of structured global guidance. The SAC (No TSP) method performs the worst, which further highlights the importance of combining global planning with local optimization. V. C ONCLUSIONS 
+
+In this paper, we propose the CKM-driven GATSAC algo-rithm for urban UAV inspection, simultaneously optimizing the flight efficiency and communication quality. By constructing the diffusion-based time-accumulated CKM and integrating the graph-based TSP planning with SAC trajectory optimization, the method can effectively avoid low-quality communication regions while maintaining a relatively short flight distance. Simulation results validate the effectiveness of the proposed diffusion-based CKM and the hierarchical planning framework. REFERENCES [1] J. Yan, Z. Zhou, and B. Chen, “Multi-UAV Cooperative Trajectory Planning with Dynamic Programming,” IEEE Trans. Autom. Sci. Eng. ,early access, Mar. 2026. [2] Z. Jia, J. He, Y. Cui, Q. Zhu, L. Yuan, F. Zhou, Q. Wu, D. Niyato, and Z. Han, “Hierarchical Low-Altitude Wireless Network Empowered Air Traffic Management,” IEEE Commun. Mag. , early access, Mar. 2026. [3] Y. Yang, X. Xiong, and Y. Yan, “UAV Formation Trajectory Planning Algorithms: A Review,” Drones , vol. 7, no. 1, pp. 62–106, Jan. 2023. [4] Z. Jia, J. He, L. He, M. Sheng, J. Liu, Q. Wu, and Z. Han, “Dynamic Trajectory Optimization and Power Control for Hierarchical UAV Swarms in 6G Aerial Access Network,” IEEE Trans. Wireless Commun. , vol. 25, pp. 3349–3362, Sep. 2025. [5] S. Zhang and R. Zhang, “Radio Map-Based 3D Path Planning for Cellular-Connected UAV,” IEEE Trans Wirel Commun. , vol. 20, no. 3, pp. 1975– 1989, Nov. 2020. [6] H.-S. Im, K.-Y. Kim, and S.-H. Lee, “Trajectory Optimization for Cellular-Enabled UAV With Connectivity and Battery Constraints,” IEEE Trans. Veh. Technol. , vol. 74, no. 11, pp. 17 812–17 828, Jun. 2025. [7] M. Chen, L. Yang, J. Cao, G. Zhu, W. Yuan, H. Jiang, and D. Niyato, “Cargo UAVs Pick-Up Systems for Low-Altitude Economy with Commu-nication Quality, Battery Energy, and Time Window Constraints,” IEEE Trans Mob Comput. , early access, Dec. 2025. [8] C. H. Liu, X. Ma, X. Gao, and J. Tang, “Distributed Energy-Efficient Multi-UAV Navigation for Long-Term Communication Coverage by Deep Reinforcement Learning,” IEEE Trans. Mob. Comput. , vol. 19, no. 6, pp. 1274–1285, Mar. 2019. [9] Y. Zeng, X. Xu, and R. Zhang, “Trajectory Design for Completion Time Minimization in UAV-Enabled Multicasting,” IEEE Trans. Wireless Commun. , vol. 17, no. 4, pp. 2233–2246, Jan. 2018. [10] J. Wang, Q. Zhu, Z. Jia, Y. Zheng, K.-K. Ma, Q. Gao, Y. Chen, Z. Lin, and Q. Wu, “UAV-Aided 3D Spectrum Mapping Framework: Architecture, Technique, and Opportunity,” IEEE Commun. Mag. , early access, Feb. 2026. [11] Y. Chen, Q. Zhu, J. Wang, Z. Jia, X. Wang, Z. Lin, Y. Huang, Q. Wu, and C. Briso-Rodríguez, “UAV-Aided Efficient Informative Path Planning for Autonomous 3D Spectrum Mapping,” IEEE Trans. Cognit. Commun. Networking , vol. 12, pp. 1664–1677, Aug. 2025. [12] Y. Zeng, J. Chen, J. Xu, D. Wu, X. Xu, S. Jin, X. Gao, D. Gesbert, S. Cui, and R. Zhang, “A Tutorial on Environment-Aware Communications via Channel Knowledge Map for 6G,” IEEE communications surveys & tutorials , vol. 26, no. 3, pp. 1478–1519, Feb. 2024. [13] X. Xu and Y. Zeng, “How Much Data is Needed for Channel Knowledge Map Construction?” IEEE Trans Wirel Commun. , vol. 23, no. 10, pp. 13 011–13 021, May. 2024. [14] C. Zhang, T. Wang, R. Han, and Y. Gong, “Strategic Application of AIGC for UAV Trajectory Design: A Channel Knowledge Map Approach,” IEEE Trans Autom Sci Eng. , vol. 23, pp. 3423–3432, Mar. 2025. [15] G. Lancia and M. Dalpasso, “Finding the Best 3-OPT Move in Subcubic Time,” Algorithms , vol. 13, no. 11, pp. 306–332, Nov. 2020. [16] A. Klautau, P. Batista, N. González-Prelcic, Y. Wang, and R. W. Heath, “5G MIMO Data for Machine Learning: Application to Beam-Selection Using Deep Learning,” in 2018 Information Theory and Applications Workshop (ITA) , San Diego, CA, USA, 2018.

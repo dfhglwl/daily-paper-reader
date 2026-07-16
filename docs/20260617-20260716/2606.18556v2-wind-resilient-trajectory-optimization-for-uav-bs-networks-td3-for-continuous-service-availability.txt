@@ -1,0 +1,563 @@
+Title: Wind-Resilient Trajectory Optimization for UAV-BS Networks: TD3 for Continuous Service Availability
+
+URL Source: https://arxiv.org/pdf/2606.18556v2
+
+Published Time: Tue, 23 Jun 2026 02:39:08 GMT
+
+Number of Pages: 6
+
+Markdown Content:
+# Wind-Resilient Trajectory Optimization for UAV-BS Networks: TD3 for Continuous Service Availability 
+
+Azim Akhtarshenas ∗, German Svistunov ∗, Kuangyu Zheng ‡, and David L´ opez-P´ erez †∗Universitat Polit` ecnica de Val` encia (UPV), Spain 
+
+†Beihang Valencia Polytechnic Institute (BVPI), China 
+
+‡Beihang University, China aakhtar@doctor.upv.es 
+
+Abstract —Unmanned aerial vehicle (UAV)-mounted base sta-tions are highly susceptible to wind disturbances such as gusts and turbulence, which induce positional drift and degrade com-munication link quality, particularly in emergency scenarios. To address this challenge, we propose a DRL-based framework for wind-resilient trajectory adjustment and positioning based on the Twin Delayed Deep Deterministic Policy Gradient (TD3) algorithm. The method models wind as a stochastic kinematic perturbation, avoiding complex aerodynamic modeling, thereby enabling the TD3 agent to learn adaptive control policies that maintain optimal coverage footprints. By prioritizing user-centric performance metrics under turbulent conditions, the proposed ar-chitecture ensures continuous service availability despite external disruptions. Simulation results demonstrate that the TD3-based approach effectively compensates for wind-induced displacements and outperforms benchmark methods, including Proximal Policy Optimization (PPO), in terms of throughput stability and robust-ness in windy environments. 
+
+Index Terms —UAV Base Stations, Wind Turbulence Compensa-tion, TD3, Deep Reinforcement Learning 
+
+I. I NTRODUCTION 
+
+Unmanned aerial vehicles (UAVs) are increasingly deployed as aerial base stations in wireless communication systems [1], offering flexible and on-demand connectivity, particularly in emergency scenarios. However, their performance is signif-icantly degraded by environmental disturbances, especially wind and atmospheric turbulence. These disturbances induce trajectory deviations, instability, and reduced communication quality, thereby necessitating robust control and adaptation strategies [2]. Recent studies have highlighted the critical impact of atmospheric conditions on unmanned aerial vehicle-mounted base station (UAV-BS) systems. Surveys on wind-aware simulations and UAV-based atmospheric sensing further underscore the need for accurate turbulence modeling in real-istic UAV-BS deployments [3], [4]. 
+
+This research is supported by the Generalitat Valenciana through the CIDEGENT PlaGenT, Grant CIDEXG/2022/17, Project iTENTE; the action CNS2023-144333, financed by MCIN/AEI/10.13039/501100011033 and the European Union “NextGenerationEU”/PRTR; and the Xiongan S&T Inno-vation Program No.SQ2023XAGG0188 and S&T Program of Hebei China No.246Z0303G. 
+
+A. Related Work 
+
+Substantial efforts have investigated UAV-BS deployment and trajectory optimization from a communication perspective, targeting network metrics such as coverage, throughput, and fairness. However, most of these works assume ideal flight conditions and do not explicitly consider wind-induced dis-turbances. At the same time, extensive research has addressed wind-effect modeling and robust disturbance rejection to en-hance UAV-BS trajectory performance in turbulent environ-ments. Wind-resilient UAV-BS trajectory control methods can be broadly categorized as follows: 
+
+1) Classical Wind-Resilient UAV-BS Trajectory Control: 
+
+Significant efforts have been devoted to improving UAV-BSs stability and control under turbulent conditions. Traditional proportional-integral-derivative controllers, despite their sim-plicity, often exhibit degraded performance in the presence of nonlinear disturbances. In contrast, advanced model-based techniques such as cascaded model predictive control have demonstrated superior stability and disturbance rejection ca-pabilities [5]. Pilot-in-the-loop simulations have been used to assess controllability limits and highlight the sensitivity of UAV-base stations (BSs) to atmospheric turbulence [2]. Robust control methods, including sliding mode control methods [6], disturbance-rejection-based trajectory tracking [7], and fixed-time control [8], have shown enhanced performance under uncertainties and external disturbances. Trajectory adaptation strategies such as dual-mode control further enable UAVs to adjust motion according to wind conditions while preserving control authority in extreme environments [9]. Nevertheless, these approaches generally rely on accurate system dynamics and predefined assumptions. Consequently, their effectiveness diminishes under highly dynamic and stochastic wind con-ditions. Moreover, their high computational complexity and limited adaptability hinder real-time applicability in UAV tra-jectory optimization. 
+
+2) DRL-Based Wind-Resilient UAV-BS Trajectory Control: 
+
+To address high computational complexity and limited adapt-ability under severe wind turbulence, deep reinforcement learn-ing (DRL) has emerged as a promising paradigm for manag-ing wind disturbances, aerodynamic uncertainties, and multi-
+
+> arXiv:2606.18556v2 [eess.SY] 21 Jun 2026
+
+objective trajectory optimization [10]. For instance, DRL-based UAV-BS flight control using the Twin Delayed Deep Determin-istic Policy Gradient (TD3) and proximal policy optimization (PPO) algorithms was investigated in [11], where TD3 showed superior stability and faster convergence compared with PPO. Focusing on TD3, Himanshu et al. [12] reported improved navigation performance for quadrotors under disturbances, while [13] achieved robust stabilization of a twin-rotor sys-tem in windy conditions. Nevertheless, these studies primarily address low-level flight dynamics and navigation tasks. Exist-ing works typically treat UAV-BS control and communication performance independently, with limited integration of wind-resilient control strategies and communication-aware trajectory optimization in UAV-BS networks. 
+
+B. Motivation and Contributions 
+
+Despite recent advances in wind-resilient UAV-BS control, classical approaches [2], [5]–[9] rely on accurate system models and predefined dynamics, limiting their adaptability to highly dynamic and stochastic wind conditions. Although DRL-based solutions [11]–[13] have shown promising results, most prior works focus on flight stability and navigation, with limited emphasis on communication-aware trajectory op-timization. In contrast, our prior work [1] addressed UAV-BS positioning without accounting for wind effects or turbulence. Motivated by this gap, particularly in emergency scenarios requiring reliable connectivity under rapidly changing con-ditions, user mobility, and incomplete system information, we propose a DRL-based framework for joint wind-resilient trajectory control and positioning. The main contributions of this work are listed as follows:  
+
+> •
+
+We develop a TD3-based framework for adaptive UAV-BS positioning that captures UE mobility patterns, en-hances coverage performance, and improves fairness-aware throughput in dynamic environments.  
+
+> •
+
+We enable wind-resilient UAV-BS operation in GPS-denied scenarios by exploiting user equipment (UE) ref-erence signals and angle-of-arrival (AoA) measurements, improving robustness under turbulent conditions.  
+
+> •
+
+Simulation results demonstrate that the proposed TD3-based approach achieves faster convergence and outper-forms PPO in terms of mean reward and throughput. II. A TMOSPHERIC WIND DISTURBANCE MODELING 
+
+To evaluate the impact of atmospheric disturbances on UAV-BS performance, four wind conditions are considered: constant wind and wind shear (steady components), as well as discrete gust and continuous turbulence (stochastic com-ponents) [2]. Wind is modeled as the superposition of steady and stochastic components, representing persistent effects and turbulence, respectively [14]. In this work, these disturbances are incorporated as cumulative velocity perturbations on the 
+
+Fig. 1: Wind input profiles [2]. UAV-BS kinematic state, with emphasis on the networking-layer response (see Fig. 1). Further details and mathematical formulations can be found in [2], [5], [14], [15]. 
+
+1) Constant Wind: As shown in Fig. 1(a), constant wind is modeled as a steady disturbance that gradually increases to a specified value and remains constant thereafter. It is defined as: 
+
+vconst (t) = v0, (1) where v0 is a constant wind velocity vector, representing a persistent external force on UAV-BS motion [2], [14]. 
+
+2) Wind Shear: Fig. 1(b) illustrates wind shear, modeled as a gradual variation in wind speed (and possibly direction) over time. It is expressed as: 
+
+vshear (t) = v0 + κt, (2) where κ denotes the shear rate. This non-uniform wind profile induces deviations in the UAV-BS trajectory [2]. 
+
+3) Discrete Gust: A discrete gust is modeled as a short-duration disturbance with smooth rise and decay (Fig. 1(c)): 
+
+vgust (t) = 
+
+(Vg sin 
+
+ π(t−t0)
+
+> Tg
+
+
+
+, t0 ≤ t ≤ t0 + Tg ,
+
+0, otherwise , (3) where Vg is the peak gust amplitude and Tg is the duration. This transient disturbance causes temporary deviations in UAV-BS motion [2], [5], [14]. 
+
+4) Continuous Turbulence: Continuous turbulence is repre-sented as a stochastic process with random fluctuations over time (Fig. 1(d)). It is modeled using a first-order Gauss–Markov process motion [2], [15]: 
+
+vturb (t + 1) = αvturb (t) + w(t), (4) where α ∈ [0 , 1] determines temporal correlation and w(t) ∼N (0 , σ 2I) represents Gaussian white noise. This captures per-sistent and time-varying atmospheric effects on UAV-BS. III. S YSTEM DESCRIPTION 
+
+In this study, we consider a wireless network composed of multiple UAV-BSs serving ground UEs (first responders). The system operates in both downlink and uplink using TDMA. Let U = {u1, . . . , u U } denote the set of UEs. The position of UE u ∈ U is given by ρU 
+
+> u
+
+= [ xU 
+
+> u
+
+, y U 
+
+> u
+
+, z U 
+
+> u
+
+]⊤, and the collective positions of all UEs are denoted by XU = [ ρU1 , . . . , ρU 
+
+> U
+
+]. UEs are grouped into hotspots, where the communication metrics of all UEs within each hotspot are aggregated and, when required, represented by a single equivalent UE. Let H = {h1, . . . , h H }
+
+denote the set of hotspots, each with radius r and equal number of UEs. Hotspot mobility follows a linear mobility model. All UEs move with speed v. Each UE in the same hotspot is associated with the UAV-BS dedicated to this hotspot. Let 
+
+D = {d1, . . . , d D } denote the set of UAV-BSs, with positions 
+
+ρD 
+
+> d
+
+= [xD 
+
+> d
+
+, y D 
+
+> d
+
+, z D 
+
+> d
+
+]⊤. The collective UAV-BS positions are given by XD = [ ρD1 , . . . , ρD 
+
+> D
+
+].
+
+A. Channel Model 
+
+In this study, we use the Urban Macro (UMa) channel models defined by the Third Generation Partnership Project (3GPP) in TR 36.814 to calculate each of the aforementioned channel gain components, with the following modifications: the multi-path fading is modeled using a Rician distribution, and the BS antennas are assumed to be omnidirectional. We assume that our proposed network operates over a bandwidth B at a carrier frequency f . Each radio link within the network is subject to both slow and fast fading effects. The overall channel gain between the uth UE belonging to any hotspot served by the dth UAV-BSs on the frequency resource k is denoted by 
+
+Gu,d,k . This composite gain is modeled as the product of several contributing factors: antenna gain ( Ga), path gain ( Gp), shadow fading ( Gs), and fast fading ( Gff ), as given by 
+
+Gu,d,k = Ga 
+
+> u,d
+
+· Gp 
+
+> u,d
+
+· Gs 
+
+> u,d
+
+· Gff  
+
+> u,d,k
+> 2
+
+. (5) The overall channel gain, Gu,d,k , depends on both the position of each UAV-BS, denoted by ρD 
+
+> d
+
+(which is treated as an optimization variable), and the position of the UEs, denoted by 
+
+ρU 
+
+> u
+
+, which is assumed to be unknown. Therefore, the overall channel gain between the uth UE and the dth UAV-BS can be expressed as Gu,d,k = Gu,d,k 
+
+ ρU 
+
+> u
+
+, ρD
+
+> d
+
+. The power received by the uth UE from the dth UAV-BS on the the kth frequency resource is given by 
+
+P rx 
+
+> u,d,k
+
+(ρU 
+
+> u
+
+, ρD 
+
+> d
+
+) = P tx  
+
+> d,k
+
+· Gu,d,k (ρU 
+
+> u
+
+, ρD 
+
+> d
+
+). (6) where P tx  
+
+> d,k
+
+denotes the transmit power of the the dth UAV-BS on the kth frequency resource. The signal quality experienced by the uth UE from the dth 
+
+UAV-BS on the frequency resource k is quantified by the average signal-to-interference-plus-noise ratio (SINR), denoted by γu,d,k . It is computed as [16] 
+
+γu,d,k (ρU 
+
+> u
+
+, XD) = P rx 
+
+> u,d,k
+
+(ρU 
+
+> u
+
+, ρD 
+
+> d
+
+)
+
+PDd′=1  
+
+> d′̸=d
+
+P rx 
+
+> u,d ′,k
+
+(ρU 
+
+> u
+
+, ρD 
+
+> d′
+
+) + σ2
+
+> k
+
+. (7) where σ2 
+
+> k
+
+denotes the noise power in the frequency resource k,and ρD represents the set of positions of all UAV-BSs. Using Shannon–Hartley theorem, the achievable throughput for the first responder u connected to the BS of the UAV-BS d on the frequency resource k can be expressed as [16] 
+
+Ru,d,k (ρU 
+
+> u
+
+, XD) = Bk log 2
+
+
+
+1 + γu,d,k (ρU 
+
+> u
+
+, XD)
+
+
+
+. (8) where Bk denotes the bandwidth allocated to the frequency resource k. If a scheduler is used to ensure fair distribution of the available resources among the UEs inside the cell—such as a round-robin scheme-the achievable throughput of the uth 
+
+UE associated with the dth UAV-BS can be represented as 
+
+Ru,d (ρU 
+
+> u
+
+, XD) = BU log 2
+
+
+
+1 + ¯ γu,d (ρU 
+
+> u
+
+, XD)
+
+
+
+. (9) where BU denotes the average bandwidth allocated per UE under equal resource sharing, and ¯γu,d (ρU 
+
+> u
+
+, XD) represents the effective SINR averaged over the allocated frequency resources. IV. DRL-BASED PROBLEM STATEMENT 
+
+Considering the proposed system model in the previous section, a DRL-based framework for a UAV-BS trajectory optimization under wind turbulence is considered, to optimize network performance using a fairness-based throughput metric. 
+
+A. Objective Function 
+
+The goal is to determine, in real time, the optimal UAV-BSs positions ρD(t) that maximize the total fair throughput, denoted by Rfair , for the UAV-BSs under wind turbulence. To this end, a centralized architecture is adopted, where a single reinforcement learning (RL) agent controls the UAV-BSs to provide communication services. We analyze the system over a finite UE movement and UAV-BS operation period T , indexed by discrete time steps t ∈ {0, 1, . . . , T }. For example, at time step t, the location of the u-th UE is denoted by ρU 
+
+> u
+
+(t),while the location of the d-th UAV-BS is given by ρD 
+
+> d
+
+(t). For notational simplicity, the explicit time index t is omitted in the remainder of this paper. The total fair throughput is defined as 
+
+Rfair (XU, XD) = 
+
+> D
+
+X
+
+> d=1
+
+X
+
+> u∈U d
+
+log 10 
+
+
+
+Ru,d 
+
+
+
+ρU 
+
+> u
+
+, XD 
+
+, (10) where XU and XD denote the (unknown) locations of all UEs and the positions of UAV-BSs, respectively. Ud denotes the set of UEs associated with the dth UAV-BS, with |U d| = N in the considered setup. This formulation promotes network fairness by giving higher priority to UEs with lower throughput, thus avoiding resource allocation bias toward already well-served UEs. The optimization problem is given by: 
+
+max 
+
+> XD
+
+Rfair (XU, XD), (11) where XD denotes the positions of the UAV-BS to be op-timized. Real-time UAV-BS trajectory optimization is chal-lenging due to the high dimensionality, stochastic nature, and nonlinearity of the problem, further exacerbated by wind turbu-lence. These factors, combined with UEs mobility and dynamic radio conditions, motivate the use of DRL-based approaches for adaptive and real-time decision-making. 
+
+B. DRL-based TD3 
+
+The UAV-BS trajectory optimization problem under wind turbulence is formulated as a Markov decision process. The agent interacts with the environment through states s ∈ S ,actions a ∈ A , and rewards r. Transitions are recorded at each time step as (s, a, r, s ′), where s′ denotes the next state. The objective of the agent is to learn a policy π that maximizes the expected long-term return (see Algorithm 1). TD3 [17] is an off-policy actor-critic algorithm that improves training stability and reduce overestimation bias in continuous control tasks. TD3 learns a deterministic policy πϕ(s) and two critic networks Qθ1 (s, a ) and Qθ2 (s, a ) using a replay buffer B,enabling sample-efficient learning in stochastic environments. To improve training stability, a warm-up phase of Nwarm steps is employed, during which actions are randomly sampled to populate the replay buffer before policy updates begin. The target for the critic networks is defined as [17]: 
+
+y = r + γ min  
+
+> i=1 ,2
+
+Qθ′ 
+
+> i
+
+(s′, ˜a), (12) where ˜a = πϕ′ (s′) + ϵ, and ϵ ∼ clip (N (0 , σ ), −c, c ). The critic networks are trained by minimizing the loss function: 
+
+L(θi) = EB
+
+h
+
+(Qθi (s, a ) − y)2i
+
+. (13) The actor is updated using the deterministic policy gradient: 
+
+∇ϕJ(ϕ) = EB
+
+h
+
+∇aQθ1 (s, a ) a=πϕ(s)∇ϕπϕ(s)
+
+i
+
+. (14) TD3 further improves stability through clipped double Q-learning, target policy smoothing, and delayed policy updates, which reduce value overestimation and training variance. The target networks are softly updated as [17]: 
+
+θ′ 
+
+> i
+
+← τ θ i + (1 − τ )θ′
+
+> i
+
+, ϕ′ ← τ ϕ + (1 − τ )ϕ′, (15) where τ ≪ 1.In contrast to on-policy PPO, TD3 leverages experience replay to improve sample efficiency and robustness. This makes TD3 suitable for dynamic and non-stationary environments, such as wind-affected UAV-BS operations. 
+
+1) State Space: Here, we introduce the DRL agent’s state space for the proposed system model. During each episode of length τ time steps, the state set comprises time-dependent observations from all UAV-BSs, including their positions, the average SINR, and AoA statistics of each hotspot measured by the on-board BS. Specifically, the state of the dth UAV-BS associated with the hth hotspot is defined as: 
+
+S = { ˜ρd, ¯γd, Ψd,h , Φd,h }Dd=1 ,
+
+where ˜ρd = [ ρD
+
+> d,t
+
+, . . . , ρD 
+
+> d,t −τ
+
+] denotes the position history of the UAV-BS d over a window of τ time steps. At time step 
+
+Algorithm 1 TD3 [17]  
+
+> 1:
+
+Initialize critic networks Qθ1 , Q θ2 and actor network πϕ
+
+with random parameters θ1, θ 2, ϕ  
+
+> 2:
+
+Initialize target networks θ′ 
+
+> 1
+
+← θ1, θ′ 
+
+> 2
+
+← θ2, ϕ′ ← ϕ 
+
+> 3:
+
+Initialize replay buffer B 
+
+> 4:
+
+for t = 1 to T do  
+
+> 5:
+
+Select action a ∼ πϕ(s) + ϵ, ϵ ∼ N (0 , σ ) 
+
+> 6:
+
+Observe reward r and next state s′ 
+
+> 7:
+
+Store (s, a, r, s ′) in B 
+
+> 8:
+
+Sample mini-batch of N transitions (s, a, r, s ′) from B 
+
+> 9:
+
+˜a ← πϕ′ (s′) + ϵ, ϵ ∼ clip (N (0 , σ ), −c, c ) 
+
+> 10:
+
+y ← r + γ min i=1 ,2 Qθ′ 
+
+> i
+
+(s′, ˜a) 
+
+> 11:
+
+Update critics: 
+
+θi ← arg min 
+
+> θi
+
+1
+
+N
+
+X(y − Qθi (s, a )) 2 
+
+> 12:
+
+if t mod d = 0 then , Update actor: 
+
+∇ϕJ(ϕ) = 1
+
+N
+
+X ∇aQθ1 (s, a ) a=πϕ(s)∇ϕπϕ(s) 
+
+> 13:
+
+Update target networks: 
+
+θ′ 
+
+> i
+
+← τ θ i + (1 − τ )θ′
+
+> i
+
+ϕ′ ← τ ϕ + (1 − τ )ϕ′ 
+
+> 14:
+
+end if  
+
+> 15:
+
+end for 
+
+t = i, ρd,i represents the position of the dth UAV-BS, while 
+
+¯γd,i denotes the average SINR of all UEs served by UAV-BS d. Furthermore, Ψd,h,i and Φd,h,i represent the circular mean and circular standard deviation of the AoA measure-ments associated with hotspot h, respectively. These AoA-based statistics encode directional characteristics of the UE distribution, allowing the agent to infer spatial user dynamics without requiring explicit UE location information. Assuming three UAV-BSs operating at a fixed altitude and serving three hotspots, the overall state space is defined as: 
+
+S =
+
+ (x1, y 1, h UAV ), ¯γ1,1, Ψ1,1, Φ1,1
+
+,
+
+ (x2, y 2, h UAV ), ¯γ2,2, Ψ2,2, Φ2,2
+
+,
+
+ (x3, y 3, h UAV ), ¯γ3,3, Ψ3,3, Φ3,3
+
+.
+
+ . (16) 
+
+2) Action Space: At every decision stage, the action speci-fies the movement of each UAV-BS. The agent selects a direc-tion βd and a displacement magnitude r within a continuous action space, i.e., A = {(βd, r )}, where βd ∈ [−180 ◦, 180 ◦),
+
+r ∈ [0 , r max ], and d ∈ { 1, 2, 3}. The parameter rmax defines the maximum allowable displacement per time step, and βd
+
+is measured with respect to the east direction. The action is defined for each UAV-BS, and the overall action space consists of the joint movement decisions of all UAV-BSs. The proposed framework leverages the continuous control capability of TD3 to enable fine-grained trajectory adjustments without action (a) Training reward (TD3 vs. PPO). (b) Training throughput (TD3 vs. PPO).  
+
+> (c) Evaluation reward (TD3 vs. PPO). (d) Evaluation throughput (TD3 vs. PPO).
+
+Fig. 2: Trajectory optimization: comparison of TD3 and PPO performance during training and evaluation under wind turbulence. discretization, which is essential for capturing small spatial variations that significantly impact network performance. 
+
+3) Reward Function: The reward is designed to maximize the total fair throughput Rfair , as defined in (10). To ensure numerical stability and consistent reward scaling, a min-max normalization is applied to the reward signal. To further sta-bilize training, a parametric nonlinear mapping based on a sigmoid function [18] is employed, transforming Rfair as: 
+
+R = (1 + exp ( −cs(Rfair − cm))) −1 . (17) where cs > 0 controls the slope and cm determines the midpoint of the mapping, set to cs = 0 .25 and cm = 20 ,respectively. This mapping stabilizes the reward scale, reduces large fluctuations, and improves convergence during training. V. R ESULTS AND ANALYSIS 
+
+A. Simulation Configuration 
+
+The simulation setup is described as follows: 
+
+Network Settings: We consider a rectangular deployment area of 400 m × 1200 m , symmetric about the origin, with three hotspots initially located at (−350 , −550) , (350 , 0) , and 
+
+(−350 , 550) (all coordinates in meters), following linear UE mobility. Each hotspot serves 10 UEs, deployed at a fixed altitude of 1.5 m and moving at a constant speed of 10 m /s.The hotspots move along straight lines from right to left and reverse direction upon reaching the deployment boundaries. The environment includes three UAV-BSs operating at an altitude of 100 m , each with a mass of 2.5 kg and an initial speed of 10 m /s. The maximum displacement per time step is limited to rmax = 20 m . Each UAV-BS operates with a system bandwidth of 5 MHz , a carrier frequency of 2 GHz , a transmit power of 43 dBm , and a noise power is −114 dBm /MHz . The propagation scenario is based on the 3GPP UMa model (TR 36.814), with omnidirectional antennas and Rician fading. 
+
+Wind Disturbance Settings: Low-altitude wind is modeled as a composite process including constant, stochastic, shear, and gust components. The steady component has an average speed of 6.5 m /s, representing typical operating conditions. Stochastic turbulence is modeled using an autoregressive AR(1) process with a standard deviation of 1.5 m /s, capturing short-term fluctuations. A slowly varying shear component with am-plitude 1.0 m /s and a period of 180 steps accounts for gradual atmospheric variations over time. In addition, a transient gust event with a peak speed of 2.5 m /s is introduced at step 80 for a duration of 8 steps, modeling wind disturbances [2], [14]. 
+
+Neural Network Settings: The main TD3 hyperparameters are defined as follows. Both the actor and critic networks use a constant learning rate of 3×10 −4 and consist of three hidden layers with 256 neurons each. The TD3 algorithm uses a replay buffer of size 10 6, a batch size of 256, a discount factor γ =0.99 , and a soft update coefficient τ = 0 .005 . Gradient clipping with a maximum norm of 1.0 is applied to stabilize training. In addition, delayed policy updates with a factor of 2, target policy smoothing with clipped noise ( σ = 0 .2, clip = 0 .5), and decaying exploration noise (initial standard deviation = 0 .2)are employed. For PPO, a constant learning rate of η = 3 ×
+
+10 −5 is used, with both actor and critic networks having the same architecture of three hidden layers with 256 neurons each. PPO uses γ = 0 .99 and λ = 0 .95 to balance short- and long-term rewards. For both algorithms, training is performed over 46k episodes, consisting of 256 time-steps. 
+
+B. Numerical Results 
+
+To assess generalization, the performance of the proposed system is evaluated under two scenarios. During training, the initial UAV-BSs positions are randomly initialized, and the reward and throughput are monitored accordingly (See Fig. 2(a) and (b)). During evaluation, the UAV-BSs are initialized with two predefined positions at the altitude of 100 m and horizontal coordinates [(0 , 180) , (0 , 0) , (0 , −180)] for the first scenario, and [( −180 , 380) , (180 , 380) , (−180 , −380)] for the second scenario correspondingly. The system performance is assessed every 500 iterations (See Fig. 2(c) and (d)). Fig. 2 presents the simulation results evaluating both communication performance (throughput) and RL performance (reward). The figure com-pares off-policy TD3 and on-policy PPO under wind turbulence during the training phase (Fig. 2(a) and (b)) and the evaluation phase (Fig. 2(c) and (d)). During training, Fig. 2(a) shows that TD3 achieves a higher and more stable mean reward, converging to approximately 0.65, while PPO converges to a lower value with noticeable fluctuations. Fig. 2(b) further demonstrates that TD3 rapidly reaches a mean throughput of approximately 22 Mbps within the early training stages (around 
+
+10 4 episodes), whereas PPO improves more gradually and ex-hibits higher variance. As shown in Fig. 2(c), TD3 consistently achieves higher reward values with lower variability, indicating more effective optimization of the fairness-based objective. Fig. 2(d) confirms that TD3 maintains a mean throughput of ap-proximately 22 Mbps across different initializations, while PPO converges to approximately 16 Mbps with increased variability. These results demonstrate that TD3 provides more robust and consistent performance under dynamic wind conditions. VI. C ONCLUSION 
+
+This paper presented a TD3-based DRL framework for wind-resilient UAV-BS trajectory optimization. By modeling wind as a stochastic disturbance and incorporating communication-aware objectives, the proposed approach enables adaptive UAV-BS positioning while maintaining service continuity. Sim-ulation results demonstrate that TD3 consistently outperforms PPO in terms of convergence speed, stability, and communi-cation performance, achieving higher reward and throughput under varying wind conditions. These findings highlight the effectiveness of TD3 in handling dynamic and non-stationary environments. Overall, the proposed framework provides a practical and robust solution for UAV-BS-assisted emergency communications, particularly in challenging scenarios such as wind disturbances and GPS-denied environments. REFERENCES [1] M. R. Ib´ a˜ nez, A. Akhtarshenas, D. L´ opez-P´ erez, and G. Geraci, “Opti-mizing UAV aerial base station flights using DRL-based proximal policy optimization,” in ICC Workshops . IEEE, 2025, pp. 1293–1298. [2] Y. J. Hasan, M. S. Roeser, and A. E. Voigt, “Evaluation of the con-trollability of a remotely piloted high-altitude platform in atmospheric disturbances based on pilot-in-the-loop simulations: Yj hasan et al.” CEAS Aeronautical Journal , vol. 14, no. 1, pp. 225–242, 2023. [3] R. Sasse, C. A. Hirst, E. Frew, and B. Argrow, “A survey on applications of small uncrewed aircraft systems for offshore wind farms,” Wind Energy Science Discussions , vol. 2023, pp. 1–23, 2023. [4] K. Cole and A. Wickenheiser, “Spatio-temporal wind modeling for UAV simulations. arxiv (2019),” arXiv preprint arXiv:1905.09954 , 1905. [5] M. A. Sadi, A. Jamali, and A. M. N. Abang Kamaruddin, “Optimizing UAV performance in turbulent environments using cascaded model pre-dictive control algorithm and pixhawk hardware,” Journal of the Brazilian Society of Mechanical Sciences and Engineering , vol. 47, p. 396, 2025. [6] L. Chen, Z. Liu, H. Gao, and G. Wang, “Robust adaptive recursive sliding mode attitude control for a quadrotor with unknown disturbances,” ISA transactions , vol. 122, pp. 114–125, 2022. [7] Z. Xu, L. Fan, W. Qiu, G. Wen, and Y. He, “A robust disturbance-rejection controller using model predictive control for quadrotor UAV in tracking aggressive trajectory,” Drones , vol. 7, no. 9, p. 557, 2023. [8] X. Cai, X. Zhu, and W. Yao, “Fixed-time trajectory tracking control of a quadrotor UAV under time-varying wind disturbances: theory and experimental validation,” Measurement Science and Technology , vol. 35, no. 8, p. 086205, 2024. [9] K. Cole and A. M. Wickenheiser, “Trajectory generation for UAVs in unknown environments with extreme wind disturbances,” arXiv preprint arXiv:1906.09508 , 2019. [10] S. Lale, P. I. Renn, K. Azizzadenesheli, B. Hassibi, M. Gharib, and A. Anandkumar, “Falcon: Fourier adaptive learning and control for disturbance rejection under extreme turbulence,” npj Robotics , vol. 2, no. 1, p. 6, 2024. [11] H. R. Khanzada, A. Maqsood, and A. Basit, “Reinforcement learning for UAV flight controls: Evaluating continuous space reinforcement learning algorithms for fixed-wing uavs,” Plos one , vol. 20, no. 10, p. e0334219, 2025. [12] K. Himanshu, J. V. Pushpangathan et al. , “Waypoint navigation of quadrotor using deep reinforcement learning,” IFAC-PapersOnLine ,vol. 55, no. 22, pp. 281–286, 2022. [13] Z. Gamal, Y. Mahran, and A. El-Badawy, “Control of a twin rotor using twin delayed deep deterministic policy gradient (TD3),” in 2024 28th ICSTCC Conference . IEEE, 2024, pp. 329–335. [14] E. Bøhn, E. M. Coates, S. Moe, and T. A. Johansen, “Deep reinforcement learning attitude control of fixed-wing UAVs using proximal policy optimization,” in 2019 international conference on unmanned aircraft systems (ICUAS) . IEEE, 2019, pp. 523–533. [15] A. Phadke, F. A. Medrano, T. Chu, C. N. Sekharan, and M. J. Starek, “Modeling wind and obstacle disturbances for effective performance observations and analysis of resilience in UAV swarms,” Aerospace ,vol. 11, no. 3, p. 237, 2024. [16] A. Goldsmith, Wireless communications . Cambridge university press, 2005. [17] S. Fujimoto, H. Hoof, and D. Meger, “Addressing function approximation error in actor-critic methods,” in International conference on machine learning . PMLR, 2018, pp. 1587–1596. [18] S. R. Dubey, S. K. Singh, and B. B. Chaudhuri, “Activation functions in deep learning: A comprehensive survey and benchmark,” Neurocomput-ing , vol. 503, pp. 92–108, 2022.

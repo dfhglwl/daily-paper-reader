@@ -1,0 +1,642 @@
+Title: DynFly: Dynamic-Aware Continuous Trajectory Generation for UAV Vision-Language Navigation in Urban Environments
+
+URL Source: https://arxiv.org/pdf/2606.31654v1
+
+Published Time: Wed, 01 Jul 2026 01:10:45 GMT
+
+Number of Pages: 35
+
+Markdown Content:
+# Highlights 
+
+DynFly: Dynamic-Aware Continuous Trajectory Generation for UAV Vision-Language Navigation in Urban Environments 
+
+Wen Jiang, Hanfang Liang, Li Wang, Kangyao Huang, Wang Xu, Wei Fan, Jinyuan Liu, Shaoyu Liu, Hongwei Duan, Bin Xu, Xiangyang Ji, Huaping Liu 
+
+• Identifies the motion-interface gap between UAV-VLN and continuous flight execution. 
+
+• Proposes DynFly, a dynamic-aware continuous trajectory generation frame-work. 
+
+• Represents UAV trajectories in control-point space for continuous motion generation. 
+
+• Designs dynamically sensitive supervision for trajectory generation. 
+
+• Improves navigation performance and trajectory quality on the OpenUAV benchmark. 
+
+> arXiv:2606.31654v1 [cs.RO] 30 Jun 2026
+
+# DynFly: Dynamic-Aware Continuous Trajectory Generation for UAV Vision-Language Navigation in Urban Environments 
+
+Wen Jiang a,1 , Hanfang Liang f,1 , Li Wang a,g , Kangyao Huang b, Wang Xu c, Wei Fan a, Jinyuan Liu d, Shaoyu Liu e, Hongwei Duan a, Bin Xu a, ∗, Xiangyang Ji c, ∗,Huaping Liu b
+
+> aSchool of Mechanical Engineering, Beijing Institute of Technology, Beijing, 100081, China
+> bDepartment of Computer Science and Technology, Tsinghua University, Beijing, 100084, China
+> cDepartment of Automation, Tsinghua University, Beijing, 100084, China
+> dSchool of Software, Dalian University of Technology, Dalian, 116024, China
+> eSchool of Artificial Intelligence, Xidian University, Xi’an, 710071, China
+> fSchool of Artificial Intelligence and Automation, Huazhong University of Science and Technology, Wuhan, 430074, China
+> gChongqing Innovation Center, Beijing Institute of Technology, Chongqing, 401120, China
+
+Abstract 
+
+Recent advances in multimodal large models have significantly improved UAV vision-language navigation (UAV-VLN) by enhancing high-level perception and reasoning. However, existing methods mainly focus on predicting discrete ac-tions, local targets, or sparse waypoints, while the continuous transition from nav-igation intent to executable UAV motion remains weakly modeled. This motion-interface gap limits the continuity, stability, and executability of generated UAV trajectories. To address this gap, we propose DynFly, a dynamic-aware contin-uous trajectory generation framework that bridges high-level navigation reason-ing and executable UAV motion. DynFly bridges high-level navigation intent and continuous UAV motion through a lightweight trajectory generation layer. Specif-ically, it represents expert trajectories in B-spline control-point space and employs a Spline-DiT generator to learn conditional trajectory generation via flow match-ing. Furthermore, we introduce UAV-oriented dynamic-aware supervision over position, finite-di ff erence velocity, finite-di ff erence acceleration, heading consis-tency, and local target alignment, enabling the generated trajectories to better sat-isfy UAV motion characteristics. And our trajectory generation framework can     
+
+> ∗Corresponding authors.
+> Email addresses: bitxubin@bit.edu.cn (Bin Xu), xyji@tsinghua.edu.cn (Xiangyang Ji)
+> 1These authors contributed equally to this work.
+
+also be integrated with an existing UAV-VLN framework while preserving its original visual-language reasoning pipeline. Extensive experiments on the Open-UAV UAV-VLN benchmark show that DynFly improves both navigation perfor-mance and trajectory quality. On the Test Unseen Full split, DynFly improves the strongest baseline by 4.69 NDTW, 2.40 SDTW, 2.14 SR points and 4.87 OSR points, while reducing NE by 4.51 m. 
+
+Keywords: Unmanned aerial vehicles, Vision-language navigation, Motion interface, Continuous trajectory generation, Dynamic-aware motion modeling 
+
+1. Introduction 
+
+Recent advances in multimodal large models have significantly improved UAV vision-language navigation (UAV-VLN) [1, 2, 3] by enhancing visual perception, language understanding, and high-level navigation reasoning. Given multi-view visual observations and natural language instructions, modern UAV-VLN sys-tems are capable of planning navigation goals in complex 3D environments [4, 5]. However, unlike ground robots [6, 7], UAVs operate in continuous three-dimensional space, where successful navigation requires not only selecting cor-rect navigation targets but also generating executable flight trajectories that satisfy motion continuity and kinematic constraints. Therefore, transforming high-level navigation intent into continuous UAV motion has become an important problem in UAV-VLN. Most existing UAV-VLN methods improve navigation performance by en-hancing semantic understanding and spatial reasoning. Typical approaches intro-duce stronger visual encoders, geometry-enhanced scene representations, histor-ical memory, or large vision-language models [8] to improve target localization and navigation planning. Recent systems, including TravelUAV, AutoFly, and LongFly [9, 10, 11], further improve high-level reasoning ability through multi-modal foundation models. Although these methods achieve encouraging naviga-tion performance, their final outputs are still commonly represented as discrete actions, local targets, or sparse waypoint sequences. Such representations mainly answer where to fly, while the continuous transition between navigation targets remains weakly modeled. In UAV flight, this transition is critical because the vehicle cannot move by 2Figure 1: Motivation of the proposed dynamic-aware trajectory generation framework. Under the same visual-language navigation intent and goal, sparse waypoint prediction may produce under-constrained aerial motion with abrupt turns, velocity jumps, and unstable local transitions. DynFly converts the high-level intent into a continuous 3D UAV trajectory through dynamic-aware trajectory generation, yielding smoother motion, improved heading consistency, and better target alignment. 
+
+instantaneously jumping between sparse targets. Instead, it must follow a contin-uous motion process with coherent displacement, velocity, acceleration, and head-ing changes. Continuous trajectory generation therefore provides a more suitable motion representation for UAV navigation, as it explicitly models intermediate flight states and produces trajectories that are smoother and easier for downstream controllers to track. This observation exposes a key limitation in current UAV-VLN systems, which lack an explicit motion interface between high-level navigation intent and contin-uous UAV flight execution. Motivated by this limitation, we propose DynFly, a dynamic-aware continu-ous trajectory generation framework for UAV vision-language navigation, as il-lustrated in Fig. 1. DynFly preserves existing visual-language reasoning modules and introduces an independent motion layer that converts high-level navigation in-tent into executable continuous UAV trajectories. Specifically, expert trajectories are represented in B-spline control-point space, where a lightweight Spline-DiT learns conditional trajectory generation through flow matching. The generated control points are then decoded into continuous trajectories and optimized us-3ing UAV-oriented dynamic-aware supervision over position, finite-di ff erence ve-locity, finite-di ff erence acceleration, heading consistency, and local target align-ment. By introducing motion priors during trajectory generation, DynFly pro-duces smoother, more stable, and physically executable UAV trajectories while preserving the original visual-language reasoning pipeline. The main contributions are summarized as follows: 
+
+• We propose DynFly, a dynamic-aware continuous trajectory generation frame-work that bridges high-level navigation reasoning and executable UAV mo-tion. The proposed framework preserves the original visual-language rea-soning pipeline while introducing an explicit trajectory generation layer for continuous UAV motion. 
+
+• We develop a spline-structured continuous trajectory generation framework that represents trajectories in B-spline control-point space and employs a lightweight Spline-DiT with flow matching to learn conditional trajectory generation, enabling the transformation of high-level navigation intent into continuous 3D UAV trajectories. 
+
+• We introduce UAV-oriented dynamic-aware supervision by incorporating motion priors over position, finite-di ff erence velocity, finite-di ff erence ac-celeration, heading consistency, and target alignment, leading to smoother, more stable, and physically executable UAV trajectories. 
+
+• Extensive experiments on UAV-VLN benchmarks demonstrate that DynFly consistently improves both navigation performance and trajectory quality, while further validating the e ff ectiveness and compatibility of the proposed trajectory generation framework. 
+
+2. Related Work 
+
+2.1. Vision-Language Navigation for UAVs 
+
+VLN aims to guide embodied agents to navigate according to natural-language instructions and visual observations. Early works such as R2R and Speaker-Follower established the basic VLN setting by connecting instruction understand-ing, visual state encoding, and sequential action prediction [5, 12]. Later meth-ods, including HAMT, and DUET, improved navigation performance through 4cross-modal representation learning, semantic grounding, history modeling, and topological reasoning [13, 14]. With the development of large language mod-els and vision-language models, VLN has further evolved toward embodied rea-soning. MapGPT, MapNav, and AgentVLN improve long-horizon navigation through language reasoning, semantic maps, and structured planning [15, 16, 17], while vision-language-action models such as PaLM-E, RT-2, and OpenVLA ex-tend visual-language understanding to robot action generation [18, 19, 20, 21]. These advances have also promoted UAV vision-language navigation. Represen-tative systems, including AerialVLN [22], TravelUAV [9], OpenFly [23], Flight-GPT [24], LongFly [11], and AutoFly [10], improve UAV navigation through stronger perception, spatial reasoning, historical memory, or multimodal founda-tion models. Although these methods substantially improve high-level navigation capability, most of them still represent navigation outputs as discrete actions, lo-cal targets, or sparse waypoint sequences. Such representations mainly determine where the UAV should fly, while the conversion from navigation intent to exe-cutable continuous UAV motion remains weakly modeled. 
+
+2.2. Continuous UAV Trajectory Modeling 
+
+Continuous trajectory modeling plays an important role in UAV flight because UAV motion is closely related to velocity, acceleration, heading changes, and trajectory smoothness. Traditional UAV trajectory planning methods commonly employ B-splines, minimum-snap optimization, or kinodynamic planning to gen-erate smooth and dynamically feasible trajectories [25, 26, 27]. Recent label-free UAV trajectory prediction work has also explored pseudo-label supervision and dynamics-aware motion modeling; for example, Liang et al. [28] generate pseudo trajectory labels and incorporate UAV motion dynamics to predict long-horizon 3D trajectories without explicit trajectory annotations. Representative systems such as EGO-Planner and PE-Planner further demonstrate that spline-based tra-jectory representations are e ff ective for real-time UAV planning and local replan-ning [26, 29]. However, these methods mainly rely on geometric maps, local sensing, or optimization objectives and are not designed to model visual-language navigation intent. More recently, generative action models such as Di ff usion Pol-icy, π0, and FlowMP have shown that di ff usion models and flow matching can generate continuous action sequences from visual or task conditions [30, 31, 32]. 5Although these methods demonstrate the potential of generative modeling for con-tinuous control, they generally operate in action spaces and do not explicitly ex-ploit the continuous curve structure of UAV trajectories. Overall, existing research mainly follows two separate directions: UAV-VLN methods focus on high-level navigation reasoning and answer where to fly, while trajectory planning and gen-erative action models focus on continuous motion generation and answer how to move. The motion interface between these two levels remains underexplored. DynFly addresses this gap by introducing a dynamic-aware continuous trajectory generation framework that explicitly models the transition from navigation intent to executable UAV motion. 
+
+3. Method 
+
+3.1. Problem Formulation 
+
+This paper studies the motion-interface problem in UAV-VLN, where high-level visual-language intent is converted into a short-horizon continuous UAV trajectory. At time t, Rt = {Ifront  
+
+> t
+
+, Irear  
+
+> t
+
+, Ileft  
+
+> t
+
+, Iright  
+
+> t
+
+, Idown  
+
+> t
+
+} denotes the multi-view RGB ob-servations, a language instruction L = {wi}Ni=1, and the pose of the UAV St =
+
+[xt, yt, zt, φ t, θ t, ψ t]. The visual-language front-end produces a context representation and a local navigation intent: (ht, gt) = Φ vl (Rt, L, St), (1) where ht denotes the visual-language context and gt ∈ R3 is the local 3D target consumed by the motion layer. Given ( ht, gt), DynFly predicts a future 3D trajectory over the next T steps: ˆYt = { ˆpt+1, . . . , ˆpt+T }, ˆpt+i ∈ R3, (2) with the supervised trajectory denoted as Y∗ 
+
+> t
+
+= {p∗
+
+> t+1
+
+, . . . , p∗ 
+
+> t+T
+
+}. The local motion generation function is formulated as ˆYt = Ψ motion (ht, gt). (3) Unlike waypoint-centric prediction, DynFly models short-horizon UAV motion in B-spline control-point space and supervises the decoded trajectory with motion-aware trajectory losses. 6Figure 2: Overall architecture and workflow of DynFly. The Qwen2.5-3B visual-language front-end produces a context representation and a local navigation intent from multi-view observations, language instruction, and UAV state. The proposed motion layer then generates B-spline control points through conditional flow matching and decodes them into a continuous UAV trajectory with trajectory-level dynamic-aware supervision. 
+
+3.2. System Overview 
+
+Fig. 2 shows the overall architecture and workflow of DynFly. The central idea is to separate high-level visual-language reasoning from low-level continuous motion generation, while connecting them through a compact motion interface. Given multi-view RGB observations Rt, language instruction L, and UAV state 
+
+St, the visual-language front-end produces a context representation and a local navigation intent: (ht, gt) = FΘ(Rt, L, St), (4) where ht denotes the visual-language context and gt ∈ R3 is the local 3D target consumed by the trajectory generator. The front-end is responsible for high-level semantic and spatial reasoning, namely where the UAV should fly next, while DynFly converts this intent into how to fly through a continuous short-horizon trajectory. In our implementation, the visual-language front-end is built on Qwen2.5-3B. Multi-view RGB observations are encoded by an EVA ViT-G vision tower with a CLIP image processor, and the selected high-level visual features are projected 7into the multimodal hidden space through a projector. This front-end provides visual-language context and local navigation intent for the subsequent motion layer. DynFly therefore focuses on the motion-interface problem: transforming high-level intent into spline-structured continuous UAV trajectories. To address the motion-interface gap in UAV-VLN, DynFly keeps the visual-language front-end responsible for semantic grounding and local intent predic-tion, while shifting the main modeling e ff ort to the subsequent motion-generation module. The proposed module then transforms the front-end intent into spline-structured continuous UAV trajectories. During training, expert waypoint trajectories are converted into B-spline pseudo control-point labels and used to supervise a Spline-DiT generator in control-point space through flow matching. During inference, the same conditioned genera-tor samples B-spline control points from noise, and a B-spline decoder maps the generated control points into a continuous short-horizon UAV trajectory. This lay-ered design directly targets the motion-generation interface that is often hidden in waypoint-centric UAV-VLN systems. The trajectory condition encoder projects the visual-language context, local target, and flow-matching time into a shared hidden space: 
+
+cvis  
+
+> t
+
+= Proj vis (ht), ctar  
+
+> t
+
+= MLP tar (gt), cτ = MLP τ(Embed( τ)) , (5) where τ ∈ [0 , 1] denotes the flow-matching generation time. These conditions are fused into the global condition vector for Spline-DiT: 
+
+hτ = Fuse cvis  
+
+> t
+
++ ctar  
+
+> t
+
++ cτ . (6) Conditioned on hτ, the Spline-DiT predicts a vector field in B-spline control-point space rather than directly predicting independent waypoints. The generated control points are decoded into a 3D trajectory using a precomputed B-spline basis matrix. The decoded trajectory is supervised with position matching, first-order displacement consistency, second-order motion variation, direction consistency, and local target alignment. Overall, DynFly serves as a trajectory generation layer that bridges high-level navigation reasoning and executable UAV motion. 
+
+3.3. Pseudo Control-Point Label Generation 
+
+Given the current front-end context and local navigation target, DynFly gener-ates a 3D trajectory that respects local UAV motion continuity. Instead of directly 8predicting discrete waypoints, we reformulate trajectory generation as conditional flow-field modeling in B-spline control-point space. The first step is to con-vert discrete trajectory labels into continuous-curve control points, which serve as pseudo control-point labels. Waypoint-centric methods usually represent the expert trajectory as 
+
+Y∗ = [y∗
+
+> 0
+
+, y∗
+
+> 1
+
+, . . . , y∗ 
+
+> T−1
+
+], y∗ 
+
+> t
+
+∈ R3. (7) This representation is intuitive, but discrete waypoints do not explicitly describe the continuous motion between adjacent points. When neighboring waypoints are far apart or the trajectory contains sharp turns, a model may learn position matching while ignoring velocity variation, acceleration smoothness, and direc-tion continuity. For UAVs, this can produce trajectories with discontinuities, ve-locity jumps, or overly aggressive local turns. We therefore convert the expert trajectory into B-spline control-point space. B-spline curves provide local continuity and smoothness, and their control points compactly describe the geometry of an entire trajectory. The expert trajectory is mapped to a set of control points 
+
+C∗ = [c∗
+
+> 0
+
+, c∗
+
+> 1
+
+, . . . , c∗
+
+> Ncp −1
+
+] ∈ RNcp ×3, (8) where Ncp is the number of control points. We call C∗ a pseudo control-point label because it is fitted from expert waypoints rather than directly annotated as a separate sensor signal. The label is no longer an isolated waypoint sequence, but a dynamic-aware training target obtained through continuous curve parameteriza-tion. Fig. 3 summarizes this conversion without relying on a formula-heavy view. Raw expert waypoints are first aligned to a normalized trajectory time grid, a fixed B-spline basis is constructed, and the control polygon is fitted so that the decoded curve reconstructs the expert trajectory. The resulting control points become com-pact pseudo control-point labels for the subsequent flow-generation module. 9Figure 3: Pseudo control-point label generation. Discrete expert waypoints are fitted with an open-uniform clamped B-spline basis to obtain pseudo control-point labels C∗ = Φ †Y∗. These labels provide a compact control-point-space target for flow matching and can be decoded back into contin-uous B-spline trajectories. 
+
+Let the B-spline degree be K, the number of control points be Ncp , and the number of discrete trajectory steps be T . We construct an open-uniform clamped knot vector 
+
+ξ = [ξ0, ξ 1, . . . , ξ Ncp +K ], (9) with length Ncp + K + 1. In a clamped B-spline, the first and last knots are re-peated K + 1 times, which stabilizes the curve near the endpoints. For normalized trajectory time u ∈ [0 , 1], the B-spline basis functions N j,K (u) are computed by the standard Cox-de Boor recursion. Evaluating the basis at 
+
+ut = tT − 1 , t = 0, 1, . . . , T − 1, (10) gives a basis matrix 
+
+Φ ∈ RT ×Ncp , Φt, j = N j,K (ut). (11) Rows of Φ are normalized so that PNcp −1 
+
+> j=0
+
+Φt, j = 1. Any control-point sequence 
+
+C ∈ RNcp ×3 can then be decoded into a trajectory: ˆY = ΦC, ˆyt =
+
+> Ncp −1
+
+X
+
+> j=0
+
+Φt, jc j. (12) Because B-spline basis functions have local support and smooth recursive struc-ture, the decoded trajectory naturally introduces structural coupling between neigh-boring trajectory points. 10 Training data provides an expert waypoint trajectory Y∗, while the generator learns in control-point space. We therefore solve for control-point labels whose decoded curve reconstructs the expert trajectory: 
+
+C∗ = arg min  
+
+> C
+
+∥ΦC − Y ∗∥2 
+
+> F
+
+. (13) The closed-form least-squares solution is obtained by the Moore-Penrose pseudo-inverse: 
+
+C∗ = Φ†Y∗, Φ† ∈ RNcp ×T . (14) When Ncp > T , as in the default Ncp = 8, T = 8, K = 3 configuration, this fit-ting problem is underdetermined. The pseudo-inverse therefore selects the deter-ministic minimum-norm control-point label among the least-squares solutions; it should be interpreted as a compact training target construction rather than a unique physical trajectory parameterization. This converts waypoint labels into control-point labels. Compared with direct waypoint supervision, the resulting pseudo control-point label compresses the whole trajectory shape, encourages continu-ous curves after decoding, and provides a more suitable generation space for flow matching. 
+
+3.4. DiT-Based Control Point Flow Generation 
+
+After obtaining the pseudo control-point label C∗, DynFly models trajectory generation as conditional control-point generation. Given the front-end context ht
+
+and local target gt, the model generates control points ˆC ∈ RNcp ×3, ˆY = Φ ˆC. (15) The core distribution is 
+
+pθ(C | ht, gt). (16) We use flow matching to learn a conditional vector field in control-point space: 
+
+vθ(Xτ, hτ), (17) where Xτ ∈ RNcp ×3 is the intermediate control-point state at flow time τ ∈ [0 , 1], and hτ ∈ Rd is a condition vector produced from the front-end context, target, and time features. The trajectory generator reuses the visual-language context produced by the front-end. If the front-end exposes visual tokens or a feature map, these features 11 are pooled into a compact context vector; if it exposes a single context embedding, that embedding is used directly. The context vector is projected to the DiT hidden dimension: ¯fimg = 1
+
+M
+
+> M
+
+X
+
+> m=1
+
+fm, eimg = ϕimg (¯ fimg ). (18) This keeps the upstream visual-language model compact: the trajectory generator uses the front-end context as a global semantic condition rather than introducing an additional task-specific visual decoder head. The local target g ∈ R3 is encoded by a lightweight MLP: 
+
+etar = ϕtar (g), ϕtar : R3 → Rd. (19) Flow matching also requires the model to predict vector fields at arbitrary τ. We use sinusoidal timestep embedding followed by an MLP: 
+
+eτ = ϕτ(γ(τ)) . (20) The image, target, and time conditions are fused by addition followed by a small fusion network: 
+
+hτ = ϕfuse (eimg + etar + eτ). (21) At flow time τ, the input control-point state is projected into hidden tokens and augmented with learnable control-point positional embeddings: 
+
+z j = Win xτ, j + p j, j = 0, 1, . . . , Ncp − 1. (22) The global condition is normalized and broadcast to every control-point token. The token sequence is processed by a Transformer encoder, and a final Layer-Norm plus linear layer predicts the control-point vector field: 
+
+vθ(Xτ, hτ) ∈ RNcp ×3. (23) This module can be viewed as a lightweight DiT-style denoiser, but its tokens are B-spline control points rather than image patches, and it predicts a flow vector field rather than image noise. Fig. 4 summarizes the full control-point flow gener-ation process, including condition encoding, DiT-based control-point denoising, flow-matching supervision, and inference-time Euler sampling followed by B-spline decoding. 12 Figure 4: DiT-based control-point flow generation. The condition encoder fuses visual context, the local target, and flow time into a global condition hτ. The intermediate control-point state Xτ is embedded as B-spline control-point tokens with learnable positional encodings, processed by DiT blocks, and mapped to the vector field vθ(Xτ, hτ). Flow-matching training supervises the field from Gaussian noise to pseudo control-point labels, while inference performs Euler sampling in control-point space and decodes the final control points with the B-spline basis. 
+
+To learn a continuous transformation from noise to trajectory control points, we sample Gaussian noise 
+
+Z ∼ N (0, I), Z ∈ RNcp ×3, (24) and a random flow time τ ∼ U (0 , 1). Given pseudo control-point label C∗, the linear interpolation path is 
+
+Xτ = (1 − τ)Z + τC∗. (25) Equivalently, the learned field approximates the conditional flow 
+
+dXτ
+
+dτ = vθ(Xτ, hτ), X0 = Z, X1 = C∗. (26) The target vector field is 
+
+uτ = C∗ − Z. (27) 13 The flow-matching objective is 
+
+LFM = E h∥vθ(Xτ, hτ) − (C∗ − Z)∥22
+
+i . (28) For trajectory-level supervision during training, we form the implemented auxil-iary clean control-point estimate from the same noise anchor: ˆC = Z + vθ(Xτ, hτ), ˆY = Φ ˆC. (29) This estimate follows the implemented auxiliary decoder path for trajectory-level losses. At inference, the model does not access C∗. It initializes C(0) ∼ N (0, I), sets τi = i/S for i = 0, . . . , S − 1, constructs hτi from the same front-end context, local target, and the current time embedding, and applies Euler integration: 
+
+C(i+1) = C(i) + ∆ τ vθ(C(i), hτi ), ∆τ = 1
+
+S . (30) After S steps, C(S ) is decoded by Φ to obtain the predicted UAV trajectory. 
+
+3.5. Loss Design 
+
+To make the model learn both control-point generation and trajectory-level dy-namic consistency, DynFly uses a joint objective consisting of flow matching, po-sition, velocity, acceleration, heading, and target losses. Fig. 5 illustrates how the control-point-space supervision and trajectory-space supervision are connected through B-spline decoding. For each sampled training tuple, the per-sample flow-matching loss is LFM .Although the generator learns in control-point space, the final task is trajectory prediction. We therefore decode ˆ C into ˆY and apply a position loss: 
+
+Lpos = SmoothL1( ˆY, Y∗). (31) All trajectory points are aligned by the local prediction horizon used by the B-spline decoder. The velocity and acceleration terms are finite-di ff erence con-straints over this decoded trajectory. These finite-di ff erence terms capture local displacement and curvature patterns that are physically relevant to UAV motion, and can therefore regularize real trajectory shapes in addition to matching way-point positions. To match local motion trends, we approximate velocity with first di ff erences: ˆvt = ˆyt+1 − ˆyt, v∗ 
+
+> t
+
+= y∗ 
+
+> t+1
+
+− y∗ 
+
+> t
+
+, (32) 14 Figure 5: Joint loss design for Spline-DiT trajectory generation. Flow matching provides control-point-space supervision from noisy control points to pseudo control-point labels. The predicted control points are decoded by the B-spline basis into a continuous trajectory, where position, finite-di ff erence velocity, finite-di ff erence acceleration, heading, and target-anchoring losses form the dynamic-aware trajectory supervision and improve goal responsiveness. 
+
+And define 
+
+Lvel = SmoothL1( ˆ V, V∗). (33) Acceleration is approximated by second di ff erences: ˆat = ˆyt+2 − 2ˆ yt+1 + ˆyt, a∗ 
+
+> t
+
+= y∗ 
+
+> t+2
+
+− 2y∗ 
+
+> t+1
+
++ y∗ 
+
+> t
+
+. (34) The acceleration loss matches expert acceleration and suppresses overly large predicted second-order changes: 
+
+Lacc = SmoothL1( ˆ A, A∗) + α 1
+
+T − 2 
+
+> T−3
+
+X
+
+> t=0
+
+∥ˆat∥22. (35) The implementation uses α = 0.1 for this acceleration penalty. To further avoid overly aggressive local motion, we impose upper-bound constraints on the predicted finite-di ff erence velocity and acceleration. Heading consistency is computed from normalized velocity directions: ˆdt = ˆvt
+
+∥ˆvt∥2 + ϵ , d∗ 
+
+> t
+
+= v∗
+
+> t
+
+∥v∗ 
+
+> t
+
+∥2 + ϵ , (36) 
+
+Lhead = 1 − 1
+
+T − 1 
+
+> T−2
+
+X
+
+> t=0
+
+ˆd⊤ 
+
+> t
+
+d∗ 
+
+> t
+
+(37) 15 where ϵ is a small constant for numerical stability. This loss directly constrains the local flight direction and helps avoid trajecto-ries that are positionally close but directionally inconsistent. The local target g is anchored at an intermediate trajectory index 
+
+r = min(4 , T − 1) , (38) with target loss 
+
+Ltar = SmoothL1(ˆ yr, g). (39) The index follows the implemented target anchor in the trajectory layer and places the local target near the early-middle part of the short horizon. This does not force the final point to equal the local target. Instead, it encourages the short-horizon trajectory to move toward the target while leaving later points available for smoothing, local adjustment, or motion variation. The final training objective is 
+
+L = λFM LFM + λpos Lpos + λvel Lvel + λacc Lacc 
+
++ λhead Lhead + λtar Ltar .
+
+(40) In the reported training setting, the weights are λFM = 1.0, λpos = 1.0, λvel = 0.2, 
+
+λacc = 0.05, λhead = 0.05, and λtar = 0.1. These dynamic-aware terms guide the decoded trajectory toward smoother local displacement, acceleration consistency, heading consistency, and target responsiveness. 
+
+4. Experiments 
+
+4.1. Experimental Setup 4.1.1. Datasets and Experimental Environment 
+
+We evaluate DynFly on the OpenUAV UAV-VLN benchmark. The dataset consists of Train, Test Seen, Test Unseen Map, and Test Unseen Object splits, where the test sets are further divided into Easy and Hard subsets. The training set contains 9,152 trajectories, while the Test Seen, Test Unseen Map, and Test Unseen Object sets contain 1,418, 958, and 629 trajectories, respectively. All experiments are conducted in the AirSim simulator, which provides physics-based UAV simulation and realistic visual environments [33]. 16 4.1.2. Evaluation Metrics 
+
+We report the standard navigation metrics, including normalized dynamic time warping (NDTW), success weighted by dynamic time warping (SDTW), navigation error (NE), success rate (SR), oracle success rate (OSR), and success weighted by path length (SPL). The DTW-based metrics are computed as NDTW( P, G) = exp − DTW( P, G)
+
+η|G|
+
+!
+
+, SDTW = 1succ NDTW , (41) where η = 3.0 and 1succ indicates whether the navigation is successful. In addition to the standard navigation metrics, we evaluate trajectory quality using SmoothMean, SmoothVar, TurnMean, and TurnVar. Smoothness is mea-sured using the second-order di ff erence of adjacent trajectory points, 
+
+ai = ˆpi+2 − 2 ˆ pi+1 + ˆpi, (42) where SmoothMean and SmoothVar denote the mean and variance of ∥ai∥2, re-spectively. Turning stability is measured by the angle between two consecutive motion directions, 
+
+θi = arccos ( ˆ pi+1 − ˆpi)⊤( ˆ pi+2 − ˆpi+1)(∥ ˆpi+1 − ˆpi∥2 + ϵ)( ∥ ˆpi+2 − ˆpi+1∥2 + ϵ)
+
+!
+
+, (43) where TurnMean and TurnVar denote the mean and variance of θi, respectively. In implementation, the cosine value is clipped to [-1,1] before applying arccos. 
+
+4.1.3. Implementation Details 
+
+The framework uses Qwen2.5-3B as the visual-language front-end and a frozen EVA ViT-G as the vision encoder. DynFly predicts a seven-step 3D trajectory represented by eight cubic B-spline control points and uses a Spline-DiT with a hidden size of 512, six Transformer blocks, and eight attention heads for control-point generation. The model is trained on eight NVIDIA RTX 4090 GPUs with a batch size of 8, a learning rate of 5 × 10 −4, and six training epochs using bf16 mixed precision. The dynamic-aware loss weights are set to λvel = 0.2, 
+
+λacc = 0.05, λhead = 0.05, and λtar = 0.1. During inference, trajectories are gener-ated using 10 Euler integration steps. 
+
+4.2. Comparison With State-of-the-Art Methods 
+
+We compare DynFly with representative UAV-VLN methods, including Ran-dom Action, Fixed Action, CMA, TravelUAV and TravelUAV-DA [9], Open-17 Table 1: Results on the Test Seen Set across Full /Easy /Hard splits. The low-data block uses 25% of training data and the full-data block uses 100% of training data. The Human row is included as a seen-set reference and is not an algorithmic baseline.                                                                                                                                                                                       
+
+> Method Full Easy Hard
+> NE ↓SR ↑OSR ↑SPL ↑NE ↓SR ↑OSR ↑SPL ↑NE ↓SR ↑OSR ↑SPL ↑
+> Human 14.15 94.51 94.51 77.84 11.68 95.44 95.44 76.19 17.16 93.37 93.37 79.85 25% Training Data
+> TravelUAV [9] 132.59 11.59 24.50 10.45 85.75 14.11 30.35 12.34 181.19 8.98 18.43 8.48 OpenVLN [34] 125.97 14.39 28.03 12.94 87.96 15.22 30.64 13.31 175.54 13.32 24.62 12.55 SpatialFly [36] 113.31 16.84 38.36 14.58 70.13 18.60 48.15 16.12 162.90 14.82 27.02 12.81
+> DynFly (Ours) 63.96 32.93 64.25 27.24 44.63 34.70 68.07 27.19 86.15 30.91 59.85 27.31 100% Training Data
+> Random Action 222.20 0.14 0.21 0.07 142.07 0.26 0.39 0.13 320.12 0.00 0.00 0.00 Fixed Action 188.61 2.27 8.16 1.40 121.36 3.48 11.48 2.14 270.69 0.79 4.09 0.49 CMA 135.73 8.37 18.72 7.90 84.89 11.48 24.52 10.68 197.77 4.57 11.65 4.51 TravelUAV [9] 106.28 16.10 44.26 14.30 68.78 18.84 47.61 16.39 152.04 12.76 40.16 11.76 TravelUAV-DA [9] 98.66 17.45 48.87 15.76 66.40 20.26 51.23 18.10 138.04 14.02 45.98 12.90 NavFoM [35] 93.05 29.17 49.24 25.03 58.98 32.91 53.16 27.87 143.83 23.58 43.40 20.80 LongFly [11] 60.02 36.39 65.87 31.07 38.10 38.52 71.90 31.24 85.20 33.94 58.94 30.88 SpatialFly [36] 58.05 38.54 68.62 33.43 34.41 39.59 74.14 33.61 84.76 37.33 62.27 33.22
+> DynFly (Ours) 53.66 40.62 69.89 33.33 33.46 42.74 74.27 33.35 76.85 38.18 64.85 33.30
+
+VLN [34], NavFoM [35], LongFly [11], and SpatialFly [36]. For a fair compari-son, LongFly, SpatialFly, and DynFly use the same Qwen2.5-3B visual-language front-end and are trained and evaluated on the same dataset under the same train-ing and evaluation settings. This enables a fair evaluation of the performance improvements brought by DynFly. 
+
+4.2.1. Quantitative Evaluation on the OpenUAV-Seen Dataset 
+
+As shown in Table 1, we further evaluate DynFly on the OpenUAV Test Seen dataset under two training settings, including 25% Low-Data and 100% Full-Data. Table 1 reports the complete quantitative results on the Full, Easy, and Hard splits, and provides an overall comparison of representative methods on the Seen dataset. Under the 25% Low-Data setting, DynFly achieves the best NE, SR, OSR, and SPL on the Full, Easy, and Hard splits. Compared with SpatialFly, Dyn-Fly reduces NE from 113.31 m to 63.96 m on the Full split, while improving SR from 16.84% to 32.93%, OSR from 38.36% to 64.25%, and SPL from 14.58% to 27.24%. Similar improvements are also observed on the Easy and Hard splits. For example, on the Hard split, DynFly reduces NE from 162.90 m to 86.15 m while 18 Table 2: Results on the Test Unseen Set across Full /Easy /Hard splits. NDTW, SDTW, SR, OSR, and SPL are higher-is-better; NE is lower-is-better. Dashes indicate unavailable metrics rather than zero scores.                                                                                                                                                                     
+
+> Method Full Easy Hard
+> NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑
+> Random Action ––225.64 0.06 0.06 0.06 ––164.66 0.19 0.19 0.19 ––280.58 0.00 0.00 0.00 Fixed Action ––193.30 1.76 5.36 1.09 ––140.33 3.19 8.08 1.88 ––245.96 0.85 3.08 0.55 CMA ––147.27 4.98 12.41 4.74 ––102.54 8.03 17.52 7.52 ––191.30 2.76 7.53 2.71 TravelUAV [9] ––130.60 11.41 31.13 10.45 ––96.27 12.47 33.31 11.29 ––167.49 10.62 28.91 9.80 NavFoM [35] ––118.34 15.63 30.46 14.21 ––89.77 16.98 32.22 15.35 ––155.69 14.35 27.79 13.16 LongFly [11] 9.31 5.57 91.84 24.19 43.86 20.84 9.09 5.31 69.16 22.89 43.24 18.66 9.51 5.81 112.02 25.36 44.41 22.76 SpatialFly [36] 11.20 6.50 87.82 25.46 44.41 21.76 10.20 6.04 64.49 25.17 44.18 20.36 12.08 6.91 108.56 25.71 44.63 23.01
+> DynFly (Ours) 15.89 8.90 83.31 27.60 49.28 23.57 14.21 7.96 64.85 26.10 46.72 21.26 17.38 9.73 99.73 28.93 51.55 25.63
+
+improving SR to 30.91%. These results indicate that DynFly is able to learn a stable continuous trajectory generation process even with limited training data, leading to better navigation performance. Under the 100% Full-Data setting, DynFly continues to achieve consistent improvements. On the Full split, DynFly improves SR from 38.54% to 40.62% while reducing NE from 58.05 m to 53.66 m compared with SpatialFly. On the Hard split, NE is further reduced from 84.76 m to 76.85 m, while SR and OSR in-crease to 38.18% and 64.85%, respectively. Although SPL remains comparable to SpatialFly, DynFly consistently achieves better navigation success and lower nav-igation error. These results suggest that the proposed dynamic-aware motion inter-face further improves navigation performance on top of a strong visual-language navigation framework. Overall, DynFly consistently improves navigation performance under both limited-data and full-data settings. The improvements are reflected not only in a single metric but also in navigation success, navigation accuracy, and path e ffi -ciency. These results further validate the e ff ectiveness of the proposed dynamic-aware motion interface for UAV vision-language navigation. 
+
+4.2.2. Quantitative Evaluation on the OpenUAV-Unseen Dataset 
+
+As shown in Table 2, we first evaluate DynFly on the OpenUAV Test Un-seen dataset. The dataset contains the Full, Easy, and Hard splits, which are used to evaluate navigation performance in unseen environments. Table 2 reports the complete quantitative results, and provides an overall comparison of the six eval-uation metrics for representative methods. On the Full split, DynFly achieves the best performance on all six metrics, 19 including NDTW, SDTW, NE, SR, OSR, and SPL. Compared with the strongest baseline, SpatialFly, DynFly improves NDTW from 11.20 to 15.89 and SDTW from 6.50 to 8.90, while reducing NE from 87.82 m to 83.31 m. At the same time, SR, OSR, and SPL increase to 27.60%, 49.28%, and 23.57%, respectively. These results indicate that the proposed dynamic-aware motion interface improves trajectory matching, navigation success, and path e ffi ciency within the same UAV-VLN framework. The improvement is more evident on the Hard split. Compared with Spa-tialFly, DynFly reduces NE from 108.56 m to 99.73 m and achieves the best results on NDTW, SDTW, SR, OSR, and SPL. This suggests that in more challenging un-seen environments, improving high-level visual-language reasoning alone is not su ffi cient. Explicitly modeling the transition from high-level navigation intent to continuous UAV motion provides more stable performance gains. On the Easy split, DynFly still achieves the best results on NDTW, SDTW, SR, OSR, and SPL, while NE is slightly higher than that of SpatialFly. This in-dicates that existing spatial representation methods are already able to achieve low navigation error in relatively simple scenarios, whereas the main advantage of DynFly lies in improving trajectory matching, navigation success, and path effi ciency. Overall, the results on the Test Unseen dataset demonstrate the e ff ec-tiveness of DynFly in unseen environments and show that the proposed dynamic-aware motion interface improves the conversion from high-level navigation intent to executable continuous UAV trajectories. 
+
+4.2.3. Performance on Unseen Map and Unseen Object 
+
+Figure 6 provides a visual comparison of the Full split under the Overall, Unseen Object, and Unseen Map evaluation protocols. Overall, DynFly achieves the best overall performance across the three settings, obtaining the lowest NE together with the highest SR, OSR, and SPL. These results show that the proposed dynamic-aware continuous trajectory generation method consistently improves the overall navigation performance of UAV vision-language navigation. A comparison between the two unseen scenarios further shows that DynFly achieves larger improvements on the Unseen Object split, with better navigation success, path e ffi ciency, and lower navigation error. This indicates that the pro-posed method can generate more stable continuous flight trajectories when object 20 0 50 100 150 200 250 
+
+> DynFly(Ours)
+> SpatialFly
+> LongFly
+> NavFoM
+> TravelUAV
+> CMA
+> Fixed
+> Random
+> Overall
+
+NE ↓      
+
+> 83.3
+> 87.8
+> 91.8
+> 118.3
+> 130.6
+> 147.3
+> 193.3
+> 225.6
+> 010 20 30 40 50
+
+SR (%) ↑     
+
+> 27.6
+> 25.5
+> 24.2
+> 15.6
+> 11.4
+> 5.0
+> 1.8
+> 0.1
+> 020 40 60 80
+
+OSR (%) ↑     
+
+> 49.3
+> 44.4
+> 43.9
+> 30.5
+> 31.1
+> 12.4
+> 5.4
+> 0.1
+> 010 20 30 40
+
+SPL (%) ↑                                            
+
+> 23.6
+> 21.8
+> 20.8
+> 14.2
+> 10.4
+> 4.7
+> 1.1
+> 0.1
+> 050 100 150 200 250
+> DynFly(Ours)
+> LongFly
+> NavFoM
+> TravelUAV
+> CMA
+> Fixed
+> Random
+> Object
+> 52.3
+> 66.7
+> 108.0
+> 118.1
+> 155.8
+> 212.8
+> 260.1
+> 010 20 30 40 50
+> 49.3
+> 43.9
+> 29.8
+> 22.4
+> 9.1
+> 3.7
+> 0.2
+> 020 40 60 80
+> 76.2
+> 64.6
+> 48.0
+> 46.9
+> 16.1
+> 9.5
+> 0.2
+> 010 20 30 40
+> 43.2
+> 38.4
+> 27.2
+> 20.5
+> 8.7
+> 2.2
+> 0.2
+> 050 100 150 200 250
+> DynFly(Ours)
+> LongFly
+> NavFoM
+> TravelUAV
+> CMA
+> Fixed
+> Random
+> Map
+> 103.7
+> 108.3
+> 125.1
+> 138.8
+> 141.7
+> 180.5
+> 203.0
+> 010 20 30 40 50
+> 13.4
+> 11.3
+> 6.3
+> 4.2
+> 2.3
+> 0.5
+> 0.0
+> 020 40 60 80
+> 31.6
+> 30.3
+> 18.9
+> 20.8
+> 10.0
+> 2.6
+> 0.0
+> 010 20 30 40
+> 10.7
+> 9.3
+> 5.7
+> 3.8
+> 2.2
+> 0.4
+> 0.0
+> DynFly(Ours) SpatialFly LongFly NavFoM TravelUAV CMA Fixed Random
+
+Figure 6: Full-split comparison across Unseen Overall, Unseen Object, and Unseen Map settings. DynFly improves most navigation metrics across the three unseen protocols, with especially strong gains on unseen-object generalization. 
+
+categories change, leading to better object-level generalization. In comparison, the performance gap becomes smaller on the Unseen Map split because all meth-ods are challenged by completely unseen scene layouts. Nevertheless, DynFly still achieves the best overall performance, demonstrating good generalization to unseen environments. Unlike previous methods that mainly improve navigation through visual rep-resentation, spatial modeling, or high-level reasoning, DynFly focuses on the mo-tion generation process between high-level navigation intent and continuous UAV trajectories. As a result, the proposed method improves both object-level general-ization on Unseen Object and environment-level generalization on Unseen Map. These results further demonstrate that the proposed dynamic-aware motion inter-face e ff ectively improves the conversion from high-level navigation intent to exe-cutable continuous UAV trajectories and enhances generalization across di ff erent unseen scenarios. 
+
+4.3. Ablation Studies 4.3.1. Ablation on Di ff erent Components 
+
+As shown in Table 3, we progressively evaluate the contribution of each com-ponent in DynFly, including the B-spline representation, the Spline-DiT gener-ator, and the dynamic-aware loss. Replacing the conventional MLP trajectory head with a B-spline head consistently improves navigation performance across 21 Table 3: Ablation study of key trajectory modeling components across Full /Easy /Hard splits on the Test Unseen Set.                                                                                                            
+
+> Variant B-spline DiT Dyn. Loss Full Easy Hard
+> NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑
+> MLP Head –––12.30 6.38 92.87 23.69 43.54 20.22 11.39 5.68 68.28 22.76 42.84 18.18 13.11 7.01 114.73 24.52 44.17 22.04 B-spline Head ✓––13.72 7.60 92.43 24.51 44.30 21.21 13.04 6.91 69.40 23.96 43.51 19.68 14.32 8.05 112.91 25.00 45.00 22.58 B-spline DiT ✓✓–13.91 8.11 89.35 27.28 45.49 22.63 12.69 7.03 66.50 25.44 45.11 19.87 14.99 9.08 109.67 28.93 45.83 25.09
+> DynFly Full ✓✓✓15.89 8.90 83.31 27.60 49.28 23.57 14.21 7.96 64.85 26.10 46.72 21.26 17.38 9.73 99.73 28.93 51.55 25.63
+
+Figure 7: Sensitivity to the number of B-spline control points. Eight control points provide the best overall balance between trajectory capacity and generalization. 
+
+all three evaluation splits. On the Full split, NDTW increases from 12.30 to 13.72, SDTW improves from 6.38 to 7.60, and both SR and SPL also increase. After in-troducing Spline-DiT, the performance is further improved. On the Full split, SR increases to 27.28%, NE is reduced from 92.43 m to 89.35 m, and NDTW, SDTW, and SPL also improve. These results show that the B-spline representation pro-vides a better continuous trajectory representation, while the generative trajectory model further learns a more suitable trajectory distribution for UAV navigation. After adding the dynamic-aware loss, DynFly achieves the best overall per-formance on most metrics. On the Full split, NDTW increases to 15.89, NE is reduced to 83.31 m, OSR reaches 49.28%, and SPL increases to 23.57%. On the Hard split, DynFly also achieves the best NDTW, SDTW, NE, OSR, and SPL, while SR is tied with the B-spline DiT model. Overall, all three components con-tribute to the final performance. The B-spline representation models continuous trajectories, Spline-DiT improves trajectory generation, and the dynamic-aware loss further constrains the motion properties of the generated trajectory. Together, they form the proposed dynamic-aware motion interface, which better converts high-level navigation intent into continuous and executable UAV trajectories. 22 Table 4: E ff ect of dynamics regularization strength across Full /Easy /Hard splits.                                                                                                           
+
+> Setting λvλaλh
+> Full Easy Hard
+> NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑NDTW ↑SDTW ↑NE ↓SR ↑OSR ↑SPL ↑
+> No Dyn 00013.91 8.11 89.35 27.28 45.49 22.63 12.69 7.03 66.50 25.44 45.11 19.87 14.99 9.08 109.67 28.93 45.83 25.09 Weak Dyn 0.1 0.025 0.025 13.29 7.53 94.50 24.70 42.66 20.89 12.81 7.23 65.42 25.03 45.25 19.99 13.72 7.79 120.37 24.40 40.36 21.70 Base Dyn 0.2 0.05 0.05 15.89 8.90 83.31 27.60 49.28 23.57 14.21 7.96 64.85 26.10 46.72 21.26 17.38 9.73 99.73 28.93 51.55 25.63
+> Strong Dyn 0.4 0.1 0.1 14.08 7.42 88.89 25.27 45.56 21.16 13.35 6.65 66.57 23.56 45.11 18.51 14.72 8.11 108.73 26.79 45.95 23.52
+
+4.3.2. Sensitivity Analysis on Control-Point 
+
+Figure 7 shows the e ff ect of the number of B-spline control points on naviga-tion performance. When only two control points are used, all navigation metrics are much worse and the navigation error is the highest. This indicates that too few control points cannot provide su ffi cient trajectory representation to describe continuous UAV motion, including local motion changes and turning behaviors. Increasing the number of control points to four leads to clear improvements in all metrics, showing that a richer trajectory representation helps improve navigation performance. When the number of control points is further increased to eight, the model achieves the best overall performance. NDTW, SDTW, SR, OSR, and SPL all reach their highest values, while NE is reduced to its lowest value. This suggests that eight control points provide a good balance between trajectory representation and model complexity. Increasing the number of control points to twelve causes most metrics to decrease. A possible reason is that more control points increase the flexibility of the trajectory representation and enlarge the control-point search space, making the trajectory distribution more di ffi cult to learn with the current amount of training data. As a result, the overall generalization performance de-creases. Therefore, eight control points are used as the default configuration in DynFly. 
+
+4.3.3. Sensitivity Analysis on Dynamic-Aware Loss 
+
+As shown in Table 4, we study the e ff ect of di ff erent dynamic-aware loss weights on navigation performance. Without the dynamic-aware loss (No Dyn), the model is able to generate continuous trajectories, but there is still room for improvement in navigation performance. Using smaller loss weights (Weak Dyn) does not improve the results, and several metrics even decrease. For example, on the Full split, SR drops from 27.28% to 24.70%, while NE increases from 89.35 m 23 to 94.50 m. This indicates that weak dynamic constraints are not su ffi cient to ef-fectively guide trajectory generation or fully exploit motion information such as velocity, acceleration, and heading. The default setting (Base Dyn) achieves the best overall performance. Com-pared with No Dyn, it improves NDTW from 13.91 to 15.89, SDTW from 8.11 to 8.90, reduces NE from 89.35 m to 83.31 m, and increases OSR from 45.49% to 49.28% and SPL from 22.63% to 23.57% on the Full split. When the loss weights are further increased (Strong Dyn), most navigation metrics decrease again. For example, SR drops to 25.27% and SPL decreases to 21.16%. These results sug-gest that moderate dynamic-aware supervision provides e ff ective motion guidance while preserving the optimization of the navigation objective. In contrast, exces-sively large loss weights place too much emphasis on motion constraints and re-duce navigation performance. Therefore, the Base Dyn setting provides the best balance between motion guidance and navigation performance, and is adopted as the default configuration in DynFly. To further understand why Base Dyn achieves the best navigation perfor-mance, we additionally compare the trajectory quality under di ff erent dynamics regularization strengths, as shown in Table 5. Overall, Base Dyn consistently pro-duces smoother and more stable trajectories across the Full, Easy, and Hard splits. On the Full split, SmoothMean decreases from 0.249 to 0.198, SmoothVar is re-duced from 35.359 to 4.759, and TurnMean decreases from 0.185 to 0.158. Simi-lar improvements are also observed on the Hard split, where SmoothVar decreases from 47.541 to 3.179 and TurnMean decreases from 0.183 to 0.156. These results indicate that the dynamic-aware loss e ff ectively suppresses trajectory oscillation and produces smoother continuous flight trajectories. Compared with No Dyn, Base Dyn consistently reduces both trajectory oscil-lation and turning variation across all splits. Increasing the loss weights further (Strong Dyn) still maintains relatively stable turning behavior. For example, Turn-Var on the Full split decreases slightly from 0.036 to 0.035. However, Smooth-Var increases substantially from 4.759 to 26.718, indicating a clear degradation in overall trajectory smoothness. This suggests that overly strong motion con-straints reduce the flexibility of trajectory generation, making it more di ffi cult for the model to adapt its trajectory to di ff erent navigation scenarios. Overall, mod-24 Table 5: Trajectory quality under di ff erent dynamics regularization strengths across Full /Easy /Hard splits.                                                   
+
+> Setting Full Easy Hard SmoothMean ↓SmoothVar ↓TurnMean ↓TurnVar ↓SmoothMean ↓SmoothVar ↓TurnMean ↓TurnVar ↓SmoothMean ↓SmoothVar ↓TurnMean ↓TurnVar ↓
+> No Dyn 0.249 35.359 0.185 0.044 0.255 10.825 0.190 0.051 0.247 47.541 0.183 0.041 Base Dyn 0.198 4.759 0.158 0.036 0.215 7.984 0.164 0.042 0.190 3.179 0.156 0.032
+> Strong Dyn 0.219 26.718 0.162 0.035 0.235 37.983 0.166 0.040 0.211 21.120 0.160 0.033
+
+Table 6: Compatibility evaluation of DynFly on SpatialFly. 
+
+Method NDTW ↑ SDTW ↑ NE ↓ SR ↑ OSR ↑ SPL ↑
+
+SpatialFly [36] 11.20 6.50 87.82 25.46 44.41 21.76 SpatialFly [36] +Dyn 13.76 7.71 82.54 27.60 48.77 23.65 Improvement +2.56 +1.21 -5.28 +2.14 +4.36 +1.89 
+
+erate dynamic-aware regularization provides a better balance between trajectory quality and navigation performance, which explains why Base Dyn achieves the best overall results. 
+
+4.4. Integration with Existing UAV-VLN Frameworks 
+
+To evaluate the compatibility of DynFly with an existing UAV-VLN frame-work, we integrate it into SpatialFly [36] while keeping the original visual-language front-end and training configuration unchanged. Only the continuous trajectory generation module is replaced. As shown in Table 6, the proposed module consis-tently improves all navigation metrics. On the Full split, NDTW increases from 11.20 to 13.76, SDTW increases from 6.50 to 7.71, NE is reduced from 87.82 m to 82.54 m, and SR, OSR, and SPL improve by 2.14%, 4.36%, and 1.89%, respec-tively. These results indicate that the performance improvement mainly comes from the proposed dynamics-aware trajectory generation framework rather than changes to the visual-language backbone. Furthermore, the proposed framework can be integrated into an existing UAV-VLN system while preserving its original visual-language reasoning pipeline. The results demonstrate the e ff ectiveness of explic-itly modeling continuous UAV motion between high-level navigation reasoning and flight execution. 25 Figure 8: Qualitative navigation comparison under the same instruction and visual scene. SpatialFly terminates early before reaching the target, while DynFly successfully reaches the target by generating a longer continuous trajectory. 
+
+4.5. Generated Trajectory Analysis 4.5.1. Qualitative Navigation Comparison 
+
+Figure 8 shows a qualitative navigation example. Under the same naviga-tion instruction and visual observation, SpatialFly terminates early and fails to reach the target region, while DynFly maintains continuous flight and success-fully reaches the target. This observation is consistent with the quantitative results and further demonstrates that DynFly improves navigation success in challenging scenes. From the navigation process, it can be seen that DynFly generates a longer continuous trajectory and maintains a more stable flight direction throughout the navigation process, without obvious early termination or local failure. This sug-gests that the proposed dynamic-aware motion interface better transforms high-level navigation intent into continuous executable UAV trajectories, leading to more stable navigation behavior. 
+
+4.5.2. Multi-view Trajectory Visualization 
+
+Figure 9 further visualizes the generated trajectories from an overall view and two enlarged local views (View 1 and View 2), together with the ground-truth (GT) trajectory. From the overall view, DynFly generates trajectories that are closer to the GT and maintains continuous flight toward the target. In contrast, 26 Figure 9: Additional qualitative comparison with multi-view trajectory details. The enlarged views show that DynFly produces a more coherent local flight path under the same visual-language front-end, while the baseline trajectory exhibits larger local oscillations and less stable progress toward the target. This supports that the improvement comes from the proposed dynamic-aware trajectory layer rather than a change of VLM backbone. 
+
+both SpatialFly and SpatialFly(BS) show noticeable trajectory deviations and lo-cal oscillations in several regions. Overall, DynFly produces more continuous trajectories and follows the target direction more consistently. View 1 shows the trajectory details at the early stage of flight. In this region, SpatialFly(BS) exhibits obvious local oscillations, indicating that the basic tra-jectory prediction strategy cannot maintain stable continuous motion. SpatialFly reduces the trajectory deviation by improving spatial representation, but local os-cillations are still observed. In comparison, DynFly generates smoother and more continuous trajectories, and its flight direction is more consistent with the GT. This indicates that the proposed dynamic-aware motion interface improves trajec-tory continuity and reduces unnecessary local motion fluctuations. View 2 shows the trajectory details when the UAV approaches the target re-gion. In this region, SpatialFly(BS) collides with a building, causing the naviga-tion process to terminate early. SpatialFly avoids the obstacle but still shows a relatively large local trajectory deviation from the GT. In contrast, DynFly suc-27 cessfully avoids the obstacle while maintaining a continuous and stable trajectory that is much closer to the GT. This suggests that DynFly performs more e ff ective local path adjustment in complex environments, improving trajectory executabil-ity and navigation stability near the target region. Overall, the trajectory quality improves progressively from SpatialFly(BS) to SpatialFly and then to DynFly. SpatialFly improves the overall navigation direction through better spatial representation, while DynFly further introduces a dynamic-aware motion interface to model the generation of continuous flight trajectories from high-level navigation intent. As a result, the model not only predicts where the UAV should fly, but also learns how to generate continuous trajectories that better match UAV flight characteristics. Under the same visual-language front-end, DynFly further reduces the gap between the predicted tra-jectory and the ground-truth trajectory. These observations are consistent with the quantitative results, the trajectory-quality analysis, and the ablation studies, further demonstrating the e ff ectiveness of DynFly for dynamic-aware continuous trajectory generation. 
+
+5. Conclusion 
+
+This paper presented DynFly, a dynamics-aware continuous trajectory gen-eration framework for UAV vision-language navigation. Instead of improving the visual-language front-end, DynFly focuses on bridging high-level navigation reasoning and executable UAV motion. By introducing a B-spline-based trajec-tory representation, a Spline-DiT trajectory generator, and dynamic-aware su-pervision, DynFly generates continuous UAV trajectories that better match UAV motion characteristics. Experimental results show that the proposed framework improves both navigation performance and trajectory quality, while the ablation studies further verify the e ff ectiveness of the B-spline trajectory representation, the Spline-DiT generator, and the dynamic-aware supervision. More importantly, the results demonstrate that explicitly modeling continuous UAV motion not only improves trajectory quality, but also serves as an e ff ective bridge between high-level navigation reasoning and low-level flight execution, leading to better navi-gation performance in complex and unseen environments. 
+
+Limitations and future work. Although DynFly improves both navigation 28 performance and trajectory quality, this work still has some limitations. First, the proposed framework is evaluated only in simulation environments, and its performance on real UAV platforms still needs to be verified. Second, the cur-rent framework focuses on short-horizon trajectory generation from high-level navigation intent. The connection with low-level flight control and long-horizon navigation has not been studied yet. In addition, further improvements in model lightweighting, real-time inference, and sim-to-real transfer are needed for prac-tical applications. In the future, we will evaluate DynFly on real UAV platforms, improve its e ffi ciency, and explore its application to more UAV vision-language navigation and vision-language-action systems. 
+
+CRediT authorship contribution statement Wen Jiang : Conceptualization, Methodology, Software, Investigation, For-mal Analysis, Visualization, Writing – Original Draft; Hanfang Liang : Investi-gation, Methodology, Formal Analysis, Visualization, Writing – Review & Edit-ing; Li Wang : Validation, Supervision, Writing – Review & Editing; Kangyao Huang : Methodology, Validation, Formal Analysis, Writing – Review & Edit-ing; Wang Xu : Resources, Supervision, Writing – Review & Editing; Wei Fan :Investigation, Data Curation; Jinyuan Liu : Data Curation, Validation; Shaoyu Liu : Formal Analysis, Visualization; Hongwei Duan : Data Curation, Visualiza-tion; Bin Xu : Conceptualization, Supervision, Funding Acquisition, Project Ad-ministration, Writing – Review & Editing; Xiangyang Ji : Supervision, Writing – Review & Editing; Huaping Liu : Supervision, Writing – Review & Editing. 
+
+Data availability 
+
+Data will be made available on reasonable request. 
+
+Declaration of competing interest 
+
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper. 29 Acknowledgements 
+
+This work was supported by the National Natural Science Foundation of China under Grant No. 52502496, U22B2052 and the Natural Science Foundation of Chongqing, China under Grant No. CSTB2025NSCQ-GPX0413, and the Na-tional High Technology Research and Development Program of China under Grant No. 2020YFC1512501. 
+
+Declaration of generative AI and AI-assisted technologies in the writing pro-cess 
+
+During the preparation of this manuscript, the authors used ChatGPT for En-glish language polishing and writing assistance. After using this tool, the authors reviewed and edited the content and are fully responsible for the final content of this manuscript. 30 References 
+
+[1] M. Dai, E. Zheng, W. Cheng, J. Chen, Z. Feng, W. Yang, Drl: An ef-ficient heterogeneous spatial feature interaction framework for uav self-localization, Pattern Recognition 177 (2026) 113330. [2] Y. Gu, W. Chen, D. Peng, Uav-based multimodal object detection via fea-ture enhancement and dynamic gated fusion, Pattern Recognition 172 (2026) 112722. [3] B. Dewangan, M. Srinivas, Amsf-yolo: An attention-based multi-scale fea-ture extraction model for uav small object detection, Pattern Recognition 177 (2026) 113303. [4] P. Anderson, Q. Wu, D. Teney, J. Bruce, M. Johnson, N. Sunderhauf, I. Reid, S. Gould, A. Van Den Hengel, Vision-and-language navigation: Interpreting visually-grounded navigation instructions in real environments, in: Proceed-ings of the IEEE Conference on Computer Vision and Pattern Recognition, 2018, pp. 3674–3683. [5] D. Fried, R. Hu, V. Cirik, A. Rohrbach, J. Andreas, L.-P. Morency, T. Berg-Kirkpatrick, K. Saenko, D. Klein, T. Darrell, Speaker-follower models for vision-and-language navigation, arXiv preprint arXiv:1806.02724 (2018). arXiv:1806.02724. [6] K. He, Y. Jing, Y. Huang, Z. Lu, D. An, L. Wang, Memory-adaptive vision-and-language navigation, Pattern Recognition 153 (2024) 110511. [7] B. Mohammadi, E. Abbasnejad, Y. Qi, Q. Wu, A. Van Den Hengel, J. Q. Shi, Parameter-e ffi cient action planning with large language models for vision-and-language navigation, Pattern Recognition 172 (2026) 112462. [8] S. Liu, J. Li, G. Zhao, Y. Zhang, X. Meng, F. R. Yu, X. Ji, M. Li, Eventgpt: Event stream understanding with multimodal large language models (2024). arXiv:2412.00832. [9] X. Wang, D. Yang, Z. Wang, H. Kwan, J. Chen, W. Wu, H. Li, Y. Liao, S. Liu, Towards realistic uav vision-language navigation: Platform, bench-mark, and methodology, arXiv preprint arXiv:2410.07087 (2024). 31 [10] X. Sun, W. Si, W. Ni, Y. Li, D. Wu, F. Xie, R. Guan, H.-Y. Xu, H. Ding, Y. Wu, et al., Autofly: Vision-language-action model for uav au-tonomous navigation in the wild, arXiv preprint arXiv:2602.09657 (2026). arXiv:2602.09657. [11] W. Jiang, L. Wang, K. Huang, W. Fan, J. Liu, S. Liu, H. Duan, B. Xu, X. Ji, Longfly: Long-horizon uav vision-and-language navigation with spatiotem-poral context integration, arXiv preprint arXiv:2512.22010 (2025). [12] Y. Liu, F. Yao, Y. Yue, G. Xu, X. Sun, K. Fu, Navagent: Multi-scale urban street view fusion for uav embodied vision-and-language navigation (2024). arXiv:2411.08579. URL https://arxiv.org/abs/2411.08579 
+
+[13] S. Chen, P.-L. Guhur, C. Schmid, I. Laptev, History aware multi-modal transformer for vision-and-language navigation, arXiv preprint arXiv:2110.13309 (2021). arXiv:2110.13309. [14] S. Chen, P.-L. Guhur, M. Tapaswi, C. Schmid, I. Laptev, Think global, act lo-cal: Dual-scale graph transformer for vision-and-language navigation, arXiv preprint arXiv:2202.11742 (2022). arXiv:2202.11742. [15] J. Chen, B. Lin, R. Xu, Z. Chai, X. Liang, K.-Y. K. Wong, Mapgpt: Map-guided prompting with adaptive path planning for vision-and-language nav-igation, arXiv preprint arXiv:2401.07314 (2024). arXiv:2401.07314. [16] L. Zhang, X. Hao, Q. Xu, Q. Zhang, X. Zhang, P. Wang, J. Zhang, Z. Wang, S. Zhang, R. Xu, Mapnav: A novel memory representation via annotated semantic maps for vision-and-language navigation, arXiv preprint arXiv:2502.13451 (2025). arXiv:2502.13451. [17] Z. Xin, W. Li, Y. Jiang, Z. Huang, B. Wang, P. Li, J. Zhu, J. Qin, S. Huang, Agentvln: Towards agentic vision-and-language navigation, arXiv preprint arXiv:2603.17670 (2026). arXiv:2603.17670. [18] D. Driess, F. Xia, M. S. M. Sajjadi, C. Lynch, A. Chowdhery, B. Ichter, A. Wahid, J. Tompson, Q. Vuong, T. Yu, et al., Palm-e: An embodied multi-modal language model, in: International Conference on Machine Learning, 2023, pp. 8469–8488. 32 [19] A. Brohan, N. Brown, J. Carbajal, Y. Chebotar, X. Chen, K. Choroman-ski, T. Ding, D. Driess, A. Dubey, C. Finn, et al., Rt-2: Vision-language-action models transfer web knowledge to robotic control, arXiv preprint arXiv:2307.15818 (2023). arXiv:2307.15818. [20] M. J. Kim, K. Pertsch, S. Karamcheti, T. Xiao, A. Balakrishna, S. Nair, R. Rafailov, E. Foster, G. Lam, P. Sanketi, et al., Openvla: An open-source vision-language-action model, arXiv preprint arXiv:2406.09246 (2024). arXiv:2406.09246. [21] D. Jing, J. Nie, T. Zhang, J. Liu, H. Yao, Z. Lu, M. Ding, Tem-povla: Learning speed-controllable vision-language-action policies (2026). arXiv:2606.06491. URL https://arxiv.org/abs/2606.06491 
+
+[22] S. Liu, H. Zhang, Y. Qi, P. Wang, Y. Zhang, Q. Wu, Aerialvln: Vision-and-language navigation for uavs, in: Proceedings of the IEEE /CVF Conference on Computer Vision and Pattern Recognition, 2023, pp. 15384–15394. [23] Y. Gao, C. Li, Z. You, J. Liu, Z. Li, P. Chen, Q. Chen, Z. Tang, L. Wang, P. Yang, et al., Openfly: A comprehensive platform for aerial vision-language navigation, arXiv preprint arXiv:2502.18041 (2025). [24] H. Cai, J. Dong, J. Tan, J. Deng, S. Li, Z. Gao, H. Wang, Z. Su, A. Sumalee, R. Zhong, Flightgpt: Towards generalizable and inter-pretable uav vision-and-language navigation with vlms, arXiv preprint arXiv:2505.12835 (2025). arXiv:2505.12835. [25] A. Babaei, A. Karimi, Optimal trajectory-planning of uavs via b-splines and disjunctive programming, arXiv preprint arXiv:1807.02931 (2018). arXiv:1807.02931. [26] X. Zhou, Z. Wang, H. Ye, C. Xu, F. Gao, Ego-planner: An esdf-free gradient-based local planner for quadrotors, arXiv preprint arXiv:2008.08835 (2020). arXiv:2008.08835. [27] D. Burke, A. Chapman, I. Shames, Fast spline trajectory planning: Minimum snap and beyond, arXiv preprint arXiv:2105.01788 (2021). arXiv:2105.01788. 33 [28] H. Liang, S. Yuan, F. Liu, Y. Yang, B. Wang, Z. Huang, C. Shi, J. Jin, Label-free long-horizon 3d uav trajectory prediction via motion-aligned rgb and event cues (2025). arXiv:2507.03365. URL https://arxiv.org/abs/2507.03365 
+
+[29] J. Qiu, Q. Liu, J. Qin, D. Cheng, Y. Tian, Q. Ma, Pe-planner: Aperformance-enhanced quadrotor motion planner for autonomous flight in complex and dynamic environments, arXiv preprint arXiv:2403.12865 (2024). arXiv:2403.12865. [30] C. Chi, S. Feng, S. Du, Z. Xu, E. Cousineau, B. Burchfiel, S. Song, Di ff u-sion policy: Visuomotor policy learning via action di ff usion, arXiv preprint arXiv:2303.04137 (2023). [31] K. Black, N. Brown, D. Driess, A. Esmail, M. Equi, C. Finn, N. Fusai, L. Groom, K. Hausman, B. Ichter, et al., π0: A vision-language-action flow model for general robot control, arXiv preprint arXiv:2410.24164 (2024). arXiv:2410.24164. [32] K. Nguyen, A. T. Le, T. Pham, M. Huber, J. Peters, M. N. Vu, Flowmp: Learning motion fields for robot planning with conditional flow matching, arXiv preprint arXiv:2503.06135 (2025). [33] S. Shah, D. Dey, C. Lovett, A. Kapoor, Airsim: High-fidelity visual and physical simulation for autonomous vehicles, in: Field and Service Robotics, 2017. [34] P. Lin, G. Sun, C. Liu, F. Li, W. Ren, Y. Cong, Openvln: Open-world aerial vision-language navigation, arXiv preprint arXiv:2511.06182 (2025). [35] J. Zhang, A. Li, Y. Qi, M. Li, J. Liu, S. Wang, H. Liu, G. Zhou, Y. Wu, X. Li, et al., Embodied navigation foundation model, arXiv preprint arXiv:2509.12129 (2025). [36] W. Jiang, K. Huang, L. Wang, W. Xu, W. Fan, J. Liu, S. Liu, H. Liang, H. Duan, B. Xu, X. Ji, Spatialfly: Geometry-guided representation align-ment for uav vision-and-language navigation in urban environments (2026). arXiv:2603.21046. 34

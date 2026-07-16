@@ -1,0 +1,625 @@
+Title: Scalable Online Flight Trajectory Optimization via Sequential Quadratic Programming for Urban Air Mobility in Ultra Low-Altitude Airspace
+
+URL Source: https://arxiv.org/pdf/2606.23008v1
+
+Published Time: Tue, 23 Jun 2026 03:25:19 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# Scalable Online Flight Trajectory Optimization via Sequential Quadratic Programming for Urban Air Mobility in Ultra Low-Altitude Airspace 
+
+Josue N. Rivera, Bohang Liang, Chen Lv, and James Wang 
+
+School of Mechanical and Aerospace Engineering Nanyang Technological University 
+
+Singapore, Singapore 
+
+{josue.rivera, lyuchen, james.wang }@ntu.edu.sg, bohang001@e.ntu.edu.sg 
+
+Abstract —As Urban Air Mobility (UAM) scales toward high-density operations, generating collision-free trajectories within complex 3D cityscapes is a critical safety requirement. This paper proposes a scalable Sequential Quadratic Programming (SQP) framework that integrates geometric environmental con-straints, operational limits, and vehicle dynamics within a single online trajectory optimization process. Rather than precomputing obstacle-free corridors ahead of time, our method encodes obstacle avoidance as live separating-hyperplane constraints regenerated at every solver iteration, so that dense urban geometry and full-DOF vehicle dynamics are resolved jointly and online as the reference and environment evolve. A variable-scale quadtree decomposition keeps computation bounded, enabling the framework to scale to city-wide environments while preserv-ing real-time performance for high-speed flight. We validate the framework against conventional SQP, Iterative Linear Quadratic Regulator, and Differential Dynamic Programming across flights in five real-world urban centers, attaining 100% success and clearance rates on CPU-only hardware. 
+
+Index Terms —Trajectory optimization, sequential quadratic programming, urban air mobility, unmanned aerial vehicles, digital twin. 
+
+I. I NTRODUCTION 
+
+The promise of Urban Air Mobility (UAM) lies in reimagin-ing city life through the third dimension, offering efficient and reliable movement of people, goods, and services across con-gested cities [1]. In compact, high-density environments such as San Francisco, New York, Singapore, or Hong Kong, UAM offers a compelling solution to ground-level saturation that conventional transportation cannot resolve. However, broad deployment remains impeded by concerns over community noise, privacy, and, most critically, operational safety [2], [3]. Safety concerns are particularly acute in ultra low-altitude airspace (below 150 m above ground level, AGL), where vehicles share confined urban volumes with buildings and other aircraft. At these altitudes, the risks of midair colli-sion, infrastructure strike, and third-party ground impact are substantially elevated relative to conventional aviation [4]. For aerial applications to scale, trajectory generation must 
+
+This research was supported by A*STAR under its RIE2025 Manufacturing Trade and Connectivity (MTC) Industry Alignment Fund - Pre- Positioning (IAF-PP), with Award No. M23L5a0002. 
+
+therefore simultaneously guarantee collision avoidance with real-world infrastructure and dynamic feasibility with respect to vehicle limitations. Yet many real-time implementations either treat geometric collision avoidance as a preprocessing step separate from the dynamic optimization (which can lead to suboptimal solutions) or only encode a small, fixed set of obstacles (which can lead to safety-margin violations in dense environments and limited scalability as the number of obstacles grows) [5]–[7]. This paper proposes the Last-Mile Trajectory Planning (LTP) framework to address the challenge of generating safe and dynamically feasible trajectories in dense urban settings. LTP formulates the problem as a Sequential Quadratic Pro-gram (SQP) that jointly optimizes over vehicle dynamics, operational constraints, and real-world geometry. By encoding obstacle avoidance as an intrinsic live constraint, the plan-ner autonomously corrects for ill-conditioned global refer-ences and challenging demands. Furthermore, a variable-scale cell decomposition keeps computation bounded, enabling the framework to scale to city-wide environments while maintain-ing real-time performance for high-speed flight. The contributions of this paper are fourfold:  
+
+> •
+
+Live In-the-Loop Geometric Avoidance: We formulate an online SQP trajectory optimizer that encodes build-ing avoidance as live separating-hyperplane constraints regenerated at every solver iteration, rather than as pre-computed corridors, so that dense urban geometry and full-DOF vehicle dynamics are resolved jointly within a few Quadratic Programming (QP) iterations.  
+
+> •
+
+Scalable Spatial Decomposition: We introduce avariable-scale quadtree decomposition over an Unmanned Aircraft System Traffic Management (UTM) channel. This restricts each inner QP call to a locally relevant constraint subset along a trajectory, maintaining near-constant solve times even as the environment scales to city-wide maps with hundreds of obstacles.  
+
+> •
+
+High-Performance Digital Twin Pipeline: We develop a JAX-accelerated digital-twin model that fuses auto-matic differentiation, zero-order-hold discretization, and JIT compilation into a single XLA kernel. This enables 
+
+> arXiv:2606.23008v1 [eess.SY] 22 Jun 2026
+
+sub-millisecond discretization, and supports 10 –20 Hz replanning on CPU-only edge hardware.  
+
+> •
+
+UAM Trajectory Planning Benchmark and Open-Source Release: We validate the framework across a comprehensive benchmark of 1710 flights (across the var-ious algorithms) in five real-world urban environments, and release the source code to support UAM research reproducibility. The remainder of this paper is organized as follows. Sec-tion II situates the framework within the urban air mobility, unmanned aircraft system traffic management, and trajectory-optimization literature. Section III formalizes the LTP frame-work, covering the digital-twin dynamics model, the live half-plane geometric constraints, the variable-scale quadtree decomposition, and the QP transformation to standard form for SQP. Section IV reports the simulations benchmark, com-parisons against DDP, iLQR, and SQP baselines, and two city-scale case studies in Singapore and Boston. Section V concludes with the insights found and discusses extensions toward a full UAM stack. II. R ELATED WORKS 
+
+A. Urban Air Mobility and Traffic Management 
+
+Urban air mobility has emerged over the last decade as a proposed solution to ground-level congestion in dense metropolitan areas, promising efficient movement of passen-gers and cargo through low-altitude airspace [1], [8]. Its realization is contingent on resolving a tightly coupled set of economic, social, and operational challenges, from community noise and equitable network planning to conflict management and autonomous cargo certification [2], [9]–[11]. Operational safety is among the most critical of these challenges. At low altitudes, UAM vehicles share confined urban volumes with buildings and other aircraft, creating substantially elevated risks of midair collision, infrastructure strike, and third-party ground impact compared to conventional aviation [3], [4]. Addressing these challenges at scale requires a dedicated unmanned aircraft system traffic management (UTM) stack for strategic deconfliction, tactical separation, and trajectory supervision [12], [13]. Research in UTM has yielded three primary morphologies for structuring low-altitude airspace: gridding, stratification, and networking [14]. These approaches partition operational volumes into structures such as cor-ridors, tubes, or lanes, each offering a different trade-off between flight flexibility and traffic predictability [14]–[16]. Our framework adopts the altitude stratification model, where the airspace is segmented into distinct altitude layers within which aircraft can navigate freely. The horizontal partition is driven by factors such as buildings height, mission needs, vehicle classes, and regulations. 
+
+B. UAV Navigation System 
+
+Autonomous UAV navigation is typically realized through a modular architecture comprising four tightly coupled stages: perception (e.g., sensor fusion from LiDAR, cameras, IMU, and GPS to build environment representations), obstacle state estimation and prediction (tracking dynamic objects and fore-casting future positions), motion planning (computing opti-mal trajectories), and low-level control (tracking the planned trajectory with actuator commands) [17]. This modular de-composition allows each component to be developed, tested, and certified independently, which is particularly valuable in safety-critical UAM applications where each subsystem’s behavior must be auditable. As an alternative to this modular paradigm, end-to-end deep learning frameworks commonly seek to collapse the entire stack into a single learned policy that maps raw sensor streams directly to control commands, and have demonstrated impressive agility in cluttered natural environments [18], [19]. However, deployment at the scale and determinism required for UAM remains an open problem. Learned policies are sensitive to distributional shift between training and deploy-ment environments, depend heavily on the quality and diver-sity of training data, and offer limited formal guarantees on safety-critical constraint satisfaction [20]–[22]. For this reason, learned planners and controllers are not included in our exper-imental comparison; we focus instead on the modular archi-tecture with dynamics-aware trajectory optimization methods whose constraint behavior can be audited and certified. 
+
+C. Path Planning 
+
+Motion planning is traditionally divided into two stages. Path planning (or global planning) generates a sequence of reference waypoints from origin to destination, typically with reduced geometric fidelity and without accounting for vehicle dynamics. Classical approaches include graph search (A *), sampling-based methods (PRM, RRT, dubins+RRT*), and reactive potential fields (APF), with recent learning-based variants combining graph neural networks and reinforcement learning for cooperative routing [20], [23], [24]. In the UAV context, path planning has progressively shifted from pure shortest-path formulations toward multi-objective problems that explicitly reason about energy, noise, privacy, and third-party risk [25]–[30]. Our framework consumes the output of such a global planner as a reference and is agnostic both to the specific algorithm used and to whether that reference is precomputed offline or streamed from a low-frequency online planner. The trajectory optimization stage itself runs online, ingesting the current reference at every replanning cycle. 
+
+D. Trajectory Planning 
+
+Trajectory planning (also called local planning or trajec-tory optimization) is the stage of motion planning that con-verts a global reference into a dynamically feasible, time-parameterized 4D trajectory over a short horizon, incorpo-rating, to varying degrees, vehicle dynamics, actuator limits, operational restrictions, and obstacle constraints. Dynamics-aware implementations have converged on three dominant real-time algorithmic families: Sequential Quadratic Programming, Differential Dynamic Programming (DDP), and its first-order variant, the iterative Linear Quadratic Regulator (iLQR) [31]– [33]. Modern implementations build on these foundations, incorporating Augmented Lagrangian methods for constraint handling (e.g., ALTRO) and hybrid approaches, such as fusing DDP-style closed-loop rollouts into SQP iterates [6], [7]. In the UAV domain, optimization-based trajectory planners have demonstrated dynamic obstacle avoidance for small systems in confined spaces, while a parallel line of UAM-scale work has addressed trajectory generation from a UTM airspace-design perspective [5], [34]–[37]. ElSayed and Mohamed [37], for example, propose a digital-twin Skyroutes discretization that carves the urban airspace into a network of lanes and generates cubic spline trajectories along them, a networking-style UTM morphology. Their work is complementary to the stratification model targeted here for UAM online trajectory planning. A practical limitation of conventional SQP, iLQR, and DDP with respect to UAM is that each is typically formulated with a fixed, small set of obstacles encoded directly in the cost or constraint structure [7], [35]. This assumption breaks down in realistic urban settings, where an 800 to 1000 moperational radius may contain several hundred individually relevant buildings. Furthermore, conventional iLQR and DDP struggle to scale reliably to full multi-state complex dy-namics in dense geometry, while many existing SQP-based formulations typically treat obstacle avoidance as an offline preprocessing step rather than an intrinsic constraint inside the optimizer [38]. To address these gaps, our work reformulates trajectory optimization to reason about complex geometry and vehicle dynamics jointly, utilizing a spatial decomposition approach that keeps computational overhead strictly bounded even as the operational environment scales to city-wide di-mensions. III. M ETHODOLOGY 
+
+The Last-Mile Trajectory Planning (LTP) framework is an online, dynamics-aware trajectory optimization system that converts a coarse global reference into a feasible, collision-free, and dynamically consistent 4D trajectory for urban aerial mobility (Figure 1). As illustrated in Figure 2, the framework comprises three tightly coupled components: (1) a digital-twin UAV model used for forward state prediction, Jacobian linearization, and state discretization, (2) a digital environment 
+
+that tracks both static infrastructure and obstacles within the UTM channel, and (3) an online SQP optimizer that converts the discretized dynamics, operational limits, and live geometric half-planes into a series of Quadratic Programs (QPs) to solve for real-time optimal trajectory. 
+
+A. Digital Twin Dynamics Modeling and Discretization 
+
+We define the digital twin of a UAV as a nonlinear, continuous-time, first-order state-space model: 
+
+˙x(t) = f (x(t), u (t)) (1) where x ∈ Rn and u ∈ Rm represent the state and control vectors, respectively. To leverage optimization techniques, we linearize the dy-namics around each state and control in a nominal trajec-tory (¯ xk, ¯uk) derived from either the previous iteration or 
+
+Fig. 1: Real time 4D trajectory optimization in ultra low-altitude urban airspace. the current candidate solution. Applying a first-order Taylor expansion, we obtain: 
+
+f (x, u ) ≈ f (¯ xk, ¯uk) + ∇xf ¯xk ,¯uk
+
+(x − ¯xk)+ ∇uf ¯xk ,¯uk
+
+(u − ¯uk) (2) where Ac := ∇xf and Bc := ∇uf are the continuous-time Jacobian matrices obtained via automatic differentiation [41]. The linearized dynamics can then be written in affine form: 
+
+˙x(t) = Acx(t) + Bcu(t) + dc (3) where the affine drift term is dc = f (¯ xk, ¯uk) − Ac ¯xk − Bc ¯uk.
+
+1) System Discretization: To integrate the continuous-time system over a prediction step ∆t, we employ one of two discretization strategies depending on the complexity of the dynamics and the precision required. For simple systems, or when numerical stability and pre-cision are paramount, we apply an exact Zero-Order Hold (ZOH) discretization. First, we construct an augmented matrix 
+
+M ∈ R(n+m+1) ×(n+m+1) :
+
+M =
+
+Ac Bc dc
+
+0 0 0
+
+
+
+(4) Computing the matrix exponential Λ = eM∆t yields the exact discrete-time system matrices: 
+
+Λ = 
+
+
+
+Ad Bd gd
+
+0 I 00 0 1
+
+ (5) Conversely, for higher-dimensional or computationally com-plex systems where matrix exponentiation becomes a bottle-neck, we utilize a Forward Euler approximation. This trades integration precision for faster execution speeds: 
+
+Ad = I + Ac∆t (6) 
+
+Bd = Bc∆t (7) 
+
+gd = dc∆t (8) Digital Twin    
+
+> Tracking Controller
+> (e.g., PID, LQR, MPC) High Frequency
+> Global Path Planner
+> (e.g., A*, RRT*, APF, PRM) Low Frequency
+> Digital Twin Dynamics
+> (First-Order State Space Model)
+> Digital Environment
+> (RGeoJSON)
+> Constraint Formation
+> (Dynamics + Collision Avoidance + Operational Limits)
+> Iterative QP Solver
+> (OSQP Optimization)
+> Trajectory Optimization
+> Medium Frequency (~10-20 Hz) Real World
+> Autonomous Aerial Vehicle
+> (e.g., eVTOL, Quadcopter)
+> Urban Environment
+> Static Obstacles Live Obstacles Obstacle Updates State Data Control Reference Waypoints Optimal Trajectory
+
+Fig. 2: Last-Mile Trajectory Planning (LTP) framework for urban air mobility. Vector skyline and quadcopter adapted from Freepik [39], [40]. Regardless of the chosen strategy, the method results in the discrete affine update law used in our equality constraints: 
+
+xk+1 = Adxk + Bduk + gd (9) where xk ∈ Rn and uk ∈ Rm represent the discrete-time state and control variables at step k.By leveraging JAX’s JIT compilation, the batched computa-tion of the Jacobians (Ac, B c) and the selected discretization routine across all time steps in the nominal trajectory are fused into an optimized XLA kernel. This allows for real-time linearization and discretization (typically taking under one millisecond for most evaluated systems) at every inner QP solver iteration [41]. Future work will explore integration with differentiable simulators such as Mujoco XLA(MJX) to support non-analytically defined custom digital twin models. 
+
+B. Digital Environment and Constraints 
+
+The trajectory optimization is subject to various constraints derived from the digital environment and twin model. We categorize them into three groups: (i) geometric environmental constraints representing static infrastructure, encoded via our RGeoJSON format; (ii) box and linear constraints that enforce operational limits; and (iii) dynamics equality constraints (introduced above) that ensure dynamic feasibility. 
+
+1) Geometric Environmental Constraints: Because urban geometry is non-convex, we perform local convex decom-position along the nominal trajectory. For each digital-twin nominal state ¯xk and set of obstacle geometries O, we identify the closest surface points pobs ∈ O via linear projection and compute the repulsion vector vrep = xpos − pobs . We then formulate a separating hyperplane defined by the unit normal n = vrep /∥vrep ∥ for each face. To ensure the vehicle maintains a safety distance of at least dsaf e , we enforce: 
+
+n⊤xpos ≥ n⊤pobs + dsaf e (10) 
+
+(a) Relaxed boundary. (b) Strict boundary. 
+
+Fig. 3: Geometric constraint feasible space (highlighted in sky blue) shrinks as the safety distance boundary dsaf e from buildings is increased with respect to the current state. Across all nominal states ¯xk, these inequalities are aggre-gated into the half-plane matrix ¯Aenv and bound vector ¯benv :
+
+¯Aenv,k xk ≤ ¯benv,k (11) The safety distance dsaf e is exposed as a tunable parameter, allowing the operator to control how close the vehicle is permitted to approach any infrastructure surface. This rela-tionship is illustrated in Figure 3. Each polygon edge in the highlighted feasible space is a separating hyperplane, offset from the nearest buildings face by dsaf e , and the feasible space itself is the intersection of these half-planes with respect to the current state. Increasing dsaf e pushes every bounding line inward, progressively shrinking the feasible region. Because the half-planes are regenerated from the nominal trajectory at every inner solver call, the formulation also confers reference robustness: when the global reference passes too close to (or through) an obstacle, the active half-planes pull the predicted states back into the feasible region, so the planner Fig. 4: Planned trajectory deviation from an ill-conditioned reference when approaching a building corner. deviates autonomously from the unsafe reference rather than tracking it into a collision or violation (Figure 4). 
+
+2) Variable-Scale Quadtree Decomposition: As the oper-ational area grows to city-scale dimensions, considering all obstacles in a sector becomes computationally expensive: a typical UAM channel of 800 to 1000 m radius can contain several hundred individually relevant buildings, and naively appending one half-plane per building face per horizon step inflates the QP beyond what can be solved at a planning rate. To preserve real-time performance while retaining global awareness, we partition the airspace channel using a variable-scale quadtree decomposition (Fig. 5). Each leaf cell carries an obstacle registry listing the obstacles whose influence intersect that cell. At each inner solver call in the trajectory replanning cycle, the planner queries the registries of the cells that the nominal trajectory horizon traverses and constructs half-planes only for the locally relevant subset; obstacles outside the current sector contribute zero rows to Aenv and are therefore invisible to OSQP. SQP is well suited to this regime because the active half-plane set varies smoothly between calls, allowing OSQP’s warm-starting to amortize most of the factorization cost across solves. The net effect is that the per-call QP size, and therefore solve time, depends on a small local obstacle density rather than on the global map size, which is the property that lets the framework scale from a single block to an entire downtown without re-tuning. Furthermore, the variable-scale nature of the quadtree decomposition mitigates the computational impact of exceptionally dense local obstacle clusters. 
+
+3) Operational Constraints: Operational constraints en-compass any physical, regulatory, or mission-specific restric-tions that can be expressed as box bounds or linear inequalities over the decision variables. Basic kinematic limits and actuator saturations are enforced natively as box constraints on the state and control variables: 
+
+umin ≤ uk ≤ umax , xmin ≤ xk ≤ xmax 
+
+where xmin/max encodes bounds such as velocity limits, gen-eralized orientation constraints, and altitude floors or ceilings, 
+
+Fig. 5: Quadtree decomposition of the Orchard Road UAM channel into sectors, each maintaining a local registry of live obstacles. while umin/max captures the specific control input limits of the UAV. Beyond simple box bounds, the framework accommodates any generalized operational requirement formulated as a linear inequality. Relevant examples include:  
+
+> •
+
+Control-rate limits: |uk+1 − uk| ≤ ∆umax , which suppress aggressive control commands and reduce wear on the actuators.  
+
+> •
+
+Virtual geofencing: half-space constraints a⊤xpos ≤
+
+b that cordon off no-fly zones, restricted airspace, or terminal-area corridors not represented in the physical building geometry.  
+
+> •
+
+Bounding-state corridors: time-varying box constraints 
+
+xk ≤ xk ≤ xk that confine a portion of the trajectory to a tube around the reference, useful for departure or approach segments where conformance is required.  
+
+> •
+
+Coupled state-control limits: linear couplings that en-force combined restrictions, written in the general form 
+
+Alin z ≤ blin .All such operational constraints are absorbed into the same 
+
+Acon and (l, u ) structure used for the dynamics and environ-ment geometry. 
+
+C. Quadratic Programming Trajectory Formulation 
+
+We formulate trajectory generation using Sequential Quadratic Programming (SQP). At each SQP iteration, we solve the following convex quadratic optimization problem over an N -step horizon until convergence: 
+
+min 
+
+> x,u N
+
+X
+
+> k=1
+
+∥xk − xref k ∥2 
+
+> Q
+
++ 
+
+> N−1
+
+X
+
+> k=0
+
+∥uk∥2 
+
+> R
+
++ ∥xN − xref N ∥2
+
+> Qf
+
+s.t. xk+1 = Ad,k xk + Bd,k uk + gd,k 
+
+¯Aenv,k xk ≤ ¯benv,k 
+
+xmin ≤ xk ≤ xmax , umin ≤ uk ≤ umax 
+
+Alin z ≤ blin (optional state-control limits) 
+
+x0 = xinit 
+
+(12) To solve the problem efficiently with the OSQP solver, we transform it into the standard QP form: minimize  
+
+> z
+> 12
+
+z⊤P z + q⊤z
+
+subject to l ≤ Acon z ≤ u (13) where the decision vector z ∈ RN (n+m) is constructed by stacking the predicted states followed by the control sequence. Given that the initial state x0 is a fixed parameter, the decision variables are defined as: 
+
+z = x⊤ 
+
+> 1
+
+· · · x⊤ 
+
+> N
+
+u⊤ 
+
+> 0
+
+· · · u⊤ 
+
+> N−1
+
+⊤ (14) Expanding the quadratic tracking error (x − xref )⊤Q(x −
+
+xref ) = x⊤Qx − 2x⊤ 
+
+> ref
+
+Qx + C, we derive the block-diagonal Hessian P and linear cost vector q:
+
+P = diag (2 Q, . . . , 2Qf , 2R, . . . , 2R) (15) 
+
+q =
+
+
+
+−2Qx ref 
+
+> 1
+
+...
+
+−2Qf xref N
+
+0N m ×1
+
+ (16) The constraint matrix Acon is a sparse vertical stack of dynamics equalities, geometric half-plane inequalities, linear constraints, and variable bounds. For the dynamics xk+1 = Ad,k xk + Bd,k uk + gd,k , we rearrange terms to isolate the variables in z:
+
+I|{z}  
+
+> coeff of xk+1
+
+xk+1 −Ad,k 
+
+| {z }  
+
+> coeff of xk
+
+xk −Bd,k 
+
+| {z }  
+
+> coeff of uk
+
+uk = gd,k (17) This yields the sparse dynamics block Adyn ∈ RN n ×N (n+m):
+
+Adyn =
+
+
+
+I 0 · · · 0 −Bd, 0 0 · · · −Ad, 1 I · · · 0 0 −Bd, 1 · · · 
+
+0 −Ad, 2
+
+. . . 0 0 0 . . .... ... · · · I ... ... · · · 
+
+
+
+(18) The bounds vectors ldyn and udyn for these rows enforce the equality constraint: 
+
+ldyn = udyn =
+
+
+
+Ad, 0x0 + gd, 0
+
+gd, 1
+
+...
+
+gd,N −1
+
+ (19) Note that for the first step ( k = 0 ), the term Ad, 0x0 is moved to the right-hand side bound vector, since x0 is fixed. The final constraint system is assembled as: 
+
+Acon =
+
+
+
+Adyn 
+
+Aenv 
+
+Alin 
+
+I
+
+ , l =
+
+
+
+ldyn 
+
+−∞ −∞ 
+
+zmin 
+
+ , u =
+
+
+
+udyn 
+
+benv 
+
+blin 
+
+zmax 
+
+ (20) where Aenv contains the half-plane rows aligned with the corresponding state indices in z, Alin aggregates any linear constraints over the decision variables, and the trailing identity block enforces the box bounds. Between successive cycles, only the rows that depend on the current operating point (Adyn , Aenv , and the affine bounds) need to be updated. The structural sparsity pattern is preserved, so OSQP can warm-start from the previous solution and amortize most of the factorization cost across solves. IV. E XPERIMENTS AND RESULTS 
+
+To evaluate the efficacy of the proposed LTP framework, we conducted comprehensive cargo delivery simulation exper-iments to quantify its performance and analyzed case studies to demonstrate its practical utility. 
+
+A. Experimental Setup 1) Digital Twin: Simulations are built around a 6-DOF Newton–Euler cargo quadcopter digital twin model [42]. The 12-dimensional state and 4-dimensional control vectors are 
+
+x = p⊤, v ⊤, ξ ⊤, ω ⊤⊤ ∈ R12 
+
+u = w1, w 2, w 3, w 4
+
+⊤ ∈ R4, (21) where p = [x, y, z ]⊤ is the world-frame position, v =[vx, v y , v z ]⊤ the linear velocity, ξ = [ ϕ, θ, ψ ]⊤ the roll–pitch– yaw Euler angles, ω = [ p, q, r ]⊤ the body angular rates, and 
+
+wi the individual rotor speeds in an ×-frame layout. The four rotor speeds are mapped to collective thrust and body torques through an actuator mixer, 
+
+
+
+u1
+
+τϕ
+
+τθ
+
+τψ
+
+ =
+
+
+
+kf kf kf kf
+
+− kf l 
+
+> √2
+
+− kf l  
+
+> √2
+> kfl
+> √2
+> kfl
+> √2
+
+− kf l   
+
+> √2
+> kfl
+> √2
+> kfl
+> √2
+
+− kf l
+
+> √2
+
+kM −kM kM −kM
+
+| {z }
+
+> M
+
+
+
+w21
+
+w22
+
+w23
+
+w24
+
+ (22) where u1 is the collective thrust, τb = [ τϕ, τ θ , τ ψ ]⊤ are the roll, pitch, and yaw body torques. Motors 1– 4 are positioned at −45 ◦, −135 ◦, +135 ◦, +45 ◦ relative to the forward axis, alternating CW/CCW. The continuous-time state-space model ˙x(t) = f (x, u ) is described by: 
+
+˙x(t) = 
+
+
+
+˙p
+
+˙v
+
+˙ξ
+
+˙ω
+
+
+
+=
+
+
+
+vu1
+
+m R(ξ) e3 − kt
+
+m v − g e 3
+
+T(ξ) ω
+
+
+
+I−1 
+
+> x
+
+(τϕ + ( Iy −Iz ) qr − Ir q Ωr − kr p)
+
+I−1 
+
+> y
+
+(τθ + ( Iz −Ix) pr + Ir p Ωr − kr q)
+
+I−1 
+
+> z
+
+(τψ + ( Ix −Iy ) pq − kr r)
+
+
+
+(23) where, letting cα := cos α, sα := sin α, and tθ := tan θ, the body z-axis in the world frame and the Euler-angle kinematic mapping are defined as 
+
+R(ξ) e3 =
+
+
+
+sϕsψ + cϕcψ sθ
+
+cϕsψ sθ − cψ sϕ
+
+cϕcθ
+
+ , T(ξ) = 
+
+
+
+1 sϕ tθ cϕ tθ
+
+0 cϕ −sϕ
+
+0 sϕ/c θ cϕ/c θ
+
+ ,TABLE I: Quadcopter Physical & Aerodynamic Parameters                                 
+
+> Sym. Parameter Value [Unit]
+> mMass 5.2[kg]
+> lArm length 0.35 [m]
+> IInertia diag (.04 , . 04 , . 08)
+> IrMotor inertia 2.0·10 −4[kg ·m2]
+> gGravity 9.807 [m /s2]
+> kfThrust coeff. 6.0·10 −5[N ·s2]
+> kMMoment coeff. 1.0·10 −6[N ·m·s2]
+> ktTrans. drag diag (0 .5,0.5,0.8) [N ·s/m]
+> krRot. drag 0.2·I3[N ·m·s]
+
+TABLE II: Urban Environments                              
+
+> Environment Radius [m] Alt. Channel [m] Routes
+> Austin, TX 700 50 −70 10 Boston, MA 500 40 −60 12 Orchard Road, Singapore 1000 50 −70 14 Marina Bay, Singapore 600 50 −70 10 Hong Kong 700 90 −100 11
+> Total 57
+
+e3 = [0 , 0, 1] ⊤, Ωr = w1−w2+w3−w4 is the net signed rotor an-gular momentum (gyroscopic term), and I = diag( Ix, I y , I z ).Physical parameters are listed in Table I. 
+
+2) Urban Environments: To evaluate generalization across diverse urban morphologies, experiments were conducted in five real-world environments extracted from OpenStreetMap [43]: Austin, Texas , Boston, Massachusetts , Orchard Road district, Singapore , Marina Bay district, Singapore , and Hong Kong . Building footprints for each environment are ingested as RGeoJSON polygons and converted to convex half-plane constraints at runtime. The five environments span a broad spectrum of urban density, building height, and street-grid regularity (from the low-rise grid of Austin to the ultra-dense high-rise cluster of Hong Kong), providing a stringent and diverse evaluation of the framework. Per-environment area radii and UTM cruise altitudes are reported alongside route counts in Table II. Operational limits and trajectory planner parameters are summarized in Table III. Rotor speeds are bounded to 
+
+[100 , 1.5 whover ] rad/s to prevent stall and actuator saturation, where whover = pmg/ (4 kf ) ≈ 464 rad/s. Box constraints on the state enforce the velocity, tilt, and altitude limits shown in Table III. No cost on the control is applied. Geometry constraints (half-plane rows in Acon ) are rebuilt at every inner solver call using the current nominal trajectory. 
+
+3) Computational Platform: All simulations were executed on a single workstation equipped with an Intel ® Core ™ i5-14600KF processor (14 cores / 20 threads, 3.5 GHz base clock speed, up to 5.3 GHz) and 32 GB of DDR5 RAM. No GPU acceleration was used. JAX was configured to run exclusively on the CPU backend (XLA/LLVM) and OSQP to use its built-in sparse algebra backend. This setup reflects a realistic onboard or edge-computing deployment scenario, where high-end GPU resources are unavailable. TABLE III: Quadcopter Operational Limits and Simulation Parameters                                            
+
+> Sym. Parameter Value [Unit]
+> dsaf e Boundary distance 10 .0[m]
+> vhorz Max horiz. 40 .0[m/s]
+> vvert Vert. range [−3.0,4.0] [m/s]
+> ϕ, θ Max tilt 0.6[rad]
+> ωMax rate 2.5[rad/s]
+> ∆tTime step 0.1[s]
+> THorizon 2.5[s]
+> NHorizon steps 25
+> QState cost matrix 10 2·diag (20 ,7,20 ,7,50 ,5,
+> 10 ,10 ,10 ,50 ,50 ,10)
+> RControl cost matrix 04×4
+> QfFinal state cost 2·Q
+
+B. Quantitative Comparative Analysis 
+
+We conducted a benchmark study comprising 1710 cargo delivery flights across all five environments, six planning algorithms, and five target speeds (5, 8, 10, 12, and 15 m/s). All reference paths were pre-verified to lie at least dsafe from any building surface, so any clearance violation is attributable solely to the planner. Two primary metrics are reported in Table IV: Success Rate (SR), the fraction of flights reaching the goal without numerical divergence, and Clearance Rate 
+
+(CR), the fraction of successful flights that maintained a sep-aration of at least dsafe −0.1 m from every obstacle throughout the trajectory. The remaining columns report solve time per planning call, minimum clearance, travel time, path length, and control effort (Ctrl. Eff.), defined here as the mean norm of the rotor-speed along the trajectory as a proxy for actuation energy. 
+
+1) DDP Divergence: DDP achieved a 0% success rate on every quadcopter trial. Its second-order quadratic approxima-tion is ill-conditioned for the 12-state Newton-Euler model at the tested speeds: the highly nonlinear rotational dynamics drive the value-function Hessian to lose positive definiteness within a few iterations, causing backward-pass failures and erroneous control outputs. This is a known limitation of vanilla DDP on high-dimensional nonlinear systems [38] and is absent in the WMR sanity check (below). 
+
+2) iLQR vs. SQP: iLQR recovers an SR of 98.2% by drop-ping the second-order state correction, yet achieves only 95.4% CR and requires 137 .60 ± 19 .65 ms per planning call, roughly 
+
+5.5× slower than the base SQP planner ( 25 .04 ± 1.10 ms). The gap stems from iLQR’s full-horizon forward–backward sweeps at every iteration, whereas SQP reduces each outer iterate to a few sparse OSQP solves. With near-identical path lengths ( ≈311 m) and travel times ( ≈35 s), trajectory quality is comparable; SQP’s advantage is purely computational. 
+
+3) Effect of Geometric Constraints: Adding the live half-plane constraints (SQP Geo.) raises CR from 95.4% to 98.9% while maintaining solve time competitive for real-time tra-jectory replanning. The quadtree decomposition limits the number of active half-plane rows to those in the UAV’s local sector, which keeps the QP size small regardless of TABLE IV: UAM Quadcopter Trajectory Planning Benchmark: Aggregate over 1710 flights (57 routes × 6 algorithms × 5speeds, five cities). Metrics marked – are undefined due to 0% SR. All metrics computed on successful trials only.                                                                                                      
+
+> Algorithm SR (%) CR (%) Solve (ms) Min Clear. (m) Travel (s) Path (m) Ctrl. Eff.
+> DDP 0.0 ––––––iLQR 98.2 95.4 137 .60 ±19 .65 11 .79 ±20 .13 34 .90 ±26 .56 312 .7±191 .8932 .4±18 .0
+> SQP 100.0 95.4 25 .04 ±1.10 11 .69 ±20 .02 35 .49 ±26 .59 310 .2±190 .8935 .7±13 .1
+> SQP (Relax. Limits) 99.6 95.1 23 .98 ±0.36 11 .70 ±20 .05 35 .26 ±26 .67 310 .5±191 .0938 .0±15 .9
+> SQP (Geo.) (Ours) 100.0 98.9 31 .56 ±4.27 11 .71 ±20 .00 35 .50 ±26 .59 310 .2±190 .8935 .4±12 .7
+> SQP (Geo. + Relax.) (Ours) 100.0 100.0 30 .64 ±4.09 11 .70 ±20 .01 35 .20 ±26 .65 310 .1±190 .8938 .0±15 .9
+
+city density. Combining geometric constraints with relaxed operational limits (SQP Geo. + Relax.) achieves a perfect 100% CR across all 285 flights while maintaining similar 
+
+0.03 s solve time, demonstrating that the two mechanisms are complementary. Geometry constraints push the trajectory away from obstacles, and limit relaxation provides the additional kinematic slack needed to satisfy both the avoidance and the dynamics constraints simultaneously at high speeds. We further note that the solve-time deviations remain small across all flights (e.g., 31 .56 ± 4.27 ms for SQP Geo.). The deterministic OSQP iterations, inter-call warm-starting, and quadtree-bounded QP size make per-call timing depend on local obstacle density rather than on route length or city scale. This low variance tightens the planner’s real-time tolerance, as worst-case latency stays close to the mean, a desirable property for onboard scheduling and certification. By contrast, the large spread in the clearance and travel-time columns (e.g., 
+
+11 .71 ± 20 .00 m and 35 .50 ± 26 .59 s) confirms that the bench-mark itself spans diverse and demanding route geometries. 
+
+4) Speed vs. Clearance: As Figure 6 shows, minimum clearance degrades noticeably for iLQR and base SQP at 12– 15 m/s: aggressive dynamic turns cause the UAV to cut corners and challenge the safety margin even when the reference path is clear. The geometric SQP variants maintain their clearance margin across all speeds, confirming that the half-plane constraints are dominant mechanisms for high-speed safety. To account for numerical precision at high speeds, we defined the clearance tolerance as 0.1 m below dsaf e .As a sanity check, we applied all algorithms to a simplified Wheeled Mobile Robot (WMR) scenario with three routes and ten static obstacles, incorporating obstacle avoidance via the Augmented Lagrangian method for DDP and iLQR. As shown in Table V, all algorithms, including DDP, achieve 
+
+100% SR and CR, suggesting that the quadcopter divergence stems from the system’s strongly nonlinear 12-dimensional dynamics and complex urban environment rather than an implementation artifact. All source code and configurations are publicly released, though absolute execution times vary across hardware. 
+
+C. Case Studies 
+
+To complement the aggregate benchmark, we present two representative delivery missions that illustrate the framework’s real-world utility in city districts where aerial mobility pro-vides an advantage over ground transport. 5 8 10 12 15 
+
+> Pace (m/s)
+> 0
+> 20
+> 40
+> 60
+> 80
+> Min Clearance (m)
+> Clearance Distribution by Pace (paired routes, violin)
+> iLQR
+> SQP
+> SQP (Relax Const.)
+> SQP (Geo) (Ours)
+> SQP (Geo + Relax Const.) (Ours)
+
+Fig. 6: As the UAV is requested to travel at a faster pace, iLQR and conventional SQP struggle to maintain safety distance from buildings. TABLE V: WMR Sanity-Check Benchmark (10 obstacles). All algorithms achieve 100% SR and CR in this low-complexity setting.                                  
+
+> Algorithm SR (%) CR (%) Solve (ms)
+> DDP 100.0 100.0 25 .53 ±1.92
+> AL-DDP 100.0 100.0 48 .17 ±3.44
+> iLQR 100.0 100.0 20 .73 ±0.51
+> AL-iLQR 100.0 100.0 40 .21 ±0.47
+> SQP 100.0 100.0 16 .59 ±0.03
+> SQP (Geo.) 100.0 100.0 51 .31 ±0.37
+
+1) Package delivery from Orchard Road Store to Theater in Singapore (Case 1): The mission covers approximately 1.3 km of road through the Orchard Road shopping district, a journey of 4, 6, 5, and 18 minutes by motorcycle, car, bicycle, and foot, respectively, due to traffic signals and pedestrian crossings. The LTP framework plans a direct aerial route at 50 m altitude for approximately a minute of flight time, navigating between the dense high-rise facades along Orchard Road while respecting all geometric and dynamic constraints (Figure 7). The time saving would be most significant during peak shopping hours when ground-level congestion is highest. 
+
+2) Food delivery from downtown Boston to Cambridge, Massachusetts (Case 2): The mission spans approximately 2.4 km of road between downtown Boston and Cambridge, a route requiring 12, 15, 30, and 41 minutes by car, bicycle, (a) Orchard, Singapore (b) Environment            
+
+> (c) t= 5 .7s(d) t= 43 .2s(e) t= 49 .9s
+
+Fig. 7: 4D trajectory flight mission for package delivery from Lucky Plaza departmental store to local theater.             
+
+> (a) Charles River, Boston, Massachusetts (b) Environment
+> (c) t= 3 .6s(d) t= 8 .9s(e) t= 221 .7s
+
+Fig. 8: 4D trajectory flight mission for aerial food delivery from Mike’s Sub to dinning hall. public transit, and foot, respectively, as all ground routes must cross the Charles River via bridges. The LTP framework plans an aerial trajectory that crosses directly over the Charles River at 50 m altitude, bypassing bridge congestion entirely and completing the delivery in approximately 4 minutes of flight (Figure 8). Because the majority of the flight path passes over open water rather than dense urban geometry, obstacle interactions are limited to the departure and arrival urban segments, yielding lower safety concerns, minimal geometric constraint activity, and heightened trajectory optimality. V. C ONCLUSION 
+
+In this work, we presented the Last-Mile Trajectory Plan-ning (LTP) framework, a real-time, dynamics-aware trajectory optimization architecture for small UAVs operating within an altitude-stratified urban air mobility channel. The framework couples a JAX-accelerated digital-twin model with an SQP optimizer that treats infrastructure and obstacle avoidance as a live separating-hyperplane constraint, regenerated at every inner solver call from the current candidate trajectory and the current digital environment. A variable-scale quadtree decomposition over the UTM channel further restricts each call to a locally relevant subset of geometry, so the per-call QP size remains compact and governed by local geometric density rather than by the size of the global map. Across 1710 flights spanning five real-world urban environ-ments (Austin, Boston, Orchard Road, Marina Bay, and Hong Kong), 57 routes, five target speeds up to 15 m/s, and different trajectory planning algorithms, the framework attained a 100% 
+
+success rate and a 100% clearance rate, while solving each planning call in roughly 0.03 s on a CPU-only edge platform for a quadcopter model. Conventional DDP diverged on the highly nonlinear 12-state Newton-Euler quadcopter model, while iLQR was approximately 5.5× slower than the base SQP planner and exhibited clearance violations at high speeds. Similarly, SQP variants without live geometric constraints lost clearance margin during aggressive turns. The geomet-ric SQP variant introduced here addressed these limitations with no measurable increase in solve time, demonstrating the advantage of reasoning about obstacle avoidance and vehicle dynamics jointly within the SQP formulation. Two case studies (an Orchard Road delivery in Singapore and a cross-river delivery in Boston) further illustrated end-to-end utility in city districts where ground transport is fundamentally limited by traffic or topology. Several directions for future work remain. First, integrating the planner into a comprehensive UTM stack, where strate-gic deconfliction, conformance monitoring, and contingency management are coordinated via digital-twins, would bridge the gap between airspace design and vehicle-level trajectory planning. Second, the linear-constraint formulation can nat-urally extend to virtual restrictions, such as dynamic geo-fences, noise-sensitive corridors, and environmental-impact zones, without modifying the core optimizer. Third, extending the constraint generator to handle moving obstacles (e.g., other UAM traffic or microclimate cells) will be critical for operations in fully shared airspace. Finally, formal safety ver-ification of the closed-loop trajectory generation and tracking cascade remains a necessary step toward flight certification. The source code is publicly available at https://github.com/ wzjoriv/Larp along with the benchmark tested and case studies flights simulations. REFERENCES [1] Yumeng Li, Tong Guo, Jun Chen, Jianjun Wu, Yu Zhang, Sameer Alam, Kaiquan Cai, and Wenbo Du. Urban Air Mobility: Review and Challenges. IEEE Intelligent Transportation Systems Magazine ,17(3):67–87, 2024. [2] Christelle Al Haddad, Emmanouil Chaniotakis, Anna Straubinger, Kay Pl¨ otner, and Constantinos Antoniou. Factors affecting the adoption and use of urban air mobility. Transportation research part A: policy and practice , 132:696–712, 2020. [3] Chananya Charnsethikul, Jose M Silva, Wim JC Verhagen, and Raj Das. Urban air mobility aircraft operations in urban environments: A review of potential safety risks. Aerospace , 12(4):306, 2025. [4] Jun Li, Rongkun Jiang, Rao Fu, Yan Gao, Yang Liu, Kaiquan Cai, and Quan Quan. Mid-air collision risk for urban air mobility: A review. 
+
+Drones , 10(3):211, 2026. [5] Sikang Liu, Michael Watterson, Kartik Mohta, Ke Sun, Subhrajit Bhat-tacharya, Camillo J. Taylor, and Vijay Kumar. Planning dynamically feasible trajectories for quadrotors using safe flight corridors in 3-d complex environments. IEEE Robotics and Automation Letters ,2(3):1688–1695, 2017. [6] Sumeet Singh, Jean-Jacques Slotine, and Vikas Sindhwani. Optimizing Trajectories with Closed-Loop Dynamic SQP. In 2022 International Conference on Robotics and Automation (ICRA) , pages 5249–5254, May 2022. [7] Taylor A. Howell, Brian E. Jackson, and Zachary Manchester. ALTRO: A Fast Solver for Constrained Trajectory Optimization. In 2019 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pages 7674–7679, November 2019. [8] Nima Moradi, Chun Wang, and Fereshteh Mafakheri. Urban Air Mobility for Last-Mile Transportation: A Review. Vehicles , 6(3):1383– 1414, August 2024. [9] Mariah Barsotti, John-Paul Clarke, and Zhenyu Gao. Integrating social and economic sustainability in urban air mobility network planning. 
+
+Journal of Air Transportation , 0(0):1–17, 0. [10] Zhenyu Gao, Yue Yu, Qinshuang Wei, Ufuk Topcu, and John-Paul Clarke. Noise-aware and equitable urban air traffic management: An optimization approach. Transportation Research Part C: Emerging Technologies , 165:104740, 2024. [11] Margarete F. Groll, Spencer R. Granlund, and Luis E. Alvarez. In-tegration Challenges With Conflict Management Systems and Route Planning for Autonomous Aerial Cargo Operations. In 2025 AIAA DATC/IEEE 44th Digital Avionics Systems Conference (DASC) , pages 01–10, September 2025. [12] Euclides Carlos Pinto Neto, Derick Moreira Baum, Jorge Rady de Almeida, Jo˜ ao Batista Camargo, and Paulo Sergio Cugnasca. ATrajectory Evaluation Platform for Urban Air Mobility (UAM). IEEE Transactions on Intelligent Transportation Systems , 23(7):9136–9145, July 2022. [13] Josue N Rivera and Dengfeng Sun. Air traffic management for collaborative routing of unmanned aerial vehicles via potential fields. In 2024 International Conference on Research in Air Transportation (ICRAT) , 2024. [14] Jin Yang, Yanjun Wang, Xu Hang, and Daniel Delahaye. A Review on Airspace Design and Risk Assessment for Urban Air Mobility. IEEE Access , 12:157599–157611, 2024. [15] Dae-Sung Jang, Corey A. Ippolito, Shankar Sankararaman, and Vahram Stepanyan. Concepts of Airspace Structures and System Analysis for UAS Traffic flows for Urban Areas. In AIAA Information Systems-AIAA Infotech @ Aerospace , Grapevine, Texas, January 2017. American Institute of Aeronautics and Astronautics. [16] Aleksandar Bauranov and Jasenka Rakas. Designing airspace for urban air mobility: A review of concepts and approaches. Progress in Aerospace Sciences , 125:100726, August 2021. [17] Hashim A Hashim. Advances in uav avionics systems architecture, classification and integration: A comprehensive review and future per-spectives. Results in Engineering , 25:103786, 2025. [18] Antonio Loquercio, Elia Kaufmann, Ren´ e Ranftl, Matthias M¨ uller, Vladlen Koltun, and Davide Scaramuzza. Learning high-speed flight in the wild. Science Robotics , 6(59):eabg5810, 2021. [19] Yonghao Zhao, Jianjun Ni, Guangyi Tang, Yang Gu, and Simon X Yang. Improved d3qn with graph augmentation for enhanced multi-uav cooperative path planning in urban environments. International Journal of Machine Learning and Cybernetics , 16(4):2315–2333, 2025. [20] Tarek Sheltami, Gamil Ahmed, Mustafa Ghaleb, and Ashraf Mahmoud. UAV Path Planning and Trajectory Optimization: A Comprehensive Survey. Arabian Journal for Science and Engineering , 51(1):105–145, January 2026. [21] Jiankun Wang, Tianyi Zhang, Nachuan Ma, Zhaoting Li, Han Ma, Fei Meng, and Max Q.-H. Meng. A survey of learning-based robot motion planning. IET Cyber-Systems and Robotics , 3(4):302–314, 2021. [22] Chen Tang, Ben Abbatematteo, Jiaheng Hu, Rohan Chandra, Roberto Mart´ ın-Mart´ ın, and Peter Stone. Deep Reinforcement Learning for Robotics: A Survey of Real-World Successes. Annual Review of Control, Robotics, and Autonomous Systems , 8:153–188, 2025. [23] Wei Zhou and Zhouyingmiao Chen. A Semantic-Aware Integrated A *
+
+and Artificial Potential Field Path Planning Framework. IEEE Robotics and Automation Letters , 11(5):6368–6375, May 2026. [24] Jianan Wang, Changyu Bi, Fuxiang Liu, and Jiayuan Shan. Dubins-RRT* motion planning algorithm considering curvature-constrained path optimization. 296:128390. [25] Bizhao Pang, Xinting Hu, Wei Dai, and Kin Huat Low. Uav path optimization with an integrated cost assessment model considering third-party risks in metropolitan environments. Reliability Engineering & System Safety , 222:108399, 2022. [26] Xinting Hu, Bizhao Pang, Fuqing Dai, and Kin Huat Low. Risk Assessment Model for UAV Cost-Effective Path Planning in Urban Environments. IEEE Access , 8:150162–150173, 2020. [27] Drew Scott, Satyanarayana G. Manyam, Isaac E. Weintraub, David W. Casbeer, and Manish Kumar. Noise Aware Path Planning and Power Management of Hybrid Fuel UAVs. IEEE Transactions on Automation Science and Engineering , 22:8227–8238, 2025. [28] Satyanarayana G. Manyam, David W. Casbeer, Swaroop Darbha, Isaac E. Weintraub, and Krishna Kalyanam. Path Planning and Energy Management of Hybrid Air Vehicles for Urban Air Mobility. IEEE Robotics and Automation Letters , 7(4):10176–10183, October 2022. [29] Yian Zhu, Ziye Jia, Yao Wu, Yuanhao Cui, Qiuming Zhu, and Qihui Wu. Safety-Aware UAV Traffic Management for Low-Altitude Urban Airspace. IEEE Transactions on Vehicular Technology , pages 1–6, 2026. [30] Josue N. Rivera, Dengfeng Sun, and Chen Lv. City-Wide Low-Altitude Urban Air Mobility: A Scalable Global Path Planning Approach via Risk-Aware Multi-Scale Cell Decomposition. In Proceedings of the 2026 IEEE 6th International Conference on Human-Machine Systems (ICHMS) , Singapore, July 2026. IEEE. [31] Philip E. Gill and Elizabeth Wong. Sequential Quadratic Programming Methods. In Jon Lee and Sven Leyffer, editors, Mixed Integer Nonlinear Programming , pages 147–224, New York, NY, 2012. Springer. [32] David Mayne. A Second-order Gradient Method for Determining Optimal Trajectories of Non-linear Discrete-time Systems. International Journal of Control , 3(1):85–95, January 1966. [33] Weiwei Li and Emanuel Todorov. Iterative Linear Quadratic Regulator Design for Nonlinear Biological Movement Systems. In Proceedings of the First International Conference on Informatics in Control, Automation and Robotics , pages 222–229, Set´ ubal, Portugal, 2004. SciTePress -Science and and Technology Publications. [34] Bj¨ orn Lindqvist, Sina Sharif Mansouri, Ali-akbar Agha-mohammadi, and George Nikolakopoulos. Nonlinear MPC for Collision Avoidance and Control of UAVs With Dynamic Obstacles. IEEE Robotics and Automation Letters , 5(4):6001–6008, 2019. [35] Alex Oshin, Hassan Almubarak, and Evangelos A. Theodorou. Differ-entiable robust model predictive control. In Proceedings of Robotics: Science and Systems (RSS) , Delft, Netherlands, July 2024. [36] Jianjian Liang, Shoukun Wang, and Zhi Liu. A Guidance Method for Fixed-wing Unmanned Aerial Vehicle Based on Model Predictive Control. In 2024 43rd Chinese Control Conference (CCC) , pages 4055– 4060, Kunming, China, July 2024. IEEE. [37] Mo ElSayed and Moataz Mohamed. Robust digital-twin airspace discretization and trajectory optimization for autonomous unmanned aerial vehicles. Scientific Reports , 14(1):12506, 2024. [38] Carlos Mastalli, Wolfgang Merkt, Josep Marti-Saumell, Henrique Fer-rolho, Joan Sol` a, Nicolas Mansard, and Sethu Vijayakumar. Afeasibility-driven approach to control-limited ddp. Autonomous Robots ,46(8):985–1005, 2022. [39] rawpixel.com. Silhouette skyline illustration. Vector graphic (modified) from Freepik, 2026. [40] freepik.to. Professional drones with flat design. Vector graphic (modified) from Freepik, 2026. [41] James Bradbury, Roy Frostig, Peter Hawkins, Matthew James Johnson, Yash Katariya, Chris Leary, Dougal Maclaurin, George Necula, Adam Paszke, Jake VanderPlas, Skye Wanderman-Milne, and Qiao Zhang. JAX: composable transformations of Python+NumPy programs, 2018. [42] M Islam, M Okasha, and M M Idres. Dynamics and control of quadcopter using linear model predictive control approach. IOP Confer-ence Series: Materials Science and Engineering , 270:012007, December 2017. [43] OpenStreetMap contributors. Planet dump retrieved from https://planet.osm.org . https://www.openstreetmap.org, 2017.

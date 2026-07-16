@@ -1,0 +1,599 @@
+Title: Dynamic Airspace Management for UAVs in Evolving Urban Environments: Collaborative Coordination and Human Safety
+
+URL Source: https://arxiv.org/pdf/2607.04825v1
+
+Published Time: Tue, 07 Jul 2026 03:17:01 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Dynamic Airspace Management for UAVs in Evolving Urban Environments: Collaborative Coordination and Human Safety 
+
+# Lin Sun ∗
+
+Shanghai Jiao Tong University Shanghai, China sun_lin@sjtu.edu.cn 
+
+# Yuhang Wang ∗
+
+Shanghai Jiao Tong University Shanghai, China lingbo_2022@sjtu.edu.cn 
+
+# Fan Meng Hong ∗
+
+Shanghai Jiao Tong University Shanghai, China stevenhong@sjtu.edu.cn 
+
+# Haopeng Chen †
+
+Shanghai Jiao Tong University Shanghai, China chen-hp@sjtu.edu.cn 
+
+# Yan Jiao 
+
+Shanghai Shapere Information Technology Co.,Ltd. Shanghai, China jiaoyan2026@126.com 
+
+# Yongming Xu 
+
+Shanghai Shapere Information Technology Co.,Ltd. Shanghai, China xuym2026@126.com 
+
+## Abstract 
+
+The low-altitude economy is an emerging industry with significant development potential, in which the safety of unmanned aerial vehi-cle (UAV) operations is a critical challenge. Particularly within com-plex urban topographies and human-populated environments, UAV airspace management must prioritize collision avoidance and hu-man safety. We propose Pharos, a collaborative multi-UAV airspace management system. Pharos lies between the distributed local per-ception paradigm and the centralized fine-grained control para-digm. Pharos coordinates the safe parallel execution of UAVs in shared airspace while innovatively accounting for the impact of human fear. Pharos is implemented using the MAPPO algorithm due to its faster convergence and higher rewards than other typi-cal MARL algorithms (HAPPO and HATRPO). To evaluate Pharos, we developed a 3D simulation system using real urban data. Vi-sualization results demonstrate its effective airspace coordination capability. Regarding performance verification, Pharos reduced human fear by 52.72% compared to the benchmark Ipopt. More-over, we designed spatial entropy as a system evaluation metric to quantify space utilization, which improved performance by 70.82% and 2.03% compared to the benchmarks Ipopt and A-star, respec-tively. The source code is available at an anonymized repository: 
+
+https:// github.com/ pharos-anonymized/ source-code.git .
+
+## CCS Concepts 
+
+• Computing methodologies → Cooperation and coordina-tion ; Multi-agent systems .
+
+## Keywords 
+
+Airspace management, UAV collaborative coordination, Exclusive space, Human safety, Spatial entropy 
+
+## 1 Introduction 
+
+Driven by the rapid evolution of unmanned aerial vehicles (UAVs), the low-altitude economy has emerged as a highly active domain in recent years [ 40 ]. Diverse UAV platforms are now increasingly integrated into daily operations, ranging from heavy-lift UAVs for long-haul logistics to lightweight UAVs for infrastructure inspection 
+
+> ∗These authors contributed equally to this research.
+> †Corresponding author.
+
+Figure 1: Three airspace management paradigms: ( a) Dis-tributed local perception paradigm may lead to collisions of 
+
+𝐴 ,𝐵 at blind spots. ( b) Centralized fine-grained control para-digm ensures safety for 𝐴 and 𝐵 via sequential instructions by timeline ①-②. ( c) Pharos coordinates the exclusive spaces for 𝐴 and 𝐵 through coarse-grained global management to enable safe parallel passage. 
+
+and urban last-mile delivery. However, when multiple UAVs operate in parallel within a shared low-altitude space, their respective pri-vate operations are highly likely to conflict. When UAV flight zones overlap densely populated urban areas, the risk of UAV collisions and the threat to human safety they pose will increase significantly [26 ]. Consequently, establishing an airspace management system for UAVs to ensure safety at low altitudes is a pressing concern. This involves tackling two main challenges: exploring effective multi-UAV collaborative coordination solutions [ 5 ] and addressing human fears related to low-altitude flights [32]. Firstly, human safety factors are currently mainly considered in applications involving two-dimensional spaces, such as autonomous driving [ 39 ] and industrial robotics [ 21 ]. Unlike the relatively pre-dictable roadways for autonomous vehicles or the enclosed and 
+
+> arXiv:2607.04825v1 [cs.MA] 6 Jul 2026 Lin et al.
+
+controlled environments for industrial robots, UAVs operate in open, three-dimensional environments. In these dynamic, integrated set-tings where UAVs and humans coexist, addressing human safety issues in UAV airspace management has become increasingly com-plex. There is an urgent need to explore solutions to fill this gap in the research field. Secondly, there are currently two main paradigms for UAV col-laborative coordination. One is the distributed local perception paradigm , as typically seen in conventional Embodied Intelligence Systems (EAI) [ 11 ]. This involves equipping UAVs with local sen-sors, enabling them to operate based on information from their own fields of view. While effective for individual autonomy , the reliance on onboard sensors introduces substantial payload and cost overheads, which can be restrictive for the scalable deployment of lightweight UAVs. Moreover, the local field of view provided by onboard sensors inherently limits global situational awareness ,potentially exposing UAVs to blind-spot collisions in the presence of obstacles. For instance, high-rise buildings may impede the mutual detection of UAVs 𝐴 and 𝐵 at key intersections, as shown in Fig. 1(a). The other paradigm is centralized fine-grained control para-digm , such as the traditional Air Traffic Control (ATC) technology [ 12 ]. As in Fig. 1(b), the ATC center integrates radar data and UAV telemetry to maintain global situational awareness and directly issues flight commands to UAVs through fine-grained trajectory 
+
+planning algorithms [ 2, 8 , 20 ]. While this paradigm enhances the safety of UAVs’ collaboration, it faces implementation challenges. These include the need for standardized control interfaces from UAV manufacturers and potential performance bottlenecks at the centralized control center. Therefore, a solution is needed to bridge the two paradigms above by coordinating the safe parallel execution of multiple UAVs. To this end, we propose Pharos , a novel collaborative multi-UAV airspace management paradigm. As shown in Fig. 1(c), Pharos achieves this coordination not by directly planning detailed trajec-tories, but by coordinating exclusive spaces for each UAV, allowing their autonomous operations within the safe spaces. By doing so, 
+
+Pharos effectively overcomes the limitations of the distributed lo-cal perception paradigm . It reduces collision risks arising from in-complete local views and the payload and cost constraints caused by advanced onboard sensors, specifically resource-intensive per-ception payloads (e.g., LiDARs and depth cameras). Compared to the centralized fine-grained control paradigm , Pharos em-ploys a coarse-grained airspace coordination scheme to alleviate the performance bottlenecks typically caused by fine-grained tra-jectory planning. Furthermore, by avoiding direct motion control, Pharos does not interfere with the UAVs’ underlying control 
+
+systems. It provides collaborative guidance relying on a communi-cation interface for data exchange . This eliminates the challenge of requiring UAV manufacturers to open their proprietary control permissions . The paradigm of Pharos is mirrored in terrestrial traf-fic management, where vehicles from varying brands and drivers with varying experience can independently control their vehicles under the macro-coordination of traffic lights. To realize this collaborative paradigm, we design and implement a system of the same name, Pharos . The system establishes global situational awareness by fusing lightweight UAV telemetry data with dynamic pedestrian states, where the latter can conceptu-ally be acquired through crowdsourced IoT networks in real-world deployments. Driven by this, Pharos employs Multi-Agent Rein-forcement Learning (MARL) for collaborative airspace coordination. During the training phase, Pharos encodes UAV observation fea-tures using the Artificial Potential Field (APF) to capture dynamic urban environments. To achieve global optimization with safety priority , we formulate a comprehensive reward mechanism that prioritizes collision avoidance and human safety , while incor-porating flight progression as an auxiliary incentive . Specifically, we innovatively introduce a human fear factor to quantify the psychological impact of low-altitude flights, incorporating physical distance, velocity, and direction vectors. Collision penalties strictly account for both inter-UAV collisions and stationary urban obsta-cles. During the inference phase, the trained model enables parallel execution across UAVs: at each time step, multiple UAVs perform 
+
+inference in parallel to determine their non-overlapping, exclusive spaces . Finally, we introduce spatial entropy in simulations to effectively evaluate their space utilization efficiency within the constrained airspace. The main contributions of this paper are as follows: 
+
+(1) We propose Pharos, a collaborative airspace management solution for multi-UAV coordination that bridges centralized control and distributed local perception, thereby reducing potential UAV collisions and human safety concerns. 
+
+(2) We introduce a quantifiable human fear factor to model the psychological impact of low-altitude UAV operations, and integrate it into the reward mechanism of the MAPPO algorithm to perform parallel inference of the UAV exclusive spaces. 
+
+(3) We implement the namesake Pharos simulation system us-ing real-world urban data. Comprehensive experiments validate its accuracy, effectiveness, and performance in low-altitude space coordination. 
+
+## 2 Related Work 2.1 Airspace coordination for UAVs 
+
+For current research on UAV airspace coordination, we summarize three core methods: (1) The centralized planning and optimization method mainly includes two categories: Multi-Agent Pathfinding (MAPF) and Numerical Optimization (NO). MAPF focuses on single-objective problems (such as the shortest path) and struggles with the complex weighting of multiple objectives and soft constraints. When objectives are weighted, state space and collision resolu-tion become highly complex, reducing algorithm efficiency. NO employs mathematical functions to model constraints and flight objectives—such as optimal paths [ 27 ], minimal energy consump-tion [ 35 ], and economic load dispatch [ 1 ] —transforming them into solvable optimization problems. To achieve these optimiza-tions, Geometric-based methods are often used, employing coor-dinate transformations (e.g., geometric distances [ 37 ], SE(3) [ 28 ], and graph topologies [ 22 ]) to describe UAV motion constraints. However, these centralized methods generally have high computa-tional complexity, and their effectiveness at obstacle avoidance in dynamic environments is limited. 
+
+(2) The distributed reactive control method is exemplified by the Artificial Potential Field (APF) method. These methods achieve Dynamic Airspace Management for UAVs in Evolving Urban Environments 
+
+collision avoidance by creating a virtual attractive field for target points and a virtual repulsive field for obstacles [ 25 ]. Compared to centralized methods, APF is faster computationally and better suited to dynamic environments. However, it is essentially a short-sighted optimization approach relying on instantaneous gradient descent, which can easily cause UAVs to get stuck in local minima (where attractive and repulsive forces balance), hindering their progress towards the destination. To alleviate this issue, researchers have proposed various improvements, such as integrating light transmission models by Li et al . [15] , and introducing collinear force deflection angles by Zhang et al. [38]. 
+
+(3) The collaborative optimization method is represented by Multi-Agent Reinforcement Learning (MARL). Unlike APF’s dependence on instantaneous gradients, MARL collaboratively optimizes strate-gies by learning gradients of long-term cumulative rewards, effec-tively handling global optimization problems and avoiding local minima. In recent years, MARL-based methods [ 36 ] have made significant progress in collaborative UAV decision-making [ 16 ], ef-fectively avoiding the local-minimum problem in APF by combining exploration and exploitation strategies. 
+
+## 2.2 Human-Machine Coexistence Safety 
+
+As the coexistence of humans and machines in various environ-ments deepens, ensuring human safety while enabling intelligent machines to work efficiently becomes a critical issue. The concept of human safety in human-machine interactions was first intro-duced in Asimov’s Three Laws of Robotics and the ISO 10218-1 Four Principles [ 13 ]. In fields such as industrial robotics [ 26 ], and autonomous driving [ 18 ], the physical scope of human-machine interaction is typically limited to relatively small, enclosed, and mostly two-dimensional spaces. However, the impact of UAVs op-erating in three-dimensional spaces on human safety remains a significant challenge. Although Van Waveren et al . [32] developed a Control Barrier Function (CBF) to enhance human-perceived safety in interactions between a single UAV and a single human, prioritiz-ing human safety in complex, dynamic environments with multiple UAVs and humans remains to be fully addressed. 
+
+## 3 System Model and Problem Formulation 
+
+Sec. 3.1 will introduce the system space model, including the urban setting model and the UAV exclusive space model. And Sec. 3.2 will formalize the problem of the optimization objectives. 
+
+## 3.1 Space Model 
+
+There are two distinct technical approaches for creating the space model to coordinate exclusive, safe, and available space for multiple UAVs in the urban environment. The first approach treats space as a continuous resource, allowing optimal coordination based on the flight needs of UAVs. This method minimizes coordinated space but entails high computational complexity for both space coor-dination and conflict detection. In contrast, the second approach divides space into numerous independent, fine-grained, discrete units, where each UAV receives an exclusive cuboid slice defined by integer multiples of these units. Although this method may lead 
+
+Figure 2: An illustration of the multi-UAV management in the complex urban space model. 
+
+to some space wastage, it significantly reduces computational de-mands compared to the continuous model. Consequently, Pharos adopts the discrete space model for UAV airspace management. We use the space coordinate system 𝑆 (𝑥, 𝑦, 𝑧 ) shown in Fig. 2 to represent 3D airspace, which includes both moving humans and stationary buildings as obstacles. A set of humans 𝐻 = {ℎ} moves on the 𝑥𝑂𝑦 plane, with each human ℎ having a velocity ah and a gravity center at 𝑝 ℎ (𝑥, 𝑦, ℎ ), where ℎ is a constant height. The stationary buildings are represented by 𝐵 = {𝑏 }. Following the design from Hu et al. [ 10 ], each building is modeled as a cuboid 
+
+𝑐 𝑏 ({ 𝛤 − 
+
+> 𝑏
+
+, 𝛤 + 
+
+> 𝑏
+
+}) , 𝛤 ∈ { 𝑥, 𝑦, 𝑧 }, based on its minimum and maximum projections on the 𝑥, 𝑦, 𝑧 axes. This modeling method can be gener-alized to other types of stationary obstacles, such as sculptures or street lamps. There is a set of UAVs 𝑈 = {𝑢 } operating in the airspace. To ensure safe operation, each UAV is coordinated an exclusive space ,represented by a cuboid 𝑐 𝑢 ({ 𝛤 − 
+
+> 𝑢
+
+, 𝛤 + 
+
+> 𝑢
+
+}) , 𝛤 ∈ { 𝑥, 𝑦, 𝑧 } (illustrated as the dashed box in Fig. 2). This cuboid allows the UAV to customize its flight path without colliding with other UAVs or obstacles, ensuring that its exclusive space does not overlap with others. For UAV 𝑢 
+
+with destination point ˜𝑝 𝑢 and current velocity v𝑢 , its current gravity center point is 𝑝 𝑢 (𝑥, 𝑦, 𝑧 ). The UAV 𝑢 is regarded as a volumetric object rather than merely a particle point, and its volume is modeled by a cube of side length 𝜇 that must be entirely contained within the exclusive space. And the distance from UAV 𝑢 to human ℎ is represented by 𝑑 (𝑢, ℎ ), calculated as the Euclidean distance between their gravity centers. The distance from UAV 𝑢 to building 𝑏 is 
+
+𝑑 (𝑢, 𝑏 ), defined as the shortest Euclidean distance from the UAV’s gravity center 𝑝 𝑢 to the surface of 𝑐 𝑏 . The current space 𝑆 is treated as a global situational awareness zone 𝑐 𝑆 . The data center Pharos performs the above space modeling (as shown in Fig. 2) and UAV airspace management using stationary building data and situational data reported by UAVs and other mobile intelligent terminals. Lin et al. 
+
+## 3.2 Problem Formulation 
+
+UAV collision avoidance and human safety are the foremost priori-ties. Additionally, to ensure a comprehensive airspace management solution, we also include flight progression in our optimization ob-jectives. Therefore, the optimization objectives for Pharos’s airspace management problem are divided into three aspects: the collision avoidance quantified by the collision penalty to avoid collisions among UAVs and between UAVs and obstacles; the human fear penalty to alleviate the fear UAVs may instill in humans; flight progression is to prompt UAVs to reach their destinations as soon as possible instead of hovering. Pharos is designed to find the opti-mal strategy for the multi-UAV exclusive space coordination. 
+
+3.2.1 Collision Penalty. The potential collision objects for UAV 𝑢 
+
+include the other UAVs in 𝑈 , humans 𝐻 , and buildings 𝐵 , as Equ. 1. 
+
+𝑃 𝑠 𝑢 = 12∑︁ 𝑢 ′ ∈𝑈 \{ 𝑢 }
+
+𝐼 𝑢,𝑢 ′ +∑︁   
+
+> 𝑘 ∈𝐻 ∪𝐵
+
+𝐴 𝑢,𝑘 (1) where, 
+
+𝐼 𝑢,𝑢 ′ =
+
+Ö  
+
+> 𝛤 ∈ { 𝑥,𝑦,𝑧 }
+
+max (min (𝛤 + 
+
+> 𝑢
+
+, 𝛤 + 
+
+> 𝑢 ′
+
+) − max (𝛤 − 
+
+> 𝑢
+
+, 𝛤 − 
+
+> 𝑢 ′
+
+), 0)
+
+𝐴 𝑢,𝑘 =
+
+1, 𝑑 (𝑢, 𝑒 ) ≤ 𝜇 /20, otherwise The penalty is divided into two parts. 𝐼 𝑢,𝑢 ′ represents the number of intersection points between the exclusive spaces of 𝑐 𝑢 and the other UAV 𝑐 𝑢 ′ . The coefficient 1/2 in 𝑃 𝑠 𝑢 eliminates double counting of intersection volumes for all UAV pairs in Equ. 4. Collisions between 
+
+𝑢 and moving humans 𝐻 , as well as stationary buildings 𝐵 , are classified as collisions with obstacles. We define 𝐴 𝑢,𝑘 to indicate a collision occurs when the distance from UAV 𝑢 ’s gravity center 𝑝 𝑢 
+
+to obstacle 𝑘 is less than half the side length 𝜇 of its volume cube, aligning with intuitive expectations. Specific distance calculations between 𝑢 and ℎ, and between 𝑢 and 𝑏 , follow the system model definition in Sec. 3.1. 
+
+3.2.2 Human Fear Penalty. We proposed the human fear factor to quantify the fear impact of UAV 𝑢 on human ℎ, and the penalty value 
+
+𝑃 𝑓 𝑢 is calculated as Equ. 2. The influence occurs only if the distance 
+
+𝑑 (𝑢, ℎ ) is within ¯𝑟 in Fig. 3. And the angle 𝜃 𝑢,ℎ represents the angle between the UAV’s velocity vector vu and the human’s velocity vector ah, while 𝜑 𝑢,ℎ is the angle between vu and the vector from UAV pointing to the human. Fear increases when UAVs approach humans in case ① and decreases when they move away in case ③.Additionally, as the distance between the UAV and human increases in cases ② and ④, fear diminishes. 
+
+𝑃 𝑓 𝑢 =∑︁ 
+
+> ℎ∈𝐻
+
+
+
+(1 − 𝑐𝑜𝑠𝜃 𝑢,ℎ ) · max (0, 𝑐𝑜𝑠𝜑 𝑢,ℎ )
+
+𝑑 (𝑢, ℎ ) , ¯𝑟 ≥ 𝑑 (𝑢, ℎ )
+
+0, otherwise (2) 
+
+3.2.3 Flight progression. UAV 𝑢 ’s flight progression consists of two parts: the immediate bonus 𝑅 𝑙 𝑢 upon arriving at destination 
+
+˜𝑝 𝑢 (see Equ. 3a), which is triggered when the distance from the gravity center 𝑝 𝑢 to ˜𝑝 𝑢 is below a threshold 𝛿 . The second part is the progression bonus 𝑅 𝑔 𝑢 (see Equ. 3b), where 𝑝 ′ 
+
+> 𝑢
+
+denotes the gravity center coordinate of 𝑢 at the previous timestamp. The flight 
+
+Figure 3: The human fear model with highlighting four spe-cific cases ① to ④ of UAVs’ impact on humans, projected onto the 𝑥𝑂𝑧 plane. Notably, Pharos operates with 3D vectors rather than 2D perspectives. 
+
+progression is designed to encourage the UAV to fly forward and prevent it from hovering to avoid collisions. 
+
+𝑅 𝑙 𝑢 =
+
+1, 𝑑 (𝑝 𝑢 , ˜𝑝 𝑢 ) < 𝛿 
+
+0, otherwise (3a) 
+
+𝑅 𝑔 𝑢 = 𝑑 (𝑝 ′
+
+> 𝑢
+
+, ˜𝑝 𝑢 ) − 𝑑 (𝑝 𝑢 , ˜𝑝 𝑢 ) (3b) Thus, the final optimization objective for the UAV airspace man-agement problem is represented as R in Equ. 4. Here, 𝛽 𝑠 , 𝛽 𝑓 , 𝛼 𝑙 ,and 𝛼 𝑔 are the weight parameters for collision penalty, human fear penalty, immediate flight reward, and progression flight reward, respectively. Our goal is to maximize R to coordinate exclusive spaces for UAVs for dynamic airspace management. 
+
+max R = max ∑︁  
+
+> 𝑢 ∈𝑈
+
+(− 𝛽 𝑠 𝑃 𝑠 𝑢 − 𝛽 𝑓 𝑃 𝑓 𝑢 + 𝛼 𝑙 𝑅 𝑙 𝑢 + 𝛼 𝑔 𝑅 𝑔 𝑢 ) (4) 
+
+## 4 Proposed Method 
+
+Given that this study mainly focuses on collaborative decision-making and optimization at the algorithm level, we assume that the Pharos system, based on a collaborative group framework with consistent goals and meeting the admission conditions, can reli-ably collect situation awareness data and distribute the exclusive space coordination results at each time step. The following Sec. 4.1 formalizes the algorithm model as a Dec-POMDP, and Sec. 4.2 introduces the MAPPO algorithm adopted. 
+
+## 4.1 Airspace Management Decision Model 
+
+The multi-UAV airspace management problem is essentially a col-laborative Multi-Agent System (MAS), in which multiple UAVs must make collaborative decisions in a partially observable and Dynamic Airspace Management for UAVs in Evolving Urban Environments 
+
+Figure 4: Pharos’ core algorithm based on MAPPO. 
+
+dynamically changing environment to achieve global objectives. Therefore, we adopt the Decentralized Partially Observable Markov Decision Process (Dec-POMDP) as the formal algorithm frame-work of Pharos. This model accurately captures the characteristics of UAVs making decisions in parallel based on their observations, while the design of global states and shared reward functions aligns with the macro collaboration objectives of the Pharos center. This reflects the core concept of centralized collaboration and parallel execution from the perspective of the algorithmic framework. We extracted the key components directly related to the Pharos airspace management problem from the standard Dec-POMDP model and represented them as a five-tuple < I, O, A, S, R >.A complete Dec-POMDP should also include standard components such as the state transition function, observation function, and discount factor. In this study, the state transition and observation functions are implicitly defined by the dynamics of the simulation environment. The discount factor 𝛾 is a critical hyper-parameter, whose setting will be explained in Sec. 4.2 and summarized in Tab. 1. We represent the entire airspace management cycle as T = {𝑡 }.Pharos can handle the dynamic changes in the urban environment at each time step 𝑡 and coordinate appropriate exclusive spaces for UAVs, thereby ensuring reliable airspace management. The components of < I, O, A, S, R > corresponding to time step 𝑡 are elaborated in detail as follows: 
+
+Agent : I = {𝑖 } represents a definite set of UAV agents. 
+
+Observation : O𝑡 = {𝑜 𝑖 } is the observation set of the agents at timestep 𝑡 , with each 𝑜 𝑖 formalized as: 
+
+𝑜 𝑖 = [𝑖𝑑 𝑖 , 𝑁 (𝑝 𝑖 ), 𝑁 ( ˜𝑝 𝑖 − 𝑝 𝑖 ), 𝑚 (𝑝 𝑖 , ˜𝑝 𝑖 ), 𝜌 𝑖 , 𝜎 E 
+
+> 𝑖
+
+, 𝐹 𝑖 ]
+
+where 𝑜 𝑖 is a one-dimensional vector of size 24 and contains four types of features: (1) Self feature : 𝑖𝑑 𝑖 is the integer identity number of agent 𝑖 ,and 𝑁 (𝑝 𝑖 ) = 𝑝 𝑖 /( 𝑝 𝑚𝑎𝑥 − 𝑝 𝑚𝑖𝑛 ) is the normalized vector of size 3 for the agent 𝑖 ’s gravity center position with respect to the coordinate system 𝑆 , where 𝑝 𝑚𝑎𝑥 and 𝑝 𝑚𝑖𝑛 are the upper and lower bounds of 
+
+𝑆 respectively. 𝑁 ( ˜𝑝 𝑖 − 𝑝 𝑖 ) = ( ˜𝑝 𝑖 − 𝑝 𝑖 )/( 𝑝 max − 𝑝 𝑚𝑖𝑛 ) and 𝑚 (𝑝 𝑖 , ˜𝑝 𝑖 )
+
+are the normalized unit vector of size 3 and Manhattan distance value of 𝑝 𝑖 and its destination ˜𝑝 𝑖 .(2) partially UAVs repulsive feature : We customized the rank 
+
+function to count the 𝜅 UAVs closest to 𝑖 in 𝑈 , which is used to calculate the partially UAV repulsive feature. Based on the definition of repulsive force in physics, the calculation between UAV 𝑖 and UAV 𝑗 is obtained, and the partially repulsive feature 𝜌 𝑖 with respect to 𝑖 is expressed as follows. 
+
+𝜌 𝑖 =∑︁   
+
+> 𝑗 ∈rank (𝑈 )𝜅 𝑖
+
+(𝑝 𝑖 − 𝑝 𝑗 )/ 𝑑 (𝑖, 𝑗 )3 (5) (3) Neighbor UAV velocity feature : The neighbor velocity fea-tures of 𝑖 are 𝜎 E 
+
+> 𝑖
+
+= {𝜎 e 
+
+> 𝑖
+
+}, with 𝜎 e 
+
+> 𝑖
+
+formalized in Equ. 6. To explain the meaning of neighbor UAV, the six observation directions are defined as E = {e} = {( 0, 0, 𝑒 ), (0, 0, −𝑒 ), (0, 𝑒, 0), (0, −𝑒, 0), (𝑒, 0, 0), (− 𝑒, 0, 0)} .Then the neighbor of 𝑖 in e is the nearest UAV 𝑗 , that is 𝑝 𝑗 = 𝑝 𝑖 + 𝜆 e
+
+(take 𝜆 as the first positive integer that makes this expression hold). 
+
+𝜎 e 
+
+> 𝑖
+
+=
+
+0.5 + 𝜀 · sign (( v𝑗 − v𝑖 ) · e)/ 𝜆, 𝑝 𝑗 = 𝑝 𝑖 + 𝜆 e,
+
+0, otherwise, where , 𝜆 ∈ N+, 𝜀 ∈ [ 0, 0.5].
+
+(6) Given a neighbor 𝑗 in direction e, 𝜎 e 
+
+> 𝑖
+
+computes the relative velocity feature between agents 𝑗 and 𝑖 along e. This feature is inversely proportional to the distance coefficient 𝜆 between them. Geomet-rically, a positive relative velocity feature indicates that neighbor 
+
+𝑗 is flying closer, thereby increasing 𝜎 e 
+
+> 𝑖
+
+, while a negative feature signifies that 𝑗 is flying away, causing 𝜎 e 
+
+> 𝑖
+
+to decrease. (4) Human fear prediction feature : With the six observation directions mentioned above, the operation of the UAV can also hover at the current position. Therefore, the prediction of human fear features includes seven values, which are concatenated using Equ. 2 as follows. 
+
+𝐹 𝑖 = 𝑃 𝑓 𝑖 ⊕ 𝑃 𝑓 𝑖 ∼1 ⊕ ... ⊕ 𝑃 𝑓 𝑖 ∼e (7) where 𝑃 𝑓 𝑖 represents the fear that occurs to humans when 𝑖 hovers, and 𝑃 𝑖 ∼e𝑓 represents the fear that occurs to humans if 𝑖 moves one step in the direction of e.
+
+Action A𝑡 = {𝑎 𝑖 } indicates that the agent set has a definite set of actions at the timestep 𝑡 . The geometric meaning of the action set is the direction and range selection for exclusive spaces. Therefore, in the discrete 3D space, six directions E (the same as the neighbor UAVs) need to be considered, as well as an additional action of the UAV hovering, that is, E = E ∪ {( 0, 0, 0)} . Then 𝑎 𝑖 is denoted as follows: 
+
+𝑎 𝑖 = [𝑎 0 
+
+> 𝑖
+
+, ..., 𝑎 e 
+
+> 𝑖
+
+],∑︁  
+
+> 𝑎 e
+> 𝑖 ∈𝑎 𝑖
+
+𝑎 e 
+
+> 𝑖
+
+= 1, 𝑎 e 
+
+> 𝑖
+
+∈ { 0, 1}.
+
+Each agent is coordinated the exclusive space 𝑐 𝑖 in the direction e of 
+
+𝑎 e 
+
+> 𝑖
+
+= 1 according the observation information 𝑎 𝑖 , and the calculation 
+
+𝑐 𝑖 is formalized as follows: 
+
+𝑐 𝑖 = ({ 𝛤 − 
+
+> 𝑖
+
+− 𝑒 /2, 𝛤 + 
+
+> 𝑖
+
++ 𝑒 /2}) (8) where, 
+
+𝛤 − 
+
+> 𝑖
+
+= min (𝛤 𝑖 , 𝛤 ′ 
+
+> 𝑖
+
+), 𝛤 + 
+
+> 𝑖
+
+= max (𝛤 𝑖 , 𝛤 ′ 
+
+> 𝑖
+
+), 𝛤 ∈ { 𝑥, 𝑦, 𝑧 },𝑝 ′ 
+
+> 𝑖
+
+(𝑥 ′ 
+
+> 𝑖
+
+, 𝑦 ′ 
+
+> 𝑖
+
+, 𝑧 ′ 
+
+> 𝑖
+
+) = 𝑝 𝑖 (𝑥 𝑖 , 𝑦 𝑖 , 𝑧 𝑖 ) + ∑︁  
+
+> 𝑎 e
+> 𝑖 ∈𝑎 𝑖
+
+𝑎 e 
+
+> 𝑖
+
+· e.
+
+In Equ.8, 𝑝 ′ 
+
+> 𝑖
+
+is the next position coordinate of UAV 𝑖 calculated by the action 𝑎 𝑖 and the current position 𝑝 𝑖 . The exclusive space 𝑐 𝑖 (as Fig.4) is obtained by forming a cuboid with coordinates 𝑝 𝑖 and 𝑝 ′
+
+> 𝑖
+
+and extending the boundary outward by a length of 𝑒 /2. The UAV’s operation within 𝑐 𝑖 can avoid potential collisions and eliminate human fear. Lin et al. 
+
+Algorithm 1 Pharos: dynamic airspace management algorithm for multiple UAVs based on MAPPO 
+
+Require: UAVs 𝑈 , humans 𝐻 , buildings 𝐵 , 3D-space 𝑆 
+
+Ensure: result set of multi-UAV exclusive spaces {𝑐 𝑖 |𝑖 ∈ 𝑈 } 
+
+> 1:
+
+init the critic 𝑉 𝜔 , actors {𝜋 𝜗 𝑖 |𝑖 ∈ I}  
+
+> 2:
+
+while 𝑒𝑝 ≤ 𝑒𝑝𝑖𝑠𝑜𝑑𝑒 do  
+
+> 3:
+
+init environment 𝑡 = 0, S = S0, D = [ ]  
+
+> 4:
+
+while 𝑡 <= T do  
+
+> 5:
+
+get observation set from env O𝑡 = {𝑜 𝑖 } 
+
+> 6:
+
+execute each actor: A𝑡 {𝑎 𝑖 } ← O 𝑡 {𝑜 𝑖 } 
+
+> 7:
+
+execute Equ. 8: {𝑐 𝑖 } ← A 𝑡 {𝑎 𝑖 } 
+
+> 8:
+
+take A𝑡 to step env: S𝑡 +1, R𝑡 ← S 𝑡  
+
+> 9:
+
+store (S 𝑡 , A𝑡 , R𝑡 , S𝑡 +1) in replay buffer D 
+
+> 10:
+
+end while  
+
+> 11:
+
+gradient update the critic network 𝑉 𝜔 by loss function 
+
+𝑙𝑜𝑠𝑠 𝜔 = 1
+
+> T
+
+Í𝑡 ∈ T (𝐺 𝑡 − 𝑉 𝜔 (S 𝑡 )) 2 
+
+> 12:
+
+gradient update each actor 𝜋 𝜗 𝑖 by 𝑙𝑜𝑠𝑠 𝜗 𝑖 = 1
+
+> T
+
+Í𝑡 ∈ T 
+
+(𝐺 𝑡 − 𝑉 𝜔 (S 𝑡 )) · min [𝑝𝑟𝑜𝑏 (𝑎 𝑖 ), clip (prob (𝑎 𝑖 ), 1 − 𝜍, 1 + 𝜍 )] ,prob (𝑎 𝑖 ) = 𝜋 𝜗 𝑖 (𝑎 𝑖 )/ 𝜋 𝑒𝑝 −1 
+
+> 𝜗 𝑖
+
+(𝑎 𝑖 ) 
+
+> 13:
+
+end while 
+
+State The environment state at timestep 𝑡 is a one-dimensional vector (with the size of 6 + 24 ∗ |I| ) as: 
+
+S𝑡 = [𝑝 𝑚𝑖𝑛 , 𝑝 𝑚𝑎𝑥 , 𝑜 1, ..., 𝑜 𝑖 ].
+
+Where 𝑝 𝑚𝑖𝑛 and 𝑝 𝑚𝑎𝑥 are the coordinate system information and 
+
+{𝑜 𝑖 } are the agents’ observation information. 
+
+Reward The reward function provides feedback on the quality of agents’ actions, facilitating a balance between exploring new behaviors and exploiting known effective ones. We define the re-ward function R𝑡 in Equ. 4 shared by all agents to guide UAVs in optimizing the coordination of exclusive spaces. Within the framework of Dec-POMDP, the multi-UAV airspace management problem is considered an NEXP-complete problem [ 3 ], posing theoretical challenges. However, due to the finite-horizon 
+
+[ 23 ] of the current problem, there exists at least one optimal joint policy that satisfies the following conditions: The finite time step set T , observation set O𝑡 , action set A𝑡 and state set S𝑡 of UAVs; The bounded reward function R𝑡 consist of collision penalty, hu-man fear penalty, and flight reward; the system’s state transitions adhere to the Markov property. Thus, our goal is not to find a precise optimal solution but rather to have multiple UAVs collabo-rate to approximate the global optimal, safe, and efficient airspace coordination strategy. 
+
+## 4.2 Airspace Management Algorithm for UAVs 
+
+In the Dec-POMDP modeling for multi-UAV airspace management, we employ the Multi-Agent Proximal Policy Optimization (MAPPO) algorithm [ 36 ] for obtaining approximate solutions. MAPPO adopts a centralized training and decentralized execution paradigm. Dur-ing the training phase, global information is used to optimize the joint policy of multiple UAVs. In the execution phase, each UAV independently makes decisions based on its partial observations and subsequently plans detailed paths. This paradigm aligns per-fectly with the architecture of the Pharos system, which strikes a balance between centralized control and distributed local percep-tion paradigms, ensuring efficient collaboration and scalability at the algorithmic level. Moreover, to validate the reasonableness of our algorithm selection, we conducted comparative experiments with typical multi-agent reinforcement learning algorithms such as HAPPO and HATRPO. The relevant results and analysis are detailed in Sec. 5.3. As illustrated in Fig. 4, the Pharos system built on the MAPPO algorithm comprises two core components: a set of actor networks 
+
+{𝜋 𝜗 𝑖 }, each corresponding to one UAV, and a global shared critic network 𝑉 𝜔 evaluating the performance of actors’ policies. Both the actor and critic networks are implemented as multi-layer per-ceptrons (MLPs). Each actor takes the partial observation 𝑜 𝑖 of its associated UAV as input and outputs a probability distribution over possible directions for selecting the exclusive space. To conform to the discrete action set A𝑡 defined in the decision model, the action 
+
+𝑎 𝑖 with the highest probability is assigned a value of 1, while all others are set to 0. The critic receives the global state S𝑡 as input and produces a value estimate 𝑉 𝜔 , which evaluates the quality of the current joint policy and guides the gradient-based update of all actor networks. The Pharos algorithm, based on MAPPO, optimizes the policy 
+
+𝜋 𝜗 𝑖 of each UAV actor network through the policy gradient method. This optimization aims to maximize the long-term cumulative re-turn 𝐺 𝑡 , where 𝐺 𝑡 is defined as the sum of the reward R𝑡 at the current timestamp and the discounted cumulative return at the next timestamp 𝐺 𝑡 +1. The algorithm updates the policy parameters by calculating the expected policy gradient ∇𝜗 𝑖 𝐽 (𝜗 𝑖 ), which repre-sents the direction in which the long-term return 𝐺 𝑡 changes with the policy parameters 𝜗 𝑖 . The formal calculation of our adopted algorithm MAPPO [36] is as follows: 
+
+∇𝜗 𝑖 𝐽 (𝜗 𝑖 ) = E𝜋 𝜗 𝑖 
+
+∇𝜗 𝑖 𝐺 𝑡 
+
+ , 𝐺 𝑡 = R𝑡 + 𝛾 · 𝐺 𝑡 +1.
+
+As the gradient gradually converges, the Pharos system eventually approaches a team-optimal solution in the cooperative multi-UAV game. That is, the policies of all UAV actors reach a local optimal state, and any unilateral change of policy by a single UAV cannot increase the global reward R𝑡 . The complete algorithmic procedure of Pharos is summarized in Algorithm 1, which can coordinate exclusive spaces for multiple UAVs in complex urban environments with stationary buildings and moving humans, while ensuring the safety of both humans and UAVs. 
+
+## 5 Simulation 
+
+We have developed a multi-UAV simulation visualization system for Pharos in a complex urban environment, as an overview in Fig. 5(a) and anonymized source code available at https:// github.com/ pharos-anonymized/ source-code/ tree/ master/ pharos-visual-3d . Detailed experiments and analysis are as follows. 
+
+## 5.1 Simulation Setup 
+
+For the simulation dataset, we obtained stationary building data for a 155m × 135m rectangular area in Shanghai, China, representing a typical complex intersection, from OpenMap (OSM) [ 24 ] and mod-eled the buildings based on designs by Hu et al . [10] to construct the Dynamic Airspace Management for UAVs in Evolving Urban Environments 
+
+Figure 5: (a) Overview of Pharos visualization system. (b)(c) Snapshots of two test cases for system capabilities. Full dynamic effect is shown in the anonymized video at https:// github.com/ pharos-anonymized/ source-code/ blob/ master/ visualization.md .
+
+Pharos spatial map. Pharos also stochastically generates moving hu-mans with diverse velocities and trajectories to simulate real-world dynamic interactions. During inference, the static layout remains fixed while all dynamic configurations, including UAV destination positions and human movements, are randomized. For UAV flight simulation, we have not preset any specific planned flight routes. We only require that the UAVs be able to reach the “next exclusive space" at the next time step. This minimal constraint design allows users to retain complete freedom in route customization for actual UAV operation. The relevant hyperparameters for the implementation are de-tailed in Tab. 1. Among them, based on safety priority, the reward weights are: the paramount penalty for collision avoidance, along-side a cumulative penalty for human psychological impact, and the combined incentive for flight progression (including immediate bonus and progression bonus). This ensures that flight progression serves merely as an auxiliary objective, subject to safety constraints. According to the statistical data, various types of UAVs have a maxi-mum level flight speed of 100 km/h [ 6 ], and a minimum end-to-end control latency of 50 ms [ 4], indicating that a UAV can move up to 1.4 m per communication time step. Consequently, we establish the granularity of the discretized spatial model at the meter scale. All simulation experiments were run on a server equipped with an AMD EPYC 9554 CPU (128 cores), 251GB of RAM, and an NVIDIA RTX A6000 GPU (48GB VRAM). 
+
+## 5.2 Experimental Baselines 
+
+The description of the experimental baseline algorithms and the reasons for the selections are as follows. 
+
+Ipopt : The solver Ipopt (Interior Point Optimizer) is proposed by Stefan [ 30 , 31 ], which is an open-source mathematical optimization toolkit based on the interior point method and widely used for solving constrained optimization problems. It provides a continuous solution for Pharos’ global optimization objective R, serving as the accuracy benchmark for Pharos’ discrete model. 
+
+Table 1: Hyperparameter settings in the simulation. Hyperparameter Value 
+
+space model: 𝛿, 𝜇, 𝑒 0.02, 0.5, 1 human fear model: ¯ℎ, ¯𝑟 1.7, 5.0 observation features: 𝜅, 𝜀, 𝜆 |𝑈 | − 1, 0.3, 2 reward weights: 𝛽 𝑠 , 𝛽 𝑓 , 𝛼 𝑙 , 𝛼 𝑔 100.0, 2.5, 3.0, 1.0 loss function: 𝛾, 𝜍 0.95, 0.2 learning rate: actor, critic 0.005, 0.002 episode step, batch size 5e6, 100 
+
+HAPPO and HATRPO : HAPPO (Heterogeneous-Agent Prox-imal Policy Optimisation) and HATRPO ( Heterogeneous-Agent Proximal Policy Optimisation) are both multi-agent policy optimiza-tion algorithms proposed by Kuba et al . [14] in the same paper. We employed the same hyperparameter configuration as the MAPPO algorithm (see Tab. 1) to compare the performance of different MARL algorithms in the multi-UAV airspace management problem. 
+
+A-star : A-star is a classic benchmark in the field of path plan-ning, and Farid et al . [7] have applied it to the path planning of UAVs. Although Pharos primarily addresses the issue of multi-UAV airspace collaborative management, it can also guide flights by co-ordinating exclusive spaces for UAVs. We will take the optimal path generated by A-star as the comparison benchmark and, under the same safety constraints, verify that Pharos can achieve planning efficiency similar to traditional methods in complex environments. 
+
+## 5.3 Simulation Results and Analysis 
+
+In this subsection, we conducted detailed experiments to verify and analyze the accuracy, effectiveness, and performance of the system. 
+
+5.3.1 Global optimization performance . To verify the solution accuracy and convergence performance of Pharos for the global Lin et al. 
+
+Figure 6: Comparison of training convergence with other typical MARL algorithms under different numbers of UAVs ( U ), humans ( H ), and buildings ( B). 
+
+Figure 7: Comparison of inference performance between Pharos and Ipopt solver over 200 steps (100 ms/step). 
+
+optimization objective R, we compared it with two types of base-line methods: one based on the mathematical optimization solver Ipopt, and the other using advanced MARL algorithms HAPPO and HATRPO. Firstly, we compared Pharos and Ipopt for the same optimization objective R. During the inference phase, Pharos used a pre-trained model in an environment with 10 buildings, 10 humans, and 10 UAVs. As shown in Fig. 7, the reward value curves over time for both methods indicate that, despite some fluctuations during the initial inference phase, Pharos remains stable and significantly outperforms Ipopt most of the time, especially in the latter half of the inference, with an average reward value 60.59% higher. This occurs because while Ipopt achieves exact mathematical optimality for a single time step, it lacks long-term planning capabilities. Additionally, we compared Pharos with the HAPPO and HA-TRPO algorithms to test the model convergence during the training phase. All three used the same reward function and hyperparam-eters listed in Tab. 1 and were trained in three scenarios: UAV-only, UAV-human, and UAV-human-building. As shown in Fig. 6, Pharos exhibits fast and stable convergence across all scenarios (a)-(c). Moreover, Pharos achieved the highest reward value after the fastest convergence in all scenarios, demonstrating that Pharos, based on the MAPPO algorithm, can better find a set of approxi-mately optimal UAV collaborative management policies under our problem constraints. 
+
+5.3.2 Collision avoidance and flight progression . To evaluate the Pharos’s abilities of collision avoidance and flight progression, we designed two test cases and conducted visual analyses based on a pre-trained model comprising 10 buildings, 8 humans, and 10 UAVs, as shown in Fig. 5(b)(c). 
+
+Airspace coordination of UAVs at Intersection . This test case repli-cates the scene from Fig. 1to verify the system’s ability for airspace coordination in shared airspace. The experimental results, presented in timeline (b)-1 to (b)-3 in Fig. 5(b), outline three stages of their en-counter: before the encounter, during safe collision avoidance, and as they keep approaching their destinations. Although building 𝑏 1
+
+acts as a direct obstacle between 𝑢𝑎𝑣 4 and 𝑢𝑎𝑣 5, the UAV agents can obtain the appropriate exclusive spaces based on the pre-trained policies, operate safely within them, and avoid collisions. Further-more, the visual trajectories confirm that the UAVs do not fall into deadlocks; driven by the progression incentives, they immediately resume cumulative progression toward their respective destinations post-encounter. 
+
+Obstacle Adaptive Detour . This test focuses on the autonomous adaptability of UAVs when flying through tall buildings. As shown on the timeline (c)-1 to (c-2) in Fig. 5(c), 𝑢𝑎𝑣 5 can leverage space coordination policy learned during model training to adjust its route in real-time during actual decision-making, achieving smooth and safe obstacle avoidance. Importantly, the flight progression reward can guide the UAV to maintain its forward momentum after bypassing the building, preventing any hovering or stagnation. This result shows the system’s environmental adaptability and sustained execution in complex obstacle environments. 
+
+5.3.3 Human fear impact . To evaluate the psychological impact on humans caused by UAV operations under different algorithms, we use Equ. 2 to calculate the fear value experienced by humans due to nearby UAVs. We use the average fear values for UAV-human pairs as a comparative indicator of psychological fear impact among the algorithms. The constant value of 𝑑 (𝑢, ℎ ) in Equ. 2 is defined as the unit distance of 1 in the discrete spatial model to ensure absolute safety between UAVs and humans, meaning no collisions occur. Thus, the range of average fear values for UAV-human pairs is [0,2], where a smaller average fear value indicates that the algorithm is more human-friendly. For the Pharos algorithm, we utilize pre-trained models with a centralized approach for various numbers of UAVs (10 buildings, 8 humans). During the parallel execution of UAVs, we record the inference results at each time step. In contrast, Dynamic Airspace Management for UAVs in Evolving Urban Environments 
+
+Table 2: Results of human fear and space utilization Method Metric UAV count 
+
+10 20 30 Ipopt h.f. 0.1720 0.3953 0.3131 s.e. 29.5083 54.3881 81.9306 A-star h.f. 1.0436 1.9870 2.6175 s.e. 48.9936 93.8634 134.0800 
+
+Pharos h.f. 0.4228 0.9273 1.4304 s.e. 49.7410 95.9659 137.1851 
+
+Note : Average human fear (h.f.) and spatial entropy (s.e.) in different methods over 200 inference steps (100 ms/step). with the Ipopt solver and the A-star algorithm, we synchronously collect the human fear values corresponding to each time step through step-by-step solving and planning processes in the same simulation environment. As shown in Tab. 2, Pharos reduces human fear by an average of 52.72% compared to A-star. However, we observed that compared to Pharos, Ipopt shows even lower human fear. This is because of its lack of long-term planning ( as discussed in Sec. 5.3.1 ). In exper-iments, when the UAV encountered moving humans or high-rise buildings, Ipopt determined that the optimal reward function was for the UAV to remain hovering, rather than taking a detour towards its destination. This represents a suboptimal strategy. While this may appear to yield lower human fear, it often leads to numerous UAVs becoming stuck and failing to fly forward. This phenomenon is further illustrated in the overall reward trends in Fig. 7. 
+
+5.3.4 Space utilization . To verify the space utilization of the UAV collaborative management system Pharos, we introduce the concept of spatial entropy in this subsection. Spatial entropy is a dedicated measurement metric used for post-hoc evaluation of airspace resource utilization, rather than being part of the main Pharos algorithm. Inspired by the widely applied information en-tropy [ 9, 17 , 19 ], which denotes a system’s degree of disorder, we have extended this concept to spatial entropy to quantify the unifor-mity of UAV distribution within the airspace. Specifically, a lower spatial entropy value indicates a more concentrated distribution of UAVs (e.g., all clustered on hotspot flight routes), which usually implies uneven utilization of airspace resources and a high risk of congestion. Conversely, a higher spatial entropy value suggests a more widespread and uniform distribution of UAVs across the avail-able airspace, symbolizing more efficient and thorough utilization of airspace resources.. To calculate the value of spatial entropy, we analogize the event of a single UAV occupying a specific spatial unit in the Pharos coor-dinate system to a random event in information theory, according to the original definition of information entropy (brief expression, 
+
+H = − Í Plog P) proposed by C. E. Shannon [ 29 ]. By statistically analyzing the frequency of occupation of each spatial unit by all UAVs during the task execution time, we can obtain the probability distribution of occupation for each spatial unit. Ultimately, this leads to the spatial entropy representing the overall characteristics of UAV distribution within he airspace, the calculation formula shown as follows: 
+
+H = −∑︁  
+
+> 𝑞 ∈𝑆
+
+P𝑞 log (P 𝑞 ), P𝑞 =∑︁  
+
+> 𝑡 ∈ T
+
+∑︁ 𝑢 ∈𝑈 
+
+I(𝑝 𝑡 𝑢 = 𝑞 )/|T | (9) where 𝑞 is a coordinate 𝑞 (𝑥, 𝑦, 𝑧 ) in space 𝑆 , 𝑝 𝑡 𝑢 denotes the coor-dinate of UAV 𝑢 at time 𝑡 , and I is an indicator function that is 1 when 𝑝 𝑡 𝑢 = 𝑞 and 0 otherwise. We continue to compare the pre-trained Pharos with the Ipopt and A-star algorithms. The experimental results of spatial entropy for the three methods under different UAV counts are presented in Tab. 2. The spatial entropy for Pharos was the highest, with increases of 70.82% and 2.03% compared to Ipopt and A-star, re-spectively. The spatial entropy for the two algorithms differs sig-nificantly. For Ipopt, as discussed in the previous section, the al-gorithm’s tendency to hover when facing obstacles results in low human fear and consequently low entropy, as it does not occupy additional space. Conversely, the UAVs using A-star cumulatively move toward their destinations, disregarding the fear it may instill in humans, thereby resulting in relatively high spatial entropy. 
+
+5.3.5 Complexity analysis . We identify that computational costs arise mainly during the training and inference phases. The training phase is computation-intensive but a one-time investment, which can be optimized through pre-training. Theoretical analysis of multi-agent collaborative learning indicates that the time complexity at this phase increases approximately linearly with the number of agents. We actually carried out the scalability tests shown in Fig. 8, which demonstrated the stable convergence of Pharos model training under varying numbers of UAVs. This also aligns with data scales in other leading UAV collaboration studies [12, 33, 34]. During the inference phase, each UAV agent executes in a par-allel manner and only needs to run a lightweight policy network for forward computing, thereby achieving a low-latency response. Experiments demonstrate that the system can achieve an average inference delay of approximately 100 ms per time step in the cur-rent dynamic environment (see the annotations in Fig. 8 and Tab. 2 respectively), making it suitable for the dynamically evolving urban low-altitude environment. 
+
+## 6 Conclusion and Future Work 
+
+We have developed an airspace management system for multi-UAV collaborative coordination based on the MAPPO algorithm. Through comprehensive tests of collision avoidance, human fear im-pact, and space utilization, we demonstrated Pharos’s effectiveness, accuracy, and performance. The focus of our research in the future is as follows: (1) Cross-zone coordination for UAVs : We will investigate partitioning wide-area airspace and enabling cross-zone UAV coordination to improve system efficiency and scalability. (2) Entropy-driven for UAV on-demand coordination : Based on the spatial entropy mentioned in the experiment evaluation metric, we will apply it to on-demand access and on-demand coordination of UAVs in urban settings. (3) 4D spatio-temporal data manage-ment : We will develop a 4D data management engine to handle the complex 3D spatial and temporal dynamics of urban low altitude. Lin et al. 
+
+Figure 8: Scalability testing of Pharos based on MAPPO: Train-ing convergence of the average reward per agent for varying scenarios. 
+
+## References 
+
+[1] Mohammad Amin Akbari, Mohsen Zare, Rasoul Azizipanah-Abarghooee, Seyedali Mirjalili, and Mohamed Deriche. 2022. The cheetah optimizer: A nature-inspired metaheuristic algorithm for large-scale optimization problems. Scientific reports 12, 1 (2022), 10953. [2] Noorulden Basil, Abdullah Fadhil Mohammed, Bayan Mahdi Sabbar, Hamzah M Marhoon, Adis Abebaw Dessalegn, Mohammad Alsharef, Enas Ali, and Sherif SM Ghoneim. 2025. Performance analysis of hybrid optimization approach for UAV path planning control using FOPID-TID controller and HAOAROA algorithm. 
+
+Scientific Reports 15, 1 (2025), 4840. [3] Daniel S Bernstein, Robert Givan, Neil Immerman, and Shlomo Zilberstein. 2002. The complexity of decentralized control of Markov decision processes. 
+
+Mathematics of operations research 27, 4 (2002), 819–840. [4] CAAC. 2018. Safety Flight Test Report for Networked Low-Altitude UAVs . https: //www.caac.gov.cn/XXGK/XXGK/GFXWJ/201811/t20181127_193186.html Ac-cessed: January 2026. [5] Minghao Chen, Feng Shu, Min Zhu, Di Wu, Yu Yao, and Qi Zhang. 2025. Reinforcement-Learning-Based UAV 3-D Target Tracking and Digital-Twin-Assisted Collision Avoidance with Integrated Sensing and Communication. IEEE Internet of Things Journal (2025). [6] PRC State Council. 2023. Interim Regulations on the Flight Management of Un-manned Aerial Vehicles . https://www.gov.cn/gongbao/2023/issue_10586/202307/ content_6893000.html Accessed: January 2026. [7] Ghulam Farid, Silvio Cocuzza, Talha Younas, Asghar Abbas Razzaqi, Waqas Ah-mad Wattoo, Ferdinando Cannella, and Hongwei Mo. 2022. Modified A-star (A*) approach to plan the motion of a quadrotor UAV in three-dimensional obstacle-cluttered environment. Applied Sciences 12, 12 (2022), 5791. [8] Shengwei Fu, Ke Li, Haisong Huang, Chi Ma, Qingsong Fan, and Yunwei Zhu. 2024. Red-billed blue magpie optimizer: a novel metaheuristic algorithm for 2D/3D UAV path planning and engineering design problems. Artificial Intelligence Review 57, 6 (2024), 134. [9] Jiali He, Liangdong Qu, Pei Wang, and Zhaowen Li. 2024. An oscillatory particle swarm optimization feature selection algorithm for hybrid data based on mutual information entropy. Applied Soft Computing 152 (2024), 111261. [10] Xiao-Bing Hu, Chang-Shu Yang, Jun Zhou, Ying-Fei Zhang, and Yi-Ming Ma. 2025. Research on 3D layered visibility graph route network model and multi-objective path planning for UAVs in complex urban environments. Aerospace Science and Technology 159 (2025), 109947. [11] Zihan Hu, Weikai Yang, Meng Zhang, Chengdong Lei, Hongtao Liang, Fuhui Zhou, and Qihui Wu. 2024. Toward Embodied Intelligence: An Autonomous Exploration System for Multimodal UAV. In 2024 International Conference on Ubiquitous Communication (Ucom) . IEEE, 444–448. [12] Shuangyao Huang, Haibo Zhang, and Zhiyi Huang. 2024. CoDe: A Cooperative and Decentralized Collision Avoidance Algorithm for Small-Scale UAV Swarms Considering Energy Efficiency. In 2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) . IEEE, 13152–13159. [13] S ISO. 2012. Robots and Robotic Devices-Safety Requirements for Industrial Robots-Part 1: Robots (ISO 10218-1: 2012). International Organization for Stan-dardization (2012). [14] JG Kuba, R Chen, M Wen, Y Wen, F Sun, J Wang, and Y Yang. 2022. Trust Region Policy Optimisation in Multi-Agent Reinforcement Learning. In ICLR 2022-10th International Conference on Learning Representations . The International Conference on Learning Representations (ICLR), 1046. [15] Jiacheng Li, Yangwang Fang, Haoyun Cheng, Zhikai Wang, Zihao Wu, and Mengjie Zeng. 2022. Large-scale fixed-wing UAV swarm system control with collision avoidance and formation maneuver. IEEE Systems Journal 17, 1 (2022), 744–755. [16] Shaowei Li, Yuhong Jia, Fan Yang, Qingyang Qin, Hui Gao, and Yaoming Zhou. 2022. Collaborative decision-making method for multi-UAV based on multiagent reinforcement learning. IEEE Access 10 (2022), 91385–91396. [17] Peng Liang, Yangtao Chen, Yafeng Sun, Ying Huang, and Wei Li. 2024. An information entropy-driven evolutionary algorithm based on reinforcement learning for many-objective optimization. Expert Systems with Applications 238 (2024), 122164. [18] Haicheng Liao, Zhenning Li, Huanming Shen, Wenxuan Zeng, Dongping Liao, Guofa Li, and Chengzhong Xu. 2024. Bat: Behavior-aware human-like trajectory prediction for autonomous driving. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 38. 10332–10340. [19] Zhiyuan Liu, Yunshan Wang, Qixiu Cheng, and Hai Yang. 2022. Analysis of the in-formation entropy on traffic flows. IEEE Transactions on Intelligent Transportation Systems 23, 10 (2022), 18012–18023. [20] Qicheng Meng, Kai Chen, and Qingjun Qu. 2024. Ppswarm: Multi-uav path planning based on hybrid pso in complex scenarios. Drones 8, 5 (2024), 192. [21] Kelly Merckaert, Bryan Convens, Marco M Nicotra, and Bram Vanderborght. 2024. Real-time constraint-based planning and control of robotic manipulators for safe human–robot collaboration. Robotics and Computer-Integrated Manufacturing 87 (2024), 102711. [22] Tomáš Musil, Matěj Petrlík, and Martin Saska. 2022. SphereMap: Dynamic multi-layer graph structure for rapid safety-aware UAV planning. IEEE Robotics and Automation Letters 7, 4 (2022), 11007–11014. [23] Frans A Oliehoek, Christopher Amato, et al . 2016. A concise introduction to decentralized POMDPs . Vol. 1. Springer. [24] OpenStreetMap contributors. 2012. OpenStreetMap. http://www.openstreetmap. org (Accessed 1 March 2026). [25] Zhenhua Pan, Chengxi Zhang, Yuanqing Xia, Hao Xiong, and Xiaodong Shao. 2021. An improved artificial potential field method for path planning and forma-tion control of the multi-UAV systems. IEEE Transactions on Circuits and Systems II: Express Briefs 69, 3 (2021), 1129–1133. [26] Aaron Pereira, Mareike Baumann, Jonas Gerstner, and Matthias Althoff. 2022. Improving efficiency of human-robot coexistence while guaranteeing safety: Theory and user study. IEEE Transactions on Automation Science and Engineering 
+
+20, 4 (2022), 2706–2719. [27] Manh Duong Phung and Quang Phuc Ha. 2021. Safety-enhanced UAV path planning with spherical vector-based particle swarm optimization. Applied Soft Computing 107 (2021), 107376. [28] Joohwan Seo, Nikhil Potu Surya Prakash, Alexander Rose, Jongeun Choi, and Roberto Horowitz. 2023. Geometric impedance control on SE (3) for robotic manipulators. IFAC-PapersOnLine 56, 2 (2023), 276–283. [29] Claude E Shannon. 1948. A mathematical theory of communication. The Bell system technical journal 27, 3 (1948), 379–423. [30] Vigerske Stefan. 2024. Ipopt v3.14.17 . https://github.com/coin-or/Ipopt Accessed: January 2026. [31] Vigerske Stefan. 2025. ThirdParty-Mumps v3.0.10 . https://github.com/coin-or-tools/ThirdParty-Mumps Accessed: January 2026. [32] Sanne Van Waveren, Rasmus Rudling, Iolanda Leite, Patric Jensfelt, and Christian Pek. 2023. Increasing perceived safety in motion planning for human-drone interaction. In Proceedings of the 2023 ACM/IEEE international conference on human-robot interaction . 446–455. [33] Chao Yan, Chang Wang, Xiaojia Xiang, Kin Huat Low, Xiangke Wang, Xin Xu, and Lincheng Shen. 2023. Collision-avoiding flocking with multiple fixed-wing UAVs in obstacle-cluttered environments: A task-specific curriculum-based MADRL approach. IEEE Transactions on Neural Networks and Learning Systems 
+
+35, 8 (2023), 10894–10908. [34] Chao Yan, Xiaojia Xiang, Chang Wang, Fei Li, Xiangke Wang, Xin Xu, and Lincheng Shen. 2023. PASCAL: PopulAtion-Specific Curriculum-based MADRL for collision-free flocking with large-scale fixed-wing UAV swarms. Aerospace Science and Technology 133 (2023), 108091. [35] Zheng Yao, Qiwu Zhu, Yanhui Zhang, Haibo Huang, and Min Luo. 2025. Min-imizing Long-Term Energy Consumption in RIS-Assisted UAV-Enabled MEC Network. IEEE Internet of Things Journal (2025). [36] Chao Yu, Akash Velu, Eugene Vinitsky, Jiaxuan Gao, Yu Wang, Alexandre Bayen, and Yi Wu. 2022. The surprising effectiveness of ppo in cooperative multi-agent games. Advances in neural information processing systems 35 (2022), 24611–24624. [37] Weiwei Zhan, Yanjie Chen, Bingwei He, Zhiqiang Miao, Hui Zhang, and Yaonan Wang. 2022. Geometric-based prescribed performance control for unmanned aerial manipulator system under model uncertainties and external disturbances. 
+
+ISA transactions 128 (2022), 367–379. [38] Pengfei Zhang, Yin He, Zhongliu Wang, Shujie Li, and Qinyang Liang. 2024. Research on Multi-UAV Obstacle Avoidance with Optimal Consensus Control Dynamic Airspace Management for UAVs in Evolving Urban Environments 
+
+and Improved APF. Drones 8, 6 (2024), 248. [39] Chenyang Zhao, Duanfeng Chu, Zejian Deng, and Liping Lu. 2024. Human-like decision making for autonomous driving with social skills. IEEE Transactions on Intelligent Transportation Systems 25, 9 (2024), 12269–12284. [40] Yuekuan Zhou. 2025. Unmanned aerial vehicles based low-altitude economy with lifecycle techno-economic-environmental analysis for sustainable and smart cities. Journal of Cleaner Production (2025), 145050.

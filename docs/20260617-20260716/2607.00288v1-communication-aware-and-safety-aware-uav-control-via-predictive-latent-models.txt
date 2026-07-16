@@ -1,0 +1,1028 @@
+Title: Communication-Aware and Safety-Aware UAV Control via Predictive Latent Models
+
+URL Source: https://arxiv.org/pdf/2607.00288v1
+
+Published Time: Thu, 02 Jul 2026 00:18:20 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+> 1
+
+# Communication-Aware and Safety-Aware UAV Control via Predictive Latent Models 
+
+Hamid Shiri and Mehdi Bennis 
+
+Abstract —This article presents a communication-aware and risk-aware predictive latent control (CRPL) framework for unmanned aerial vehicle (UAV) systems operating under par-tial observability and uncertain environment dynamics. CRPL integrates a joint-embedding predictive architecture (JEPA) with probabilistic communication and safety constraints to jointly optimize UAV motion and transmission power. The learned latent model generates recursive multi-step rollouts, enabling the controller to anticipate future motion, channel degradation, and collision risk. These predictions are incorporated into a unified safety-aware optimization framework for proactive, energy-aware trajectory and communication adaptation. Simulation results show that CRPL closely approaches the performance of an oracle analytical predictive controller and outperforms reactive constrained and unconstrained baselines under limited band-width and dynamic uncertainty. In the bandwidth-limited regime, CRPL reduces terminal error, i.e., the final UAV-to-goal distance, by up to a factor of approximately 3 and outage duration by up to approximately 18 , while also lowering communication energy and collision risk. These improvements are achieved with only a moderate motion-energy overhead, demonstrating a favorable trade-off among mobility effort, communication reliability, and operational safety. 
+
+Index Terms —Autonomous predictive UAV control, JEPA, safety-aware, communication-aware, stochastic optimization 
+
+I. I NTRODUCTION 
+
+Unmanned aerial vehicles (UAVs) are expected to play an important role in future intelligent wireless and autonomous systems because of their mobility, flexibility, and rapid de-ployment capability [1], [2]. In applications such as wireless coverage, aerial surveillance, intelligent transportation, emer-gency communications, environmental monitoring, and edge intelligence, UAVs must simultaneously accomplish mission objectives, maintain reliable connectivity, use communication resources efficiently, and operate safely in uncertain environ-ments [1], [3]–[7]. This problem is illustrated in Fig. 1, where a base sta-tion (BS) generates navigation and communication deci-sions for a UAV using latent representations extracted from high-dimensional sensor observations. Because communica-tion quality and collision risk depend on future interactions between the UAV and its environment, effective operation requires anticipating both channel and safety conditions. This motivates predictive decision-making mechanisms that jointly account for communication reliability, environment evolution, and safety constraints. A central challenge in autonomous UAV operation is the strong coupling among mobility, communication reli-
+
+Hamid Shiri and Mehdi Bennis are with the Centre for Wireless Communications, University of Oulu, FI-90014 Oulu, Finland(e-mail: 
+
+{hamid.shiri,mehdi.bennis }@oulu.fi). 
+
+Fig. 1. Communication-aware UAV control scenario in which a BS controls a UAV from its initial position toward a goal region while accounting for wireless connectivity and obstacle-induced risk. 
+
+ability, environment geometry, and safety. Communication links in UAV scenarios are highly sensitive to blockage and the resulting large-scale fading effects [8], [9]. Exist-ing communication-aware UAV optimization methods have investigated UAV placement, throughput maximization, out-age reduction, coverage enhancement, secure communica-tions, and energy-efficient trajectory design [10]–[13]. More recently, learning-based communication-aware control frame-works have been proposed for online UAV path planning and large-scale UAV coordination, including neural-network-based opportunistic control, attention-based communication-aware planning, federated-learning-assisted control, and mean-field game formulations for massive UAV systems [4], [7], [14], [15]. Despite these advances, most existing approaches adapt communication and navigation decisions using current observations or instantaneous channel conditions. As a result, their ability to anticipate future communication degradation or collision risks caused by obstacles and environmental uncertainty remains limited. Meanwhile, advances in model-based reinforcement learn-ing and latent world models have shown that predictive dynam-ics can be learned directly from high-dimensional observations [16], [17]. Joint-embedding predictive architectures (JEPAs) and their extensions, including I-JEPA and V-JEPA2, pro-vide self-supervised mechanisms for learning predictive latent representations without requiring computationally expensive pixel-level reconstruction [18], [19]. Related studies have explored latent representation learning in wireless systems, including latent wireless dynamics from channel-state infor-mation, multi-modal latent dynamics, and predictive latent planning [20], [21]. These developments suggest that compact latent representations can capture the geometric and dynamic information required for predictive control. However, their use in joint communication, motion, and safety optimization for UAV systems remains largely unexplored. 
+
+> arXiv:2607.00288v1 [eess.SY] 1 Jul 2026 2
+
+Robust and safety-aware control is also challenging under uncertain dynamics, partial observability, and communica-tion degradation. Chance-constrained planning and stochastic model predictive control provide principled mechanisms for enforcing probabilistic safety requirements [22], [23]. Reach-avoid formulations and safe reinforcement learning have fur-ther extended these ideas to learning-based decision making under explicit safety constraints [24]–[26]. However, these methods typically emphasize navigation safety without jointly predicting communication reliability, while latent-model ap-proaches rarely incorporate both probabilistic communication and collision constraints. A unified framework that combines predictive latent environment modeling, communication-aware planning, and safety-aware UAV control is therefore still lacking. Motivated by these challenges, this article proposes CRPL, a communication-aware and risk-aware predictive latent control framework for joint UAV trajectory and transmission-power optimization. CRPL combines a JEPA-based latent model with probabilistic communication and safety constraints to generate multi-step predictions of future motion, channel conditions, and collision risk from high-dimensional observations. These predictions enable proactive communication and trajectory adaptation rather than purely reactive control. Simulation results show that CRPL approaches the performance of an oracle analytical predictive controller and improves terminal accuracy, communication efficiency, reliability, and safety rel-ative to reactive baselines. Although the selected collision-safe and communication-aware trajectories may require moderately greater motion effort, motion effort is explicitly regularized within the objective, yielding an energy-aware trade-off among mobility, reliability, and safety. The remainder of this article is organized as fol-lows. Section II formulates the JEPA-based communication-control problem. Section III presents the safety-aware policy-optimization framework. Section IV reports the simulation results, and Section V concludes the article. II. S YSTEM MODEL 
+
+Consider the communication-aware UAV control scenario il-lustrated in Fig. 1. The environment contains both controllable and uncontrollable entities. The controllable entity corresponds to the UAV, whereas the uncontrollable entities represent obstacles or other objects whose motions cannot be controlled by the BS. The environment state at time step k is represented by sk = [ rTk , v Tk ]T , where rk and vk denote the positions and velocities of all entities, respectively, and (·)T denotes the transpose operation. The analytical environment dynamics are assumed unavailable and are represented abstractly as 
+
+sk+1 ∼ ps(·| sk, a s,k ), (1) where as,k denotes the UAV control action and ps(·) is an unknown stochastic transition model. 
+
+A. JEPA-Based Latent Model 
+
+To model the unknown dynamics in (1), we employ a joint embedding predictive architecture (JEPA) that learns  
+
+> Fig. 2. JEPA-based latent model for predictive communication-aware UAV control. Future latent states are generated using the current latent representa-tion and control actions.
+
+predictive latent representations from high-dimensional obser-vations. At each time step, observations are encoded into a compact latent state, and a latent predictor utilizes the current latent representation together with the actions to estimate future latent states. The predictor is trained by matching its predictions to latent representations generated by a target en-coder, thereby learning environment dynamics without explicit system identification. The overall flow of observations, latent representations, communication actions, control actions, and training structure is illustrated in Fig. 2. 
+
+1) Latent Representation: At each time step k, the environ-ment is observed through an image Ik, as illustrated in Fig. 2, and encoded into a latent representation 
+
+zk = ϕ(Ik), (2) where ϕ(·) denotes the JEPA encoder. The observations are generated by the underlying physical state sk and provide only a partial description of the environment. The latent representation captures information associated with both the UAV and its surrounding environment. Fol-lowing structured and object-centric representation learning approaches [27], [28], we conceptually partition the latent representation as 
+
+zk = zTc,k , z Tu,k 
+
+T , (3) where zc,k and zu,k denote the latent components associated with controllable and uncontrollable entities, respectively. This decomposition facilitates the formulation of goal-reaching objectives and safety constraints, while naturally extending to environments containing multiple controllable and uncontrol-lable entities. 
+
+2) Latent Dynamics Predictor: While the latent repre-sentation in (2) captures the current environment state, communication- and safe-aware control requires anticipating future environment evolution. To incorporate temporal infor-mation, the predictor operates on a history of latent represen-tations. Defining the augmented latent state 
+
+¯zk = zTk , z Tk−1, · · · , z Tk−M +1 
+
+T , (4) 3
+
+where M denotes the history length, the latent predictor generates 
+
+ˆzk+1 = fψ (¯ zk, a s,k ), (5) where fψ (·) denotes the JEPA latent predictor and as,k is the control action. The predicted latent representation ˆzk+1 is sub-sequently appended to the latent history and used to recursively generate future latent trajectories over a planning horizon. For notational simplicity, predicted latent states generated during rollout and policy optimization are denoted by zk whenever no ambiguity arises. 
+
+3) JEPA Training: The JEPA encoder and latent predic-tor are trained offline using data collected from interactions with the environment under exploratory control actions. The objective is to learn latent representations that preserve the predictive structure of the environment while avoiding com-putationally expensive pixel-level reconstruction. Let 
+
+ztar  
+
+> k+1
+
+= ϕtar (Ik+1 ) (6) denote the target latent representation generated by a target encoder ϕtar (·) from the future observation Ik+1 . The target encoder shares the same architecture as the online encoder and is updated using an exponential moving average 
+
+ϕtar ← τ ϕ tar + (1 − τ ) ϕ, (7) where τ ∈ (0 , 1) is the momentum parameter. This slowly evolving target network improves training stability and miti-gates representation collapse. Given the latent history ¯zk and control action as,k , the pre-dictor generates the latent estimate ˆzk+1 according to (5). The predictor is trained by minimizing the discrepancy between the predicted latent representation and the target embedding, yielding the JEPA objective 
+
+LJEPA = E
+
+h
+
+ˆzk+1 − ztar 
+
+> k+1
+> 22
+
+i
+
+. (8) Unlike reconstruction-based latent models, the JEPA ob-jective directly encourages predictive consistency in latent space. Therefore, the learned latent representation captures environmental dynamics that are most relevant to forecasting future observations and downstream decision-making. After training, the encoder ϕ(·) and latent predictor fψ (·) are fixed and jointly constitute the learned world model used for latent rollout, constraint evaluation, and policy optimization. 
+
+B. Problem Formulation 
+
+We formulate a communication-aware and safety-aware UAV control problem over a finite planning horizon H. At each time step k, the controller samples a motion action 
+
+as,k ∼ πs(·| ¯zk) ∈ A s and a communication-power action 
+
+ap,k ∼ πp(·| ¯zk) ∈ A p, where As and Ap denote the corre-sponding feasible action spaces, πs and πp denote the control and communication policies, respectively, and ¯zk denotes the augmented latent state defined in (4). 
+
+1) Control Objective: The objective is to drive the con-trollable latent state zc,k toward a desired goal representation 
+
+zg while minimizing both control effort and communication power consumption. Accordingly, the stage cost is defined as 
+
+ℓk = ∥zc,k − zg ∥22 + λs∥as,k ∥22 + λp∥ap,k ∥22, (9) where λs > 0 and λp > 0 determine the relative im-portance of control and communication energy expenditures. The communication-aware and safety-aware requirements are enforced through the following chance constraints. 
+
+2) Collision Avoidance Constraint: To ensure safe oper-ation, the probability of collision with uncontrollable en-tities should remain sufficiently low throughout the plan-ning horizon. Let zHc = {zc, 1, z c, 2, . . . , z c,H } and zHu =
+
+{zu, 1, z u, 2, . . . , z u,H } denote the controllable and uncontrol-lable latent trajectories, respectively. The safety requirement is imposed through the chance constraint 
+
+Pr 
+
+> πs,π p
+
+
+
+zHc ∈ S safe (zHu )
+
+
+
+≥ 1 − δ1, (10) where δ1 ∈ [0 , 1) specifies the allowable collision risk. The trajectory-level safety set is defined as          
+
+> Ssafe (zHu) =
+> n
+> zHcΩc,k ∩Ωu,k =∅,∀k= 1 , . . . , H
+> o
+> ,(11)
+
+where Ωc,k and Ωu,k denote the observed occupancy regions of the controllable and uncontrollable entities in the observation 
+
+Ik at time step k, respectively. The condition Ωc,k ∩ Ωu,k = ∅
+
+ensures that the controllable and uncontrollable entities oc-cupy disjoint image regions throughout the planning horizon, thereby indicating collision-free operation. 
+
+3) Communication Reliability Constraint: Reliable wireless connectivity should be maintained throughout the planning horizon. Communication quality is quantified by the received signal-to-noise ratio (SNR), which depends on the UAV’s location, surrounding obstacles, communication power, and the BS’s position. Accordingly, the received SNR at time step k
+
+is modeled as             
+
+> γk= SNR (Ω c,k , a p,k ,Ωu,k , s BS )=|h(Ω c,k ,Ωu,k , s BS )|2ap,k
+> Pn
+> ,(12)
+
+where h(·) denotes the wireless channel coefficient, sBS 
+
+represents the BS state, and Pn is the noise power. The channel coefficient depends on the relative geometry of the UAV, obstacles, and BS, thereby capturing blockage effects and geometry-dependent channel variations. To ensure reliable communication, the probability that the received SNR remains above a minimum threshold γmin 
+
+throughout the planning horizon should exceed a prescribed reliability level. To express communication reliability over the horizon, let aHp = {ap, 1, a p, 2, . . . , a p,H } denote the communication-power trajectory. The corresponding received-SNR trajectory is γH  zHc , zHu , aHp , s BS 
+
+ = {γ1, γ 2, . . . , γ H }.For notational convenience, we subsequently write γH =
+
+γH  zHc , zHu , aHp , s BS 
+
+. The trajectory-level communication reliability set is then defined as 
+
+Scomm = γH γk ≥ γmin , ∀k = 1 , . . . , H . (13) The communication reliability requirement is enforced through 4
+
+the chance constraint 
+
+Pr 
+
+> πs,π p
+
+
+
+γH ∈ S comm 
+
+
+
+≥ 1 − δ2, (14) where δ2 ∈ [0 , 1) specifies the maximum allowable outage probability. 
+
+4) Optimization Problem: Combining the cost, collision avoidance requirement, communication reliability require-ment, and environment dynamics relation yields the following stochastic optimization problem: 
+
+min 
+
+> πs,π p
+
+Eπs,π p
+
+" HX
+
+> k=1
+
+ℓk
+
+#
+
+(15a) 
+
+s.t. Pr 
+
+> πs,π p
+
+
+
+zHc ∈ S safe (zHu )
+
+
+
+≥ 1 − δ1, (15b) 
+
+Pr 
+
+> πs,π p
+
+
+
+γH ∈ S comm 
+
+
+
+≥ 1 − δ2, (15c) 
+
+sk+1 ∼ ps(·| sk , a s,k ), k = 1 , . . . , H, (15d) 
+
+as,k ∈ A s, ap,k ∈ A p, k = 1 , . . . , H. (15e) 
+
+Problem (15) remains challenging due to the unknown stochas-tic environment dynamics, nonconvex chance constraints, and coupling between control and communication decisions. III. P OLICY OPTIMIZATION IN LATENT SPACE 
+
+This section introduces a tractable latent-space reformula-tion of Problem (15) together with the corresponding policy optimization framework. 
+
+A. Problem Reformulation 
+
+Problem (15) is difficult to solve directly due to the trajectory-level chance constraints and the coupling between communication and control decisions. To facilitate policy optimization, the chance constraints are first reformulated and incorporated into the objective using barrier functions. The safety and communication requirements are expressed as probabilities over entire trajectories. Define 
+
+Psafe = Pr 
+
+> πs,π p
+
+
+
+zHc ∈ S safe (zHu )
+
+
+
+, (16a) 
+
+Pcomm = Pr 
+
+> πs,π p
+
+
+
+γH ∈ S comm 
+
+
+
+, (16b) which denote the probabilities of satisfying the safety and communication requirements over the planning horizon, re-spectively. The expectations are taken with respect to the ac-tion policies. These probabilities can be equivalently expressed using indicator functions as 
+
+Psafe = EIsafe (zHc , zHu ) , (17a) 
+
+Pcomm = EIcomm (γH ) , (17b) where Isafe = I zHc ∈ S safe (zHu ) and Icomm = I γH ∈ S comm ,with I{·} denoting the indicator of an event. Accordingly, the chance constraints in (15b) and (15c) are equivalently written as Psafe ≥ 1 − δ1 and Pcomm ≥ 1 − δ2, respectively. The chance constraints are incorporated into the objective using logarithmic barrier functions, yielding 
+
+min 
+
+> πs,π p
+
+E
+
+" HX
+
+> k=1
+
+ℓk
+
+#
+
+− 1
+
+η log (Psafe − 1+ δ1)(Pcomm − 1+ δ2)−1 (18) 
+
+where η > 0 is the barrier parameter. Minimizing (18) seeks policies that achieve a low expected cost while satisfying the prescribed safety and communication-reliability requirements. 
+
+B. Latent Rollout Generation 
+
+The optimization problem in (18) requires estimating the expected cost, as well as the safety and communication reli-ability probabilities. Since these quantities depend on future latent trajectories, we employ Monte Carlo rollouts generated by the learned JEPA model. Let θs and θp denote the parameters of the control and com-munication policies, respectively. For rollout i = 1 , . . . , K and planning step k = 1 , . . . , H , the control and communication actions are sampled according to 
+
+a(i) 
+
+> s,k
+
+∼ πθs 
+
+> s
+
+(·| ¯z(i) 
+
+> k
+
+), (19a) 
+
+a(i) 
+
+> p,k
+
+∼ πθp 
+
+> p
+
+(·| ¯z(i) 
+
+> k
+
+). (19b) The unknown environment dynamics are approximated us-ing the learned JEPA latent predictor introduced in (5). Ac-cordingly, the latent trajectory is propagated according to 
+
+z(i) 
+
+> k+1
+
+≈ fψ
+
+
+
+¯z(i) 
+
+> k
+
+, a (i)
+
+> s,k
+
+
+
+, (20) where the approximation reflects the prediction error of the learned latent dynamics model. By recursively feeding pre-dicted latent states back into the predictor, future latent trajec-tories are generated over the planning horizon. Repeating this procedure for K rollouts produces a collec-tion of latent trajectories that approximate future environment evolution under the current policies. These rollouts are subse-quently used to estimate the expected cost together with the safety and communication reliability probabilities. As will be demonstrated in Section IV, the resulting rollout prediction errors remain sufficiently small over the considered planning horizons. 
+
+C. Differentiable Constraint Approximation 
+
+Direct evaluation of the safety and communication chance constraints is generally non-differentiable. Therefore, we in-troduce differentiable surrogate models that enable gradient-based optimization. For safety evaluation, a neural-network-based collision-risk predictor ˆpcoll (zc, z u) ∈ [0 , 1] is trained to estimate the probability of collision between controllable and uncontrollable entities represented in latent space. Specifically, 
+
+ˆpcoll (zc, z u) ≈ Pr  d(Ω c, Ωu) ≤ dmin 
+
+, (21) where Ωc and Ωu denote the controllable and uncontrol-lable entities, respectively, d(Ω c, Ωu) denotes the minimum boundary-to-boundary occupancy distance, and dmin is the collision threshold. For rollout i, the trajectory-level safety score is approxi-mated by 
+
+s(i)safe = m β
+
+n
+
+1 − ˆpcoll (z(i) 
+
+> c,k
+
+, z (i) 
+
+> u,k
+
+)
+
+oHk=1 
+
+
+
+, (22) 
+
+where the soft minimum operator mβ (·) with smoothing parameter β > 0 is defined as 5
+
+mβ ({xk }Hk=1 ) = − 1
+
+β log 
+
+> H
+
+X
+
+> k=1
+
+e−βx k
+
+!
+
+. (23) 
+
+The parameter β controls the approximation to the minimum safety level over the planning horizon. A larger value of β
+
+places greater emphasis on the time step with the highest predicted collision risk. The resulting rollout-based safety surrogate is 
+
+ˆPsafe = 1
+
+K
+
+> K
+
+X
+
+> i=1
+
+s(i)safe . (24) To evaluate communication reliability, we introduce a differentiable neural-network-based channel predictor 
+
+ˆh(zc, z u, s BS ) ≈ h(Ω c, Ωu, s BS ), which estimates the wireless channel coefficient from the latent representation and BS state. Using the predicted channel coefficient, the SNR-threshold violation indicator at time step k for rollout i is smoothly approximated by 
+
+ˆp(i)out ,k = σα 1 − |ˆh(i) 
+
+> k
+
+|2a(i)
+
+> p,k
+
+Pnγmin 
+
+!
+
+, (25) 
+
+where σα(x) = (1 + e−αx )−1 (26) denotes a sigmoid function with slope parameter α > 0.To obtain a tractable differentiable surrogate, we replace the all-step communication event with a time-averaged relaxation. Accordingly, for rollout i, the communication-reliability score is 
+
+s(i)comm = 1
+
+H
+
+> H
+
+X
+
+> k=1
+
+
+
+1 − ˆp(i)out ,k 
+
+
+
+, (27) 
+
+and its rollout-based estimate is 
+
+ˆPcomm = 1
+
+K
+
+> K
+
+X
+
+> i=1
+
+s(i)comm . (28) 
+
+This relaxation penalizes the fraction of the horizon over which the SNR requirement is violated while permitting short violations. However, the safety surrogate emphasizes the least-safe time step because a single collision can invalidate the trajectory. The resulting quantities ˆPsafe and ˆPcomm are dif-ferentiable surrogates for trajectory safety and communication reliability and are incorporated into the optimization objective. 
+
+D. Sequential Policy Optimization 
+
+Using the rollout-based estimates of the expected cost, safety probability, and communication reliability probability, the barrier-augmented optimization objective is given by 
+
+Jη (θs, θ p) = 1
+
+K
+
+> K
+
+X
+
+> i=1
+> H
+
+X
+
+> k=1
+
+ℓ(i) 
+
+> k
+
+−
+
+
+
+εb + 1
+
+η
+
+
+
+log 
+
+ ˆPsafe −1+ δ1
+
+ ˆPcomm − 1+ δ2
+
+−1 ,
+
+(29) 
+
+where η > 0 is the barrier parameter and εb > 0 is a residual barrier weight that prevents the influence of the constraint terms from vanishing as η increases. The objective in (29) is differentiable with respect to the policy parameters θs and θp. Consequently, gradients can be computed directly through automatic differentiation without 
+
+Algorithm 1 CRPL Policy Optimization  
+
+> 1
+
+Input: initial policy parameters θs, θ p, barrier parameter 
+
+η > 0, risk tolerances δ1, δ 2, planning horizon H, number of rollouts K, barrier growth factor μ > 1, learning rate 
+
+λ > 0, termination tolerances ϵ0, ϵ 1, ϵ 2 > 0, stabilization constant εb > 0. 
+
+> 2
+
+repeat Stage 1: Control Policy Optimization  
+
+> 3
+
+repeat  
+
+> 4
+
+Set: a(i) 
+
+> p,k
+
+= ap, max  
+
+> 5
+
+Generate K latent rollouts: 
+
+a(i) 
+
+> s,k
+
+∼ πθs 
+
+> s
+
+(·| ¯z(i) 
+
+> k
+
+), z(i) 
+
+> k+1
+
+≈ fψ (¯ z(i) 
+
+> k
+
+, a (i)
+
+> s,k
+
+) 
+
+> 6
+
+Compute ˆPsafe , ˆPcomm , and Jη (θs, θ p) 
+
+> 7
+
+Update control policy: 
+
+θs ← θs − λ∇θs Jη 
+
+> 8
+
+until ∥∇ θs Jη ∥ < ϵ 1
+
+Stage 2: Communication Policy Optimization  
+
+> 9
+
+repeat  
+
+> 10
+
+Generate K latent rollouts: 
+
+a(i) 
+
+> s,k
+
+∼ πθs 
+
+> s
+
+(·| ¯z(i) 
+
+> k
+
+), z(i) 
+
+> k+1
+
+≈ fψ (¯ z(i) 
+
+> k
+
+, a (i)
+
+> s,k
+
+) 
+
+> 11
+
+a(i) 
+
+> p,k
+
+∼ πθp 
+
+> p
+
+(·| ¯z(i) 
+
+> k
+
+) 
+
+> 12
+
+Compute ˆPsafe , ˆPcomm , and Jη (θs, θ p). 
+
+> 13
+
+Update communication policy: 
+
+θp ← θp − λ∇θp Jη 
+
+> 14
+
+until ∇θp Jη < ϵ 2 
+
+> 15
+
+Update barrier parameter: 
+
+η ← μη  
+
+> 16
+
+until 1 
+
+> η
+
+< ϵ 0 
+
+> 17
+
+Output: optimized policy parameters θ⋆s and θ⋆p .requiring analytical gradient derivations. In principle, (29) can be optimized jointly with respect to the control and communication policies. However, direct joint optimization often suffers from unstable convergence due to the strong cou-pling between trajectory planning and communication power allocation. Furthermore, communication power can typically be adapted at a faster timescale than UAV motion, whereas vehicle dynamics impose stronger constraints on trajectory evolution. Motivated by these observations, the proposed CRPL adopts a sequential optimization strategy. First, the control policy is optimized assuming the maximum allowable communication power, thereby prioritizing safe and goal-directed trajectory generation. Then, with the control policy fixed, the commu-nication policy is optimized along the latent trajectories gen-erated by the learned control policy. The resulting procedure consists of the following two steps:  
+
+> •
+
+Step 1: Optimize the control policy πθs 
+
+> s
+
+assuming maxi-mum communication power.  
+
+> •
+
+Step 2: Optimize the communication policy πθp 
+
+> p
+
+along the trajectories generated by the optimized control policy. The proposed CRPL algorithm is summarized in Algorithm 1. 6
+
+IV. S IMULATION RESULTS 
+
+In this section, we evaluate the proposed CRPL framework through numerical simulations in a synthetic UAV environ-ment. We investigate the accuracy of the learned latent model, the resulting trajectory optimization performance, and the robustness of the framework under varying communication bandwidth and environment uncertainty levels. 
+
+A. Simulation Setup 1) Environment and Dynamics: We consider a synthetic two-dimensional square environment [0 , 1] × [0 , 1] in normal-ized spatial units. The UAV starts from rc, 0 = [0 .1, 0.5] T with zero initial velocity and aims to reach a circular goal region centered at rg = [0 .9, 0.5] T with radius 0.05 . A BS located at 
+
+rBS = [0 .5, 0.05] T communicates with and controls the UAV through a wireless link. A planning horizon of H = 100 time steps is adopted based on the JEPA’s look-ahead evaluation presented later. Let sc,k = rTc,k , v Tc,k 
+
+T denote the UAV state, where 
+
+rc,k , v c,k ∈ R2 are its position and velocity, respectively. The second-order dynamics can be written in the state-space form 
+
+sc,k +1 = As c,k + B˜as,k + Gw k, (30) where A =
+
+I I
+
+0 I
+
+
+
+, B =
+
+0
+
+I
+
+
+
+, G =
+
+ 0
+
+σcI
+
+
+
+, I denotes the two-dimensional identity matrix, wk ∼ N (0 , I ) models the distur-bance, σc controls the level of dynamic uncertainty, the speed 
+
+vc,k is limited to vmax = 4 ×10 −2 before the UAV position is up-dated, and ˜as,k = amax as,k , is the physical acceleration com-mand, where amax = 3 .5×10 −3 is the maximum acceleration magnitude. For closed-loop control, the normalized motion-action space is As = {[0 , 0] , [1 , 0] , [−1, 0] , [0 , 1] , [0 , −1] } , and the communication-power action space is Ap = {1, 4}. During policy optimization, differentiable continuous relaxations of the motion and communication actions are used to propagate gradients through the latent rollouts. At execution time, the relaxed policy outputs are mapped to the nearest feasible actions in As and Ap, respectively. Accordingly, the UAV may apply zero acceleration or accelerate along one of the positive or negative coordinate directions, while the commu-nication policy selects between the two available transmis-sion power levels. During offline JEPA data generation, the two normalized acceleration components are instead sampled continuously from [−1, 1] to provide broader excitation of the second-order dynamics. The closed-loop trajectory ex-periments include one obstacle fixed at ru, 0, which depends on the scenario under consideration. However, for latent model training, the uncontrollable entity evolves according to ru,k +1 = ru,k + vu,k , where its direction is sampled independently for every trajectory with deterministic reflection at the environment boundaries, and with a fixed speed set as 
+
+∥vu,k ∥2 = 1 .25 × 10 −2.
+
+2) JEPA Architecture and Training: The JEPA encoder ϕ(·)
+
+maps each 100 ×100 observation image Ik to a compact latent representation. It consists of four convolutional blocks with channel dimensions (32 , 64 , 96 , 128) , followed by adaptive pooling and a fully connected projection to a 256 -dimensional feature representation. Two latent heads then generate the controllable and uncontrollable components zc,k , z u,k ∈ R16 ,whose concatenation forms the complete latent state zk ∈ R32 .Although the general formulation supports an arbitrary history length M , we use M = 2 in the simulations. For each entity j ∈ { c, u }, define the augmented latent state ¯zj,k =
+
+zTj,k , z Tj,k −1
+
+T . The corresponding linear latent predictor is parameterized as 
+
+¯zj,k +1 ≈
+
+ψj, 0 ψj, 1
+
+I 0
+
+
+
+¯zj,k +
+
+ψj,a 
+
+0
+
+
+
+aj,k , (31) where ψj, 0, ψ j, 1 ∈ R16 ×16 and ψj,a ∈ R16 ×2 are learned parameters. The controllable predictor receives ac,k = as,k ,whereas the uncontrollable predictor receives no exogenous action and therefore uses au,k = 0 . The inclusion of both 
+
+zj,k and zj,k −1 enables the predictor to capture temporal dependencies while maintaining a lightweight model structure. The controllable and uncontrollable predictors use separate pa-rameters, allowing their dynamics to be learned independently. The JEPA model is trained offline using an exponential-moving-average target encoder with momentum τ = 0 .995 .After training, the encoder and latent predictors are fixed and used to generate recursive latent rollouts during CRPL policy optimization. To isolate the impact of predictive latent planning, the linear predictor in (31) is employed in the main closed-loop experiments. More expressive predictors can be incorporated without modifying the proposed optimization framework; accordingly, a deep multilayer perceptron (MLP) and a long short-term memory (LSTM) network are evaluated separately as alternative predictor architectures in the latent rollout comparison. 
+
+3) Wireless Channel: Communication performance is eval-uated using a geometry-aware LOS/NLOS channel model. The large-scale LOS channel gain is modeled according to the distance dependent path loss model |hLOS  
+
+> k
+
+|2 = G0d−αPL  
+
+> k
+
+,
+
+where G0 = 1 is the reference gain, αPL = 2 is the path-loss exponent, and dk = ∥rc,k − rBS ∥2 denotes the distance between the UAV and the BS. To account for obstacle-induced shadowing, we employ a simplified LOS/NLOS ap-proximation. The effective channel gain is given by |hk|2 =(1 − pk)|hLOS  
+
+> k
+
+|2 + pkκNLOS |hLOS  
+
+> k
+
+|2, where pk ∈ [0 , 1] denotes the blockage probability, and κNLOS = 0 .1 represents the additional attenuation associated with NLOS propagation. The blockage probability pk is computed from the relative geome-try of the UAV, obstacle, and BS using a smooth differentiable approximation of line-of-sight obstruction. As a result, the channel quality degrades smoothly as the obstacle increasingly obstructs the LOS path between the UAV and the BS. 
+
+4) Communication Protocol: The wireless channel model is used to evaluate closed-loop communication-control perfor-mance through a packet-delivery model. The CRPL policies are optimized using the fixed SNR requirement γmin and are not explicitly conditioned on B; bandwidth variation is introduced only during closed-loop packet-delivery evaluation. Since the achievable transmission rate is determined by the received SNR, packet delivery provides an operational measure of the communication reliability formulation introduced in Section II. At each time step, the BS computes a control 7
+
+command and transmits a control packet of size Lpkt = 4 
+
+bits to the UAV. The achievable communication rate is given by Rk = B log 2(1 + γk), where B denotes the available bandwidth and γk is the received SNR. A communication outage is declared whenever the available channel capacity is insufficient to deliver the control packet within the current control interval, i.e., Rk∆t < L pkt . During an outage, the UAV continues to apply the most recently received control action until a new control packet is successfully delivered. The outage duration Tout reported in Figs. 6 and 7 is computed as the cumulative time for which this condition holds. This pro-tocol is employed only in the experiments of Section IV-D to evaluate the communication-control system under bandwidth limitations and environment uncertainty. 
+
+5) Policy and Algorithm Parameters: The control and communication policies, πθs 
+
+> s
+
+and πθp 
+
+> p
+
+, are parameterized by feed-forward neural networks with two hidden layers of 64 
+
+neurons and tanh activations. Both networks take the latent representation as input and output action probabilities over 
+
+As and Ap, respectively. Unless otherwise stated, the default simulation parameters are: collision threshold dmin = 0 , safety risk tolerance δ1 = 0 .05 , communication outage tolerance 
+
+δ2 = 0 .05 , minimum required SNR γmin = 1 (0 dB), barrier growth factor μ = 2 , initial barrier parameter η = 1 , barrier sta-bilization parameter εb = 10 −4, learning rate λ = 10 −3, barrier termination tolerance ϵ0 = 10 −3, control-policy convergence tolerance ϵ1 = 10 −3, and communication-policy convergence tolerance ϵ2 = 10 −3.
+
+6) Evaluation Metrics: The terminal goal-reaching error is defined as df = ∥rc,H − rg ∥2 , where rc,H denotes the terminal UAV position. The cumulative communication energy is approximated by Ecomm = PHk=1 ap,k , which represents the total normalized transmission-power expenditure over the planning horizon. The UAV propulsion energy is evaluated as 
+
+Ectrl = PHk=1 P  ∥vc,k ∥2
+
+ , where P (·) follows the standard rotary-wing propulsion-power model in [29], which accounts for profile, induced, and parasite power components. The adopted propulsion parameters are P0 = 79 , Pi = 88 ,
+
+Utip = 120 , v0 = 4 , d0 = 0 .3, ρ = 1 .225 , s = 0 .05 , and 
+
+A = 0 .5. Safety performance is quantified by the maximum collision probability pmax coll = max k=1 ,...,H pcoll ,k , where pcoll ,k 
+
+denotes the instantaneous ground-truth collision probability. Communication reliability is measured by the outage duration 
+
+Tout , defined as the cumulative time during which the outage condition in Section IV-A4 is satisfied. 
+
+7) Proposed and Baseline Methods: We compare the 
+
+CRPL framework against three baseline methods. APC is an analytical predictive controller with access to the environment dynamics and obstacle evolution, and therefore serves as an oracle benchmark that is not realizable in practice. RCC is a reactive constrained controller that employs the same collision-avoidance constraints as CRPL together with SNR-triggered transmission power adaptation based only on current observa-tions. UCC is an unconstrained communication controller that performs local collision avoidance and reactive transmission power adaptation without incorporating communication or probabilistic safety constraints into the planning process. H                                                                                       
+
+> 50 100 150 200 250 300 350 400 450 500
+> p(`1;e 5 x)
+> 0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0 Linear-x=1px
+> Linear-x=5px
+> MLP-x=1px
+> MLP-x=5px
+> LSTM-x=1px
+> LSTM-x=5pxx[px]
+> 00.2 0.4 0.6 0.8 11.2 1.4 1.6 1.8
+> p(`1;e 5 x)
+> 0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> Linear-H=1
+> Linear-H=100
+> MLP-H=1
+> MLP-H=100
+> LSTM-H=1
+> LSTM-H=100
+> Fig. 3. Recursive controllable-latent predictor comparison. (a) Probability that UAV position error remains below x∈ { 1,5}pixels as a function of the look-ahead horizon H. (b) Empirical CDF of the decoded ℓ1position error at H= 1 and H= 100 .
+
+B. Latent Rollout Accuracy 
+
+Before evaluating the closed-loop performance of CRPL, we examine whether the learned JEPA representation supports sta-ble recursive prediction and whether increasing the predictor complexity improves long-horizon accuracy. Accurate multi-step rollouts are essential because the proposed framework uses them to anticipate future UAV motion, communication quality, and collision risk over the planning horizon. To isolate the effect of predictor architecture, the same frozen JEPA representation is used for all models, and only the controllable latent predictor is varied. We compare the proposed linear second-order predictor with a deep MLP and an LSTM network over a common set of Monte Carlo trajectories. At the look-ahead horizon H, the decoded UAV position error is defined as ℓ1,e (H) = ∥ˆrc,H − rc,H ∥1 , where 
+
+ˆrc,H and rc,H denote the predicted and ground-truth UAV positions, respectively. The error is measured in image pixels, with one pixel corresponding to 0.01 normalized spatial units. Fig. 3(a) reports probability p(ℓ1,e (H) ≤ x) for thresholds 
+
+x ∈ { 1, 5} pixels. The 1-pixel threshold provides a stringent measure of local prediction accuracy, whereas the 5-pixel threshold represents a task-relevant spatial tolerance. Since five pixels correspond to 0.05 normalized spatial units, this threshold is comparable to the radius of the goal region, although the rollout error and goal-reaching condition use different norms. All three predictors remain accurate over short horizons, but their performance separates as recursive errors accumulate. At the planning horizon H = 100 , approximately 
+
+93% of the linear-predictor rollouts remain below a 1-pixel error, compared with about 84% for the MLP and 68% for the LSTM. In contrast, more than 99% of the rollouts for all three predictors remain below the 5-pixel threshold at 
+
+H = 100 , indicating that large task-scale prediction errors are rare over the selected planning horizon. The linear predictor nevertheless exhibits the slowest probability decay as the time horizon increases. Fig. 3(b) presents the empirical error CDFs at H = 1 
+
+and H = 100 . At one-step prediction, the three distributions 8(a) 
+
+> (b)
+> (c)
+> (d)
+> 0
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> pout
+> Trajectory
+> Low power
+> High power
+> Start
+> Goal
+> Obstacle
+> BS
+
+Scenario 1 (a)  
+
+> (b)
+> (c)
+> (d)
+> 0
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> 0.6
+> 0.7
+> 0.8
+> 0.9
+> pout
+> Trajectory
+> Low power
+> High power
+> Start
+> Goal
+> Obstacle
+> BS
+
+Scenario 2       
+
+> Fig. 4. UAV trajectories under two obstacle configurations. In Scenario 1, the obstacle is located at (0 .50 ,0.30) , whereas in Scenario 2 it is located at
+> (0 .50 ,0.45) . Within each scenario, panels (a)–(d) correspond to CRPL, APC, RCC, and UCC, respectively. The background denotes the geometry-dependent blockage probability, and the trajectory markers indicate the selected low- and high-power actions. (a)
+> .
+> 0
+> 1
+> 2
+> 4
+> 6CRPL(prop.)
+> APC
+> RCC
+> UCV
+> .min(a)
+> .
+> 0
+> 5
+> 10
+> 15
+> 20
+
+k     
+
+> 020 40 60 80 100
+> 0
+> 0.5
+> 1
+> 1.5
+> (b)
+> pcoll
+> #10 -3
+
+Scenario 1 k      
+
+> 020 40 60 80 100
+> (b)
+> pcoll
+> 0
+> 0.1
+> 0.2
+> #10 -1
+
+Scenario 2      
+
+> Fig. 5. Received SNR and collision-risk evolution under the two obstacle configurations. Panel (a) shows the received SNR γk, with the dashed line indicating the required level γmin , while panel (b) shows the corresponding collision probability pcoll ,k .
+
+are nearly coincident, with approximately 90% of the errors remaining below 0.2 pixels. At the planning horizon H = 100 ,their tail behavior becomes more distinct. The 90 th-percentile errors are approximately 0.82 , 1.08 , and 1.28 pixels for the linear, MLP, and LSTM predictors, respectively. Thus, to cover 
+
+90% of the evaluated rollouts, the error thresholds required by the MLP and LSTM are approximately 1.3 and 1.6 times that of the linear predictor. This further demonstrates the greater stability of the linear model under recursive prediction. These results indicate that, for the learned JEPA represen-tation and the approximately second-order UAV dynamics, increasing predictor complexity does not improve recursive accuracy. The lightweight linear predictor provides the most stable long-horizon rollouts and is therefore used in the subsequent CRPL experiments. Its accuracy over the selected planning horizon supports the use of latent rollouts for evaluat-ing future communication and safety conditions without direct access to analytical environment dynamics. 
+
+C. Trajectory Optimization Performance 
+
+We evaluate the proposed CRPL framework under the two obstacle configurations shown in Fig. 4, with the correspond-ing SNR and collision-risk profiles presented in Fig. 5. In Scenario 1, the obstacle is located at ru, 0 = (0 .50 , 0.30) 
+
+and mainly degrades the communication channel along the direct path between the initial position and the goal. In Scenario 2, the obstacle is located at ru, 0 = (0 .50 , 0.45) and directly obstructs the shortest path. The two configurations therefore induce different trade-offs among path efficiency, communication quality, and collision safety. In Scenario 1, all methods remain close to the direct path and exhibit similar collision-risk profiles. The main difference lies in the timing of the transmission-power decisions. CRPL and APC anticipate the upcoming channel degradation and increase power before the received SNR reaches γmin . By contrast, RCC and UCC increase power only after sensing the degradation, causing a temporary SNR violation. Their power reduction is also delayed, so high transmission power remains active after the strongest shadowing has passed, resulting in unnecessary communication-energy consumption. The peak collision risk of UCC is only about 1.2 times that of CRPL, reflecting the relatively mild geometric conflict in this scenario. In Scenario 2, the benefit of predictive planning becomes 910!1 100                                                          
+
+> B[Hz]
+> 0
+> 0.1
+> 0.2
+> 0.3
+> (a) df
+> 10!1100
+> B[Hz]
+> 6
+> 8
+> 10
+> 12
+> (b) Ecomm
+> 10!1100
+> B[Hz]
+> 10
+> 12
+> 14
+> 16
+> 18
+> (c) Ectrl
+> 10!1100
+> B[Hz]
+> 0
+> 0.1
+> 0.2
+> 0.3
+> (d) P max
+> coll
+> 10!1100
+> B[Hz]
+> 0
+> 5
+> 10
+> 15
+> 20
+> (e) Tout
+> CRPL(prop.)
+> RCC
+> UCC
+> Fig. 6. Closed-loop performance versus communication bandwidth B. Panels (a)–(e) show the terminal goal-reaching error df, communication energy Ecomm ,motion energy Ectrl , maximum collision probability pmax coll , and outage duration Tout , respectively. 00.20.40.60.81
+> <c#10!2
+> (a) df
+> 0
+> 0.1
+> 0.2
+> 0.3
+> 00.20.40.60.81
+> <c#10!2
+> (b) Ecomm
+> 6
+> 8
+> 10
+> 12
+> 00.20.40.60.81
+> <c#10!2
+> (c) Ectrl
+> 10
+> 12
+> 14
+> 16
+> 18
+> 00.20.40.60.81
+> <c#10!2
+> (d) P max
+> coll
+> 0
+> 0.1
+> 0.2
+> 0.3
+> 00.20.40.60.81
+> <c#10!2
+> (e) Tout
+> 0
+> 5
+> 10
+> 15
+> 20
+> CRPL(prop.)
+> RCC
+> UCC
+> Fig. 7. Closed-loop performance versus dynamic disturbance σc. Panels (a)–(e) show the terminal goal-reaching error df, communication energy Ecomm ,motion energy Ectrl , maximum collision probability pmax coll , and outage duration Tout , respectively.
+
+more pronounced. CRPL and APC select a lower detour around the obstacle and thereby avoid the more strongly shadowed region, while RCC and UCC follow the upper side of the obstacle and experience a deeper SNR degradation. Consequently, CRPL and APC maintain the received SNR above the required level without sustained high-power trans-mission, whereas RCC and UCC temporarily fall below the threshold before their delayed power increase takes effect. The collision-risk profiles show a similar separation: the peak risk of UCC is approximately 4 times that of CRPL, while APC and RCC remain much closer to the proposed method. This larger difference results from the absence of a trajectory-level safety constraint in UCC. The close agreement between CRPL and APC indicates that the learned latent representation preserves the informa-tion required for predictive, communication-aware trajectory planning. Overall, CRPL anticipates future channel degrada-tion and collision risk, allowing it to adapt both trajectory and transmission power at the appropriate time and thereby achieve more reliable and efficient operation than the reactive alternatives. 
+
+D. Limited Bandwidth and Dynamic Uncertainty 
+
+We next examine whether the observed advantages of CRPL persist over a broader range of communication and dynamic conditions. In particular, we evaluate whether predictive latent planning remains effective when limited bandwidth constrains command delivery and dynamic uncertainty makes future UAV motion and channel evolution less predictable. Fig. 6 shows that the largest performance differences arise in the bandwidth-limited regime. At the lowest considered bandwidth, the terminal errors df of RCC and UCC are approximately 3 and 2.5 times that of CRPL, respectively, while their communication energies Ecomm are approximately 
+
+1.7 and 1.6 times that of CRPL. As the bandwidth increases, the terminal errors of all methods decrease and approach a saturation region, indicating that additional communication resources provide diminishing benefits once bandwidth is no longer the dominant performance bottleneck. The strongest separation is observed in the outage duration Tout , for which RCC and UCC experience approximately 18 and 12 times the outage duration of CRPL, respectively, at the lowest bandwidth, and remain more than 10 times that of CRPL over much of the considered range. These trends are consistent with the trajectory, SNR, and collision-risk profiles observed in the preceding sub-section. The recursive JEPA rollouts allow CRPL to iden-tify communication-shadowed and high-risk regions before they are reached and to coordinate trajectory deviations with transmission-power decisions. The reactive methods instead respond only after unfavorable channel or geometric con-ditions have been encountered, resulting in higher Ecomm 
+
+and prolonged outages. CRPL and RCC maintain low pmax coll 
+
+because both enforce the safety constraint, whereas UCC ex-hibits a larger and more variable collision risk, consistent with the peaks observed in Fig. 5. CRPL therefore combines the safety benefits of constrained control with the communication benefits of predictive planning, at the cost of only a moderate increase in Ectrl , approximately 1.1–1.2 times that of the reactive controllers. Fig. 7 shows the corresponding sensitivity to dynamic uncertainty. For small and moderate values of σc, the per-formance changes gradually, indicating that all controllers tolerate limited deviations from the nominal UAV dynamics. The separation becomes more pronounced at σc = 0 .01 , where stronger disturbances reduce the accuracy of future motion and channel predictions. At this uncertainty level, the terminal errors df of RCC and UCC are approximately 1.35 and 1.4
+
+times that of CRPL, respectively, while their communication energies Ecomm are about 1.4 times that of CRPL. Their outage durations Tout are approximately 7 and 6.5 times that of CRPL, demonstrating that predictive trajectory and communication adaptation remains effective even when the re-alized UAV motion deviates from its predicted evolution. The comparatively contained variation in the CRPL outage results also indicates more consistent communication reliability under increasing uncertainty. 10 
+
+The comparison among CRPL, RCC, and UCC clarifies the contributions of the main algorithmic components. CRPL and RCC retain relatively low pmax coll because both explicitly enforce the probabilistic safety constraint. In contrast, the collision risk of UCC increases more rapidly with σc and becomes approximately 3 times that of CRPL at the highest disturbance level, while its larger variation indicates less consistent safety performance under strongly perturbed motion. The substan-tially lower df , Ecomm , and Tout of CRPL relative to RCC isolate the additional benefit of predictive latent planning, since both methods retain the same safety mechanism. Across both bandwidth and uncertainty studies, the comparatively contained variation of CRPL in terminal error and outage du-ration further indicates more reliable closed-loop performance under unfavorable operating conditions. Together with the rollout study in Section IV-B, these results show that the stable look-ahead predictions provided by the JEPA representation and lightweight linear predictor translate into effective trajectory and communication adaptation. CRPL therefore achieves improved communication reliability, goal-reaching accuracy, and safety with only a moderate increase in motion energy Ectrl .V. C ONCLUSION 
+
+This article presented CRPL, a communication-aware and safety-aware predictive latent control framework for UAV trajectory optimization. By integrating a JEPA-based predic-tive model with probabilistic communication and safety con-straints, CRPL jointly optimizes trajectory and communication decisions from high-dimensional observations. The proposed framework enables proactive adaptation to communication degradation and collision risk through predictive latent roll-outs, thereby improving decision-making under uncertainty. Simulation results demonstrated consistent improvements in trajectory accuracy, communication efficiency, reliability, and safety compared with reactive baseline methods, while limiting the additional motion effort required for communication-aware and collision-safe trajectory adaptation. REFERENCES [1] M. Mozaffari, W. Saad, M. Bennis, Y.-H. Nam, and M. Debbah, “A tutorial on UAVs for wireless networks: Applications, challenges, and open problems,” IEEE Commun. Surveys Tuts. , vol. 21, no. 3, pp. 2334– 2360, 2019. [2] Y. Zeng, J. Xu, and R. Zhang, “Accessing from the sky: A tutorial on UAV communications for 5g and beyond,” Proc. IEEE , vol. 107, no. 12, pp. 2327–2375, Dec. 2019. [3] M. Mozaffari, W. Saad, M. Bennis, and M. Debbah, “Efficient de-ployment of multiple unmanned aerial vehicles for optimal wireless coverage,” IEEE Commun. Lett. , vol. 20, no. 8, pp. 1647–1650, Aug. 2016. [4] H. Shiri, J. Park, and M. Bennis, “Massive autonomous UAV path planning: A neural network based mean-field game theoretic approach,” in Proc. IEEE Global Commun. Conf. (GLOBECOM) , 2019, pp. 1–6. [5] S. Zhang, H. Zhang, B. Di, and L. Song, “Joint trajectory and power optimization for UAV relay networks,” IEEE Commun. Lett. , vol. 22, no. 1, pp. 161–164, Jan. 2018. [6] C.-F. Liu, M. Bennis, M. Debbah, and H. V. Poor, “Dynamic task offloading and resource allocation for ultra-reliable low-latency edge computing,” IEEE Trans. Commun. , vol. 67, no. 6, pp. 4132–4150, Jun. 2019. [7] H. Shiri, J. Park, and M. Bennis, “Communication-efficient massive UAV online path control: Federated learning meets mean-field game theory,” 
+
+IEEE Trans. Commun. , vol. 68, no. 11, pp. 6840–6857, 2020. [8] W. Khawaja, I. Guvenc, D. Matolak, U.-C. Fiebig, and N. Schnecken-burger, “A survey of air-to-ground propagation channel modeling for unmanned aerial vehicles,” IEEE Commun. Surveys Tuts. , vol. 21, no. 3, pp. 2361–2391, 2019, third Quarter. [9] A. Al-Hourani, S. Kandeepan, and S. Lardner, “Optimal LAP altitude for maximum coverage,” IEEE Wireless Commun. Lett. , vol. 3, no. 6, pp. 569–572, 2014. [10] M. Alzenad, A. El-Keyi, H. Yanikomeroglu, and F. Lagum, “3-D placement of an unmanned aerial vehicle base station for maximum coverage of users with different QoS requirements,” IEEE Wireless Commun. Lett. , vol. 7, no. 1, pp. 38–41, Feb. 2018. [11] Q. Wu, Y. Zeng, and R. Zhang, “Joint trajectory and communication design for multi-UAV enabled wireless networks,” IEEE Trans. Wireless Commun. , vol. 17, no. 3, pp. 2109–2121, Mar. 2018. [12] Y. Zeng and R. Zhang, “Energy-efficient UAV communication with trajectory optimization,” IEEE Trans. Wireless Commun. , vol. 16, no. 6, pp. 3747–3760, Jun. 2017. [13] G. Zhang, Q. Wu, M. Cui, and R. Zhang, “Securing UAV communi-cations via joint trajectory and power control,” IEEE Trans. Wireless Commun. , vol. 18, no. 2, pp. 1376–1389, Feb. 2019. [14] H. Shiri, J. Park, and M. Bennis, “Remote UAV online path planning via neural network-based opportunistic control,” IEEE Wireless Commun. Lett. , vol. 9, no. 6, pp. 861–865, 2020. [15] H. Shiri, H. Seo, J. Park, and M. Bennis, “Attention-based communica-tion and control for multi-UAV path planning,” IEEE Wireless Commun. Lett. , vol. 11, no. 7, pp. 1409–1413, 2022. [16] D. Hafner, T. Lillicrap, J. Ba, and M. Norouzi, “Dream to control: Learning behaviors by latent imagination,” in Proc. Int. Conf. Learn. Represent. (ICLR) , 2020. [17] J. Schrittwieser et al. , “Mastering Atari, Go, chess and shogi by planning with a learned model,” Nature , vol. 588, no. 7839, pp. 604–609, Dec. 2020. [18] M. Assran, Q. Duval, I. Misra, P. Bojanowski, P. Vincent, M. Rabbat, Y. LeCun, and N. Ballas, “Self-supervised learning from images with a joint-embedding predictive architecture,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR) , 2023, pp. 15 619–15 629. [19] M. Assran, A. Bardes, D. Fan, Q. Garrido, R. Howes, M. Muckley, A. Rizvi, C. Roberts, K. Sinha, A. Zholus et al. , “V-jepa 2: Self-supervised video models enable understanding, prediction and planning,” 
+
+arXiv preprint arXiv:2506.09985 , 2025. [20] C. B. Chaaya, A. M. Girgis, and M. Bennis, “Learning latent wireless dynamics from channel state information,” IEEE Wireless Commun. Lett. , vol. 14, no. 2, pp. 489–493, 2024. [21] C. Bou Chaaya, A. M. Girgis, and M. Bennis, “Learning latent multi-modal dynamics for optimized resource planning,” IEEE Transactions on Wireless Communications , vol. 25, pp. 9591–9607, 2026. [22] L. Blackmore, M. Ono, and B. C. Williams, “Chance-constrained optimal path planning with obstacles,” IEEE Trans. Robot. , vol. 27, no. 6, pp. 1080–1094, 2011. [23] A. Mesbah, “Stochastic model predictive control: An overview and perspectives for future research,” IEEE Control Syst. Mag. , vol. 36, no. 6, pp. 30–44, 2016. [24] T. Ni and M. Kamgarpour, “A learning-based approach to stochastic optimal control under reach-avoid constraint,” in Proc. 28th ACM Int. Conf. Hybrid Syst.: Comput. Control (HSCC) , ser. HSCC ’25, 2025. [25] J. Achiam, D. Held, A. Tamar, and P. Abbeel, “Constrained policy optimization,” in Proc. 34th Int. Conf. Mach. Learn. (ICML), PMLR ,vol. 70, 2017, p. 22–31. [26] Y. Emam, G. Notomista, P. Glotfelter, Z. Kira, and M. Egerstedt, “Safe reinforcement learning using robust control barrier functions,” IEEE Robot. Autom. Lett. , vol. 10, no. 3, pp. 2886–2893, 2025. [27] T. Kipf, E. Van der Pol, and M. Welling, “Contrastive learning of structured world models,” Proc. Int. Conf. Learn. Represent. (ICLR) ,2020. [28] F. Locatello, D. Weissenborn, T. Unterthiner, A. Mahendran, G. Heigold, J. Uszkoreit, A. Dosovitskiy, and T. Kipf, “Object-centric learning with slot attention,” Adv. Neural Inf. Process. Syst. , vol. 33, pp. 11 525– 11 538, 2020. [29] Y. Zeng, J. Xu, and R. Zhang, “Energy minimization for wireless communication with rotary-wing UAV,” IEEE Trans. Wireless Commun. ,vol. 18, no. 4, pp. 2329–2345, 2019.

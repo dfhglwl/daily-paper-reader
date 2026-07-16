@@ -1,0 +1,720 @@
+Title: Handover-Aware Trajectory Planning for Cellular-Connected UAVs under STL Specifications and URLLC Constraints
+
+URL Source: https://arxiv.org/pdf/2607.03781v1
+
+Published Time: Tue, 07 Jul 2026 02:03:06 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# Handover-Aware Trajectory Planning for Cellular-Connected UAVs under STL Specifications and URLLC Constraints 
+
+Yuqi Ping, Tianhao Liang, Bofeng Zheng, Bingyan Xie, and Tingting Zhang 
+
+Abstract—This paper investigates handover-aware trajec-tory planning for cellular-connected UAVs executing mission-centric tasks under ultra-reliable low-latency communication (URLLC) constraints. Signal temporal logic (STL) provides a formal specification layer for translating mission seman-tics into time-bounded trajectory requirements, while finite-blocklength URLLC feasibility characterizes reliable command-and-control (C2) links with serving base stations (BSs). We formulate a joint planning problem that optimizes the UAV trajectory, STL mission satisfaction, serving-BS association, and handover behavior. To solve this mixed discrete-continuous problem, we adopt and integrate a Logic Network Flow (LNF) based STL reformulation with Bézier-parameterized motion, disk-shaped URLLC service regions, and binary association variables, so that the resulting mixed-integer quadratically constrained formulation can be solved by standard branch-and-bound solvers. Numerical simulations over a library of STL missions show that the proposed planner can execute different mission specifications under the same cellular map while maintaining URLLC feasibility. The results further reveal how mission timing, handover-aware association, and finite-blocklength stringency jointly affect trajectory shape, serving margin, and computational complexity. Index Terms—Cellular-connected UAV, signal temporal logic, Logic Network Flow, URLLC, handover-aware trajectory planning. 
+
+I. Introduction A. Background and Motivation Recent advances in artificial intelligence (AI) and em-bodied autonomy are enabling low-altitude UAVs to evolve from remotely operated platforms into mission-oriented autonomous agents [1]. This transition is expanding the operational role of UAVs from simple flight execution to task-level decision making in applications such as data collection [2], [3], precision agriculture [4], forest firefighting [5], localization and sensing services [6], [7], communication support [8], and low-altitude logistics [9]. In these scenarios, a UAV is no longer required only to reach a destination, but also to visit prescribed regions, respect temporal ordering and safety constraints, and execute sensing or service actions at appropriate mission 
+
+Yuqi Ping, Tianhao Liang, Bofeng Zheng, and Tingting Zhang are with the Guangdong Provincial Key Laboratory of Space-Aerial Networking and Intelligent Sensing, Harbin Institute of Technology, Shenzhen, P. R. China (e-mail: pingyq@stu.hit.edu.cn; liangth@hit.edu.cn; 25s052015@stu.hit.edu.cn; zhangtt@hit.edu.cn). Bingyan Xie is with the Department of Electronic Engineering, Shanghai Jiao Tong University, Shanghai 200240, China (e-mail: bingyanxie@sjtu.edu.cn). 
+
+stages. These coupled spatial and temporal requirements call for mission specifications that can be interpreted by human operators and agentic AI systems, converted into executable planning constraints, and monitored during execution. Signal temporal logic (STL) provides a nat-ural formal language for this purpose, as it can encode region-reaching, temporal ordering, persistence, and safety requirements over mission trajectories [10]–[14]. Unlike many ground-robot or closed-loop task-planning settings where communication is not explicitly modeled, low-altitude UAV missions are often executed over larger areas and under stricter operational supervision. As auton-omy increases, a UAV is expected to maintain command-and-control (C2) connectivity with ultra-reliable low-latency communication (URLLC) support via serving base stations (BSs) throughout task execution [15], [16]. Such cellular connectivity can provide wide-area coverage and beyond-visual-line-of-sight support for these operations [17]–[21]. However, mobility across heterogeneous cells tightly couples serving-cell association and handover deci-sions with trajectory planning. Frequent or poorly planned handovers may degrade communication continuity, incur signaling and synchronization overhead, trigger ping-pong effects, increase latency, and compromise the reliability of C2 links [22], [23]. The coexistence of STL-specified mission requirements and handover-sensitive C2 connectivity exposes a gap between formal mission planning and cellular-connected UAV trajectory design. Mission-level planners encode task objectives and temporal requirements, whereas handover-aware trajectory planners characterize feasible UAV mo-tion under connectivity constraints. Such temporal re-quirements directly affect the sequence of serving cells encountered along the trajectory. A decoupled design may therefore produce trajectories that satisfy task logic while ignoring serving-cell feasibility, or trajectories that main-tain connectivity while violating mission timing and logical dependencies. This gap motivates a unified handover-aware trajectory planning formulation that jointly op-timizes UAV motion, STL mission satisfaction, base-station association, and handover behavior, so that task completion and reliable network support are treated as coupled requirements rather than separate design stages. 
+
+> arXiv:2607.03781v1 [eess.SY] 4 Jul 2026
+
+B. Related Works Mission-centric UAV planning requires formal task spec-ifications that can represent not only geometric goals but also temporal and logical mission semantics. Temporal logic has been applied to reactive mission planning, robot deployment, multi-robot coordination, and motion planning with formal specifications [24]–[27]. For dynam-ical systems, STL and related temporal logics describe time-bounded requirements over continuous-valued sig-nals, making them suitable for region visiting, sequencing, persistence, deadline, and safety constraints [10]–[12], [28], [29]. Such specifications have been embedded in mixed-integer optimization, model predictive control, and reactive synthesis formulations [13], [30]–[32]. Language-grounded mission specification further supports trans-lating human-understandable commands into machine-checkable temporal-logic formulas, making STL a candi-date language for UAV mission specifications in agentic planning pipelines [14], [33], [34]. From an optimization perspective, STL mission plan-ning often relies on mixed-integer encodings whose size and relaxation quality can become problematic over long horizons [35], [36]. Logic network flow (LNF) en-codes temporal-logic satisfaction through network-flow constraints and can provide tighter convex relaxations than conventional tree-based encodings [37], while con-vex and mixed-integer motion-planning formulations pro-vide compatible trajectory parameterizations and motion-feasibility tools [38]–[44]. Nevertheless, these optimization tools are typically used for task-and-motion feasibility, and do not by themselves capture serving-BS selection, handover counting, or finite-blocklength communication constraints during mission execution. Handover-aware cellular-connected UAV trajectory planning has been studied in parallel as an enabling technology for practical low-altitude autonomy. Early, tutorial, and survey works identify UAV communica-tion opportunities, air-to-ground channel characteris-tics, mobility-induced coverage variations, and cellular-connected UAV challenges [19], [20], [45]–[49]. Standard-ization and measurement studies further show that aerial UEs experience distinct propagation, interference, and mobility behaviors in cellular systems [17], [18], [50]– [52]. Network architectures and resource orchestration for UAV-assisted and air-ground integrated networks have also been investigated [53], [54]. Machine-learning-based connectivity and security mechanisms have been stud-ied for cellular-connected UAVs [55]. Building on these foundations, trajectory planning for cellular-connected UAVs has been studied under connectivity, outage, energy, sensing, and handover constraints. A representative line of work formulates connectivity-constrained UAV planning as a graph or waypoint-search problem, where graph edges or waypoints are refined under distance, outage, bat-tery, propulsion-energy, or handover-related constraints [21], [23], [56]–[58]. Continuous-time GCS-based trajec-tory optimization has also been used to jointly optimize URLLC-supported UAV motion and BS association under handover costs [59]. Other studies consider UAV-enabled sensing, localization, integrated sensing/communication, resource allocation, and data collection, where trajectory, communication, and sensing schedules must be coor-dinated [2], [3], [6]–[8], [60], [61]. Satellite–UAV non-terrestrial network architectures further highlight the need for seamless localization and communication support across heterogeneous aerial networks [62]. These stud-ies provide important tools for handover-aware mobility control, but they usually focus on destination-oriented or waypoint-level tasks, often decomposing BS selection and trajectory refinement, and therefore cannot directly represent logical mission requirements such as precedence, return, deadline, and dwell constraints. URLLC-aware UAV communication and control provide a further set of network constraints that are directly relevant to mission execution. URLLC studies emphasize that reliability, latency, packet size, access delay, and risk-sensitive network design must be treated jointly in mission-critical wireless systems [15], [16], [63]–[65]. The finite-blocklength regime further couples packet reliability, latency, blocklength, and received signal quality [66]– [68]. For aerial links, multi-connectivity and power-control mechanisms have been studied to support URLLC-enabled UAV communication [69], [70]. Recent works further con-sider event-triggered and self-triggered control for remote UAV systems, as well as communication-control co-design for trajectory tracking, distributed formation, and energy-efficient data collection under wireless uncertainty [3], [71]–[73]. Low-altitude intelligent networking and UAV swarm systems have also motivated stronger coordination among perception, communication, and autonomous deci-sion making [5], [9], [74]. However, these studies usually treat reliability and latency as link- or control-layer re-quirements under a prescribed task structure, rather than as constraints that jointly shape mission timing, serving-cell selection, and handover-aware motion planning. Despite these advances, three issues remain unresolved for mission-centric cellular-connected UAV autonomy. First, formal mission-planning methods can express tem-poral and logical task requirements, but they usually ab-stract away the serving-cell sequence and communication feasibility that determine whether the mission can be executed over a real network. Second, cellular-connected UAV and URLLC studies optimize trajectory, resource allocation, and link reliability, but the task layer is often reduced to destination reaching, waypoint visiting, or pre-assigned operation phases. Third, handover-aware designs rarely coordinate mission phases, serving-cell selection, and handover behavior within a single optimization model. These limitations motivate a unified handover-aware plan-ning framework in which STL mission satisfaction, finite-blocklength URLLC feasibility, BS association, handover behavior, and UAV motion are planned jointly under coupled mission and network constraints. C. Main Contributions This paper aims to enable mission-centric trajectory planning for cellular-connected UAVs by jointly consid-ering STL mission semantics, finite-blocklength URLLC feasibility, serving-BS association, and handover behavior. The main contributions are summarized as follows.  
+
+> •
+
+We first establish a handover-aware cellular-connected UAV planning framework for STL-specified missions. In this framework, the mission layer en-codes temporal task requirements such as ordered inspection, disjunctive service selection, deadline-constrained inspection, data-upload, and return, while the network layer models URLLC-supported serving regions, BS association, and handover events.  
+
+> •
+
+Next, we formulate a joint mission-network-motion optimization problem over a fixed mission horizon. The decision variables include Bézier control points, STL predicate satisfaction variables, serving-BS asso-ciation binaries, and handover indicators, and the ob-jective balances motion regularity and handover cost subject to STL satisfaction, UAV motion constraints, and finite-blocklength URLLC feasibility.  
+
+> •
+
+We then adopt and integrate an LNF-based STL reformulation with Bézier-parameterized motion and disk-shaped URLLC service regions. This construc-tion maps the coupled STL, association, handover, and motion planning problem into a mixed-integer quadratically constrained program.  
+
+> •
+
+Finally, we perform numerical simulations on a four-mission library and network-sensitivity studies. The results demonstrate that the same planner can exe-cute different STL specifications under one cellular map, and they quantify how handover-aware associ-ation and finite-blocklength stringency affect serving margin, feasible mission execution, and computa-tional footprint. II. System Model A. System Overview As illustrated in Fig. 1, we consider a cellular-connected UAV that performs a mission under cellular coverage and URLLC constraints. The feasible airspace is denoted by 
+
+Q ⊂ R3, and the UAV flies at a fixed altitude H. Different from conventional point-to-point trajectory planning, the task is described by a mission specification that states what the UAV should accomplish and when it should be accomplished. Let R = {R 1, . . . , RNR } denote a set of ground-plane semantic mission regions with Rj ⊂ R2,where NR is the number of mission regions. These regions may include, for example, inspection areas, monitor-ing zones, relay-support locations, recovery regions, and emergency-service regions. These semantic regions and their temporal relations may be obtained from a task E
+
+> UAV
+> BS service region
+> UAV trajectory C2/URLLC link
+> STL mission region
+> Fig. 1. System model of the handover-aware cellular-connected UAV planning framework.
+
+database, a semantic map, or a higher-level language-to-logic module. This paper takes the resulting machine-interpretable predicates and temporal constraints as in-puts and focuses on executing them through handover-aware UAV planning. Let B = {1, . . . , M } denote the set of terrestrial BSs, where M is the number of BSs. During the mission, the UAV is associated with one serving BS at each time instant and may hand over between BSs along its trajectory. The C2 link between the UAV and the serving BS must satisfy URLLC requirements throughout the mission horizon. Therefore, the planner has to determine the UAV trajectory, serving-BS association, handover schedule, and mission satisfaction jointly. This setting requires coordina-tion between the task layer and the communication layer. Formal mission specifications define the required mission behavior, while the cellular infrastructure provides the reliable C2 support needed during execution. B. UAV Motion Model We model the UAV motion by a continuous-time, fixed-altitude trajectory over the finite mission horizon 
+
+[0 , T ]. Let q(t) = [x(t), y (t), z (t)] ⊤ ∈ R3 denote the UAV position, let qs denote the initial position, and let 
+
+v(t) = ˙ q(t) denote its velocity. The flight altitude is fixed to z(t) = H, and the planar trajectory is required to be continuous and piecewise smooth over the mission horizon. The UAV is subject to the maximum-speed constraint 
+
+∥v(t)∥2 ≤ vmax , ∀ t ∈ [0 , T ], (1) where vmax is the maximum flight speed. The UAV position satisfies [x(t), y (t), H ]⊤ ∈ Q throughout the mission horizon. C. UAV-to-BS Communication Model Following the UAV-to-ground communication model in [75], we characterize each UAV–BS link by a combination of line-of-sight (LoS) and non-line-of-sight (NLoS) compo-nents. For each BS i ∈ B , its three-dimensional position is 
+
+si = [ xBS  
+
+> i
+
+, y BS  
+
+> i
+
+, z BS  
+
+> i
+
+]⊤ ∈ R3, (2) where xBS  
+
+> i
+
+and yBS  
+
+> i
+
+represent the ground-plane coordinates and zBS  
+
+> i
+
+denotes the antenna height of BS i.At time t, the 3D link distance and elevation angle between the UAV and BS i are given by 
+
+di(t) = ∥∥ q(t) − si
+
+∥∥, (3) 
+
+θi(t) = arctan 
+
+( z(t) − zBS 
+
+> i
+
+√(x(t) − xBS  
+
+> i
+
+)2 + ( y(t) − yBS  
+
+> i
+
+)2
+
+)
+
+. (4) Under this UAV-to-ground channel model, the elevation-dependent LoS and NLoS probabilities are mod-eled as 
+
+pLoS  
+
+> i
+
+(t) = 11 + αenv exp ( − βenv (θi(t) − αenv )) , (5) 
+
+pNLoS  
+
+> i
+
+(t) = 1 − pLoS  
+
+> i
+
+(t), (6) where αenv and βenv are environment-dependent parame-ters determined by the type of terrain. Accordingly, the average path loss between the UAV and BS i can be expressed as 
+
+Li(t) = pLoS  
+
+> i
+
+(t) LLoS  
+
+> i
+
+(t) + pNLoS  
+
+> i
+
+(t) LNLoS  
+
+> i
+
+(t), (7) where the LoS and NLoS components are respectively given by 
+
+LLoS  
+
+> i
+
+(t) = 
+
+( 4πf c di(t)
+
+> c
+
+)2
+
+ζLoS , (8) 
+
+LNLoS  
+
+> i
+
+(t) = 
+
+( 4πf c di(t)
+
+> c
+
+)2
+
+ζNLoS , (9) with fc denoting the carrier frequency, c the speed of light, and ζLoS , ζNLoS the excessive path loss factors corresponding to the LoS and NLoS cases, respectively. Given the BS transmit power Pi, receiver antenna gain 
+
+gr , and receiver noise power σ2, the received signal-to-noise ratio (SNR) associated with BS i at the UAV position 
+
+q(t) is 
+
+γi(q(t)) = gr Pi
+
+Li(t) σ2 . (10) D. Finite-Blocklength URLLC Feasibility We impose a URLLC requirement on the UAV–BS C2 link in terms of latency, reliability, and coding rate. Let L
+
+denote the end-to-end latency budget and εmax the target decoding error probability. Given system bandwidth B
+
+and transmission duration τ , the channel blocklength is 
+
+Nfb = Bτ, 0 < τ ≤ L, 0 < ε ≤ εmax , (11) where ε is the packet error probability, while τ ≤ L and 
+
+ε ≤ εmax impose the latency and reliability requirements, respectively. Under the normal approximation for finite blocklength coding [67], the achievable per-channel-use rate is 
+
+R(γ, N fb , ε ) ≈ log 2(1 + γ) −
+
+√
+
+V (γ)
+
+Nfb 
+
+Q−1(ε) + log 2 Nfb 
+
+2Nfb 
+
+,
+
+(12) where the channel dispersion is 
+
+V (γ) = γ(γ + 2) (1 + γ)2 (log 2 e)2, (13) 
+
+γ is the receive SNR, and Q−1(·) is the inverse Gaussian 
+
+Q-function. Let Rreq denote the required coding rate for the C2 link. The URLLC feasibility condition is 
+
+R(γ, N fb , ε max ) ≥ Rreq . (14) For a given (Nfb , ε max ), define the minimum required SNR as 
+
+γmin (Nfb ) ≜ inf {γ ≥ 0 : R(γ, N fb , ε max ) ≥ Rreq } . (15) For the selected blocklength, let γmin ≜ γmin (Nfb ). Each BS induces a URLLC-feasible region 
+
+˜Ci ≜ { q ∈ Q : γi(q) ≥ γmin 
+
+}, (16) where γi(q) denotes the SNR from BS i evaluated at an arbitrary UAV position q. Thus, the optimized serving association b(t) must satisfy γb(t)(q(t)) ≥ γmin over the mission horizon. E. STL-Based Mission Specification Consistent with the system overview, the semantic mis-sion regions R and their temporal relations are treated as machine-interpretable inputs. This subsection formalizes these inputs as a predicate library and a bounded-time STL formula. Predicate and formula generation from task databases, semantic maps, or natural-language commands can be handled by upstream mission-understanding mod-ules [14], while this paper focuses on planning with the resulting predicate library and temporal formula. Let Π = {π1, . . . , π Nπ } denote the set of atomic task predicates defined over the UAV trajectory q on [0 , T ].We assume that each semantic mission region can be represented by a polygonal ground-plane footprint given by 
+
+Rj = {p ∈ R2 : a⊤ 
+
+> j,r
+
+p ≤ κj,r , r = 1 , . . . , F j }, (17) where p = [ x, y ]⊤, Fj is the number of polygon facets, and 
+
+(aj,r , κ j,r ) defines the rth half-space boundary of Rj . The corresponding predicate πj is satisfied when the horizontal UAV position qxy (t) = [x(t), y (t)] ⊤ lies in Rj . These predicates are used to encode mission semantics such as reaching an inspection area, staying in a monitoring zone, entering a recovery region, or visiting a service region within a prescribed time window, and they serve as atomic mission conditions in the STL formula. The STL syntax specifies how atomic predicates are recursively composed into Boolean and temporal require-ments over the mission horizon. Following the standard STL syntax [10], a bounded-time formula is generated by 
+
+φ ::= π | ¬ φ | φ1 ∧ φ2 | φ1 ∨ φ2
+
+| □[t1,t 2]φ | ♢[t1,t 2]φ | φ1 U[t1,t 2] φ2, (18) where π ∈ Π, 0 ≤ t1 ≤ t2 ≤ T , and □, ♢, and U denote always, eventually, and until operators, respectively. We write q(·) |= φ when the UAV trajectory satisfies the formula. Let φmis denote the bounded-time STL mission formula constructed from Π over horizon T . Different mission cases are obtained by changing the predicate library and the temporal composition of φmis , while the handover-aware planning architecture remains unchanged. III. Problem Formulation Given a predicate library Π and a bounded-time STL mission formula φmis over a fixed mission horizon T ,the planner jointly determines the UAV trajectory and serving-BS association. The trajectory must satisfy φmis 
+
+through the mission predicates defined over the UAV motion. Let b(t) ∈ B denote the serving BS index at time 
+
+t, where b(·) is piecewise-constant and right-continuous. The handover time set is defined as 
+
+Tho ≜ { t ∈ (0 , T ] : b(t−)̸ = b(t) }, (19) and Nho ≜ |T ho | denotes the total number of han-dovers. Thus, handover awareness enters through the time variation of b(t). Maintaining the same feasible serving BS over consecutive time intervals can reduce service transitions, but it may require a larger motion effort or a smaller serving margin than always selecting the BS with the largest instantaneous SNR. We therefore introduce a nonnegative motion-regularization functional Jm(q) to penalize inefficient or abrupt UAV motion, and combine it with the handover count in the objective. With non-negative weight who trading off service transitions against motion regularization, the resulting handover-aware STL mission-planning problem under URLLC constraints is formulated as (P1) min q, v,b
+
+who Nho + Jm(q)
+
+s.t. ˙q(t) = v(t), ∀t ∈ [0 , T ], (20a) 
+
+∥v(t)∥2 ≤ vmax , ∀t ∈ [0 , T ], (20b) 
+
+q(0) = qs, (20c) 
+
+z(t) = H, ∀t ∈ [0 , T ], (20d) 
+
+q(t) ∈ Q , b(t) ∈ B , ∀t ∈ [0 , T ], (20e) 
+
+γ b(t)
+
+(q(t)) ≥ γmin , ∀t ∈ [0 , T ], (20f) 
+
+q(·) |= φmis . (20g) Problem P1 contains three coupled layers. Constraints (20a)–(20e) describe UAV motion, fixed-altitude flight, feasible airspace, and BS-index feasibility. Constraint (20f) enforces URLLC-supported C2 connectivity through the selected serving BS at every time instant. Constraint (20g) enforces the STL mission layer by requiring the phys-ical trajectory to satisfy the temporal mission formula. Therefore, the decision variables must determine not only a bounded-speed and URLLC-connected flight path, but also when each mission predicate becomes true, whether the temporal relations are satisfied, and how serving-BS handovers are scheduled during mission execution. It is worth noting that the objective of P1 contains the handover count Nho , which is induced by changes in the discrete-valued serving-BS function b(t). The constraints also involve continuous UAV motion, discrete serving-BS association, and STL satisfaction requirements that introduce logical dependencies over time. Therefore, P1 is a mixed discrete-continuous, nonconvex, and logic-constrained optimal control problem, for which a direct application of standard convex optimization methods is not available. This motivates a mixed-integer optimization reformulation. IV. LNF-Based Reformulation with Bézier-Parameterized Motion This section converts P1 into a mixed-integer quadrati-cally constrained program by transcribing the UAV motion with Bézier control points, imposing URLLC-constrained BS association and handover variables, and encoding the STL mission layer through LNF constraints [37]. In this formulation, Bézier control points jointly determine mo-tion feasibility, network feasibility, and mission-predicate truth values. The resulting problem can be handled by standard branch-and-bound algorithms that solve convex quadratic or conic relaxations at the search nodes. A. Bézier Motion Parameterization The continuous trajectory constraint in P1 is difficult to impose directly together with discrete association and logic variables. We therefore use fixed-duration Bézier segments, which preserve a continuous trajectory representation while providing control points that can be constrained through convex geometry. We represent the UAV trajectory by N cubic Bézier segments, each with fixed duration ∆t, which yields the mission horizon T = N ∆t. Since the UAV flies at the fixed altitude H, we parameterize only its horizontal trajectory, denoted by r(t) ∈ R2, and recover the three-dimensional position as q(t) = [ r(t)⊤, H ]⊤. For segment n, the planar position curve is 
+
+rn(ξ) = 
+
+> 3
+
+∑
+
+> ℓ=0
+
+rn,ℓ B(3)  
+
+> ℓ
+
+(ξ), ξ ∈ [0 , 1] , (21) where rn,ℓ ∈ R2 are spatial control points and B(3)  
+
+> ℓ
+
+(ξ) = (3
+
+> ℓ
+
+)(1 − ξ)3−ℓξℓ is the cubic Bernstein basis polynomial. Coverage and predicate constraints are imposed on the four control points of each fixed-duration segment. If all four control points of segment k lie in a convex mission region, the entire Bézier segment lies in that region by the convex-hull property of Bézier curves [43]. Adjacent Bézier segments must share endpoints so that the concatenated curve remains continuous. We impose 
+
+C0 continuity between neighboring segments through 
+
+rn, 3 = rn+1 ,0, n = 0 , . . . , N − 2. (22) The initial point is inherited from (20c), where qs,xy 
+
+denotes the ground-plane projection of qs and r0,0 = qs,xy .For ℓ = 0 , 1, 2, the derivative control points satisfy 
+
+r(1)  
+
+> n,ℓ
+
+= 3( rn,ℓ +1 − rn,ℓ ). (23) The maximum-speed constraint is imposed as the second-order cone constraint 
+
+∥r(1) 
+
+> n,ℓ
+
+∥2 ≤ vmax ∆t, n = 0 , . . . , N − 1, ℓ = 0 , 1, 2. (24) This constraint bounds the segment velocity over the full continuous Bézier curve because the derivative curve also satisfies the convex-hull property. B. URLLC-Constrained BS Association and Handover Encoding After the motion variables are represented by Bézier control points, the finite-blocklength URLLC requirement can be imposed directly on each continuous segment. On the fixed-altitude plane z = H, the SNR condition γi(q) ≥
+
+γmin for BS i is equivalent to the path-loss bound 
+
+Li(∥p − ci∥2; H) ≤ ¯Li ≜ gr Pi
+
+σ2γmin 
+
+, (25) where p = [ x, y ]⊤, ci = [ xBS  
+
+> i
+
+, y BS  
+
+> i
+
+]⊤, and Li(r; H) denotes the UAV-to-BS path-loss model evaluated at altitude H
+
+and horizontal separation r from BS i. Since Li(r; H)
+
+increases with r under the fixed-altitude channel model, the largest URLLC-feasible horizontal service radius of BS 
+
+i is 
+
+ρi ≜ sup { r ≥ 0 : Li(r; H) ≤ ¯Li }. (26) The resulting ground-plane service region is the disk 
+
+Di = {p ∈ R2 : ∥p − ci∥2 ≤ ρi}, (27) and any point in Di satisfies the finite-blocklength URLLC threshold of BS i. This disk representation keeps the as-sociation constraints compatible with mixed-integer conic optimization. Let δn,i ∈ { 0, 1} indicate whether segment n is served by BS i. A unique serving BS is selected for every segment. 
+
+∑
+
+> i∈B
+
+δn,i = 1 , n = 0 , . . . , N − 1. (28) The segment is constrained to lie in the selected URLLC disk by enforcing disk membership on its Bézier control points. 
+
+∥rn,ℓ − ci∥22 ≤ ρ2 
+
+> i
+
++ Mi(1 − δn,i ), ∀i, n, ℓ, (29) where Mi is a sufficiently large inactive constant for BS i.Since disks are convex, the convex-hull property of Bézier curves implies that (29) keeps the entire segment inside the selected URLLC disk when δn,i = 1 .Under the fixed-duration segment transcription, the continuous-time serving function b(t) is approximated as piecewise constant over each Bézier segment. A binary variable ηn ∈ { 0, 1} records whether a handover occurs between consecutive segments. For all i ∈ B and n =0, . . . , N − 2, impose 
+
+ηn ≥ δn,i − δn+1 ,i ,ηn ≥ δn+1 ,i − δn,i ,ηn ≤ 2 − δn,i − δn+1 ,i .
+
+(30) Together with the one-BS constraint in (28), these inequal-ities make ηn an exact handover indicator. Specifically, 
+
+ηn = 1 if segments n and n + 1 select different serving BSs, and ηn = 0 otherwise. The continuous-time handover count Nho in P1 is thus transcribed as ∑N −2 
+
+> n=0
+
+ηn.C. Segment-Level STL Predicate Mapping and LNF En-coding After imposing the motion and network constraints, the Bézier trajectory must also satisfy the temporal mission specification. To evaluate the STL formula on this trajectory, the continuous curve is first mapped to segment-level region predicates, and LNF is then used to encode the temporal structure of the mission formula. Under the fixed-duration segment transcription, each Bézier segment corresponds to one logic time step of du-ration ∆t. The STL formula is evaluated on the segment-level predicate trace induced by the control-point hull of each Bézier segment. Following the LNF notation, we col-lect the truth values of all predicate-time instances induced by φmis into the vector χφ = [ χφ 
+
+> 1
+
+, . . . , χ φNφ ]⊤ ∈ { 0, 1}Nφ ,which plays the role of the predicate truth vector zπ in [37]. The constraint family Zφ(r) maps these Boolean variables to the Bézier trajectory. For a region predicate associated with Rj and evaluated on segment k, let χk,j denote the corresponding compo-nent of χφ. In this paper, segment k satisfies πj if all four control points of that segment lie in Rj . The implication that χk,j = 1 makes the whole Bézier segment lie in Rj
+
+is imposed through the convex-hull property by 
+
+a⊤ 
+
+> j,r
+
+rk,ℓ ≤ κj,r + M in  
+
+> j,r
+
+(1 − χk,j ). (31) This constraint is imposed for r = 1 , . . . , F j and ℓ =0, . . . , 3. When a negated region predicate is used, the complementary implication must also be represented. Introducing binary outside-facet variables ξk,j,ℓ,r ∈ { 0, 1},we use 
+
+a⊤ 
+
+> j,r
+
+rk,ℓ ≥ κj,r + ϵj − M out  
+
+> j,r
+
+(1 − ξk,j,ℓ,r ),
+
+> 3
+
+∑
+
+> ℓ=0
+> Fj
+
+∑
+
+> r=1
+
+ξk,j,ℓ,r ≥ 1 − χk,j , (32) Fig. 2. Illustration of translating disjunctive and conjunctive logic nodes into predicate-labeled LNF edges for a generic segment-level index k [37]. 
+
+where the first inequality holds for r = 1 , . . . , F j and 
+
+ℓ = 0 , . . . , 3. Here ϵj ≥ 0 specifies the boundary convention and M in  
+
+> j,r
+
+, M out  
+
+> j,r
+
+are sufficiently large constants over the planar workspace. Hence, χk,j = 0 enforces that at least one control point violates one polygon facet. Together, (31) and (32) define the predicate-consistency family 
+
+Zφ(r) used below by linking segment-level truth variables to Bézier control points. The temporal-logic part of the mission is represented by a tuple 
+
+Fφ = ( Gφ, P, Π) , Gφ = ( VL, EL), (33) where Gφ is a directed acyclic graph with source vertex 
+
+vs and target vertex vt, and Π is the atomic predicate set introduced in Section II-E. The collection P = {P e}e∈E L
+
+assigns to each logic edge a set of predicate-time literals, possibly negated, that must be satisfied in order for the edge to be traversed. Conjunctive subformulas accumulate such literals on the same logic edge, whereas disjunctive subformulas generate alternative branches. Hence, satis-faction of φmis is encoded as routing one unit of logical flow from vs to vt while respecting the predicate labels carried by the selected edges. Fig. 2 illustrates the basic LNF construction for disjunc-tive and conjunctive logic nodes. A disjunctive node is rep-resented by alternative predicate-labeled edges, whereas a conjunctive node accumulates multiple predicates on the same logic edge. This edge-based view is the reason that STL satisfaction can be represented by a logical flow from the source vertex to the target vertex. For each e ∈ EL, introduce a binary edge-traversal variable ye ∈ { 0, 1} and a continuous predicate-flow vector 
+
+ωe ∈ [0 , 1] Nφ . The variable ye indicates whether logic edge 
+
+e is used by the logical path, while ωe carries the predicate truth values along that edge. Let ν+ 
+
+> e
+
+, ν− 
+
+> e
+
+∈ {0, 1}Nφ
+
+denote the incidence vectors of the non-negated and negated predicates in Pe, respectively. The edge-label constraints are imposed componentwise as 
+
+ωe ≥ yeν+ 
+
+> e
+
+, ∀e ∈ E L,
+
+ωe ≤ 1 − yeν− 
+
+> e
+
+, ∀e ∈ E L, (34) where 1 is the all-one vector. If ye = 1 , these constraints force every non-negated predicate carried by e to have flow value one and every negated predicate carried by 
+
+e to have flow value zero. Predicates not appearing in 
+
+Pe are unconstrained by that edge. These constraints impose selected-edge-implies-predicate relations. They do not force an edge to become active whenever its label happens to be true, which avoids over-constraining for-mulas with multiple feasible witness times. The LNF imposes scalar edge traversal and vector predicate-flow conservation. 
+
+∑
+
+> e∈E in
+> v
+
+ye = ∑
+
+> e∈E out
+> v
+
+ye, ∀v ∈ V L \ { vs, v t},
+
+∑
+
+> e∈E out
+> vs
+
+ye = 1 ,
+
+∑
+
+> e∈E in
+> v
+
+ωe = ∑
+
+> e∈E out
+> v
+
+ωe, ∀v ∈ V L \ { vs, v t},
+
+χφ = ∑
+
+> e∈E out
+> vs
+
+ωe.
+
+(35) The vector flow ωe is an auxiliary copy of the predicate trace propagated along the selected logical path. The last equality in (35) injects the trajectory-induced predicate-time trace into the LNF source. The LNF-enhanced mission-planning problem is obtained by replacing the abstract STL satisfaction constraint q(·) |= φmis in P1 with the predicate-consistency constraints χφ ∈ Z φ(r)
+
+and the network-flow constraints (34)–(35). In the imple-mentation, the LNF flow variables are included in P2 and optimized directly together with the trajectory and BS-association variables. D. Mixed-Integer Quadratically Constrained Reformula-tion Once motion, communication, and mission logic have been transcribed, the remaining step is to collect the constraints into one mixed-integer formulation with the objective used in P1. In the current implementation, smoothness is encouraged through the objective rather than imposed as a hard acceleration bound. The motion regularization is made explicit by introducing the second-order Bézier difference. Define the second-order Bézier difference 
+
+d(2)  
+
+> n,ℓ
+
+= 6( rn,ℓ +2 − 2rn,ℓ +1 + rn,ℓ ), ℓ = 0 , 1. (36) In the Bézier transcription, the abstract motion-regularization term Jm(q) in P1 is instantiated by the squared first-order control-point differences and the squared second-order Bézier differences. Combining the LNF constraints, predicate-consistency constraints, Bézier motion constraints, serving-BS association, and handover indicators yields the following mixed-integer quadratically constrained reformulation. 
+
+(P2) min  
+
+> XP2
+> N−1
+
+∑
+
+> n=0
+
+(
+
+wp
+
+> 2
+
+∑
+
+> ℓ=0
+
+∥r(1) 
+
+> n,ℓ
+
+∥22
+
++ ws
+
+> 1
+
+∑
+
+> ℓ=0
+
+∥d(2) 
+
+> n,ℓ
+
+∥22
+
+)
+
++ who  
+
+> N−2
+
+∑
+
+> n=0
+
+ηn
+
+s.t. r0,0 = qs,xy , (22) − − (24) , (28) , (29) , (30) ,
+
+χφ ∈ Z φ(r), (34) − − (35) , (36) .
+
+Here XP2 = {r, δ, η, ξ, χφ, y, ω} collects the decision vari-ables. The handover weight who follows P1, while wp and 
+
+ws instantiate the abstract motion-regularization func-tional Jm(q) through first-order motion effort and second-order trajectory smoothness, respectively. The weights normalize the heterogeneous motion and handover terms and are selected empirically. The variable domains are 
+
+δn,i ∈ { 0, 1}, ηn ∈ { 0, 1}, ye ∈ { 0, 1}, ξk,j,ℓ,r ∈ { 0, 1},
+
+χφ ∈ { 0, 1}Nφ , and ωe ∈ [0 , 1] Nφ . In our implementation, P2 is solved in Gurobi as an MIQCP, where the norm con-straints are represented as second-order cone constraints.                               
+
+> TABLE I Main Simulation Parameters Parameter Value Workspace 5 km ×5 km
+> BS map source Baseline cellular layout Number of BS regions 30
+> Finite-blocklength (B, τ, n )(1 MHz ,1 ms ,1000)
+> URLLC target (εmax , R req )(10 −5,0.25)
+> UAV altitude H= 300 m
+> Start position (250 ,2250 ,300) m
+> Bézier segments N= 24
+> Nominal segment duration ∆t= 10 s
+> Fixed mission horizon T= 240 s
+> Maximum speed vmax = 35 m /s
+> Weights (wp, w s, w ho )(0 .5,0.005 ,10 4)
+
+V. Numerical Results A. Simulation Setup We evaluate the proposed planner in a cellular-connected UAV mission scenario over a 5 km × 5 km 
+
+square area. The UAV flies at a fixed altitude H = 300 m 
+
+from the initial position qs = [250 , 2250 , 300] ⊤ m. The baseline cellular layout contains M = 30 BS coverage disks generated from the finite-blocklength threshold. The main simulation parameters are summarized in Table I. The serving margin reported in the simulations is computed from the selected disk and the Bézier control points. If bn is the BS selected for segment n, the segment margin is 
+
+mn = ρbn − max  
+
+> ℓ=0 ,..., 3
+
+∥rn,ℓ − cbn ∥2,mmin = min   
+
+> n=0 ,...,N −1
+
+mn. (37) This definition is consistent with (29), since URLLC feasibility is imposed on all control points of the selected Bézier segment. The numerical study is organized as follows. First, we evaluate mission generality over four STL specifications under the same network map and planner. Second, we study the handover-awareness tradeoff by sweeping the handover weight who in M1. Third, we tighten the offline finite-blocklength coverage map by increasing Rreq while keeping the calibrated BS powers fixed. Finally, we report the computational footprint of the LNF instances to show how predicate count and LNF size relate to solve time. B. Mission Generality Under STL Specifications Four semantic regions are used in the mission li-brary, namely inspection region A, service region B,optional data-upload region C, and return region R. Their centers are (1156 .44 , 2515 .16) m, (3965 .45 , 2363 .05) m, 
+
+(3176 .99 , 4635 .40) m, and (3963 .76 , 4306 .47) m, respec-tively. The axis-aligned square regions have half-side lengths 300 m for A and B, and 320 m for C and R.The four STL specifications are listed in Table II, where all temporal bounds are given in seconds and T = 240 s .Table III reports the results for M1–M4 under the same cellular map, Bézier motion model, objective weights, and computation budget. All four instances return feasible trajectories satisfying the encoded STL, motion, handover, and disk-based URLLC coverage constraints. Since each serving-BS region is enforced as a quadratic disk constraint rather than a polygonal inner approximation, the re-sulting mixed-integer quadratically constrained programs are demanding. Mission-specific warm starts are used to initialize the serving-cell sequence and improve incumbent discovery. The reported values compare the resulting mis-sion timing, handover behavior, trajectory length, serving margin, and computational runtime across different STL specifications. The path lengths range from 4.949 km to 6.185 km across the mission library, and the handover counts range from six to eight. These aggregate results indicate that the proposed framework is sensitive not only to geometric path length but also to the interaction between STL mission phases and BS association. The trajectory of each mission is shown below with its corresponding analysis. TABLE II Mission Library Used in the Simulation 
+
+Mission STL specification Mission meaning M1 φ1 = ♢[0 ,T ]πA ∧ ♢[0 ,T ]πB ∧ ♢[0 ,T ]πR
+
+∧(¬πB U[0 ,T ]πA) ∧ (¬πR U[0 ,T ]πB ) Visit A, then B, and finally R within [0 , T ].M2 
+
+φ2 = ♢[0 ,T ]πA ∧ (♢[0 ,T ]πB ∨ ♢[0 ,T ]πC ) ∧ ♢[0 ,T ]πR
+
+∧(¬πB U[0 ,T ]πA) ∧ (¬πC U[0 ,T ]πA)
+
+∧((¬πR U[0 ,T ]πB ) ∨ (¬πR U[0 ,T ]πC )) Visit A within [0 , T ], then either B or C
+
+within [0 , T ], and finally R within [0 , T ].M3 φ3 = ♢[0 ,40] πA ∧ ♢[90 ,150] πB ∧ ♢[210 ,T ]πR
+
+∧(¬πB U[0 ,T ]πA) ∧ (¬πR U[0 ,T ]πB ) Visit A within [0 , 40] s, inspect B within 
+
+[90 , 150] s, and return to R within [210 , T ].M4 φ4 = ♢[0 ,60] πA ∧ ♢[90 ,150] πB ∧ ♢[180 ,220] πC ∧ ♢[220 ,T ]πR
+
+∧(¬πB U[0 ,T ]πA) ∧ (¬πC U[0 ,T ]πB ) ∧ (¬πR U[0 ,T ]πC ) Visit A within [0 , 60] s, serve B within 
+
+[90 , 150] s, upload data at C within 
+
+[180 , 220] s, and return to R within 
+
+[220 , T ].
+
+TABLE III Mission Generality Results Under the Same Network Map and Planner Mission Nφ HO Path (km) Min. margin (m) Time (s) M1 72 7 6.185 1.933 147 .35 
+
+M2 96 8 5.030 0.046 127 .41 
+
+M3 72 7 4.949 0.006 98 .20 
+
+M4 96 6 5.443 0.045 97 .28 
+
+Nφ denotes the number of predicate-time variables. 0 000 000 000 000 000  
+
+>   
+> 0
+> 000
+> 000
+> 000
+> 000
+> 000
+>   
+> A
+
+Fig. 3. Optimized trajectory for M1 with ordered inspection and return. 
+
+Fig. 3 shows the baseline ordered mission. The UAV visits A, then B, and finally returns to R while main-taining URLLC feasibility over the selected BS sequence. This mission yields the longest path in Table III, because the temporal ordering forces the route to traverse the inspection and service regions before returning. 0 000 000 000 000 000  
+
+>   
+> 0
+> 000
+> 000
+> 000
+> 000
+> 000
+>   
+> A
+
+Fig. 4. Optimized trajectory for M2 with disjunctive service selec-tion. 
+
+Fig. 4 corresponds to the disjunctive mission in which the UAV must visit A and then choose either B or 
+
+C before returning. Under the nominal handover-aware objective, the optimized trajectory satisfies the C branch. The resulting serving margin is small, which indicates that the selected disjunctive branch is shaped by both mission timing and the boundary of the URLLC disk map. 0 000 000 000 000 000  
+
+>   
+> 0
+> 000
+> 000
+> 000
+> 000
+> 000
+>   
+> A
+
+Fig. 5. Optimized trajectory for M3 with deadline-constrained inspection. 
+
+Fig. 5 illustrates the deadline-constrained inspection case. The early window for A, the scheduled window for 
+
+B, and the late return window jointly restrict where the UAV can be at each segment-level time index. The path is shorter than M1 because the time windows guide the trajectory toward a more direct mission sequence, but the minimum serving margin is also the smallest among the four missions. 0 000 000 000 000 000  
+
+>   
+> 0
+> 000
+> 000
+> 000
+> 000
+> 000
+>   
+> A
+
+Fig. 6. Optimized trajectory for M4 with data-upload service. 
+
+Fig. 6 adds a data-upload visit to C after the service phase at B. Compared with the ordered mission in M1, this extra mission phase changes the route and serving-cell sequence, but the handover count is reduced to six because the optimizer can maintain several consecutive segments under the same serving BS while moving toward C and 
+
+R.C. Handover Awareness and Finite-Blocklength Strin-gency The handover-weight sensitivity study is conducted based on M1. For who = 10 3, 5×10 3, and 10 4, the handover counts are seven, six, and seven, respectively, while the minimum serving margins are approximately 0 m, 0 m, and 1.933 m. These results indicate that changing who 
+
+can alter the serving-BS sequence and serving margin, but the handover count is not monotone because the selected mission is also constrained by the overlap between the required mission regions and the URLLC disks. We therefore use this sweep as a sensitivity check rather than as the main evidence for a monotone handover-reduction trend. Figs. 7 and 8 evaluate finite-blocklength stringency. The offline disk map is first calibrated at Rreq = 0 .25 
+
+bits/channel use and then recomputed with the calibrated BS powers fixed. Increasing Rreq from 0.25 to 0.30 raises the required SNR from 0.291 to 0.342 and reduces the average disk radius from 635 .17 m to 578 .83 m. The planner finds feasible incumbents for Rreq = 0 .25 and 0.28 ,with minimum serving margins of 1.933 m and 3.403 m, respectively. Under the same 180 s time limit, no feasible incumbent is found at Rreq = 0 .30 . This does not prove mathematical infeasibility, but it shows that the current mission is close to the URLLC coverage boundary and that stricter finite-blocklength requirements can remove the effective planning margin. 0 0 0 0 0 00 
+
+R    ! 
+
+ 0
+
+00 
+
+0 
+
+>   ! 
+
+" 
+
+! 
+
+Fig. 7. Average and minimum offline disk radii under different finite-blocklength rate requirements. 0 0 00 
+
+R    
+
+00 
+
+0 
+
+0 
+
+0 
+
+0 
+
+0 
+
+>  
+
+  
+
+ 
+
+0 
+
+ 
+
+0 
+
+>   
+
+Fig. 8. Feasible incumbent indicator and minimum serving margin under different finite-blocklength rate requirements. D. Computational Footprint Fig. 9 compares the number of unique predicate-time variables, LNF edges, and solve times across the mission library. The LNF size reflects the temporal-logic structure of the mission. M2 grows due to the disjunctive branch, and M4 grows because it includes an additional data-upload region. Runtime, however, is not determined by the LNF size alone. The control-point-hull predicate encoding couples each logical predicate with multiple Bézier control points, so solve time also depends on the geometry of fea-sible mission regions and their overlap with URLLC disks. This confirms that the computational burden comes from the combined mission-network-motion structure rather than from the STL formula size alone. 
+
+Fig. 9. Computational footprint of the mission library. Predicate-time variable count, LNF edge count, and solve time capture complementary aspects of the coupled STL, handover, and Bézier planning problem. 
+
+VI. Conclusion In this paper, we studied handover-aware trajectory planning for cellular-connected UAVs executing STL-specified missions under finite-blocklength URLLC con-straints. We formulated a joint mission-network-motion optimization problem that couples STL satisfaction, Bézier-parameterized motion, BS association, and han-dover behavior, and transformed it into a mixed-integer quadratically constrained model through an LNF-based STL reformulation. Simulations on four STL missions show that the same planner can handle ordered inspection, disjunctive service selection, deadline-constrained inspec-tion, and data-upload tasks under one network map. The results also show that mission timing and URLLC coverage jointly shape the feasible trajectory, serving margin, and handover sequence. Future work will extend the framework to time-varying wireless maps and scalable multi-UAV planning. References 
+
+[1] L. Zhou, S. Leng, T. Liang, and J. Yao, “LSAI: A large small AI model codesign framework for agentic robot scenarios,” 2026. [Online]. Available: https://arxiv.org/abs/2603.21726 [2] T. Liang, H. Ding, Y. Ping, T. Zhang, L. Zhou, Q. Zhang, and T. Q. S. Quek, “Satellite-assisted UAV control: Sensing and communication scheduling for energy efficient data collection,” IEEE Internet of Things Journal, pp. 1–1, 2025. [3] T. Liang, T. Zhang, B. Cao, and Q. Zhang, “Sensing, com-munication, and control co-design for energy-efficient UAV-aided data collection,” IEEE Wireless Communications Letters, vol. 13, no. 10, pp. 2852–2856, 2024. [4] F. Toscano, C. Fiorentino, N. Capece, U. Erra, D. Travascia, A. Scopa, M. Drosos, and P. D’Antonio, “Unmanned aerial ve-hicle for precision agriculture: A review,” IEEE Access, vol. 12, pp. 69 188–69 205, 2024. [5] Y. Ping, T. Liang, H. Ding, G. Lei, J. Wu, X. Zou, K. Shi, R. Shao, C. Zhang, W. Zhang, W. Yuan, and T. Zhang, “Mul-timodal large language models-enabled UAV swarm: Towards efficient and intelligent autonomous aerial systems,” IEEE Wireless Communications, vol. 33, no. 1, pp. 89–97, 2026. [6] T. Liang, T. Zhang, Q. Wu, W. Liu, D. Li, Z. Xie, D. Li, and Q. Zhang, “Age of information based scheduling for UAV aided localization and communication,” IEEE Transactions on Wireless Communications, vol. 23, no. 5, pp. 4610–4626, 2023. [7] T. Liang, M. Jia, T. Zhang, J. Chen, L. Zhou, T. Q. S. Quek, and P.-Y. Kam, “UAV detection and localization: A RF-based framework via multiple stations collaboration,” IEEE Transactions on Network Science and Engineering, vol. 13, pp. 5736–5751, 2026. [8] T. Liang, T. Zhang, S. Zhou, W. Liu, D. Li, and Q. Zhang, “UAV-aided localization and communication: Joint frame struc-ture, beamwidth, and power allocation,” IEEE Journal of Selected Areas in Sensors, vol. 1, pp. 154–165, 2024. [9] L. Zhou, S. Leng, Z. Li, T. Liang, and T. Q. S. Quek, “Multi-sized AI models assisted low-altitude UAV delivery with RAN optimization,” IEEE Internet of Things Magazine, vol. 9, no. 2, pp. 101–107, 2026. [10] O. Maler and D. Nickovic, “Monitoring temporal properties of continuous signals,” in Formal Techniques, Modelling and Analysis of Timed and Fault-Tolerant Systems. Springer, 2004, pp. 152–166. [11] C. Belta, B. Yordanov, and E. A. Gol, Formal Methods for Discrete-Time Dynamical Systems. Springer, 2017. [12] C. Belta and S. Sadraddini, “Formal methods for control syn-thesis: An optimization perspective,” Annual Review of Control, Robotics, and Autonomous Systems, vol. 2, no. 1, pp. 115–140, 2019. [13] V. Raman, A. Donzé, M. Maasoumy, R. M. Murray, A. Sangiovanni-Vincentelli, and S. A. Seshia, “Model predictive control with signal temporal logic specifications,” in 53rd IEEE Conference on Decision and Control. IEEE, 2014, pp. 81–87. [14] Y. Ping, H. Ding, T. Liang, L. Zhou, G. Lei, X. Chen, J. Wu, J. Zhou, and T. Zhang, “LLM-enabled low-altitude UAV natural language navigation via signal temporal logic specification translation and repair,” arXiv preprint arXiv:2603.27583, 2026. [15] P. Popovski, K. F. Trillingsgaard, O. Simeone, and G. Durisi, “Wireless access for ultra-reliable low-latency communication: Principles and building blocks,” IEEE Network, vol. 32, no. 2, pp. 16–23, 2018. [16] M. Bennis, M. Debbah, and H. V. Poor, “Ultra-reliable and low-latency wireless communication: Tail, risk, and scale,” Pro-ceedings of the IEEE, vol. 106, no. 10, pp. 1834–1853, 2018. [17] X. Lin, V. Yajnanarayana, S. D. Muruganathan, S. B. Gao, H. Asplund, H.-L. Maattanen, M. Bergstrom, S. Euler, and Y.-P. E. Wang, “The sky is not the limit: LTE for unmanned aerial vehicles,” IEEE Communications Magazine, vol. 56, no. 4, pp. 204–210, 2018. [18] S. D. Muruganathan, X. Lin, H.-L. Maattanen, J. Sedin, Z. Zou, W. A. Hapsari, and S. Yasukawa, “An overview of 3GPP release-15 study on enhanced LTE support for connected drones,” IEEE Communications Standards Magazine, vol. 2, no. 4, pp. 126–132, 2018. [19] Y. Zeng, Q. Wu, and R. Zhang, “Accessing from the sky: A tutorial on UAV communications for 5G and beyond,” Proceedings of the IEEE, vol. 107, no. 12, pp. 2327–2375, 2019. [20] Y. Zeng, J. Lyu, and R. Zhang, “Cellular-connected UAV: Po-tential, challenges, and promising technologies,” IEEE Wireless Communications, vol. 26, no. 1, pp. 120–127, 2019. [21] S. Zhang, Y. Zeng, and R. Zhang, “Cellular-enabled UAV com-munication: A connectivity-constrained trajectory optimization perspective,” IEEE Transactions on Communications, vol. 67, no. 3, pp. 2580–2604, 2018. [22] A. Madelkhanova, Z. Becvar, and T. Spyropoulos, “Optimiza-tion of cell individual offset for handover of flying base stations and users,” IEEE Transactions on Wireless Communications, vol. 22, no. 5, pp. 3180–3193, 2022. [23] X. Du, S. Zhang, and F. C.-M. Lau, “Handover-aware trajec-tory optimization for cellular-connected UAV,” IEEE Wireless Communications Letters, 2025. [24] H. Kress-Gazit, G. E. Fainekos, and G. J. Pappas, “Temporal-logic-based reactive mission and motion planning,” IEEE Trans-actions on Robotics, vol. 25, no. 6, pp. 1370–1381, 2009. [25] M. Kloetzer and C. Belta, “Automatic deployment of dis-tributed teams of robots from temporal logic motion specifi-cations,” IEEE Transactions on Robotics, vol. 26, no. 1, pp. 48–61, 2010. [26] E. Plaku and S. Karaman, “Motion planning with temporal-logic specifications: Progress and challenges,” AI Communica-tions, vol. 29, no. 1, pp. 151–162, 2016. [27] Y. Kantaros and M. M. Zavlanos, “STyLuS*: A temporal logic optimal control synthesis algorithm for large-scale multi-robot systems,” The International Journal of Robotics Research, vol. 39, no. 7, pp. 812–836, 2020. [28] G. E. Fainekos and G. J. Pappas, “Robustness of temporal logic specifications for continuous-time signals,” Theoretical Computer Science, vol. 410, no. 42, pp. 4262–4291, 2009. [29] A. Donzé, T. Ferrère, and O. Maler, “Efficient robust monitoring for STL,” in International Conference on Computer Aided Verification. Springer, 2013, pp. 264–279. [30] V. Raman, A. Donzé, D. Sadigh, R. M. Murray, and S. A. Seshia, “Reactive synthesis from signal temporal logic specifications,” in Proceedings of the 18th International Conference on Hybrid Systems: Computation and Control, 2015, pp. 239–248. [31] E. M. Wolff, U. Topcu, and R. M. Murray, “Optimization-based trajectory generation with linear temporal logic specifications,” in 2014 IEEE International Conference on Robotics and Au-tomation (ICRA), 2014, pp. 5319–5325. [32] D. Sun, J. Chen, S. Mitra, and C. Fan, “Multi-agent mo-tion planning from signal temporal logic specifications,” IEEE Robotics and Automation Letters, vol. 7, no. 2, pp. 3451–3458, 2022. [33] J. Dzifcak, M. Scheutz, C. Baral, and P. Schermerhorn, “What to do and how to do it: Translating natural language direc-tives into temporal and dynamic logic representation for goal management and action execution,” in 2009 IEEE International Conference on Robotics and Automation. IEEE, 2009, pp. 4163–4168. [34] C. Finucane, G. Jing, and H. Kress-Gazit, “LTLMoP: Exper-imenting with language, temporal logic and robot control,” in 2010 IEEE/RSJ International Conference on Intelligent Robots and Systems. IEEE, 2010, pp. 1988–1993. [35] V. Kurtz and H. Lin, “A more scalable mixed-integer encoding for metric temporal logic,” IEEE Control Systems Letters, vol. 6, pp. 1718–1723, 2022. [36] ——, “Mixed-integer programming for signal temporal logic with fewer binary variables,” IEEE Control Systems Letters, vol. 6, pp. 2635–2640, 2022. [37] X. Lin, J. Ren, Y. Luo, W. Xie, and Y. Zhao, “Towards tighter convex relaxation of mixed-integer programs: Leveraging logic network flow for task and motion planning,” arXiv preprint arXiv:2509.24235, 2025. [38] A. Richards and J. P. How, “Aircraft trajectory planning with collision avoidance using mixed integer linear programming,” in Proceedings of the 2002 American Control Conference, vol. 3. IEEE, 2002, pp. 1936–1941. [39] D. Mellinger and V. Kumar, “Minimum snap trajectory gener-ation and control for quadrotors,” in 2011 IEEE International Conference on Robotics and Automation. IEEE, 2011, pp. 2520–2525. [40] R. Deits and R. Tedrake, “Computing large convex regions of obstacle-free space through semidefinite programming,” in Algorithmic Foundations of Robotics XI. Springer, 2015, pp. 109–124. [41] ——, “Efficient mixed-integer planning for UAVs in cluttered environments,” in 2015 IEEE International Conference on Robotics and Automation. IEEE, 2015, pp. 42–49. [42] J. Schulman, Y. Duan, J. Ho, A. Lee, I. Awwal, H. Bradlow, J. Pan, S. Patil, K. Goldberg, and P. Abbeel, “Motion planning with sequential convex optimization and convex collision check-ing,” The International Journal of Robotics Research, vol. 33, no. 9, pp. 1251–1270, 2014. [43] T. Marcucci, M. Petersen, D. von Wrangel, and R. Tedrake, “Motion planning around obstacles with convex optimization,” Science robotics, vol. 8, no. 84, p. eadf7843, 2023. [44] T. Marcucci, J. Umenberger, P. Parrilo, and R. Tedrake, “Shortest paths in graphs of convex sets,” SIAM Journal on Optimization, vol. 34, no. 1, pp. 507–532, 2024. [45] S. Hayat, E. Yanmaz, and R. Muzaffar, “Survey on unmanned aerial vehicle networks for civil applications: A communications viewpoint,” IEEE Communications Surveys & Tutorials, vol. 18, no. 4, pp. 2624–2661, 2016. [46] Y. Zeng, R. Zhang, and T. J. Lim, “Wireless communications with unmanned aerial vehicles: Opportunities and challenges,” IEEE Communications Magazine, vol. 54, no. 5, pp. 36–42, 2016. [47] M. Mozaffari, W. Saad, M. Bennis, Y.-H. Nam, and M. Debbah, “A tutorial on UAVs for wireless networks: Applications, chal-lenges, and open problems,” IEEE Communications Surveys & Tutorials, vol. 21, no. 3, pp. 2334–2360, 2019. [48] A. Fotouhi, M. Ding, and M. Hassan, “Survey on UAV cellular communications: Practical aspects, standardization advance-ments, regulation, and security challenges,” IEEE Communica-tions Surveys & Tutorials, vol. 21, no. 4, pp. 3417–3442, 2019. [49] B. Li, Z. Fei, and Y. Zhang, “UAV communications for 5G and beyond: Recent advances and future trends,” IEEE Internet of Things Journal, vol. 6, no. 2, pp. 2241–2263, 2019. [50] W. Khawaja, I. Guvenc, D. W. Matolak, U.-C. Fiebig, and N. Schneckenburger, “A survey of air-to-ground propagation channel modeling for unmanned aerial vehicles,” IEEE Com-munications Surveys & Tutorials, vol. 21, no. 3, pp. 2361–2391, 2019. [51] R. Amorim, H. Nguyen, P. Mogensen, I. Z. Kovacs, J. Wigard, and T. B. Sorensen, “Measured uplink interference caused by aerial vehicles in LTE cellular networks,” IEEE Wireless Communications Letters, vol. 7, no. 6, pp. 958–961, 2018. [52] G. Geraci, A. Garcia-Rodriguez, D. Lopez-Perez, E. Bjoernson, M. Ding, H. Claussen, and G. Fettweis, “Understanding UAV cellular communications: From existing networks to massive MIMO,” IEEE Access, vol. 6, pp. 67 853–67 865, 2018. [53] Y. Kawamoto, H. Yamada, H. Nishiyama, N. Kato, F. Ono, and R. Miura, “Toward future unmanned aerial vehicle networks: Architecture, resource allocation and field experiments,” IEEE Wireless Communications, vol. 26, no. 1, pp. 94–99, 2019. [54] N. Cheng, W. Xu, W. Shi, Y. Zhou, N. Lu, H. Zhou, and X. Shen, “Air-ground integrated mobile edge networks: Archi-tecture, challenges, and opportunities,” IEEE Communications Magazine, vol. 56, no. 8, pp. 26–32, 2018. [55] U. Challita, A. Ferdowsi, M. Chen, and W. Saad, “Machine learning for wireless connectivity and security of cellular-connected UAVs,” IEEE Wireless Communications, vol. 26, no. 1, pp. 28–35, 2019. [56] S. Zhang and R. Zhang, “Trajectory design for cellular-connected UAV under outage duration constraint,” in ICC 2019-2019 IEEE International Conference on Communications (ICC). IEEE, 2019, pp. 1–6. [57] H.-S. Im, K.-Y. Kim, and S.-H. Lee, “Trajectory optimization for cellular-enabled UAV with connectivity and battery con-straints,” IEEE Transactions on Vehicular Technology, 2025. [58] D. Yang, Q. Dan, L. Xiao, C. Liu, and L. Cuthbert, “An efficient trajectory planning for cellular-connected UAV under the connectivity constraint,” China Communications, vol. 18, no. 2, pp. 136–151, 2021. [59] Y. Ping, T. Zhang, and T. Liang, “Handover-aware URLLC UAV trajectory planning: A continuous-time trajectory op-timization via graphs of convex sets,” arXiv preprint arXiv:2511.13429, 2025. [60] J. Luo, T. Liang, C. Chen, and T. Zhang, “A UAV mounted RIS aided communication and localization integration system for ground vehicles,” in 2022 IEEE International Conference on Communications Workshops (ICC Workshops), 2022, pp. 139– 144. [61] H. Zeng, X. Lu, Y. Huang, S. Huang, S. Feng, X. Zhu, and J. Cao, “Deep reinforcement learning-based joint resource allocation and trajectory design for UAV-assisted multi-cell ISAC systems,” IEEE Transactions on Network Science and Engineering, vol. 13, pp. 6383–6401, 2026. [62] T. Liang, T. Zhang, and Q. Zhang, “Toward seamless localiza-tion and communication: A satellite-UAV NTN architecture,” IEEE Network, vol. 38, no. 4, pp. 103–110, 2024. [63] I. Parvez, A. Rahmati, I. Guvenc, A. I. Sarwat, and H. Dai, “A survey on low latency towards 5G: RAN, core network and caching solutions,” IEEE Communications Surveys & Tutorials, vol. 20, no. 4, pp. 3098–3130, 2018. [64] G. J. Sutton, J. Liu, D. Grace, X. Fang, and J. Zhang, “Enabling technologies for ultra-reliable and low latency communications: From PHY and MAC layer perspectives,” IEEE Communica-tions Surveys & Tutorials, vol. 21, no. 3, pp. 2488–2524, 2019. [65] C. She, C. Sun, Z. Gu, Y. Li, C. Yang, H. V. Poor, and B. Vucetic, “A tutorial on ultra-reliable and low-latency com-munications in 6G: Integrating domain knowledge into deep learning,” Proceedings of the IEEE, vol. 109, no. 3, pp. 204– 246, 2021. [66] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the finite blocklength regime,” IEEE Transactions on Information Theory, vol. 56, no. 5, pp. 2307–2359, 2010. [67] G. Durisi, T. Koch, and P. Popovski, “Toward massive, ul-trareliable, and low-latency wireless communication with short packets,” Proceedings of the IEEE, vol. 104, no. 9, pp. 1711– 1726, 2016. [68] M. Shirvanimoghaddam, Y. Li, B. Vucetic, M. Dohler, and S. Feng, “Short block-length codes for ultra-reliable low latency communications,” IEEE Communications Magazine, vol. 57, no. 2, pp. 130–137, 2019. [69] F. Salehi, M. Ozger, N. Neda, and C. Cavdar, “Ultra-reliable low-latency communication for aerial vehicles via multi-connectivity,” in 2022 Joint European Conference on Networks and Communications & 6G Summit (EuCNC/6G Summit). IEEE, 2022, pp. 166–171. [70] P. Yang, X. Xi, T. Q. S. Quek, J. Chen, and X. Cao, “Power control for a URLLC-enabled UAV system incorporated with DNN-based channel estimation,” IEEE Wireless Communica-tions Letters, vol. 10, no. 5, pp. 1018–1022, 2021. [71] Q. Liang, Y. Ping, T. Liang, and T. Zhang, “Communication and control co-design for uav trajectory tracking: An event triggered strategy,” in 2025 IEEE 102nd Vehicular Technology Conference (VTC2025-Fall), 2025, pp. 1–5. [72] H. Ding, T. Liang, Y. Ping, and T. Zhang, “Adaptive com-munication and control co-design for remote UAV systems,” in 2025 IEEE 101st Vehicular Technology Conference (VTC2025-Spring), 2025, pp. 1–6. [73] Y. Ping, T. Liang, H. Ding, and T. Zhang, “Communication and control co-design for distributed UAV formation,” in GLOBE-COM 2024 - 2024 IEEE Global Communications Conference, 2024, pp. 5006–5011. [74] G. Lei, T. Liang, Y. Ping, X. Chen, L. Zhou, J. Wu, X. Zhang, H. Ding, X. Zhang, W. Yuan, T. Zhang, and Q. Zhang, “Towards secure low-altitude airspace: MLLM-enabled UAV intent recognition,” IEEE Internet of Things Magazine, vol. 9, no. 2, pp. 93–100, 2026. [75] A. Al-Hourani, S. Kandeepan, and S. Lardner, “Optimal LAP altitude for maximum coverage,” IEEE wireless communications letters, vol. 3, no. 6, pp. 569–572, 2014.

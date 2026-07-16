@@ -1,0 +1,789 @@
+Title: RCOA Extension and Applications
+
+URL Source: https://arxiv.org/pdf/2607.02797v1
+
+Published Time: Tue, 07 Jul 2026 00:15:13 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+> 1
+
+# RCOA Extension and Applications 
+
+Ricardo Tapia, Iman Soltani 
+
+Abstract —The Relaxed Convex Obstacle Avoidance (RCOA) formulation is the first approach to enable a fully convex optimal control problem (OCP) for obstacle avoidance. Conver-gence analysis of RCOA yields an analytical framework that defines a unique characteristic: the ability to maintain obstacle avoidance (OA) efficacy even when obstacles reside beyond the controller’s prediction horizon. In this paper, RCOA is extended to three-dimensional environments and apply it to Unmanned Aerial Vehicle (UAV) navigation. Furthermore, the formulation is enhanced to incorporate vehicle geometries, moving beyond point-mass representations to enable collision avoidance between 3D objects. Numerical simulations demonstrate that RCOA provides computational performance on par or exceeding state-of-the-art methods. Notably, RCOA is demonstrated to enable a Nonlinear Model Predictive Controller (NMPC) to execute aggressive maneuvers through narrow passages with reduced prediction horizons, ensuring real-time feasibility at frequencies exceeding 30 Hz. 
+
+I. I NTRODUCTION 
+
+The proliferation of Unmanned Aerial Vehicles (UAVs) in highly constrained, unstructured environments ranging from urban air mobility and autonomous delivery to search and rescue operations in collapsed structures, has intensified the demand for robust local path planning. In these scenarios, au-tonomy requires not only navigating unforeseen environmental changes and dynamic obstacles but doing so while pushing the vehicle to its dynamic limits. Local planners must generate trajectories that are strictly collision-free, respect high-order nonlinear vehicle dynamics, and satisfy external constraints such as actuator saturation or wind disturbances [1]. Existing methodologies are broadly categorized into non-optimization and optimization-based approaches. Classic non-optimization methods, such as Artificial Potential Fields (APF) [2], Hybrid A*, and the Dynamic Window Approach (DWA) [3], are computationally efficient but often suffer from local minima or a lack of dynamic consistency. Recent efforts have attempted to mitigate these issues by hybridizing sampling-based methods like RRT with DWA or Reinforcement Learn-ing [4], [5]. However, these multi-component frameworks often increase architectural complexity without addressing the underlying limitations of the individual algorithms. Sampling-based methods, in particular, struggle with high-dimensional differential constraints, often requiring the solution of complex Boundary Value Problems (BVP) or excessive linearization to maintain accuracy between nodes [6].           
+
+> Ricardo Tapia is with the Laboratory for AI, Robotics and Automa-tion, University of California at Davis, Davis, CA 95616 USA. Email: ricardo.tapia.m@proton.me. Iman Soltani (Corresponding Author, Lab PI) is with the Laboratory for AI, Robotics and Automation, University of California at Davis, Davis, CA 95616 USA. Email: isoltani@ucdavis.edu Author contributions: Ricardo Tapia conceived the project, designed and carried out the simulations, performed the analysis, and wrote the manuscript. Lab PI Iman Soltani sponsored this work in part.
+
+Optimization-based methods, specifically Model Predictive Control and Nonlinear MPC (NMPC), inherently integrate dynamics and constraints. However, their real-time applica-tion is often hindered by two factors: (i) the nonconvexity of vehicle dynamics and (ii) the computational burden of obstacle avoidance constraints. While convex OCPs enjoy fast convergence, nonconvex formulations for obstacle avoidance typically require sequential quadratic programming (SQP) or successive convexification programming (SSCP) to remain tractable. A significant limitation of standard (N)MPC is its dependence on the prediction horizon; if an obstacle is out-side this horizon, the controller remains ”blind,” necessitating longer horizons that increase computational cost and may violate real-time frequency requirements. This creates a severe operational paradox for high-speed, ag-ile systems. To safely navigate cluttered environments, a fast-moving UAV requires a sufficiently long prediction horizon to detect obstacles and compute dynamically feasible evasive maneuvers before it is too late. However, extending the predic-tion horizon exponentially increases the computational burden, particularly when evaluating complex, nonconvex obstacle avoidance constraints. If the computational latency exceeds the sampling time, the controller destabilizes. Conversely, if the horizon is kept short to maintain high control frequencies, the NMPC becomes effectively ”myopic.” A myopic controller operating with hard spatial constraints will not react to an obstacle until it enters the prediction horizon, which, for high-speed flight, often results in inevitable collisions due to actuator limits and system inertia. Breaking this dependency between prediction horizon and avoidance capability is critical for the real-time deployment of NMPC in agile robotics. Furthermore, standard OCP formulations overwhelmingly simplify the vehicle as a point-mass. To prevent collisions, the physical dimensions of the vehicle are typically accounted for by inflating the obstacle boundaries uniformly. While mathe-matically convenient, this static inflation is highly conservative and orientation-independent. For a dynamically rotating UAV, approximating the vehicle as a bounding sphere completely eliminates the ability to execute aggressive, high-roll ma-neuvers to slip through narrow gaps. True high-performance autonomy requires the OCP to understand the exact, rotating volumetric footprint of the vehicle so it can leverage the UAV’s attitude to thread through tight corridors that a point-mass formulation would classify as infeasible. To address these challenges, the Relaxed Convex Obstacle Avoidance (RCOA) was presented in [7]. As a fully convex OA formulation, RCOA was initially validated in 2D using bicycle models with nonlinear tire dynamics, outperforming standard formulations like [8] and [9]. This paper extends RCOA in three critical dimensions: 1) 3D Scaling: Extend the RCOA formulation to three-
+
+> arXiv:2607.02797v1 [eess.SY] 2 Jul 2026 2
+
+dimensional space, addressing the scaling challenges in-herent in aerial navigation. 2) Vehicle Geometry: Transition from point-mass represen-tations to a multi-point approximation of vehicle geome-try, allowing for high-fidelity collision checking between 3D objects without excessive conservatism. 3) Horizon Independence: We demonstrate RCOA’s unique property where the analytical formulation provides aguidance effect for obstacles residing outside the NMPC prediction horizon. The performance of RCOA is evaluated through two pri-mary simulations involving quadrotor dynamics. The first assesses 3D navigation efficiency against notable OA bench-marks, demonstrating RCOA’s consistent computational ad-vantage. The second highlights a high-performance maneuver navigating a narrow passage under aggressive roll angles. Results show that RCOA facilitates successful navigation with a reduced prediction horizon, enabling controller frequencies over 30 Hz despite the nonconvex nature of the underlying dynamics. The remainder of this paper is organized as follows: Section II reviews related work in optimization-based OA. Section III defines the 3D RCOA formulation and vehicle geometry approximations. Section IV presents the simulation results, and Section V concludes the paper. II. R ELATED WORK 
+
+A. Obstacle Avoidance 
+
+The obstacle avoidance (OA) problem is foundational across robotics, with methodologies broadly categorized into non-optimization and optimization-based approaches. Early non-optimization methods, such as Artificial Potential Fields (APF) [10], [11] and the Gilbert-Johnson-Keerthi (GJK) algorithm [12], paved the way for geometric collision checking. The subsequent integration of these concepts into optimal control has driven significant progress. For instance, APF methods [13], [14] and ellipsoidal calculus [15], [16], [17] have been directly incorporated into Optimal Control Problems (OCPs). This integration is highly desirable, as it naturally couples vehicle dynamics with the generation of feasible, obstacle-free trajectories. Naturally most obstacle avoidance formulations are based on defining spacial region of the obstacle, typically simplified to primitive shapes such as rectangles and ellipses in R2
+
+[8], [9], or polytopes and ellipsoids in R3 [18], [19]. Some combine both Euclidean distance and spatial regions [19], [20]. The alternative approach is to define obstacle free regions instead, [21], [22]. The focus here is in OA formulations that use primitive shapes to define obstacles, furthermore; formulations that naturally extend to three dimensions and can also account for the shape (volume) of the controlled vehicle. Recent research has yielded significant advancements in OA formulations that capture vehicle volume. A notable approach is DCOL [18], which extends the foundational work of [23] by embedding the minimum scaled distance optimization problem directly into the OCP. DCOL accommodates a variety of primitive shapes, from polytopes to ellipsoids. While it exhibits strong performance, it inherently requires solving a convex minimum scaled distance problem at every iteration by passing differentiable KKT conditions to the OCP solver. Con-sequently, achieving real-time tractability with this framework heavily relies on highly optimized, language specific custom cone solvers, as standard solvers generally yield significantly higher computational latency for this specific architecture. Other prominent volumetric formulations include the ap-plication of ellipsoidal calculus [16] and dual problem ap-proaches capable of accommodating polytopic or spherical vehicle representations [20]. To evaluate the overlap of two ellipsoids, [16] define a scaled combination of the two ellip-soids, leveraging the criteria established in [24]: 
+
+K(λ) = 1 − (w − v)T ( 1(1 − λ) B−1 + 1
+
+λ A−1)−1(w − v) (1) where A and B are positive definite matrices defining the geometries of the respective ellipsoids, v, w ∈ Rn denote their centers, and λ ∈ [0 , 1] is a scaling factor. Collision avoidance is guaranteed if there exists a λ ∈ [0 , 1] such that 
+
+K(λ) ⩽ 0. When applied within an OCP, where the vehicle center v and rotation matrix (embedded in A) become decision variables, the formulation becomes highly nonconvex. Notably, this shares fundamental similarities with the standard point-to-ellipsoid OA constraint of [8]: 
+
+1 − (v − w)T B(v − w) ⩽ 0 (2) Alternatively, the formulation proposed in [20] utilizes the dual problem of the minimum distance between two convex sets [25]. Defining the obstacle set as Aoyo ⩽ bo and the vehicle set as Av Rib(yv − v) ⩽ bv (where Rib ∈ SO (3) maps the body frame to the inertial frame), the resulting dual OA constraints are given by: 
+
+−bTv μ + ( Aov − bo)T λ > 0
+
+−ATv μ + RT ATo λ = 0 
+
+∥ATo λ∥∗ = 1 , λ ⩾ 0, μ ⩾ 0
+
+(3) where μ and λ are dual variables. Enforcing the dual norm constraint ∥ATo λ∥∗ = 1 ensures that the spatial distance between the two sets is actively minimized rather than strictly relaxed. In this paper, RCOA is directly compared against the formulations defined by (1) and (3), as they are explicitly designed for 3D volumetric collision detection. The continuous 
+
+λ ∈ [0 , 1] representation of [16] is selected over the discrete optimization of λ∗ in [24] to increase the degrees of freedom for the OCP solver. A critical limitation of the aforementioned formulations (with the partial exception of (2)) is their high degree of nonconvexity. Furthermore, they function as hard spatial con-straints. Consequently, their reliability depends entirely on the OCP’s prediction horizon. If a trajectory leads directly toward an obstacle, but the obstacle falls just outside the finite prediction window, the trajectory remains unaltered. While acceptable for slow moving systems, this ”blindness” forces a severe compromise for highly dynamic UAVs. Finally, it should be noted that while Mixed Integer Programming (MIP) 3
+
+formulations offer an alternative for OA, their exponential worst case computational complexity renders them intractable for the high-frequency, real-time NMPC applications targeted in this study. III. M ETHODOLOGY 
+
+A. RCOA 
+
+The foundational RCOA formulation [7] defines an obstacle boundary as a rectangular region enclosed by two opposite vertices, (xo
+
+> min
+
+, y o
+
+> min
+
+) and (xo
+
+> max
+
+, y o
+
+> max
+
+). The core logic of the obstacle avoidance (OA) formulation is defined by the following spatial exclusions: 
+
+xo 
+
+> min
+
+⩽ X ⩽ xo 
+
+> max
+
+=⇒ Y ⩾ yo 
+
+> max
+
+(4) 
+
+or 
+
+xo 
+
+> min
+
+⩽ X ⩽ xo 
+
+> max
+
+=⇒ Y ⩽ yo 
+
+> min
+
+(5) where (X, Y ) designates the Cartesian position of the vehicle. Assuming the coordinate frame is aligned with the (X, Y )
+
+axes, a vehicle bounded laterally by the obstacle must remain strictly above or below it. While such logical constraints are typically incorporated into Optimal Control Problems (OCPs) using MIP [26], RCOA uniquely translates this logic into a continuous, fully convex format. The formulation is summa-rized as follows: 
+
+min faug = f0 + fobs (γ) (6a) s.t. − X ⩽ −xo 
+
+> min
+
++ M1γ1 (6b) 
+
+X ⩽ xo 
+
+> max
+
++ M2γ2 (6c) 
+
+γ1 + γ2 ⩽ 1, γ1, γ 2 ∈ [0 , 1] (6d) coupled with either the upper or lower boundary constraint: 
+
+Y ⩾ yo 
+
+> max
+
+− M3(γ1 + γ2) (7) 
+
+or Y ⩽ yo 
+
+> min
+
++ M3(γ1 + γ2) (8) where f0 is the primary cost function, and fobs is a linear penalty function defined as: 
+
+fobs = w(γ1 + γ2) (9) with weight w > 0, Mi ∈ R++ are sufficiently large constants, and γi serve as relaxed continuous variants of binary indicator variables. Assuming problem feasibility, the OA formulation func-tions as follows: If the vehicle approaches the left obsta-cle boundary ( xo
+
+> min
+
+), the penalty function drives γ1 → 0,effectively removing the M1γ1 buffer. Once the conditional domain xo 
+
+> min
+
+⩽ X ⩽ xo 
+
+> max
+
+is entered, the constraints force 
+
+γ1 = γ2 = 0 . Consequently, γ1 + γ2 = 0 , which strictly enforces Y ⩾ yo 
+
+> max
+
+via (7) or Y ⩽ yo 
+
+> min
+
+via (8). Because these two spatial topologies represent distinct convex regions, solving for the globally optimal path requires formulating two parallel OCPs (one for (7) and one for (8)). A defining characteristic of RCOA emerges from its op-timality conditions. As derived from KKT analysis in [7, Theorem 1], the optimal spatial states satisfy the following relationship: 
+
+Y ∗ ⩾ yo 
+
+> max
+
+− M3
+
+M1
+
+(xo 
+
+> min
+
+− X∗) (10) This analytical property dictates that as the vehicle approaches the lateral boundary ( xo
+
+> min
+
+), its vertical position is proportion-ally regulated toward the safe boundary ( yo
+
+> max
+
+). Crucially, this KKT derived regulation acts independently of the OCP pre-diction horizon. It provides an intrinsic anticipatory guidance, prompting evasive action before the obstacle enters the finite horizon window, a unique advantage over hard-constrained formulations that remain blind beyond their horizon. 
+
+B. Three-Dimensional and Volumetric RCOA Extensions 
+
+To extend this methodology for three-dimensional aerial applications, obstacles are modeled as rectangular prisms aligned with a local coordinate frame. The obstacle set is defined as: 
+
+O = {x ∈ R3 | Ax ⩽ b} (11) where A ∈ R6×3 contains orthogonal normal vec-tors corresponding to the fixed obstacle coordinate system (±ˆx, ±ˆy, ±ˆz), and b defines the physical dimensions, i.e. half lengths of, b = ( xo
+
+> max
+
+, −xo
+
+> min
+
+, y o
+
+> max
+
+, −yo
+
+> min
+
+, z o
+
+> max
+
+, −zo
+
+> min
+
+)T .The vehicle’s position relative to the obstacle is obtained via the homogeneous transformation matrix in SE (3) :
+
+T =
+
+ROW p
+
+0 1
+
+
+
+(12) where ROW ∈ SO (3) maps the world frame to the obstacle frame, and p translates the world origin. Because RCOA fundamentally relies on axis-splitting, it naturally scales to 3D. The formulation requires designating two axes: a primary conditional axis (ideally aligned with the vehicle’s direction of travel) and a perpendicular inequality constraint axis. This framework generally defines the light gray regions in Figure 1, the dark gray regions also represent overlap between the different regions of the obstacle. However, trajectory limits can be further restricted (e.g., the dark gray region) to navigate complex geometries like acute corners without introducing additional variables. By augmenting (7) into 3D, we obtain: 
+
+Y ⩾ yo 
+
+> max
+
+− M3(γ1 + γ2)
+
+Z ⩾ zo 
+
+> max
+
+− M4(γ1 + γ2) (13) While this point mass formulation can utilize conservative safety buffers, high performance applications require high-fidelity vehicle geometry. To address this, the vehicle’s volume is approximated by a set of points (vertices), as illustrated in Figure 2. This includes 4-point planar footprints and 8-point 3D prisms, which can be rigidly fixed to the world frame or dynamically rotated in the body frame. Applying the standard RCOA constraints identically to all 8 vertices of a rotating body frame (Figure 2) introduces a severe computational penalty, dramatically increasing the number of constraints and slack variables. While acceptable in strictly convex settings, this scale is detrimental to nonconvex NMPC. To maintain computational tractability while ensuring rigorous 4
+
+## x1
+
+## y1
+
+## z1   
+
+> Fig. 1. Typical obstacle with coordinate frame centered and axis normal to a surface.
+> AB
+> C
+> D
+> Fig. 2. Volumetric representation of the vehicle: A. Vehicle frame fixed area approximated by four points, B. Body fixed rotating area approximated by four points, C. Vehicle frame fixed cube defined by eight points, D. Body frame fixed rotating prism defined by eight points.
+
+collision avoidance, we propose the following nonconvex multi-point modification (RNCOA): 
+
+− max  
+
+> i∈V
+
+{ji} ⩽ −jo 
+
+> min
+
++ M1γ1 (14a) 
+
+min  
+
+> i∈V
+
+{ji} ⩽ jo 
+
+> max
+
++ M2γ2 (14b) 
+
+γ1 + γ2 ⩽ 1, γ1, γ 2 ∈ [0 , 1] (14c) 
+
+ki ⩾ ko 
+
+> max
+
+− M3(γ1 + γ2) ∀i ∈ V (14d) where V is the set of all vehicle vertices i = 1 , . . . , N v , and 
+
+j, k ∈ { x, y, z } with j̸ = k. For example to match (6) and (7) then j = x and k = y for each vertex i. Although determining the bounding extents ( max {ji} and min {ji}) sacrifices strict convexity, it dramatically reduces the constraint matrix size and avoids new decision variables. The underlying conditional logic conservatively requires only a single vertex to cross the 
+
+xo 
+
+> min
+
+threshold to trigger the yo 
+
+> max
+
+clearance constraints for the entire vehicle body. Because navigating an obstacle in 3D offers multiple valid spatial corridors (e.g., over, under, left, right), R(N)COA naturally fits within a hierarchical planning architecture. A global planner can dictate the preferred spatial corridor, while the local RCOA-NMPC selectively solves the corresponding OCP to generate the dynamically optimal evasion maneuver. The simulations presented in Section IV evaluate this volumetric RNCOA framework and demonstrate its capacity to execute high-speed maneuvers with aggressively reduced prediction horizons. 
+
+C. Quadrotor Model 
+
+The UAV is modeled using standard quadrotor dynamics [27] utilizing a North-East-Down (NED) coordinate system. The state vector is defined as x = ( p, v, θ, wb), where p =(px, p y , p z ) denotes the inertial position, θ = ( ϕ, θ, ψ ) are the roll, pitch, and yaw Euler angles, v = ( u, v, w ) represents the linear velocity in the body frame, and wb = ( p, q, r ) denotes the body frame angular velocity. The control input vector u =(δf , δ r , δ b, δ l) defines the commands to the front, right, back, and left rotors, producing thrust forces Fi = k1δi, where k1
+
+is an experimentally determined constant. The rigid body equations of motion are given by: 
+
+˙p = RT · v
+
+˙v = 1
+
+m F + R · mg − wb × v
+
+˙θ = G−1(θ) · wb
+
+˙wb = J−1(τ − (wb × Jwb)) 
+
+(15) where R ∈ SO (3) is the 3-2-1 Euler rotation matrix from the vehicle to the body frame, G is the kinematic transformation matrix mapping Euler angle rates to body frame angular velocities, g is the gravity vector, J = diag (Jx, J y , J z ) is the diagonal inertia matrix, and m is the vehicle mass. The total thrust F and control torques τ = ( τϕ, τ θ , τ ψ )T
+
+generated by the rotors are linearly mapped from the inputs: 
+
+
+
+Fτϕ
+
+τθ
+
+τψ
+
+ =
+
+
+
+k1 k1 k1 k1
+
+0 −lk 1 0 lk 1
+
+lk 1 0 −lk 1 0
+
+−k2 k2 −k2 k2
+
+ · u (16) where l is the radial arm length from the center of mass to the rotor hub, and k2 relates rotor speed to yaw torque. The system parameters utilized for simulation are summarized in Table I. IV. S IMULATION EXPERIMENTS 
+
+A. Vehicle Boundary Evaluation 
+
+In this subsection, the computational performance of the nonconvex RCOA formulation (RNCOA) is evaluated across 5            
+
+> TABLE I QUADROTOR PARAMETERS
+> m1.5 kg l0.175 m
+> Jx, J y, J z0.1 kg ·m2rp0.05 m
+> k11.0 k21.0
+
+the different volumetric vehicle representations detailed in Figure 2. The primary objective is to quantify the perfor-mance impact of transitioning from point mass to multi-point volumetric geometry within the RNCOA framework. The simulation environment features a quadrotor navigating a clustered environment composed of two joined rectangular obstacles, as illustrated in Figure 3. 
+
+## A4
+
+## A3
+
+## A2
+
+## A1
+
+## A∗  
+
+> 1
+> Fig. 3. Evaluation scenario of a quadrotor navigating around two joined rectangular obstacles (dark gray). The viewpoint illustrates the quadrotor’s initial position, looking along the positive x-axis. The designated zones ( A1–
+> A4) correspond to distinct spatial navigation corridors.
+
+The designated zones, A1 through A4, enforce distinct topological routes (right, above, below, or left of the obstacle). These represent realistic operational scenarios where a local planner must dictate specific evasion directions while minimiz-ing reference path error. Formulations are primarily evaluated on the computational latency required to solve the corre-sponding Optimal Control Problem (OCP). The dimensions and inertial centers of the obstacles are defined in Tables II and III. To ensure an equitable geometric comparison, the dimensions of the baseline ellipsoidal obstacles are computed as the average of the ellipsoid inscribed within the prism and the prism inscribed within the ellipsoid. The comparative evaluation benchmarks RNCOA against three standard OA formulations: the point to ellipsoid OA of (2) (EOA), the ellipsoid to ellipsoid overlap of (1) (EEOA), and the dual minimum distance between convex sets of (3) (DMDOA). RNCOA and EOA utilize discrete point repre-sentations, EEOA models both the vehicle and obstacle as continuous ellipsoids, and DMDOA models them as strict convex sets (accommodating both point and circular vehicle footprints). For RNCOA and EOA, all volumetric configura-tions from Figure 2 are tested to assess the computational degradation as constraint dimensionality increases. The exact geometric dimensions for the volumetric vehicle models are provided in Table IV, where l and r denote the quadrotor arm length and rotor radius from Table I, respectively. The standard point geometry (PG) formulation serves as the baseline. The third column indicates the initial rotational mapping of the body frame relative to the vehicle frame. Note that the representations of ’A’ and ’C’ are fixed in the vehicle frame, while ’B’ and ’D’ are body fixed. The quadrotor attitude is completely enveloped by representations of ’C’, while ’D’ is representation of the quadrotor attitude; ’A’ and ’B’ follow similarly but in 2D. The comprehensive test matrix is summarized in Table V. For EEOA, the vehicle boundary is modeled as an equivalent ellipsoid with semi-axes matching the half-lengths in Table IV. A ”Default” global optimal trajectory run is included for all baseline formulations.                                                                                         
+
+> TABLE II PRISM OBSTACLE DIMENSIONS IN INERTIAL FRAME ,UNITS OF (M)Half-Lengths (m) Center (m) Obstacle dx dy dz xyz1512001250.5 10-1.5 0TABLE III ELLIPSOIDAL OBSTACLE DIMENSIONS IN INERTIAL FRAME ,UNITS OF (M)Half-Lengths (m) Obstacle dx dy dz 16.83 1.366 2.732 26.83 0.683 1.366 TABLE IV HALF -LENGTHS OF THE VOLUMETRIC VEHICLE REPRESENTATIONS (M)Vehicle Representation Dimensions (m) in Vehicle Frame
+> Rz
+> PG [0 ,0,0] 0◦
+> A[( l+r),(l+r),0] 0◦
+> B[(
+> √22l+r),(
+> √22l+r),0] 45 ◦
+> C[( l+r),(l+r),(l+r)] 0◦
+> D[(
+> √22l+r),(
+> √22l+r),0.05] 45 ◦
+> TABLE V PROBLEM MATRIX FOR FORMULATION AND GEOMETRY COMPARISON
+> Navigation Corridor, (Fig. 3) OA Formulation A1A2A3A4Default RNCOA PG (1) , A, B, C, D NA EOA PG, A, B, C, D EEOA C(2) , D (2)
+> DMDOA (3) PG, A, B, C, D (1) Standard RCOA point-mass formulation. (2) Equivalent ellipsoid inscribed within defined prism. (3) Path A1corresponds to path A∗
+> 16
+
+1) Optimal Control Problem Formulation: The OCP struc-ture for the RNCOA formulation (specifically for configu-ration A1-D from Table V) is rigorously defined in (17). The objective function minimizes three distinct penalties: the squared Euclidean reference path error along the Y and Z
+
+axes, the linear RCOA boundary penalty of (9), and a terminal state cost specifically introduced to penalize excessive vehicle deceleration. 
+
+min 
+
+> p,γ
+> N
+
+X
+
+> k=0
+
+
+
+w1∥(pky , p kz )∥22 + w2(γk 
+
+> 1
+
++ γk 
+
+> 2
+
+)
+
+
+
+− w3p(N ) 
+
+> x
+
+(17a) s.t. x(k+1) = f (xk, uk) (17b) 
+
+0 ⩽ uk ⩽ umax (17c) 
+
+xo 
+
+> min
+
+⩽ max  
+
+> i∈V
+
+(P kx,i ) + M1γk 
+
+> 1
+
+(17d) 
+
+min  
+
+> i∈V
+
+(P kx,i ) ⩽ xo 
+
+> max
+
++ M2γk 
+
+> 2
+
+(17e) 
+
+P ky,i ⩾ yo 
+
+> max
+
+− M3(γk 
+
+> 1
+
++ γk 
+
+> 2
+
+) ∀i ∈ V (17f) 
+
+P kz,i ⩾ zo 
+
+> max
+
+− M4(γk 
+
+> 1
+
++ γk 
+
+> 2
+
+) ∀i ∈ V (17g) 
+
+γk 
+
+> 1
+
++ γk 
+
+> 2
+
+⩽ 1, γk 
+
+> 1
+
+, γ k 
+
+> 2
+
+∈ [0 , 1] (17h) 
+
+vT ⩽ (Tk)T vk (17i) 
+
+|ψ| ⩽ 20 ◦ (17j) 
+
+P ki = pk + ( Rk)T lb,i ∀i ∈ { f, r, b, l } (17k) The constraint set enforces quadrotor nonlinear dynamics (17b), bounded thrust limits (17c), the proposed RNCOA spatial exclusions (17d)–(17h), a minimum tangential velocity limit (17i), and a bounding yaw limit for numerical stability (17j). The kinematic spatial mapping of the vehicle’s boundary vertices ( P ki ) is enforced by (17k), where lb,i defines the fixed local coordinates of the boundary points in the body frame for the front, right, back, and left vertices. The velocity constraint (17i) ensures forward progression along the reference path, which empirically improved global solver convergence across all tested formulations. While exhaustive tuning could yield marginal gains, the RCOA cost weights ( w1, w 2, w 3) were held constant across each geometric configuration to maintain a normalized base-line. Weights were uniformly scaled to be strictly dominant enough to prevent constraint violations. To forcefully constrain the baseline models (EOA, EEOA, DMDOA) into designated topological corridors (e.g., path A1), hard spatial quadrant restrictions and corresponding initial guesses were required. For example, coercing a baseline formulation through path A1 necessitated explicitly seeding the solver with: 
+
+pky ⩾ −0.10 
+
+pkz ⩾ −0.25 
+
+pky, initial = 2 .0
+
+pkz, initial = 1 .0
+
+2) Evaluation Results: The array of OCPs were transcribed using CasADi [28], employing a multiple-shooting scheme with an RK4 integrator. The discrete temporal horizon was fixed at N = 80 nodes. The total look-ahead simulation time varied slightly among formulations (Table VI); these variations were strictly mandated by solver convergence limits, as EEOA and DMDOA routinely failed to converge at the aggressive time steps achievable by RNCOA and EOA. All trajectories shared identical initial origins, varying only in initial forward velocity u as detailed in Table VII. The primary reference path was aligned precisely along the inertial X-axis.            
+
+> TABLE VI SIMULATION HORIZON TIME (Tp)
+> PER OA RNCOA, EOA 4.8 EEOA 3.5 DMDOA 3.75 TABLE VII INITIAL STATE CONDITIONS ,x0
+> p[-15, 0, 0] (m)
+> u12 or 8* (m/s)
+> ∗Exclusively applied for A2
+
+RNCOA, EOA, and EEOA optimizations were solved using FATROP [29]. Due to structural matrix complexities, DMDOA required IPOPT [30] with the HSL MA57 linear solver [31], frequently relying on adaptive or probing barrier strategies to achieve convergence. Both solvers were strictly bound to a 
+
+10 −6 error tolerance. Benchmarking was performed on an HP OMEN desktop (Intel i7-14700F CPU, 32GB RAM). Because every formulation successfully yielded collision-free paths, the definitive performance metric is raw computa-tional latency. Each specific OCP configuration was executed 20 times to generate the statistical distributions illustrated in Figure 4. Across all topological corridors, RNCOA demon-strated unparalleled computational consistency, characterized by vastly narrower interquartile ranges. EOA ranked second, followed by EEOA, with DMDOA suffering the highest la-tency variance. Beyond mere consistency, RNCOA universally achieved the absolute lowest median computation times. While DMDOA and EEOA boast the theoretical robustness of guar-anteeing continuous non-intersection between two dynamic 3D bodies, this geometric fidelity incurs a prohibitive computa-tional penalty that undermines real-time control viability. Since all simulations result in an obstacle free path, the per-formance metric is purely based on solver time. All problems were ran 20 times, and the statistics are illustrated in Figure 4. Across all paths, the RCOA (or RNCOA) performance the most consistent of all formulations, with significantly narrower distributions. The EOA OA formulation followed, then EEOA, and lastly DMDOA. Beside consistency, RCOA also the lowest median value across across all configurations. Although from a robustness perspective, DMDOA an EEOA benefit in that they are sure to provide a obstacle-free trajectory between two three-dimensional objects, however, it is at the expense of increased computational complexity. Selected topological trajectories are visualized in Figures 5 and 6. Figure 5 displays the RNCOA traces for routes A1
+
+(Config D), A2 (Config C), and A4 (Config B). Figure 6 overlays the equivalent spatial solutions utilizing the baseline ellipsoid/set configurations. The dynamic distinction between statically enlarged vehicle bounds and tightly coupled body frame geometry is acutely visible in the agile attitude tracking near the vertices of the obstacle. 7
+
+PG A B C D
+
+Boundary Condition 
+
+0.25 
+
+0.50 
+
+0.75 
+
+1.00 
+
+1.25 
+
+1.50 
+
+1.75 
+
+2.00 
+
+2.25 
+
+2.50 
+
+2.75 
+
+3.00 
+
+3.25 
+
+3.50 
+
+3.75 
+
+4.00 
+
+4.25 
+
+> Time (seconds)
+
+Formulation 
+
+DMDOA 
+
+EEOA 
+
+EOA 
+
+RNCOA  
+
+> Fig. 4. Computational evaluation summary across all designated paths and volumetric vehicle boundaries (including the unconstrained default trajectory).
+
+## D
+
+## C
+
+## B      
+
+> Fig. 5. Locally optimal 3D trajectories generated by RNCOA. Highlighted: Configuration C navigating path A2(green), Configuration D traversing A1
+> (blue), and Configuration B maneuvering through A4(orange).
+
+B. Narrow Passage 
+
+In this simulation, the prediction horizon is aggressively reduced to demonstrate two critical capabilities of the RNCOA framework: (1) its ability to successfully guide the vehicle even when the obstacle resides strictly outside the finite prediction horizon, and (2) its capacity to significantly reduce computational latency for high-frequency, real-time NMPC deployment. The scenario requires the quadrotor to navigate through a narrow, restrictive slit, a maneuver that demands a high roll angle to maintain geometric feasibility. Navigating a narrow passage presents a severe kinematic constraint requiring highly aggressive maneuvering. The pas-       
+
+> Fig. 6. Locally optimal 3D trajectories generated by EEOA and EOA baselines. Highlighted: Configuration C* (bounding sphere) navigating path
+> A2(green), Configuration D* (bounding ellipsoid) traversing A1(blue), and EOA Configuration D maneuvering through A4(orange). View is along the positive x-axis.
+
+sage is defined with a width of 0.25 m and a depth of 1.0 m. For context, the physical radius of the quadrotor (from the center of mass to the outer rotor tip) is 0.225 m, leaving mere centimeters of clearance. For geometric fidelity, the vehicle is modeled using the rotating 2D planar boundary (Configuration B from Table IV). The quadrotor is controlled via a dual-mode NMPC frame-work. The primary OCP actively manages obstacle avoidance and trajectory tracking. Because the aggressiveness of the maneuver induces significant rotational momentum, the ve-hicle borders on aerodynamic instability upon exiting the slit. Consequently, a secondary, computationally lightweight stabi-8
+
+lizing OCP is activated immediately after the vehicle clears the passage to arrest the momentum and command a stable hover. The performance of RNCOA in this extreme scenario is benchmarked against the standard EOA formulation. 
+
+1) Optimal Control Problem Formulation: The primary OA OCP is formalized in (18). To facilitate the aggressive maneuver, the maximum allowable thrust constraint (18c) is significantly relaxed compared to the previous simulation. The cost function employs an L1 norm penalty on the lateral ( py )and vertical ( pz ) path deviations to prioritize exact reference tracking without overly penalizing transient aggressiveness. To geometrically define the ”slit,” the RCOA constraints are symmetrically duplicated. The first set (18d)–(18g) defines the lower-left boundary (forcing the quadrotor above and to the right), while the second set defines the top-right boundary (forcing the quadrotor below and to the left). Together, they form a strict traversable corridor. 
+
+min 
+
+> p,γ
+> N
+
+X
+
+> k=0
+
+
+
+w1∥pky − ry ∥1 + w2∥pkz − rz ∥1 + w34X
+
+> j=1
+
+γkj
+
+
+
+(18a) s.t. x(k+1) = f (xk, uk) (18b) 
+
+0 ⩽ uk ⩽ 20 N (18c) 
+
+xo1 
+
+> min
+
+⩽ max  
+
+> i∈V
+
+(P kx,i ) + M1γk 
+
+> 1
+
+(18d) 
+
+min  
+
+> i∈V
+
+(P kx,i ) ⩽ xo1 
+
+> max
+
++ M2γk 
+
+> 2
+
+(18e) 
+
+P ky,i ⩾ yo1 
+
+> max
+
+− M3(γk 
+
+> 1
+
++ γk 
+
+> 2
+
+) ∀i ∈ V (18f) 
+
+P kz,i ⩾ zo1 
+
+> max
+
+− M4(γk 
+
+> 1
+
++ γk 
+
+> 2
+
+) ∀i ∈ V (18g) 
+
+xo2 
+
+> min
+
+⩽ max  
+
+> i∈V
+
+(P kx,i ) + M1γk 
+
+> 3
+
+(18h) 
+
+min  
+
+> i∈V
+
+(P kx,i ) ⩽ xo2 
+
+> max
+
++ M2γk 
+
+> 4
+
+(18i) 
+
+P ky,i ⩽ yo2 
+
+> min
+
++ M3(γk 
+
+> 3
+
++ γk 
+
+> 4
+
+) ∀i ∈ V (18j) 
+
+P kz,i ⩽ zo2 
+
+> min
+
++ M4(γk 
+
+> 3
+
++ γk 
+
+> 4
+
+) ∀i ∈ V (18k) 
+
+> 4
+
+X
+
+> j=1
+
+γkj ⩽ 2, γkj ∈ [0 , 1] (18l) 
+
+P ki = pk + ( Rk)T lb,i ∀i ∈ { f, r, b, l } (18m) The OCP tuning parameters are summarized in Table IV-B1. The reference trajectory is configured as a linear path parallel to the inertial X-axis, rendering ry and rz constant. The secondary stabilizing OCP is functionally straightforward, structured purely to penalize linear velocities to enforce a zero-velocity hover state.             
+
+> TABLE VIII NARROW PASSAGE OCP P ARAMETERS
+> w1, w 2, w 318, 0.05, 190 ry, r z1.1, 2.0 (m)
+> xo∗
+> min , x o∗
+> max -0.1, 1.0 (m) yo1
+> max , y o2
+> min 1.0, 1.25 (m)
+> zo1
+> max , z o2
+> min 1.0, 3.0 (m) M1−450, 50, 3, 3
+
+2) Narrow Passage Results: To actively evaluate the for-mulations under severe horizon constraints, the prediction window was heavily truncated to Tp = 0 .25 s, utilizing a mere 
+
+N = 9 temporal nodes. This configuration natively maximizes the achievable control update frequency. Optimization was executed using FATROP [29]. To further prioritize real-time controller response, the solver tolerance was relaxed to 10 −1.The NMPC closed-loop simulation was executed for a total duration of 2.5 s. Initial state conditions are detailed in Table IX, with all unlisted states initialized to zero.    
+
+> TABLE IX INITIAL CONDITIONS ,x0
+> p[-10, 1.1, 2.0] (m)
+> u12 (m/s)
+
+The successful closed-loop trajectory is illustrated in Fig-ures 7 and 8. As shown in Figure 7, the quadrotor approaches the passage with zero initial roll, executing an aggressive, high-angle roll maneuver strictly to conform to the narrow geometry of the slit. To illustrate the receding horizon behavior during this approach, Figure 8 visualizes multiple sequential NMPC prediction horizons ( ϕ(i; x, u )), explicitly rendered as three overlaid solution sets highlighted in blue, yellow, and orange. Notably, the first two (blue and yellow) open-loop prediction horizons terminate strictly before the vehicle reaches the physical passage. Despite the obstacle remaining outside the solver’s look-ahead window in every iteration, each distinct sequence correctly actuates the required evasive roll angle. This visual evidence strongly confirms the theoretical assertion of Equation (10): the continuous RCOA penalty acts as an anticipatory gradient, inherently regulating the optimal attitude well in advance of the hard spatial boundary. Finally, upon exiting the passage, the secondary OCP suc-cessfully arrests the resulting dynamic instability, guiding the vehicle through a brief helical dissipation path into a stable hover. Conversely, the EOA formulation failed entirely under these truncated horizon conditions. Due to numerical drifting, the EOA solver tolerance had to be stiffened to 10 −3. As il-lustrated in Figure 9, the EOA simulation terminated prema-turely as the solver declared the OCP infeasible. Because the EOA formulation relies on hard spatial constraints rather than continuous penalty gradients, the controller remained myopic. By the time the finite horizon was long enough to ”see” the bounding ellipsoid, the vehicle’s momentum rendered the required evasion physically impossible, resulting in an infeasible trajectory state. (Note: To ensure a fair kinematic baseline, a minimum velocity constraint of 8 m/s was enforced on the EOA trial to prevent artificial deceleration outside the passage). Beyond achieving task feasibility, RNCOA demonstrated exceptional numerical efficiency. The computational statistics for the OA OCP during the simulated maneuver are provided in Table X. RNCOA maintained an average solve time of 
+
+11 .3 ms, firmly enabling sustained control frequencies exceed-ing 30 Hz. The advantage of RNCOA is clear in terms of numerical performance, the mean, max, and minimum solver time is shown below for the OA OCP during the simulation. 9 
+
+> Fig. 7. Closed-loop RNCOA trajectory navigating a narrow slit. A 2D planar outline of the quadrotor body illustrates the strict rotational conformity required to maintain geometric feasibility through the passage. Fig. 8. Sequential NMPC prediction horizons demonstrating receding horizon behavior. Three distinct OCP solution sets (highlighted in blue, yellow, and orange) are overlaid. Notably, the blue and yellow finite prediction horizons terminate strictly prior to intersection with the passage, highlighting the RCOA formulation’s capacity to induce anticipatory optimal rotations independently of the look-ahead boundary.
+
+C. Discussion 
+
+In its foundational 2D introduction [7], RCOA demon-strated computational performance on par with, or superior to, established OA formulations within nonconvex domains (e.g., bicycle models with nonlinear tire dynamics). That performance was particularly notable in tightly constrained environments where geometrically feasible trajectories were exceedingly narrow. The 3D and volumetric extensions intro-duced in this paper confirm that this computational advantage scales effectively to higher-dimensional UAV dynamics. The introduction of the nonconvex multi-point modification              
+
+> TABLE X OA OCP SOLVER PERFORMANCE (SEC .) OA mean max min RNCOA 0.0113 0.0162 0.0075 EOA 0.0168 0.0233 0.0135
+> Fig. 9. Failed NMPC trajectory utilizing the standard EOA formulation. (Top) The executed trajectory (orange) terminates in solver infeasibility before reaching the passage, with the final open-loop prediction set shown in blue. (Bottom) Orthogonal view along the +X-direction highlighting the spatial conflict.
+
+(RNCOA) was specifically designed to mitigate the com-binatorial explosion of constraints and slack variables that plagues exact 3D volumetric representations. The statistical results (Figure 4) confirm that RNCOA exhibits unparalleled consistency and the lowest median latency among the tested methods. While this discrete multi-point approximation sacri-fices the absolute, continuous geometric guarantees of exact 3D formulations (such as EEOA or DMDOA, which mathe-matically bound the entire continuum of the vehicle volume), the results indicate that the number of discrete vertices used to approximate the vehicle can be significantly increased while still maintaining a dominant computational advantage. A critical observation regarding trajectory quality lies in the inter-sample behavior of the formulations. As highlighted in the supplementary multimedia material, a direct side-by-side comparison of RNCOA and DMDOA along path A2
+
+(Configuration D) reveals stark differences in spatial enforce-ment. Because DMDOA enforces hard constraints strictly at the discrete temporal nodes of the prediction horizon, the ve-hicle trajectory is susceptible to severe inter-sample constraint violations (e.g., corner clipping between nodes). Conversely, RNCOA natively adheres to the regulatory gradient described by (10). As soon as a single boundary vertex triggers the spatial condition, the analytical penalty naturally regulates the entire boundary set safely above zo
+
+> max
+
+. This intrinsic buffering effectively eliminates inter-sample intersection without requir-ing infinitely dense node spacing. Furthermore, RNCOA successfully preserves the unique characteristic of its 2D predecessor: the capacity to command optimal evasive maneuvers even when the obstacle resides outside the finite prediction horizon. While operating with severely truncated horizons technically eliminates the solver’s ability to formally certify trajectory feasibility in advance, this limitation can be addressed architecturally. A dual horizon NMPC framework can be employed to guarantee strict safety; a slow rate, long horizon NMPC can evaluate global feasibility, while a high rate, short horizon RNCOA controller (executing at the 11 .3 ms median latency shown in Table X) tracks the 10 
+
+state and dynamically executes the avoidance maneuver at control frequencies safely exceeding 30 Hz. V. C ONCLUSION AND FUTURE WORK 
+
+This paper presented the three-dimensional extension of the Relaxed Convex Obstacle Avoidance (RCOA) formulation and applied it to the computationally demanding problem of UAV volumetric navigation. By introducing a nonconvex multi-point geometry modification (RNCOA), the framework allows for high-fidelity, rotating vehicle footprints to navigate tightly constrained environments without the conservatism of static point-mass approximations. Extensive numerical simulations demonstrated that RNCOA significantly outperforms standard baseline formulations, in-cluding ellipsoidal and dual set minimum distance constraints, in both raw computational speed and solver consistency. Most notably, the formulation’s KKT derived continuous penalty gradient enables the NMPC to inherently anticipate obstacles and execute aggressive evasive maneuvers (such as high-roll passage navigation) independently of the finite prediction horizon length. This attribute breaks the traditional compro-mise between controller look-ahead capability and real-time execution frequency. A noted structural requirement of RCOA is the necessity to define parallel OCPs to explore distinct topological routing options (e.g., over vs. under an obstacle). While this scales the problem, these OCPs are entirely decoupled and can be solved simultaneously in parallel computing environments. In practical deployment, this aligns seamlessly with hierarchical planning architectures; a global behavioral planner [32] dic-tates the preferred spatial homotopy, isolating a single locally optimal route for the RNCOA NMPC to execute. Future work will focus on generalizing the analytical prop-erties of (10). Specifically, we aim to design customized penalty formulations that induce arbitrary optimal behavioral responses beyond standard Euclidean distance regulation. Ad-ditionally, the underlying relaxed indicator logic of RCOA presents promising avenues for integration into broader Mixed Logical Dynamical (MLD) and hybrid control systems, poten-tially circumventing the need for computationally prohibitive MIP in state dependent logic transitions. REFERENCES [1] A. Romero, S. Sun, P. Foehn, and D. Scaramuzza, “Model predictive contouring control for time-optimal quadrotor flight,” IEEE Transac-tions on Robotics , vol. 38, 6 2022, ISSN : 19410468. DOI : 10.1109/ TRO.2022.3173711 [2] S. K. S. Prakash, D. Prajapati, B. Narula, and A. Shukla, “Iapf: An improved artificial potential field framework for asymmetric dual-arm manipulation with real-time inter-arm collision avoidance,” Frontiers in Robotics and AI , vol. Volume 12 - 2025, 2025, ISSN : 2296-9144. 
+
+> DOI
+
+: 10.3389/frobt.2025.1604506 [Online]. Available: https://www. frontiersin.org/journals/robotics- and- ai/articles/10.3389/frobt.2025. 1604506 [3] M. Dobrevski and D. Skoˇ caj, “Dynamic adaptive dynamic window approach,” IEEE Transactions on Robotics , vol. 40, pp. 3068–3081, 2024. DOI : 10.1109/TRO.2024.3400932 [4] Q. Han, X. Ma, J. Liu, H. Liu, Y. Yan, and Q. Yang, “A hybrid rrt-dwa path planning framework for uavs in dynamic environments,” Scientific Reports , vol. 16, p. 3089, 1 2025, ISSN : 2045-2322. DOI : 10.1038/ s41598- 025- 32993- w [Online]. Available: https://doi.org/10.1038/ s41598-025-32993-w [5] R. E. Allen and M. Pavone, “A real-time framework for kinody-namic planning in dynamic environments with application to quadrotor obstacle avoidance,” Robotics and Autonomous Systems , vol. 115, pp. 174–193, 2019, ISSN : 0921-8890. DOI : https://doi.org/10.1016/j. robot.2018.11.017 [Online]. Available: https://www.sciencedirect.com/ science/article/pii/S0921889017308692 [6] A. Perez, R. Platt, G. Konidaris, L. Kaelbling, and T. Lozano-Perez, “Lqr-rrt*: Optimal sampling-based motion planning with automatically derived extension heuristics,” in 2012 IEEE International Conference on Robotics and Automation , 2012, pp. 2537–2542. DOI : 10 . 1109 / ICRA.2012.6225177 [7] R. Tapia and I. Soltani, A convex obstacle avoidance formulation , 2025. arXiv: 2512.13836 [eess.SY] . [Online]. Available: https://arxiv.org/ abs/2512.13836 [8] J. Chen, W. Zhan, and M. Tomizuka, “Constrained iterative lqr for on-road autonomous driving motion planning,” in 2017 IEEE 20th International Conference on Intelligent Transportation Systems (ITSC) ,2017, pp. 1–7. DOI : 10.1109/ITSC.2017.8317745 [9] T. Schouwenaars, B. D. Moor, E. Feron, and J. How, “Mixed integer programming for multi-vehicle path planning,” in 2001 European Control Conference, ECC 2001 , Institute of Electrical and Electronics Engineers Inc., 2001, pp. 2603–2608, ISBN : 9783952417362. DOI : 10. 23919/ecc.2001.7076321 [10] O. Khatib, Real-Time Obstacle Avoidance for Manipulators and Mobile Robots . Apr. 1985, vol. 1, pp. 500–505. DOI : 10.1109/ROBOT.1985. 1087247 [11] J. Borenstein and Y. Koren, Real-time obstacle avoidance for fast mobile robots in cluttered environments . Jun. 1990, 572–577 vol.1, 
+
+> ISBN
+
+: 0-8186-9061-5. DOI : 10.1109/ROBOT.1990.126042 [12] E. G. Gilbert, D. W. Johnson, and S. S. Keerthi, “A fast procedure for computing the distance between complex objects in three-dimensional space,” IEEE Journal on Robotics and Automation , vol. 4, pp. 193–203, 2 1988. DOI : 10.1109/56.2083 [13] Y. She, C. Song, Z. Sun, and B. Li, “Optimized model predictive control-based path planning for multiple wheeled mobile robots in uncertain environments,” Drones , vol. 9, 1 2025, ISSN : 2504-446X. 
+
+> DOI
+
+: 10.3390/drones9010039 [Online]. Available: https://www.mdpi. com/2504-446X/9/1/39 [14] Hailin, W. Chengcheng, H. Fang, Y. X. L. Xiaofeng, and Chen, “Mpc control and path planning of omni-directional mobile robot with potential field method,” in Intelligent Robotics and Applications ,Alexandre, Y. Yamin, C. S. C. Zhiyong, and Mendes, Eds., Springer International Publishing, 2018, pp. 170–181, ISBN : 978-3-319-97589-4. [15] L. Ros, A. Sabater, and F. Thomas, “An ellipsoidal calculus based on propagation and fusion,” IEEE Transactions on Systems, Man, and Cybernetics, Part B (Cybernetics) , vol. 32, pp. 430–442, 4 2002. DOI :10.1109/TSMCB.2002.1018763 [16] M. Rosenfelder, H. Carius, M. Herrmann-Wicklmayr, P. Eberhard, K. Flaßkamp, and H. Ebel, “Efficient avoidance of ellipsoidal obsta-cles with model predictive control for mobile robots and vehicles,” 
+
+Mechatronics , vol. 110, p. 103 386, Oct. 2025, ISSN : 0957-4158. DOI :10.1016/J.MECHATRONICS.2025.103386 [Online]. Available: https: //www.sciencedirect.com/science/article/pii/S0957415825000959 [17] D. Leprich, M. Rosenfelder, M. Herrmann-Wicklmayr, K. Flaßkamp, P. Eberhard, and H. Ebel, Efficient collision-avoidance constraints for ellipsoidal obstacles in optimal control: Application to path-following mpc and uavs , 2025. [Online]. Available: https://arxiv.org/abs/2510. 26531 [18] K. Tracy, T. A. Howell, and Z. Manchester, “Differentiable collision detection for a set of convex primitives,” in 2023 IEEE International Conference on Robotics and Automation (ICRA) , 2023, pp. 3663–3670. 
+
+> DOI
+
+: 10.1109/ICRA48891.2023.10160716 [19] J. C. Pereira, V. J. S. Leite, and G. V. Raffo, “Nonlinear model pre-dictive control on se(3) for quadrotor aggressive maneuvers,” Journal of Intelligent & Robotic Systems , vol. 101, p. 62, 3 2021, ISSN : 1573-0409. DOI : 10.1007/s10846- 021- 01310- 8 [Online]. Available: https: //doi.org/10.1007/s10846-021-01310-8 [20] X. Zhang, A. Liniger, and F. Borrelli, “Optimization-based colli-sion avoidance,” IEEE Transactions on Control Systems Technology ,vol. 29, pp. 972–983, 3 2021. DOI : 10.1109/TCST.2019.2949540 [21] S. Morozov et al., Multi-query shortest-path problem in graphs of convex sets , 2024. [Online]. Available: https://arxiv.org/abs/2409.19543 [22] S. Garg, T. Cohn, and R. Tedrake, Planning shorter paths in graphs of convex sets by undistorting parametrized configuration spaces , 2025. [Online]. Available: https://arxiv.org/abs/2411.18913 11 
+
+[23] E. G. Gilbert and C. J. Ong, “New distances for the separation and penetration of objects,” in Proceedings of the 1994 IEEE International Conference on Robotics and Automation , 1994, 579–586 vol.1. DOI :10.1109/ROBOT.1994.351237 [24] I. Gilitschenski and U. D. Hanebeck, “A direct method for checking overlap of two hyperellipsoids,” in 2014 Sensor Data Fusion: Trends, Solutions, Applications (SDF) , 2014, pp. 1–6. DOI : 10.1109/SDF.2014. 6954724 [25] S. P. Boyd and L. Vandenberghe, Convex Optimization . Cambridge University Press, 2014, ISBN : 978-0-521-83378-3. DOI : 10 . 1017 / CBO9780511804441 [Online]. Available: https : / / web. stanford . edu / %7Eboyd/cvxbook/ [26] A. Bemporad and M. Morari, “Control of systems integrating logic, dynamics, and constraints,” Automatica , vol. 35, pp. 407–427, 1999. [27] R. W. Beard, “Quadrotor dynamics and control,” 2008. [Online]. Available: https://api.semanticscholar.org/CorpusID:195351003 [28] J. A. E. Andersson, J. Gillis, G. Horn, J. B. Rawlings, and M. Diehl, “Casadi – a software framework for nonlinear optimization and optimal control,” Mathematical Programming Computation , 2018. [29] L. Vanroye, A. Sathya, J. D. Schutter, and W. Decr´ e, Fatrop : A fast constrained optimal control problem solver for robot trajectory optimization and control , 2023. [Online]. Available: https://arxiv.org/ abs/2303.16746 [30] A. W¨ achter and L. T. Biegler, “On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear program-ming,” Mathematical Programming , vol. 106, pp. 25–57, 1 2006, ISSN :1436-4646. DOI : 10 . 1007 / s10107 - 004 - 0559 - y [Online]. Available: https://doi.org/10.1007/s10107-004-0559-y [31] I. S. Duff, “Ma57 - a code for the solution of sparse symmetric definite and indefinite systems,” ACM Transactions on Mathematical Software ,vol. 30, 2 2004, ISSN : 00983500. DOI : 10.1145/992200.992202 [32] J. Ziegler, P. Bender, T. Dang, and C. Stiller, “Trajectory planning for bertha — a local, continuous method,” in 2014 IEEE Intelligent Vehicles Symposium Proceedings , 2014, pp. 450–457, ISBN : 1931-0587. DOI : 10.1109/IVS.2014.6856581
